@@ -3,6 +3,9 @@ import { normalizeExecutionHostId, type ExecutionHostId } from './execution-host
 
 export const AGENT_STATUS_STORE_REPLICA_CAPABILITY = 'agent-status.store-replica.v1' as const
 export const AGENT_STATUS_STORE_REPLICA_BUFFER_MAX = 256
+/** Ceiling on rows/changes in one frame. Above every producer's own pane cap (relay 256, hook cache
+ *  500), so a legitimate host cannot reach it and an oversized frame is a peer defect, not a census. */
+export const AGENT_STATUS_STORE_FRAME_ENTRIES_MAX = 1024
 export const AGENT_STATUS_STORE_FRAME_NOTIFICATION = 'agentStatus.storeFrame' as const
 export const AGENT_STATUS_STORE_SUBSCRIBE_METHOD = 'agentStatus.subscribeStore' as const
 export const AGENT_STATUS_STORE_SNAPSHOT_METHOD = 'agentStatus.getStoreSnapshot' as const
@@ -84,6 +87,13 @@ function isRowIdentity(value: unknown): value is AgentStatusStoreRowIdentity {
   )
 }
 
+/** Keep the normalizer's output. It truncates and sanitizes every free-text field, so calling it
+ *  only as a predicate leaves a remote host's caps unenforced on the rows we hand to readers. */
+function normalizedStatusRow(row: AgentStatusIpcPayload): AgentStatusIpcPayload {
+  const payload = normalizeAgentStatusPayload(row)
+  return payload ? { ...row, ...payload } : row
+}
+
 function isStatusRow(value: unknown): value is AgentStatusIpcPayload {
   return (
     isRecord(value) &&
@@ -116,13 +126,19 @@ export function isAgentStatusStoreFrame(value: unknown): value is AgentStatusSto
     return (
       typeof value.complete === 'boolean' &&
       Array.isArray(value.rows) &&
+      value.rows.length <= AGENT_STATUS_STORE_FRAME_ENTRIES_MAX &&
       value.rows.every(isStatusRow)
     )
   }
   if (value.type === 'resnapshot-required') {
     return value.reason === 'gap' || value.reason === 'overflow' || value.reason === 'owner-restart'
   }
-  if (value.type !== 'delta' || !isCursor(value.previousCursor) || !Array.isArray(value.changes)) {
+  if (
+    value.type !== 'delta' ||
+    !isCursor(value.previousCursor) ||
+    !Array.isArray(value.changes) ||
+    value.changes.length > AGENT_STATUS_STORE_FRAME_ENTRIES_MAX
+  ) {
     return false
   }
   return value.changes.every(
@@ -196,7 +212,10 @@ export class AgentStatusStoreReplica {
     }
     for (const change of frame.changes) {
       if (change.type === 'set') {
-        state.rows.set(agentStatusStoreRowKey(agentStatusStoreRowIdentity(change.row)), change.row)
+        state.rows.set(
+          agentStatusStoreRowKey(agentStatusStoreRowIdentity(change.row)),
+          normalizedStatusRow(change.row)
+        )
       } else {
         state.rows.delete(agentStatusStoreRowKey(change.identity))
       }
@@ -254,7 +273,10 @@ export class AgentStatusStoreReplica {
       state.rows.clear()
     }
     for (const row of snapshot.rows) {
-      state.rows.set(agentStatusStoreRowKey(agentStatusStoreRowIdentity(row)), row)
+      state.rows.set(
+        agentStatusStoreRowKey(agentStatusStoreRowIdentity(row)),
+        normalizedStatusRow(row)
+      )
     }
     state.cursor = snapshot.cursor
     state.membershipConfirmed = snapshot.complete

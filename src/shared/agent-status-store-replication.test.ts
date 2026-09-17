@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AgentStatusIpcPayload } from './agent-status-types'
+import {
+  AGENT_STATUS_ASSISTANT_MESSAGE_MAX_LENGTH,
+  AGENT_TYPE_MAX_LENGTH,
+  type AgentStatusIpcPayload
+} from './agent-status-types'
 import {
   AgentStatusStorePublisher,
   type AgentStatusStoreSourceMutation
 } from './agent-status-store-publisher'
 import {
+  AGENT_STATUS_STORE_FRAME_ENTRIES_MAX,
   AgentStatusStoreReplica,
+  isAgentStatusStoreFrame,
   type AgentStatusStoreDelta,
   type AgentStatusStoreFrame,
   type AgentStatusStoreSnapshot
@@ -252,5 +258,62 @@ describe('AgentStatusStorePublisher', () => {
       cursor: 3,
       changes: [{ type: 'set', row: row('c') }]
     })
+  })
+})
+
+describe('AgentStatusStoreReplica remote payload limits', () => {
+  it('stores the normalizer output, not the raw wire row, from a snapshot', () => {
+    const replica = new AgentStatusStoreReplica()
+    const hostile: AgentStatusIpcPayload = {
+      ...row('pane-a'),
+      agentType: 'claude\nrogue',
+      lastAssistantMessage: 'x'.repeat(AGENT_STATUS_ASSISTANT_MESSAGE_MAX_LENGTH + 5_000)
+    }
+
+    replica.apply(snapshot({ rows: [hostile] }))
+
+    const [stored] = replica.getHostSnapshot('local').rows
+    expect(stored.agentType).not.toContain('\n')
+    expect(stored.agentType?.length).toBeLessThanOrEqual(AGENT_TYPE_MAX_LENGTH)
+    expect(stored.lastAssistantMessage?.length).toBeLessThanOrEqual(
+      AGENT_STATUS_ASSISTANT_MESSAGE_MAX_LENGTH
+    )
+  })
+
+  it('stores the normalizer output for a delta set change', () => {
+    const replica = new AgentStatusStoreReplica()
+    replica.apply(snapshot({ rows: [] }))
+    const hostile: AgentStatusIpcPayload = {
+      ...row('pane-b'),
+      agentType: 'codex\ninjected',
+      lastAssistantMessage: 'y'.repeat(AGENT_STATUS_ASSISTANT_MESSAGE_MAX_LENGTH + 1)
+    }
+
+    replica.apply(delta({ changes: [{ type: 'set', row: hostile }] }))
+
+    const stored = replica.getHostSnapshot('local').rows.find((r) => r.paneKey === 'pane-b')
+    expect(stored?.agentType).not.toContain('\n')
+    expect(stored?.lastAssistantMessage?.length).toBe(AGENT_STATUS_ASSISTANT_MESSAGE_MAX_LENGTH)
+  })
+
+  it('rejects a frame whose row or change count exceeds the entry ceiling', () => {
+    const tooManyRows = Array.from({ length: AGENT_STATUS_STORE_FRAME_ENTRIES_MAX + 1 }, (_, i) =>
+      row(`pane-${i}`)
+    )
+    expect(isAgentStatusStoreFrame(snapshot({ rows: tooManyRows }))).toBe(false)
+    expect(
+      isAgentStatusStoreFrame(
+        delta({
+          changes: tooManyRows.map((r) => ({ type: 'set' as const, row: r }))
+        })
+      )
+    ).toBe(false)
+  })
+
+  it('still accepts a frame at the entry ceiling', () => {
+    const atCeiling = Array.from({ length: AGENT_STATUS_STORE_FRAME_ENTRIES_MAX }, (_, i) =>
+      row(`pane-${i}`)
+    )
+    expect(isAgentStatusStoreFrame(snapshot({ rows: atCeiling }))).toBe(true)
   })
 })
