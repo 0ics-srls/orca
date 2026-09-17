@@ -75,9 +75,9 @@ function retryableSchemaError(error: unknown, sql: string): boolean {
   return RETRYABLE_SCHEMA_CODES.has(String(value.code)) || concurrentCreateCollision(value, sql)
 }
 
-// Evaluated immediately before each statement, so a pre-check still sees the tables the statements
+// Evaluated immediately before each statement, so a pre-check still sees the objects the statements
 // ahead of it created in this same boot.
-async function alreadyPresent(
+async function nothingToDo(
   target: SchemaLockTarget | undefined,
   options: SchemaStartupOptions,
   eventPrefix: string
@@ -85,10 +85,10 @@ async function alreadyPresent(
   const catalogQuery = options.catalogQuery
   if (!catalogQuery || !target) return false
   const presence = await catalogObjectPresence(catalogQuery, target)
-  if (!presence.present) return false
+  if (presence.present !== (target.skipWhen === 'present')) return false
   console.log(
     JSON.stringify({
-      event: `${eventPrefix}_object_present`,
+      event: `${eventPrefix}_object_${target.skipWhen}`,
       kind: target.kind,
       table: target.table,
       name: target.name,
@@ -114,7 +114,7 @@ export async function applyPostgresSchema(
     // Throws when an index or column statement's target cannot be read, rather than sending it
     // unchecked into the lock queue.
     const target = requireSchemaLockTarget(statement)
-    if (await alreadyPresent(target, options, eventPrefix)) {
+    if (await nothingToDo(target, options, eventPrefix)) {
       summary.skipped += 1
       continue
     }
@@ -150,7 +150,7 @@ export async function applyPostgresSchema(
         // an object that is already there.
         if (
           concurrentCreateCollision((error as { code?: unknown; constraint?: unknown }) ?? {}, sql) &&
-          (await alreadyPresent(target, options, eventPrefix))
+          (await nothingToDo(target, options, eventPrefix))
         ) {
           summary.skipped += 1
           break

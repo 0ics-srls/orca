@@ -88,6 +88,8 @@ describe('applyPostgresSchema classification', () => {
   })
 
   it('treats an already-applied constraint as skipped rather than an error', async () => {
+    // Still the answer for a caller with no pre-check, and for a constraint another director
+    // committed between this boot's pre-check and its ALTER TABLE.
     const query = vi.fn(async () => {
       throw postgresError('42710')
     })
@@ -223,11 +225,72 @@ describe('applyPostgresSchema catalog pre-check', () => {
   it('never probes the catalog for a statement that takes no relation lock', async () => {
     const query = vi.fn(async (_statement: string) => undefined)
     const { catalogQuery, asked } = catalogAnswers([{ indisvalid: true }])
-    await applyPostgresSchema([COMMENTED_TABLE, 'ALTER TABLE t DROP CONSTRAINT IF EXISTS c'], query, {
-      catalogQuery
-    })
+    await applyPostgresSchema([COMMENTED_TABLE], query, { catalogQuery })
     expect(asked).toEqual([])
-    expect(query).toHaveBeenCalledTimes(2)
+    expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips an ADD CONSTRAINT the catalog already names', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const query = vi.fn(async (_statement: string) => undefined)
+    const { catalogQuery, asked } = catalogAnswers([{}])
+    const summary = await applyPostgresSchema(
+      ['ALTER TABLE relay_region_rehome_attempts ADD CONSTRAINT region_valid CHECK (r IN (1))'],
+      query,
+      { catalogQuery }
+    )
+    expect(asked).toEqual([
+      [
+        expect.stringContaining('pg_catalog.pg_constraint'),
+        'relay_region_rehome_attempts',
+        'region_valid'
+      ]
+    ])
+    expect(query).not.toHaveBeenCalled()
+    expect(summary).toEqual({ ran: 0, skipped: 1 })
+  })
+
+  it('skips a DROP CONSTRAINT IF EXISTS when the constraint is already gone', async () => {
+    // Inverse polarity: an absent constraint is what means there is nothing to drop. Sending it
+    // anyway takes ACCESS EXCLUSIVE to discover the same thing.
+    const logged: { event?: string }[] = []
+    vi.spyOn(console, 'log').mockImplementation((line: string) => {
+      logged.push(JSON.parse(line))
+    })
+    const query = vi.fn(async (_statement: string) => undefined)
+    const { catalogQuery } = catalogAnswers([])
+    const summary = await applyPostgresSchema(
+      ['ALTER TABLE relay_region_rehome_attempts DROP CONSTRAINT IF EXISTS region_check'],
+      query,
+      { catalogQuery }
+    )
+    expect(query).not.toHaveBeenCalled()
+    expect(summary).toEqual({ ran: 0, skipped: 1 })
+    expect(logged).toContainEqual({
+      event: 'orca_relay_postgres_schema_object_absent',
+      kind: 'constraint',
+      table: 'relay_region_rehome_attempts',
+      name: 'region_check',
+      indisvalid: undefined
+    })
+  })
+
+  it('sends a DROP CONSTRAINT IF EXISTS when the constraint is still there', async () => {
+    const query = vi.fn(async (_statement: string) => undefined)
+    const { catalogQuery } = catalogAnswers([{}])
+    const statement = 'ALTER TABLE t DROP CONSTRAINT IF EXISTS region_check'
+    const summary = await applyPostgresSchema([statement], query, { catalogQuery })
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([statement])
+    expect(summary).toEqual({ ran: 1, skipped: 0 })
+  })
+
+  it('sends an ADD CONSTRAINT the catalog does not name yet', async () => {
+    const query = vi.fn(async (_statement: string) => undefined)
+    const { catalogQuery } = catalogAnswers([])
+    const statement = 'ALTER TABLE t ADD CONSTRAINT region_valid CHECK (r IN (1))'
+    const summary = await applyPostgresSchema([statement], query, { catalogQuery })
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([statement])
+    expect(summary).toEqual({ ran: 1, skipped: 0 })
   })
 
   it('sends every statement when no catalog query is supplied', async () => {

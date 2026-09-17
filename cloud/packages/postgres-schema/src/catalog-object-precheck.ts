@@ -21,6 +21,17 @@ WHERE t.oid = to_regclass($1)`
 const COLUMN_PRESENT = `SELECT 1 FROM pg_catalog.pg_attribute
 WHERE attrelid = to_regclass($1) AND attname = $2 AND attnum > 0 AND NOT attisdropped`
 
+// Name only. The CHECK body is generated from RELAY_REGIONS, so comparing it would re-run the swap
+// on every region change, and an ADD CONSTRAINT is the one statement here that scans the table.
+const CONSTRAINT_PRESENT = `SELECT 1 FROM pg_catalog.pg_constraint
+WHERE conrelid = to_regclass($1) AND conname = $2`
+
+const PRESENCE_SQL = {
+  index: INDEX_PRESENT,
+  column: COLUMN_PRESENT,
+  constraint: CONSTRAINT_PRESENT
+} as const
+
 export type SchemaCatalogPresence = { present: boolean; indisvalid: unknown }
 
 // Row presence is the answer, whatever the row says. An index left invalid by a cancelled
@@ -30,7 +41,7 @@ export async function catalogObjectPresence(
   query: SchemaCatalogQuery,
   target: SchemaLockTarget
 ): Promise<SchemaCatalogPresence> {
-  const sql = target.kind === 'index' ? INDEX_PRESENT : COLUMN_PRESENT
+  const sql = PRESENCE_SQL[target.kind]
   const rows = await query(sql, [target.table, target.name])
   const row = rows[0]
   return row ? { present: true, indisvalid: row.indisvalid } : { present: false, indisvalid: undefined }

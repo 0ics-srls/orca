@@ -14,109 +14,112 @@ import { relayPostgresSchemaStatements } from './database.js'
 // brand-new index reports missing on every director at once and each one runs a non-concurrent
 // build over the whole table, which is how a boot takes the site down. Build it out of band with
 // CREATE INDEX CONCURRENTLY first, then add it to SCHEMA and update this list.
-const GOLDEN_LOCK_TAKING: (SchemaLockTarget | { unchecked: string })[] = [
-  { kind: 'index', table: 'relay_invites', name: 'relay_invites_device' },
-  { kind: 'index', table: 'relay_devices', name: 'relay_devices_current_hash' },
-  { kind: 'index', table: 'relay_devices', name: 'relay_devices_grace_hash' },
-  { kind: 'index', table: 'relay_connection_bases', name: 'relay_connection_bases_active_deadline' },
+const GOLDEN_LOCK_TAKING: SchemaLockTarget[] = [
+  { kind: 'index', table: 'relay_invites', name: 'relay_invites_device', skipWhen: 'present' },
+  { kind: 'index', table: 'relay_devices', name: 'relay_devices_current_hash', skipWhen: 'present' },
+  { kind: 'index', table: 'relay_devices', name: 'relay_devices_grace_hash', skipWhen: 'present' },
+  { kind: 'index', table: 'relay_connection_bases', name: 'relay_connection_bases_active_deadline', skipWhen: 'present' },
   {
     kind: 'index',
     table: 'relay_assignment_region_preferences',
-    name: 'relay_assignment_region_preferences_observed'
+    name: 'relay_assignment_region_preferences_observed',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_region_rehome_attempts',
-    name: 'relay_region_rehome_attempts_pending'
+    name: 'relay_region_rehome_attempts_pending',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_region_rehome_attempts',
-    name: 'relay_region_rehome_attempts_host_recency'
+    name: 'relay_region_rehome_attempts_host_recency',
+    skipWhen: 'present'
   },
-  { kind: 'index', table: 'relay_cell_runtime', name: 'relay_cell_runtime_heartbeat' },
+  { kind: 'index', table: 'relay_cell_runtime', name: 'relay_cell_runtime_heartbeat', skipWhen: 'present' },
   {
     kind: 'index',
     table: 'relay_cell_connection_runtime',
-    name: 'relay_cell_connection_runtime_heartbeat'
+    name: 'relay_cell_connection_runtime_heartbeat',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_cell_connection_snapshots',
-    name: 'relay_cell_connection_snapshot_freshness'
+    name: 'relay_cell_connection_snapshot_freshness',
+    skipWhen: 'present'
   },
-  { kind: 'index', table: 'relay_cell_fences', name: 'relay_cell_fences_expiry' },
-  { kind: 'index', table: 'relay_cell_committed_fences', name: 'relay_cell_committed_fences_expiry' },
+  { kind: 'index', table: 'relay_cell_fences', name: 'relay_cell_fences_expiry', skipWhen: 'present' },
+  { kind: 'index', table: 'relay_cell_committed_fences', name: 'relay_cell_committed_fences_expiry', skipWhen: 'present' },
   {
     kind: 'index',
     table: 'relay_cell_legacy_fence_adoptions',
-    name: 'relay_cell_legacy_fence_adoptions_expiry'
+    name: 'relay_cell_legacy_fence_adoptions_expiry',
+    skipWhen: 'present'
   },
-  { kind: 'index', table: 'relay_cell_fence_attempts', name: 'relay_cell_fence_attempts_expiry' },
-  { kind: 'index', table: 'relay_cell_fence_attempts', name: 'relay_cell_fence_attempts_cell' },
+  { kind: 'index', table: 'relay_cell_fence_attempts', name: 'relay_cell_fence_attempts_expiry', skipWhen: 'present' },
+  { kind: 'index', table: 'relay_cell_fence_attempts', name: 'relay_cell_fence_attempts_cell', skipWhen: 'present' },
   {
     kind: 'index',
     table: 'relay_cell_fence_apply_invocations',
-    name: 'relay_cell_fence_apply_invocations_attempt'
+    name: 'relay_cell_fence_apply_invocations_attempt',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_cell_drain_attempt_states',
-    name: 'relay_cell_drain_attempt_states_cell'
+    name: 'relay_cell_drain_attempt_states_cell',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_assignment_activity_leases',
-    name: 'relay_assignment_activity_expiry'
+    name: 'relay_assignment_activity_expiry',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_control_connection_reservations',
-    name: 'relay_control_connection_reservation_headroom'
+    name: 'relay_control_connection_reservation_headroom',
+    skipWhen: 'present'
   },
   {
     kind: 'index',
     table: 'relay_control_connection_reservations',
-    name: 'relay_control_connection_reservation_assignment'
+    name: 'relay_control_connection_reservation_assignment',
+    skipWhen: 'present'
   },
-  { kind: 'index', table: 'relay_assignment_migrations', name: 'relay_assignment_migrations_active' },
+  { kind: 'index', table: 'relay_assignment_migrations', name: 'relay_assignment_migrations_active', skipWhen: 'present' },
   {
     kind: 'index',
     table: 'relay_post_drain_migration_pins',
-    name: 'relay_post_drain_migration_pins_attempt'
+    name: 'relay_post_drain_migration_pins_attempt',
+    skipWhen: 'present'
   },
-  { kind: 'index', table: 'relay_audit_events', name: 'relay_audit_events_at' },
-  { kind: 'column', table: 'relay_region_decisions', name: 'last_considered_at' },
-  { kind: 'column', table: 'relay_region_decisions', name: 'cohort_bucket' },
-  // Constraint swaps look up pg_constraint, not pg_class or pg_attribute, so the pre-check has no
-  // answer for them and they still take ACCESS EXCLUSIVE on every boot. Both are cheap on
-  // relay_region_rehome_attempts today and both are pinned here so a third one cannot slip in.
+  { kind: 'index', table: 'relay_audit_events', name: 'relay_audit_events_at', skipWhen: 'present' },
+  { kind: 'column', table: 'relay_region_decisions', name: 'last_considered_at', skipWhen: 'present' },
+  { kind: 'column', table: 'relay_region_decisions', name: 'cohort_bucket', skipWhen: 'present' },
+  // Constraint swaps are matched by name in pg_constraint, with opposite polarities: nothing to
+  // drop is nothing to do, and a name already there is nothing to add.
   {
-    unchecked:
-      'DROP CONSTRAINT relay_region_rehome_attempts.relay_region_rehome_attempts_preferred_region_check'
+    kind: 'constraint',
+    table: 'relay_region_rehome_attempts',
+    name: 'relay_region_rehome_attempts_preferred_region_check',
+    skipWhen: 'absent'
   },
   {
-    unchecked:
-      'ADD CONSTRAINT relay_region_rehome_attempts.relay_region_rehome_attempts_preferred_region_valid'
+    kind: 'constraint',
+    table: 'relay_region_rehome_attempts',
+    name: 'relay_region_rehome_attempts_preferred_region_valid',
+    skipWhen: 'present'
   },
-  { kind: 'column', table: 'relay_region_rehome_control', name: 'host_cooldown_ms' },
-  { kind: 'column', table: 'relay_control_capabilities', name: 'idle_regional_rehome' },
-  { kind: 'column', table: 'relay_region_rehome_attempts', name: 'source_generation' }
+  { kind: 'column', table: 'relay_region_rehome_control', name: 'host_cooldown_ms', skipWhen: 'present' },
+  { kind: 'column', table: 'relay_control_capabilities', name: 'idle_regional_rehome', skipWhen: 'present' },
+  { kind: 'column', table: 'relay_region_rehome_attempts', name: 'source_generation', skipWhen: 'present' }
 ]
 
 const INDEX_OR_ADD_COLUMN = /^(?:CREATE\s+(?:UNIQUE\s+)?INDEX|ALTER\s+TABLE\s+[^\s]+\s+ADD\s+COLUMN)/i
-
-const CONSTRAINT_SWAP =
-  /^ALTER\s+TABLE\s+(\S+)\s+(ADD|DROP)\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?(\S+)/i
-
-// A constraint swap is pinned by the constraint it names, not by its body: the CHECK list is
-// generated from RELAY_REGIONS, and adding a region must not have to touch this golden. Anything
-// else unchecked falls back to its whole text, so a new shape fails here loudly.
-function uncheckedIdentity(statement: string): string {
-  const collapsed = sqlWithoutLeadingComments(statement).replace(/\s+/g, ' ').trim()
-  const swap = CONSTRAINT_SWAP.exec(collapsed)
-  return swap ? `${swap[2]!.toUpperCase()} CONSTRAINT ${swap[1]}.${swap[3]}` : collapsed
-}
 
 function lockTakingStatements(): string[] {
   return relayPostgresSchemaStatements().filter(takesRelationLock)
@@ -124,11 +127,7 @@ function lockTakingStatements(): string[] {
 
 describe('relay boot-time lock targets', () => {
   it('matches the pinned list of lock-taking statements', () => {
-    expect(
-      lockTakingStatements().map(
-        (statement) => schemaLockTarget(statement) ?? { unchecked: uncheckedIdentity(statement) }
-      )
-    ).toEqual(GOLDEN_LOCK_TAKING)
+    expect(lockTakingStatements().map(schemaLockTarget)).toEqual(GOLDEN_LOCK_TAKING)
   })
 
   it('derives a target for every CREATE INDEX and every ALTER TABLE ADD COLUMN', () => {
@@ -155,11 +154,14 @@ describe('relay boot-time lock targets', () => {
     }
   })
 
-  it('pre-checks every lock-taking statement except the two pinned constraint swaps', () => {
+  it('pre-checks every lock-taking statement, with no exceptions', () => {
+    // The invariant the rule comment beside SCHEMA depends on: nothing that takes a relation lock
+    // reaches the server on a warm boot. A statement with no target breaks it.
     const unchecked = lockTakingStatements().filter(
       (statement) => schemaLockTarget(statement) === undefined
     )
-    expect(unchecked).toHaveLength(2)
+    expect(unchecked).toEqual([])
+    expect(lockTakingStatements()).toHaveLength(GOLDEN_LOCK_TAKING.length)
   })
 
   it('derives a target through the comment block a split schema glues on', () => {
@@ -176,7 +178,8 @@ describe('relay boot-time lock targets', () => {
     expect(commented.map(schemaLockTarget)).toContainEqual({
       kind: 'index',
       table: 'relay_connection_bases',
-      name: 'relay_connection_bases_active_deadline'
+      name: 'relay_connection_bases_active_deadline',
+      skipWhen: 'present'
     })
   })
 

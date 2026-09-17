@@ -83,12 +83,6 @@ describePostgres('relay boot-time schema against PostgreSQL', () => {
     return sent.filter(takesRelationLock)
   }
 
-  // The two constraint swaps look up pg_constraint, which the pre-check has no query for, so they
-  // are the only lock-taking statements a warm boot is still allowed to send.
-  function preCheckable(): string[] {
-    return lockTaking().filter((statement) => schemaLockTarget(statement) !== undefined)
-  }
-
   it('creates the schema cold, then issues no lock-taking statement on the next boot', async () => {
     const cold = await applyRecording()
     expect(lockTaking().length).toBeGreaterThan(0)
@@ -96,16 +90,15 @@ describePostgres('relay boot-time schema against PostgreSQL', () => {
 
     sent = []
     const warm = await applyRecording()
-    expect(preCheckable()).toEqual([])
-    expect(lockTaking()).toHaveLength(2)
-    // Every pre-checkable statement skipped, plus the ADD CONSTRAINT the server answers 42710 to.
-    // The CREATE TABLEs still run: they resolve a name and take no lock on an existing table.
-    const preCheckableCount = relayPostgresSchemaStatements().filter(
+    // Zero, with no exceptions: every statement that takes a relation lock has a pre-check.
+    expect(lockTaking()).toEqual([])
+    const preCheckedCount = relayPostgresSchemaStatements().filter(
       (statement) => schemaLockTarget(statement) !== undefined
     ).length
-    expect(preCheckableCount).toBe(28)
-    expect(warm.skipped).toBe(preCheckableCount + 1)
-    expect(warm.ran).toBe(relayPostgresSchemaStatements().length - warm.skipped)
+    expect(warm.skipped).toBe(preCheckedCount)
+    expect(warm.ran).toBe(relayPostgresSchemaStatements().length - preCheckedCount)
+    // The CREATE TABLEs still run: they resolve a name and take no lock on an existing table.
+    expect(warm.ran).toBeGreaterThan(0)
     await pool.end()
   })
 
@@ -119,7 +112,38 @@ describePostgres('relay boot-time schema against PostgreSQL', () => {
     )
     sent = []
     await applyRecording()
-    expect(preCheckable()).toEqual([])
+    expect(lockTaking()).toEqual([])
+    await pool.end()
+  })
+
+  it('re-adds a constraint an operator dropped, then skips it again', async () => {
+    // The pre-check matches the constraint by name only, so this is the one shape where a changed
+    // body needs an operator: drop it, and the next boot puts the current definition back.
+    await applyRecording()
+    const named = async (): Promise<number> =>
+      Number(
+        (
+          await pool.query(
+            `SELECT count(*) AS present FROM pg_catalog.pg_constraint
+             WHERE conrelid = to_regclass('relay_region_rehome_attempts')
+               AND conname = 'relay_region_rehome_attempts_preferred_region_valid'`
+          )
+        ).rows[0]?.present
+      )
+    expect(await named()).toBe(1)
+
+    await pool.query(
+      `ALTER TABLE relay_region_rehome_attempts
+       DROP CONSTRAINT relay_region_rehome_attempts_preferred_region_valid`
+    )
+    sent = []
+    await applyRecording()
+    expect(lockTaking()).toHaveLength(1)
+    expect(await named()).toBe(1)
+
+    sent = []
+    await applyRecording()
+    expect(lockTaking()).toEqual([])
     await pool.end()
   })
 
@@ -132,7 +156,7 @@ describePostgres('relay boot-time schema against PostgreSQL', () => {
       (
         await catalogObjectPresence(
           async (sql, params) => (await pool.query(sql, params)).rows,
-          { kind: 'index', table, name: 'relay_audit_events_at' }
+          { kind: 'index', table, name: 'relay_audit_events_at', skipWhen: 'present' }
         )
       ).present
 

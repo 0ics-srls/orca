@@ -54,7 +54,8 @@ describe('schemaLockTarget', () => {
     expect(schemaLockTarget(COMMENTED_INDEX)).toEqual({
       kind: 'index',
       table: 'relay_connection_bases',
-      name: 'relay_connection_bases_active_deadline'
+      name: 'relay_connection_bases_active_deadline',
+      skipWhen: 'present'
     })
   })
 
@@ -67,7 +68,8 @@ describe('schemaLockTarget', () => {
     ).toEqual({
       kind: 'index',
       table: 'relay_control_connection_reservations',
-      name: 'relay_reservation_assignment'
+      name: 'relay_reservation_assignment',
+      skipWhen: 'present'
     })
   })
 
@@ -75,7 +77,8 @@ describe('schemaLockTarget', () => {
     expect(schemaLockTarget('CREATE UNIQUE INDEX CONCURRENTLY i ON t(c)')).toEqual({
       kind: 'index',
       table: 't',
-      name: 'i'
+      name: 'i',
+      skipWhen: 'present'
     })
   })
 
@@ -85,7 +88,8 @@ describe('schemaLockTarget', () => {
     expect(schemaLockTarget('CREATE INDEX IF NOT EXISTS app.i ON app.t(c)')).toEqual({
       kind: 'index',
       table: 'app.t',
-      name: 'i'
+      name: 'i',
+      skipWhen: 'present'
     })
   })
 
@@ -93,7 +97,8 @@ describe('schemaLockTarget', () => {
     expect(schemaLockTarget('CREATE INDEX IF NOT EXISTS "od""d" ON "My Table"(c)')).toEqual({
       kind: 'index',
       table: '"My Table"',
-      name: 'od"d'
+      name: 'od"d',
+      skipWhen: 'present'
     })
   })
 
@@ -102,21 +107,53 @@ describe('schemaLockTarget', () => {
       schemaLockTarget(`ALTER TABLE relay_region_rehome_control
      ADD COLUMN IF NOT EXISTS host_cooldown_ms BIGINT NOT NULL
      DEFAULT 604800000`)
-    ).toEqual({ kind: 'column', table: 'relay_region_rehome_control', name: 'host_cooldown_ms' })
+    ).toEqual({
+      kind: 'column',
+      table: 'relay_region_rehome_control',
+      name: 'host_cooldown_ms',
+      skipWhen: 'present'
+    })
   })
 
   it('derives a column target without IF NOT EXISTS', () => {
     expect(schemaLockTarget('ALTER TABLE ONLY t ADD COLUMN c TEXT')).toEqual({
       kind: 'column',
       table: 't',
-      name: 'c'
+      name: 'c',
+      skipWhen: 'present'
     })
   })
 
-  it('gives a constraint swap no target', () => {
-    // pg_constraint is a different lookup; these statements stay unchecked and the census pins them.
-    expect(schemaLockTarget('ALTER TABLE t ADD CONSTRAINT c CHECK (x > 0)')).toBeUndefined()
-    expect(schemaLockTarget('ALTER TABLE t DROP CONSTRAINT IF EXISTS c')).toBeUndefined()
+  it('skips an ADD CONSTRAINT once the constraint name is there', () => {
+    expect(schemaLockTarget('ALTER TABLE t ADD CONSTRAINT c CHECK (x > 0)')).toEqual({
+      kind: 'constraint',
+      table: 't',
+      name: 'c',
+      skipWhen: 'present'
+    })
+  })
+
+  it('skips a DROP CONSTRAINT IF EXISTS when the constraint is already gone', () => {
+    // The inverse polarity: nothing to drop is nothing to do.
+    expect(schemaLockTarget('ALTER TABLE t DROP CONSTRAINT IF EXISTS c')).toEqual({
+      kind: 'constraint',
+      table: 't',
+      name: 'c',
+      skipWhen: 'absent'
+    })
+  })
+
+  it('derives a constraint target across a line break', () => {
+    expect(
+      schemaLockTarget(`ALTER TABLE relay_region_rehome_attempts
+     ADD CONSTRAINT relay_region_rehome_attempts_preferred_region_valid
+     CHECK (preferred_region IN ('us-central1'))`)
+    ).toEqual({
+      kind: 'constraint',
+      table: 'relay_region_rehome_attempts',
+      name: 'relay_region_rehome_attempts_preferred_region_valid',
+      skipWhen: 'present'
+    })
   })
 
   it('gives CREATE TABLE IF NOT EXISTS no target', () => {
@@ -151,14 +188,13 @@ describe('requireSchemaLockTarget', () => {
     expect(requireSchemaLockTarget(COMMENTED_INDEX)).toEqual({
       kind: 'index',
       table: 'relay_connection_bases',
-      name: 'relay_connection_bases_active_deadline'
+      name: 'relay_connection_bases_active_deadline',
+      skipWhen: 'present'
     })
   })
 
   it.each([
     ['CREATE TABLE IF NOT EXISTS t (id TEXT)'],
-    ['ALTER TABLE t ADD CONSTRAINT c CHECK (x > 0)'],
-    ['ALTER TABLE t DROP CONSTRAINT IF EXISTS c'],
     ['ALTER TABLE t ALTER COLUMN c SET DEFAULT 0']
   ])('leaves %s alone, because no target is expected of it', (statement) => {
     expect(requireSchemaLockTarget(statement)).toBeUndefined()

@@ -3,9 +3,12 @@
 // statement wrote it, schema qualification and quoting included, because it is fed to
 // `to_regclass`; `name` is the bare identifier the catalog stores in `relname`/`attname`.
 export type SchemaLockTarget = {
-  kind: 'index' | 'column'
+  kind: 'index' | 'column' | 'constraint'
   table: string
   name: string
+  // The catalog answer that means this statement has nothing left to do. Creating statements skip
+  // on present; `DROP CONSTRAINT IF EXISTS` is the inverse, because nothing to drop is done.
+  skipWhen: 'present' | 'absent'
 }
 
 // Keywords that sit in an identifier position when the optional clause before them is absent.
@@ -36,6 +39,19 @@ const ADD_COLUMN = new RegExp(
     `ADD\\s+COLUMN\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${QUALIFIED}`,
   'i'
 )
+const ADD_CONSTRAINT = new RegExp(
+  `^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?${QUALIFIED}\\s+` +
+    `ADD\\s+CONSTRAINT\\s+${QUALIFIED}`,
+  'i'
+)
+// `IF EXISTS` is required, not optional. A bare `DROP CONSTRAINT` on a missing constraint is an
+// error the server is supposed to raise, and skipping it would swallow that. Without a target the
+// statement throws at boot instead, which tells the author to write `IF EXISTS`.
+const DROP_CONSTRAINT = new RegExp(
+  `^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?${QUALIFIED}\\s+` +
+    `DROP\\s+CONSTRAINT\\s+IF\\s+EXISTS\\s+${QUALIFIED}`,
+  'i'
+)
 
 // Every statement shape that takes a relation lock before Postgres evaluates its existence test.
 // `CREATE TABLE IF NOT EXISTS` is absent on purpose: it resolves a name against the schema and
@@ -57,7 +73,9 @@ function bareIdentifier(written: string): string {
 // rather than falling through to the lock path.
 const MUST_PARSE = [
   /^CREATE\s+(?:UNIQUE\s+)?INDEX\b/i,
-  /^ALTER\s+TABLE\b[\s\S]*\bADD\s+COLUMN\b/i
+  /^ALTER\s+TABLE\b[\s\S]*\bADD\s+COLUMN\b/i,
+  /^ALTER\s+TABLE\b[\s\S]*\bADD\s+CONSTRAINT\b/i,
+  /^ALTER\s+TABLE\b[\s\S]*\bDROP\s+CONSTRAINT\b/i
 ]
 
 // Derived from the statement itself so a renamed index cannot drift away from its pre-check.
@@ -65,11 +83,29 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
   const sql = sqlWithoutLeadingComments(statement)
   const index = CREATE_INDEX.exec(sql)
   if (index?.[1] && index[2]) {
-    return { kind: 'index', table: index[2], name: bareIdentifier(index[1]) }
+    return { kind: 'index', table: index[2], name: bareIdentifier(index[1]), skipWhen: 'present' }
   }
   const column = ADD_COLUMN.exec(sql)
   if (column?.[1] && column[2]) {
-    return { kind: 'column', table: column[1], name: bareIdentifier(column[2]) }
+    return { kind: 'column', table: column[1], name: bareIdentifier(column[2]), skipWhen: 'present' }
+  }
+  const added = ADD_CONSTRAINT.exec(sql)
+  if (added?.[1] && added[2]) {
+    return {
+      kind: 'constraint',
+      table: added[1],
+      name: bareIdentifier(added[2]),
+      skipWhen: 'present'
+    }
+  }
+  const dropped = DROP_CONSTRAINT.exec(sql)
+  if (dropped?.[1] && dropped[2]) {
+    return {
+      kind: 'constraint',
+      table: dropped[1],
+      name: bareIdentifier(dropped[2]),
+      skipWhen: 'absent'
+    }
   }
   return undefined
 }
