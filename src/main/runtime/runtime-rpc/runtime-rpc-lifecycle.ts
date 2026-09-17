@@ -164,6 +164,8 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
     port: number
     preferPinnedPort: boolean
     fallbackPort?: number
+    // Why: a rebind must keep the port it is replacing; only the first bind of a session may relocate (STA-7721).
+    allowOsAssignedPortFallback?: boolean
   }): Promise<{ transport: WebSocketTransport; endpoint: string }> {
     const deviceRegistry = this.deviceRegistry
     const e2eeKeypair = this.e2eeKeypair
@@ -175,7 +177,10 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
       port: options.port,
       staticRoot: this.webClientRoot,
       ...(options.fallbackPort !== undefined ? { fallbackPort: options.fallbackPort } : {}),
-      ...(options.preferPinnedPort ? { preferPinnedPort: true } : {})
+      ...(options.preferPinnedPort ? { preferPinnedPort: true } : {}),
+      ...(options.allowOsAssignedPortFallback === false
+        ? { allowOsAssignedPortFallback: false }
+        : {})
     })
     const mobileSocketWiring = this.ensureMobileSocketWiring(deviceRegistry, e2eeKeypair)
     this.detachWebSocketWiring = mobileSocketWiring.attachTransport(wsTransport)

@@ -41,6 +41,10 @@ export type WebSocketTransportOptions = {
   fallbackPort?: number
   // Why: serve --port clients dial the pinned port; prefer it first so a stale fallback can't steal the pin (issue #8535). Default keeps fallback-first (STA-1511).
   preferPinnedPort?: boolean
+  // Why: an OS-assigned port relocates the listener, which is only safe on the FIRST bind of a session — no
+  // endpoint has been published yet. A rebind of a listener whose port is already advertised must set this
+  // false and let the bind failure surface instead of silently moving off that port (STA-7721). Default true.
+  allowOsAssignedPortFallback?: boolean
 }
 
 export class WebSocketTransport implements RpcTransport {
@@ -53,6 +57,7 @@ export class WebSocketTransport implements RpcTransport {
   private readonly staticRoot: string | undefined
   private readonly fallbackPort: number | undefined
   private readonly preferPinnedPort: boolean
+  private readonly allowOsAssignedPortFallback: boolean
   private httpServer: HttpsServer | HttpServer | null = null
   private wss: WebSocketServer | null = null
   private messageHandler: WebSocketMessageHandler | null = null
@@ -74,7 +79,8 @@ export class WebSocketTransport implements RpcTransport {
     preAuthTimeoutMs,
     staticRoot,
     fallbackPort,
-    preferPinnedPort
+    preferPinnedPort,
+    allowOsAssignedPortFallback
   }: WebSocketTransportOptions) {
     this.host = host
     this.port = port
@@ -89,6 +95,7 @@ export class WebSocketTransport implements RpcTransport {
     this.staticRoot = staticRoot
     this.fallbackPort = fallbackPort
     this.preferPinnedPort = preferPinnedPort === true
+    this.allowOsAssignedPortFallback = allowOsAssignedPortFallback !== false
   }
 
   onMessage(handler: WebSocketMessageHandler): void {
@@ -155,9 +162,13 @@ export class WebSocketTransport implements RpcTransport {
         return
       } catch (error: unknown) {
         // Why: a persisted fallback may fail for any reason, while configured ports fall through only when their listen is occupied or denied.
+        // Why the second clause: STA-7721 — with relocation off the last candidate has nowhere to fall through
+        // TO. An OS-assigned port would report success while leaving the endpoint the caller already advertised
+        // unserved, and would then be persisted as the fallback that binds first on every later launch.
         if (
-          port !== persistedFallbackPort &&
-          (!isPortListenFallbackError(error, port) || port === 0)
+          (port !== persistedFallbackPort &&
+            (!isPortListenFallbackError(error, port) || port === 0)) ||
+          (!this.allowOsAssignedPortFallback && port === candidatePorts.at(-1))
         ) {
           throw error
         }

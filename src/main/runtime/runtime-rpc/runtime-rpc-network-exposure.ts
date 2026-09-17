@@ -53,7 +53,12 @@ export class RuntimeRpcNetworkExposure extends RuntimeRpcLifecycle {
       widened = await this.startWebSocketTransport({
         host: WS_BIND_HOST_ALL_INTERFACES,
         port: previousPort,
-        preferPinnedPort: true
+        preferPinnedPort: true,
+        // Why: STA-7721 — previousPort is already published in metadata and in every offer minted so far, so
+        // an OS-assigned port here would "succeed" onto an endpoint nobody holds: the caller advertises LAN
+        // reach, nothing logs a failure, wsBoundHost latches to 0.0.0.0, and the random port gets persisted
+        // as the fallback for later launches. Fail instead and let the caller report the offer unavailable.
+        allowOsAssignedPortFallback: false
       })
     } catch (error) {
       // Why: the wide bind failed after the loopback listener was already stopped. Restore a serving
@@ -98,7 +103,12 @@ export class RuntimeRpcNetworkExposure extends RuntimeRpcLifecycle {
       restored = await this.startWebSocketTransport({
         host: WS_BIND_HOST_LOOPBACK,
         port: previousPort,
-        preferPinnedPort: true
+        preferPinnedPort: true,
+        // Why: STA-7721 — restoring means the SAME port, not any port. An OS-assigned one would leave the
+        // runtime quietly relocated (and a later successful widen would then adopt and persist that drift),
+        // whereas the branch below drops the transport, which downstream reports as websocket_unavailable.
+        // It also keeps this path free of a fallback-port write: it never adopts a port start() didn't record.
+        allowOsAssignedPortFallback: false
       })
     } catch (recoveryError) {
       // Why: even the loopback restore failed — drop the dead WebSocket transport so we never advertise an
