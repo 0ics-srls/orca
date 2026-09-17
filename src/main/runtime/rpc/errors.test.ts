@@ -15,6 +15,7 @@ import {
   nestedWorkerDepthExceededMessage
 } from '../../../shared/nested-worker-depth'
 import { OrchestrationError } from '../orchestration/orchestration-error'
+import { AgentSessionPtyWriteRefusedError } from '../../../shared/agent-session-pty-write-admission'
 
 class LineageError extends Error {
   code = 'LINEAGE_PARENT_NOT_FOUND'
@@ -295,5 +296,75 @@ describe('structured worker dispatch preamble errors', () => {
         message: 'The dispatch preamble was not delivered: provider_write_failed: broken pipe.'
       }
     })
+  })
+})
+
+describe('history resume refused by an owner', () => {
+  const refusal = {
+    sessionId: 'orca-session-1',
+    ownerRuntimeKind: 'native' as const,
+    handoffStage: null,
+    ownerPid: 4242,
+    runtimeFence: 7
+  }
+  const context = { operation: 'history-resume' as const, workspaceId: 'ws-1' }
+
+  it('sends copy a reader can act on, keeping the code clients switch on', () => {
+    const failure = mapRuntimeError(
+      'req-1',
+      { runtimeId: 'runtime-1' },
+      new AgentSessionPtyWriteRefusedError({ ...refusal, code: 'agent_session_conflict' }, context)
+    )
+
+    // The defect this pins: without the mapping the reader is shown the token.
+    expect(failure.error.message).not.toContain('agent_session_conflict')
+    expect(failure.error.message).toBe(
+      'This session is already open in a chat. Open the chat to continue.'
+    )
+    expect(failure.error.code).toBe('agent_session_conflict')
+    expect(failure.error.data).toMatchObject({
+      operation: 'history-resume',
+      workspaceId: 'ws-1',
+      agentSessionRefusal: { sessionId: 'orca-session-1', ownerPid: 4242 }
+    })
+  })
+
+  it('asks an uncertain owner to reconnect rather than reporting it dead', () => {
+    const failure = mapRuntimeError(
+      'req-1',
+      { runtimeId: 'runtime-1' },
+      new AgentSessionPtyWriteRefusedError(
+        { ...refusal, code: 'agent_session_ownership_unknown' },
+        context
+      )
+    )
+
+    expect(failure.error.code).toBe('agent_session_ownership_unknown')
+    expect(failure.error.message).toContain('cannot confirm')
+    expect(failure.error.message).not.toMatch(/gone|exited|dead|closed/i)
+  })
+
+  it('names a terminal owner as a terminal, not a chat it cannot open', () => {
+    const failure = mapRuntimeError(
+      'req-1',
+      { runtimeId: 'runtime-1' },
+      new AgentSessionPtyWriteRefusedError(
+        { ...refusal, code: 'agent_session_conflict', ownerRuntimeKind: 'tui' },
+        context
+      )
+    )
+
+    expect(failure.error.message).toContain('terminal')
+    expect(failure.error.message).not.toContain('chat')
+  })
+
+  it('leaves a PTY-write refusal alone, since only history resume carries this context', () => {
+    const failure = mapRuntimeError(
+      'req-1',
+      { runtimeId: 'runtime-1' },
+      new AgentSessionPtyWriteRefusedError({ ...refusal, code: 'agent_session_conflict' })
+    )
+
+    expect(failure.error.message).toBe('agent_session_conflict')
   })
 })
