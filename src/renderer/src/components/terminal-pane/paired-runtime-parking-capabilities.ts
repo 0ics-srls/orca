@@ -1,5 +1,9 @@
 import { TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
-import { lastVerifiedRuntimeStatus } from '../../../../shared/runtime-host-status'
+import {
+  isRuntimeHostContactRevoked,
+  lastVerifiedRuntimeStatus,
+  type RuntimeHostStatusSnapshot
+} from '../../../../shared/runtime-host-status'
 
 type PairedRuntimeParkingCapability = { capabilities?: readonly string[] }
 
@@ -7,7 +11,12 @@ type PairedRuntimeParkingCapabilityStatuses = ReadonlyMap<
   string,
   {
     status: PairedRuntimeParkingCapability | null | undefined
-    snapshot?: { status: PairedRuntimeParkingCapability | null } | null
+    snapshot?:
+      | ({ status: PairedRuntimeParkingCapability | null } & Pick<
+          RuntimeHostStatusSnapshot,
+          'verification' | 'retired'
+        >)
+      | null
   }
 >
 
@@ -42,6 +51,11 @@ export function selectPairedRuntimeParkingEnvironmentIds(
   for (const [environmentId, entry] of statuses) {
     // Why last-verified: a capability is a fact about the host's build, so an unverifiable
     // probe must not unpark its terminals. See docs/reference/ssh-execution-boundary.md.
+    // Why the revoked gate: parking discards the client's only copy of the scrollback against
+    // a host-side restore, so a host that refused us must not keep promising one.
+    if (isRuntimeHostContactRevoked(entry)) {
+      continue
+    }
     const status = lastVerifiedRuntimeStatus<PairedRuntimeParkingCapability>(entry)
     if (status?.capabilities?.includes(TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY)) {
       capable.add(environmentId)

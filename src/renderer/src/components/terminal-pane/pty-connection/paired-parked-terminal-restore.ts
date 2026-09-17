@@ -2,7 +2,10 @@ import { useAppStore } from '@/store'
 import { TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY } from '../../../../../shared/protocol-version'
 import { getRemoteRuntimePtyEnvironmentId } from '@/runtime/runtime-terminal-stream'
 import { REMOTE_PTY_ID_PREFIX } from './pty-connect-limits'
-import { lastVerifiedRuntimeStatus } from '../../../../../shared/runtime-host-status'
+import {
+  isRuntimeHostContactRevoked,
+  lastVerifiedRuntimeStatus
+} from '../../../../../shared/runtime-host-status'
 
 export function isRemoteRuntimePtyId(ptyId: string | null | undefined): boolean {
   return typeof ptyId === 'string' && ptyId.startsWith(REMOTE_PTY_ID_PREFIX)
@@ -15,9 +18,11 @@ export function canRestorePairedParkedTerminal(ptyId: string): boolean {
   }
   // Why last-verified: losing contact mid-reattach would otherwise drop the parked session
   // and cold-restore a fresh one. See docs/reference/ssh-execution-boundary.md.
-  const status = lastVerifiedRuntimeStatus(
-    useAppStore.getState().runtimeStatusByEnvironmentId.get(environmentId)
-  )
+  const entry = useAppStore.getState().runtimeStatusByEnvironmentId.get(environmentId)
+  if (isRuntimeHostContactRevoked(entry)) {
+    return false
+  }
+  const status = lastVerifiedRuntimeStatus(entry)
   return status?.capabilities?.includes(TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY) === true
 }
 

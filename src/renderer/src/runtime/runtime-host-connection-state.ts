@@ -1,4 +1,7 @@
-import type { RuntimeHostStatusSnapshot } from '../../../shared/runtime-host-status'
+import {
+  isRuntimeHostContactRevoked,
+  type RuntimeHostStatusSnapshot
+} from '../../../shared/runtime-host-status'
 import type { RuntimeStatus } from '../../../shared/runtime-types'
 import { isRuntimeWorkspaceWindowClosed } from '../../../shared/runtime-workspace-window-availability'
 
@@ -120,7 +123,7 @@ export function runtimeHostConnectionStateForEntry(
 ): RuntimeHostConnectionState {
   const snapshot = entry?.snapshot
   if (snapshot) {
-    if (snapshot.retired || snapshot.verification === 'blocked') {
+    if (isRuntimeHostContactRevoked(entry)) {
       return 'disconnected'
     }
     if (snapshot.transport === 'disconnected') {
@@ -136,13 +139,12 @@ export function runtimeHostConnectionStateForEntry(
   return runtimeHostConnectionState({
     hasStatusEntry: Boolean(entry),
     status: entry?.status ?? null,
-    // Why: 'connecting'/'unknown' used to fall through to the default 'disconnected' and
-    // report a host still establishing contact as down. Absence of transport evidence is
-    // unverifiable, not exited — docs/reference/ssh-execution-boundary.md.
-    // 'disconnected' already returned above, so 'ready' is the only connected transport left.
-    ...(snapshot
-      ? { transportStatus: snapshot.transport === 'ready' ? 'connected' : 'checking' }
-      : {}),
+    // Why only 'connecting': a transport mid-handshake fell through to the default and
+    // reported a host still establishing contact as down. 'unknown' keeps that default on
+    // purpose — it means no transport was ever attempted, which for an unreachable paired
+    // host is the permanent state, and 'checking' there withdraws its Connect action and
+    // pins the status bar to "connecting" forever.
+    ...(snapshot?.transport === 'connecting' ? { transportStatus: 'checking' as const } : {}),
     remoteControl: entry?.remoteControl ?? entry?.status?.remoteControl ?? null
   })
 }

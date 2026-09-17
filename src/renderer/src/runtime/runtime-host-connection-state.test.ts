@@ -276,7 +276,9 @@ describe('snapshot transport evidence', () => {
     ['unknown', 'checking', 'checking'],
     // Was 'disconnected': a transport still being established fell through to the default.
     ['connecting', 'unavailable', 'checking'],
-    ['unknown', 'unavailable', 'checking']
+    // Deliberately unchanged: 'unknown' means no transport was ever attempted, which is the
+    // permanent state of an unreachable paired host. See the affordance test below.
+    ['unknown', 'unavailable', 'disconnected']
   ] as const)('reads transport=%s verification=%s as %s', (transport, verification, expected) => {
     expect(
       runtimeHostConnectionStateForEntry({
@@ -284,6 +286,19 @@ describe('snapshot transport evidence', () => {
         snapshot: snapshotWith(transport, verification)
       })
     ).toBe(expected)
+  })
+
+  // A paired host that is simply switched off never gets a shared-control connection, so its
+  // transport stays 'unknown' for the whole session. Calling that 'checking' withdrew the row's
+  // Connect action (RuntimeHostStatusRow returns no label for it) and held the status-bar
+  // segment in 'connecting', leaving the user a permanent spinner and nothing to click.
+  it('keeps a never-contacted host actionable after its probe fails', () => {
+    const state = runtimeHostConnectionStateForEntry({
+      status: null,
+      snapshot: snapshotWith('unknown', 'unavailable')
+    })
+    expect(isDisconnectedRuntimeHostState(state)).toBe(true)
+    expect(runtimeStatusForOverall(state)).toBe('disconnected')
   })
 
   it('still lets a blocked or retired snapshot reach the disconnected verdict', () => {

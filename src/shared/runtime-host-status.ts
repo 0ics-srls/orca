@@ -42,6 +42,22 @@ export function lastVerifiedRuntimeStatus<Status = RuntimeStatus>(
   return entry?.snapshot?.status ?? entry?.status ?? null
 }
 
+/**
+ * The host's own verdict that this pairing is over: retired by an explicit disconnect, or
+ * refused — auth rejected or protocol mismatch, which stops every retry for good. Positive
+ * evidence, unlike a lost transport, so this is the only state that may withdraw a fact the
+ * host already gave us (docs/reference/ssh-execution-boundary.md).
+ */
+export function isRuntimeHostContactRevoked(
+  entry:
+    | { snapshot?: Pick<RuntimeHostStatusSnapshot, 'verification' | 'retired'> | null }
+    | null
+    | undefined
+): boolean {
+  const snapshot = entry?.snapshot
+  return Boolean(snapshot && (snapshot.retired || snapshot.verification === 'blocked'))
+}
+
 export type RuntimeHostStatusResponse = RuntimeRpcResponse<RuntimeStatus>
 
 export function runtimeHostStatusFailure(code: string, message: string): RuntimeRpcFailure {

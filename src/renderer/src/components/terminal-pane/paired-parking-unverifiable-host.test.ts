@@ -60,6 +60,30 @@ describe('paired parking capability through an unverifiable probe', () => {
     ).toEqual(new Set())
   })
 
+  // Parking unmounts the pane and discards the client's only copy of the scrollback, trading it
+  // for a host-side restore. A refused host retries nothing ever again, so that restore cannot
+  // happen — keeping it "capable" spends the scrollback on a promise no one can keep.
+  it.each(['blocked', 'retired'] as const)(
+    'drops a %s host that can no longer honour a restore',
+    (kind) => {
+      expect(
+        selectPairedRuntimeParkingEnvironmentIds(
+          new Map([
+            [
+              ENVIRONMENT_ID,
+              {
+                status: null,
+                snapshot: verifiedSnapshot(
+                  kind === 'blocked' ? { verification: 'blocked' } : { retired: true }
+                )
+              }
+            ]
+          ])
+        )
+      ).toEqual(new Set())
+    }
+  )
+
   it('still reads a live entry with no snapshot', () => {
     expect(
       selectPairedRuntimeParkingEnvironmentIds(
@@ -84,6 +108,25 @@ describe('paired parked terminal restore through an unverifiable probe', () => {
       ])
     })
     expect(canRestorePairedParkedTerminal(`remote:${ENVIRONMENT_ID}/pty-1`)).toBe(true)
+  })
+
+  it.each(['blocked', 'retired'] as const)('refuses a %s host', async (kind) => {
+    const { canRestorePairedParkedTerminal } =
+      await import('./pty-connection/paired-parked-terminal-restore')
+    getState.mockReturnValue({
+      runtimeStatusByEnvironmentId: new Map([
+        [
+          ENVIRONMENT_ID,
+          {
+            status: null,
+            snapshot: verifiedSnapshot(
+              kind === 'blocked' ? { verification: 'blocked' } : { retired: true }
+            )
+          }
+        ]
+      ])
+    })
+    expect(canRestorePairedParkedTerminal(`remote:${ENVIRONMENT_ID}/pty-1`)).toBe(false)
   })
 
   it('refuses a host that never advertised the capability', async () => {
