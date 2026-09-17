@@ -258,12 +258,12 @@ describe('handshake round-trip over a real Socket pair', () => {
     const hostile = connect(sockPath)
     await new Promise<void>((r) => hostile.once('connect', () => r()))
     const hostileClosed = new Promise<void>((r) => hostile.once('close', () => r()))
-    hostile.write(
-      encodeHandshakeFrame(
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: deliberately a lie. This is the frame a hostile peer sends and the type system cannot describe; the cast is what lets the encoder put it on the wire.
-        JSON.parse('{"type":"orca-relay-handshake","version":{"toString":1}}') as HandshakeMessage
-      )
+    // The annotation is deliberately a lie: this is the frame a hostile peer sends, and
+    // HandshakeMessage cannot describe it. JSON.parse answers `any`, so it needs no assertion.
+    const hostileFrame: HandshakeMessage = JSON.parse(
+      '{"type":"orca-relay-handshake","version":{"toString":1}}'
     )
+    hostile.write(encodeHandshakeFrame(hostileFrame))
     await hostileClosed
 
     const good = connect(sockPath)
