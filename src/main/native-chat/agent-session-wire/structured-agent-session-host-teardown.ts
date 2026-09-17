@@ -73,8 +73,8 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
       run: () => {
         try {
           collaborators.captureResumeMarkers()
-        } catch (error) {
-          console.warn('[structured-agent-session] capturing recovery witnesses failed', error)
+        } catch {
+          console.warn('[structured-agent-session] capturing recovery witnesses failed')
         }
       }
     },
@@ -94,8 +94,8 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
       name: 'record-resume-markers',
       run: () =>
         withPhaseTimeout(collaborators.recordResumeMarkers, RESUME_MARKER_RECORD_TIMEOUT_MS).catch(
-          (error: unknown) => {
-            console.warn('[structured-agent-session] recording recovery capsule failed', error)
+          () => {
+            console.warn('[structured-agent-session] recording recovery capsule failed')
           }
         )
     },

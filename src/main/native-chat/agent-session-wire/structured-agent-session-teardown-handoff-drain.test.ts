@@ -197,9 +197,9 @@ describe('structured agent-session host teardown', () => {
       await teardown
       expect(cleaned).toHaveBeenCalledTimes(5)
       expect(warning).toHaveBeenCalledWith(
-        '[structured-agent-session] recording recovery capsule failed',
-        expect.objectContaining({ message: expect.stringContaining('2000ms') })
+        '[structured-agent-session] recording recovery capsule failed'
       )
+      expect(vi.getTimerCount()).toBe(0)
     } finally {
       pending.resolve()
       warning.mockRestore()

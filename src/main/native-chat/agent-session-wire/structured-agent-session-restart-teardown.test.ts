@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import { attach, hostTestState } from './structured-agent-session-host-test-harness'
 import { pendingApproval } from './structured-agent-session-restart-resume-test-harness'
@@ -7,6 +7,34 @@ import {
   HOST_TEST_SESSION as SESSION,
   HOST_TEST_THREAD as THREAD
 } from './structured-agent-session-host-test-data'
+
+it.each(['captureMarkers', 'recordMarkers'] as const)(
+  'keeps private %s failures out of logs while completing teardown',
+  async (method) => {
+    await attach()
+    const { host, store } = hostTestState()
+    const failure = new Error('private recovery payload at /private/account/session.json')
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const operation = vi.spyOn(host.restartResume, method).mockImplementation(() => {
+      throw failure
+    })
+    try {
+      await expect(host.flushAllStreamedEvents()).resolves.toBeUndefined()
+      expect(operation).toHaveBeenCalledOnce()
+      expect(warning).toHaveBeenCalledExactlyOnceWith(
+        method === 'captureMarkers'
+          ? '[structured-agent-session] capturing recovery witnesses failed'
+          : '[structured-agent-session] recording recovery capsule failed'
+      )
+      expect(warning.mock.calls.flat().map(String).join(' ')).not.toContain(failure.message)
+      expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+      expect(() => host.journalSnapshot(SESSION)).toThrow('agent_session_ownership_unknown')
+    } finally {
+      operation.mockRestore()
+      warning.mockRestore()
+    }
+  }
+)
 
 it.each(['approval', 'question', 'completed'])(
   'does not offer work with an accepted %s event queued at quit',

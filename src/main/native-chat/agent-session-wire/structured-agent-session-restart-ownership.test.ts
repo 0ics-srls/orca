@@ -563,9 +563,9 @@ it('logs teardown capsule publication failure and still releases the provider', 
   await expect(previous.host.flushAllStreamedEvents()).resolves.toBeUndefined()
   expect(() => previous.host.journalSnapshot(SESSION)).toThrow('agent_session_ownership_unknown')
   expect(warning).toHaveBeenCalledWith(
-    '[structured-agent-session] recording recovery capsule failed',
-    expect.any(Error)
+    '[structured-agent-session] recording recovery capsule failed'
   )
+  expect(warning.mock.calls.flat().map(String).join(' ')).not.toContain(previous.root)
   expect(previous.store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
   warning.mockRestore()
   await rm(capsulePath, { recursive: true })
