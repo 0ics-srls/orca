@@ -319,6 +319,30 @@ describe('claude journal translation — background task rows', () => {
     expect(taskRowTexts().at(-1)).toBe(SUMMARY)
   })
 
+  it('reports a failure for a task nothing in this transcript ever admitted', () => {
+    // The captured frame from a session where NOTHING rendered: the typed path
+    // declined the row and told the fallback the frame was covered, so the
+    // failure reached neither surface.
+    const { translator, fallbackRows, taskRowIds, taskRowTexts } = harness()
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'bjzenpq13',
+        tool_use_id: 'toolu_01ASNfnDBEzt4w3ejLE12bGu',
+        status: 'failed',
+        output_file: '',
+        summary: 'Locate the exact screenshot session',
+        uuid: '1d748563-5741-4aa8-9c21-7023b90bc737'
+      })
+    )
+
+    expect(taskRowIds()).toEqual(['claude-background-task:bjzenpq13'])
+    expect(taskRowTexts().at(-1)).toBe('Locate the exact screenshot session')
+    // One row, not two: the typed row is real coverage, so the generic fallback
+    // stays quiet beside it rather than printing the opcode.
+    expect(fallbackRows()).toEqual([])
+  })
+
   it('keeps the aggregate roster frame off the transcript even when it carries a failure', () => {
     const { translator, fallbackRows, taskRowIds } = harness()
     translator.handle(

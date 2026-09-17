@@ -108,7 +108,14 @@ function rememberClaudeBackgroundTaskTerminal(
   }
 }
 
-export type ForeignOwner = 'roster' | 'ambient' | 'foreground'
+/** Who renders a task this owner deliberately declined.
+ *
+ *  `sidechain` is a Task spawned inside a subagent's own run: its spawning tool
+ *  never reached the top-level transcript, so no top-level row may claim it.
+ *  `fallback` is a task whose outcome was already printed by the generic
+ *  provider-frame row because no typed slot was free; its redeliveries must not
+ *  print again, and must not mint the typed row that was declined. */
+export type ForeignOwner = 'roster' | 'ambient' | 'foreground' | 'sidechain' | 'fallback'
 
 /** How much each ledger is holding. Named and readonly so a caller can prove
  *  eviction still bounds them without reaching into the collections. */

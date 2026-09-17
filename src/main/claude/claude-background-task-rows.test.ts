@@ -1,91 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
-import type {
-  AgentJournalItemBody,
-  AgentJournalItemIdentity
-} from '../../shared/agent-session-journal-types'
-import type { NativeChatBackgroundTaskBlock } from '../../shared/native-chat-types'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
-import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
-
-/** The exact payloads the user's journal carried for the reported failure. */
-const FAILED_UPDATE = {
-  type: 'system',
-  subtype: 'task_updated',
-  task_id: 'byjnee2no',
-  patch: { status: 'failed', end_time: 1_789_332_035_695 }
-}
-const FAILED_NOTIFICATION = {
-  type: 'system',
-  subtype: 'task_notification',
-  task_id: 'byjnee2no',
-  tool_use_id: 'toolu_01CqPd7y',
-  status: 'failed',
-  output_file: '/private/tmp/claude-501/tasks/byjnee2no.output',
-  summary: 'Background command "Wait for the verification verdict" failed with exit code 1'
-}
-
-function blockOf(body: AgentJournalItemBody | undefined): NativeChatBackgroundTaskBlock | null {
-  if (!body || body.kind !== 'message') {
-    return null
-  }
-  const block = body.blocks.find(
-    (candidate): candidate is NativeChatBackgroundTaskBlock => candidate.type === 'background-task'
-  )
-  return block ?? null
-}
-
-function twinOf(body: AgentJournalItemBody | undefined): string | null {
-  if (!body || body.kind !== 'message') {
-    return null
-  }
-  const block = body.blocks.find((candidate) => candidate.type === 'text')
-  return block?.type === 'text' ? block.text : null
-}
-
-/** The spawn call the harness treats as forwarded to the top-level transcript.
- *  Admission consults this, so a test that wants a row must name it. */
-const FORWARDED_TOOL = 'toolu_01CqPd7y'
-
-function harness(forwarded: readonly string[] = [FORWARDED_TOOL, 'toolu_first', 'toolu_second']) {
-  const items: { identity: AgentJournalItemIdentity; body: AgentJournalItemBody }[] = []
-  const turnOpens: number[] = []
-  const sink: StructuredAgentSessionEventSink = {
-    appendItem: (identity, body) => items.push({ identity, body }),
-    appendTombstone: vi.fn(),
-    publish: vi.fn()
-  }
-  let clock = 1_000
-  const forwardedTools = new Set(forwarded)
-  const rows = new ClaudeBackgroundTaskRows({
-    sink,
-    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
-    openOutputTurn: () => turnOpens.push(1),
-    now: () => (clock += 10)
-  })
-  const keys = (): string[] =>
-    items.map((item) =>
-      item.identity.provider === 'orca' ? item.identity.clientMessageId : item.identity.provider
-    )
-  return {
-    rows,
-    items,
-    keys,
-    forwardedTools,
-    latest: () => blockOf(items.at(-1)?.body),
-    latestTwin: () => twinOf(items.at(-1)?.body),
-    turnOpens
-  }
-}
-
-const START_BASH = {
-  type: 'system',
-  subtype: 'task_started',
-  task_id: 'byjnee2no',
-  tool_use_id: 'toolu_01CqPd7y',
-  task_type: 'local_bash',
-  description: 'Wait for the verification verdict',
-  is_backgrounded: true
-}
+import { describe, expect, it } from 'vitest'
+import {
+  FAILED_NOTIFICATION,
+  FAILED_UPDATE,
+  FORWARDED_TOOL,
+  harness,
+  START_BASH
+} from './claude-background-task-row-test-support'
 
 describe('claude background task rows', () => {
   it('reports one failed backgrounded command as ONE row carrying the provider sentence', () => {
@@ -140,104 +60,6 @@ describe('claude background task rows', () => {
     expect(latestTwin()).toBe("Check the verifier's state")
   })
 
-  it('drops a terminal frame for a task that was never admitted', () => {
-    // Matched on `task_id` alone. The forwarded-parent question was settled at
-    // admission and is never re-asked here, so a frame naming nothing this
-    // transcript tracks yields no row rather than inventing one.
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'never-admitted',
-      status: 'failed',
-      summary: 'orphan failure'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('writes nothing for a silent success it never saw start', () => {
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'quiet-1',
-      status: 'completed'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('leaves agent tasks to the subagent roster', () => {
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_started',
-      task_id: 'task-agent',
-      task_type: 'local_agent',
-      subagent_type: 'explorer',
-      description: 'Map the lane'
-    })
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'task-agent',
-      status: 'failed',
-      summary: 'the child failed'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('leaves legacy local_subagent tasks to the subagent roster', () => {
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_started',
-      task_id: 'task-legacy-agent',
-      task_type: 'local_subagent',
-      subagent_type: 'explorer'
-    })
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'task-legacy-agent',
-      status: 'failed',
-      summary: 'the child failed'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('writes nothing for ambient housekeeping the user never asked for', () => {
-    const { rows, items } = harness()
-    rows.observe({ ...START_BASH, task_id: 'ambient-1', ambient: true })
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'ambient-1',
-      status: 'failed'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('leaves foreground commands to the ordinary transcript path', () => {
-    const { rows, items } = harness()
-    expect(
-      rows.observe({
-        ...START_BASH,
-        task_id: 'foreground-1',
-        is_backgrounded: false
-      })
-    ).toBe(true)
-    expect(
-      rows.observe({
-        type: 'system',
-        subtype: 'task_notification',
-        task_id: 'foreground-1',
-        status: 'failed',
-        summary: 'foreground command failed'
-      })
-    ).toBe(true)
-    expect(items).toEqual([])
-  })
-
   it('keeps terminal ownership after a tracked task reports foregrounded', () => {
     const { rows, latest } = harness()
     rows.observe(START_BASH)
@@ -288,32 +110,6 @@ describe('claude background task rows', () => {
         patch: { status: 'failed', description: 'Check logs', error: 'boom' }
       })
     ).toBe(true)
-    expect(items).toEqual([])
-  })
-
-  it('does not resurrect a task whose terminal edge arrived before its start', () => {
-    const { rows, items } = harness()
-    expect(
-      rows.observe({
-        type: 'system',
-        subtype: 'task_notification',
-        task_id: 'done-before-start',
-        status: 'completed'
-      })
-    ).toBe(true)
-    expect(rows.observe({ ...START_BASH, task_id: 'done-before-start' })).toBe(true)
-    expect(items).toEqual([])
-  })
-
-  it('does not resurrect after a terminal update that arrived before start', () => {
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_updated',
-      task_id: 'updated-before-start',
-      patch: { status: 'completed' }
-    })
-    rows.observe({ ...START_BASH, task_id: 'updated-before-start' })
     expect(items).toEqual([])
   })
 
@@ -790,46 +586,6 @@ describe('claude background task rows', () => {
     expect(rows.observe({ type: 'assistant' })).toBe(false)
     expect(rows.observe({ type: 'system', subtype: 'task_started', task_id: 'x' })).toBe(true)
   })
-  it('refuses a nested child whose spawning tool was never forwarded', () => {
-    // A Task spawned inside a subagent's sidechain names a tool id that only
-    // exists in that sidechain. A top-level row for it would claim an
-    // invocation the user never saw.
-    const { rows, items } = harness([])
-    rows.observe({ ...START_BASH, task_id: 'nested-1', tool_use_id: 'toolu_sidechain' })
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'nested-1',
-      tool_use_id: 'toolu_sidechain',
-      status: 'failed',
-      summary: 'the nested child failed'
-    })
-    expect(items).toEqual([])
-  })
-
-  it('never lets a monitor reach the timeline', () => {
-    // A monitor is Claude's own housekeeping: it runs for the life of the
-    // session and has no outcome a transcript row could report.
-    const { rows, items } = harness()
-    rows.observe({
-      type: 'system',
-      subtype: 'task_started',
-      task_id: 'monitor-1',
-      tool_use_id: FORWARDED_TOOL,
-      task_type: 'monitor',
-      description: 'Watch the build',
-      is_backgrounded: true
-    })
-    rows.observe({
-      type: 'system',
-      subtype: 'task_notification',
-      task_id: 'monitor-1',
-      status: 'failed',
-      summary: 'monitor stopped'
-    })
-    expect(items).toEqual([])
-  })
-
   it('admits a task type it does not recognise as no task at all', () => {
     const { rows, items } = harness()
     rows.observe({ ...START_BASH, task_id: 'weird-1', task_type: 'local_teleport' })

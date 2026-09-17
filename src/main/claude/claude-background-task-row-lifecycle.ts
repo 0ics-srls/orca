@@ -119,6 +119,28 @@ export function newClaudeBackgroundTaskRow(
   }
 }
 
+/** The row a terminal notification opens on its own.
+ *
+ *  A terminal frame is self-sufficient: it states an outcome the transcript owes
+ *  the user whether or not an announcement ever admitted the task, so the row is
+ *  built from the frame's own fields — its summary as the label, its status as
+ *  the state, its error, output path and usage. */
+export function newClaudeBackgroundTaskRowFromNotification(
+  id: string,
+  message: Record<string, unknown>,
+  now: number,
+  generation: number
+): ClaudeBackgroundTaskRow {
+  const row = newClaudeBackgroundTaskRow(id, message, now, generation)
+  reviseClaudeBackgroundTaskRow(
+    row,
+    { ...claudeBackgroundTaskNotificationChange(message), label: taskText(message.summary) },
+    now
+  )
+  row.terminalNotificationReceived = true
+  return row
+}
+
 export function shouldRestartClaudeBackgroundTaskRow(
   row: ClaudeBackgroundTaskRow,
   message: Record<string, unknown>
@@ -127,7 +149,11 @@ export function shouldRestartClaudeBackgroundTaskRow(
     return false
   }
   const toolUseId = claudeBackgroundTaskToolUseId(message)
-  return toolUseId !== undefined && toolUseId !== row.toolUseId
+  // One rule for a restart, the same one the terminal ledger applies to a row
+  // that has already been evicted: only when BOTH runs name their parent is a
+  // different alias the provider's restart signal. A finished run that named no
+  // parent cannot be proved distinct from this announcement, so it stands.
+  return row.toolUseId !== undefined && toolUseId !== undefined && toolUseId !== row.toolUseId
 }
 
 /** Task types the transcript materializes as a row.

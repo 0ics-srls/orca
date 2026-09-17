@@ -17,6 +17,7 @@ import {
   canonicalClaudeBackgroundTaskId,
   isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
+  newClaudeBackgroundTaskRowFromNotification,
   reviseClaudeBackgroundTaskRow,
   shouldRestartClaudeBackgroundTaskRow,
   type ClaudeBackgroundTaskChange,
@@ -190,6 +191,10 @@ export class ClaudeBackgroundTaskRows {
       restartedTerminal = true
     }
     if (!this.admitsFirstRun(message)) {
+      // The refusal is recorded, not forgotten: the task belongs to the
+      // sidechain that spawned it, so its later frames find an owner here
+      // instead of looking like a task nothing ever decided about.
+      this.ledgers.rememberForeign(id, 'sidechain')
       return true
     }
     if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
@@ -227,25 +232,45 @@ export class ClaudeBackgroundTaskRows {
     if (this.ledgers.fallbackTaskIds.has(id)) {
       this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
       this.ledgers.fallbackTaskIds.delete(id)
+      // The generic fallback has now printed this outcome, so the task is owned
+      // elsewhere: a redelivery must neither print again nor mint the typed row
+      // capacity refused. A restart announcement still lifts this, as it lifts
+      // every other foreign owner.
+      this.ledgers.rememberForeign(id, 'fallback')
       return false
     }
     const row = this.rows.get(id)
     if (row && row.terminalNotificationReceived) {
       return true
     }
-    // Remembered even for a task never admitted: Orca is deliberately stricter
-    // than the reference here, which keeps no trace of one. It stops a late
-    // announcement from opening a row for work already reported finished.
+    // Remembered even for a task never admitted. It scopes the anti-resurrection
+    // guard to ANNOUNCEMENTS: a late `task_started` cannot reopen work already
+    // reported finished, which is a different thing from this frame stating the
+    // outcome itself.
     this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
     if (!row) {
-      // Matched on `task_id` alone. A terminal frame for a task that was never
-      // admitted names nothing this transcript is tracking, so it yields no
-      // row — the forwarded-parent question was already settled at admission
-      // and is never re-asked here.
-      return true
+      return this.openTerminalRow(id, message)
     }
     this.revise(id, claudeBackgroundTaskNotificationChange(message))
     row.terminalNotificationReceived = true
+    return true
+  }
+
+  /** The row a terminal frame opens for itself. A task the transcript never
+   *  admitted still owes the user its outcome, and the frame carries everything
+   *  that outcome needs, so the row map only ever ENRICHES one — a missing entry
+   *  is not a reason to render nothing. */
+  private openTerminalRow(id: string, message: Record<string, unknown>): boolean {
+    if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
+      this.ledgers.rememberFallback(id)
+      return false
+    }
+    const generation = this.ledgers.generations.next(id)
+    this.rows.set(
+      id,
+      newClaudeBackgroundTaskRowFromNotification(id, message, this.now(), generation)
+    )
+    this.write(id)
     return true
   }
 
