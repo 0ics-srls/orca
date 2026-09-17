@@ -26,6 +26,7 @@ import type WebSocket from 'ws'
 import type { RawData } from 'ws'
 import type { RelayConfig } from './config.js'
 import type { RelayAssignmentStore } from './assignment-store.js'
+import { ControlRenewalBatch } from './control-renewal-batch.js'
 import { RelayCredentialStore, type CredentialReservation } from './credential-store.js'
 import { HostCloseReasonMemory } from './host-close-reason-memory.js'
 import { relayHostLogDigest } from './relay-host-log-digest.js'
@@ -302,6 +303,15 @@ export class HostSessionRegistry {
     private readonly random: () => number = Math.random,
     private readonly cellIncarnation?: string
   ) {}
+
+  // Renewals leave the heartbeat as an enqueue: one statement per cell per
+  // window replaces one write transaction per host, which is what keeps the
+  // shared PostgreSQL instance out of buffer-header contention.
+  private readonly controlRenewals = new ControlRenewalBatch(
+    async (rows) => await this.assignments.renewControlActivities(rows),
+    () => this.logIdentity(),
+    (flush) => this.observer.recordControlRenewalFlush?.(flush)
+  )
 
   // Uniform over [CONTROL_LEASE_MS - jitter, CONTROL_LEASE_MS + jitter).
   private controlLeaseExpiresAt(): number {
@@ -1384,15 +1394,13 @@ export class HostSessionRegistry {
         session.controlActivityId === controlActivityId &&
         session.authorityRevision === authorityRevision &&
         attempt > session.activityRenewalCompletedAttempt
-      void this.assignments
-        .renewControlActivity(
-          { userId: session.identity.sub, relayHostId: session.relayHostId },
-          {
-            activityId: controlActivityId,
-            cellId: this.config.cellId,
-            expiresAt: startedAt + CONTROL_ACTIVITY_LEASE_MS
-          }
-        )
+      void this.controlRenewals
+        .enqueue({
+          identity: { userId: session.identity.sub, relayHostId: session.relayHostId },
+          activityId: controlActivityId,
+          cellId: this.config.cellId,
+          expiresAt: startedAt + CONTROL_ACTIVITY_LEASE_MS
+        })
         .then(() => {
           if (!current()) return
           session.activityRenewalCompletedAttempt = attempt

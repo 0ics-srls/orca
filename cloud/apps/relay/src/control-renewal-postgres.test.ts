@@ -1,6 +1,7 @@
 import { ASSIGNMENT_LIMITS, RELAY_PROTOCOL_LIMITS } from '@orca-cloud/relay-contract'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { RelayAssignmentStore } from './assignment-store.js'
+import { CONTROL_RENEWAL_BATCH_SQL } from './control-renewal-statement.js'
 import {
   openRelayDatabase,
   type RelayDatabase,
@@ -22,7 +23,9 @@ const targetCell = {
   capacityRequests: 100
 }
 const userId = 'control-renewal-postgres-user'
-const identities = Array.from({ length: 6 }, (_, index) => ({
+// Indexes 0-5 belong to the single-renewal cases below, which mutate their
+// host's migration and lease state; the batch cases own 6-10.
+const identities = Array.from({ length: 11 }, (_, index) => ({
   userId,
   relayHostId: `controlrenewal${index + 1}`
 }))
@@ -72,7 +75,7 @@ class StallFirstRenewalQueryDatabase implements RelayDatabase {
   constructor(private readonly database: RelayDatabase) {}
 
   async query(sql: string, params?: unknown[]): Promise<SqlRow[]> {
-    if (this.stallNext && sql.includes('WITH assignment_state AS MATERIALIZED')) {
+    if (this.stallNext && sql === CONTROL_RENEWAL_BATCH_SQL) {
       this.stallNext = false
       this.stalled.resolve()
       await this.continue.promise
@@ -103,7 +106,7 @@ class RenewalQueryProbeDatabase implements RelayDatabase {
   constructor(private readonly database: RelayDatabase) {}
 
   async query(sql: string, params?: unknown[]): Promise<SqlRow[]> {
-    if (sql.includes('WITH assignment_state AS MATERIALIZED')) this.renewalQueries++
+    if (sql === CONTROL_RENEWAL_BATCH_SQL) this.renewalQueries++
     return await this.database.query(sql, params)
   }
 
@@ -330,6 +333,64 @@ describePostgres('PostgreSQL control renewal', () => {
         expiresAt: maximumExpiry + 1
       })
     ).rejects.toThrow('invalid_activity_expiry')
+  })
+
+  it('renews every due host in one autocommitted statement', async () => {
+    const probe = new RenewalQueryProbeDatabase(database)
+    const store = new RelayAssignmentStore(probe, () => now)
+    const batch = identities.slice(6, 10)
+    now += 30_000
+    const expiresAt = now + 105_000
+
+    const outcomes = await store.renewControlActivities(
+      batch.map((identity) => ({
+        identity,
+        activityId: controlId(sourceCell.id),
+        cellId: sourceCell.id,
+        expiresAt
+      }))
+    )
+
+    expect(outcomes).toEqual(['renewed', 'renewed', 'renewed', 'renewed'])
+    expect(probe.renewalQueries).toBe(1)
+    expect(probe.transactions).toBe(0)
+    const leases = await database.query(
+      `SELECT relay_host_id, expires_at FROM relay_assignment_activity_leases
+       WHERE user_id = ? AND activity_id = ? ORDER BY relay_host_id ASC`,
+      [userId, controlId(sourceCell.id)]
+    )
+    expect(
+      leases
+        .filter((lease) =>
+          batch.some((identity) => identity.relayHostId === lease.relay_host_id)
+        )
+        .map((lease) => Number(lease.expires_at))
+    ).toEqual([expiresAt, expiresAt, expiresAt, expiresAt])
+  })
+
+  it('reports each host its own verdict inside one batch', async () => {
+    const store = new RelayAssignmentStore(database, () => now)
+    now += 30_000
+    const expiresAt = now + 105_000
+    const live = identities[10]!
+    const absent = { userId, relayHostId: 'controlrenewalgone' }
+
+    const outcomes = await store.renewControlActivities([
+      { identity: absent, activityId: controlId(sourceCell.id), cellId: sourceCell.id, expiresAt },
+      { identity: live, activityId: controlId(sourceCell.id), cellId: sourceCell.id, expiresAt },
+      {
+        identity: live,
+        activityId: controlId(targetCell.id),
+        cellId: targetCell.id,
+        expiresAt
+      }
+    ])
+
+    expect(outcomes).toEqual([
+      'assignment_not_found',
+      'renewed',
+      'activity_cell_not_authoritative'
+    ])
   })
 
   it('uses one autocommitted PostgreSQL statement for a steady renewal', async () => {
