@@ -73,22 +73,36 @@ function turnWasCutOff(turn: AgentJournalTurnLifecycle | null): boolean {
 }
 
 /**
- * The turn an accepted submission opened, or null when the journal cannot prove the link.
+ * Whether an ACCEPTED submission's work was cut off.
  *
  * A turn names the user item that opened it, and a submission the provider acknowledged is reached
- * through that key — the same alias the turn-timing selector resolves. Without both halves there is
- * no proof this turn is the marked work rather than an older one, so this refuses.
+ * through that key — the same alias the turn-timing selector resolves. When the newest turn names
+ * this submission, that turn is the evidence and the ordinary turn rule decides.
+ *
+ * When it does NOT name it, the submission opened no turn of its own: the marked send is the newest
+ * work in the session, so any turn it opened would be the newest turn. That leaves the newest turn
+ * belonging to an EARLIER exchange, and its state is what settles the question:
+ *
+ *   interrupted / unverifiable -> cut off under BOTH readings, so it is safe either way. If the row
+ *     really is this submission's under a key we failed to match, it was cut off. If it belongs to
+ *     an earlier exchange, then this submission never opened a turn at all — and an accepted send
+ *     that never became a turn, in a session the live runtime reported as working at teardown,
+ *     cannot be finished work, because finishing writes a turn row.
+ *   completed / running -> REFUSED. Here the two readings disagree: an unmatched `completed` row
+ *     might be this submission's own finished turn under a key we did not recognise, and resuming
+ *     finished work is the one outcome worth never risking. Ambiguity resolves to no.
+ *
+ * A journal with no turn row at all is the first case with nothing to disagree about.
  */
-function turnTheSubmissionOpened(
+function acceptedSubmissionWasCutOff(
   input: StructuredAgentSessionResumeSetInput,
-  sessionId: string,
-  submission: AgentJournalSubmission
-): AgentJournalTurnLifecycle | null {
+  sessionId: string
+): boolean {
   const turn = input.journalTurn(sessionId)
-  if (!turn || turn.userItemId === undefined || submission.providerItemId === null) {
-    return null
-  }
-  return turn.userItemId === submission.providerItemId ? turn : null
+  // No turn row at all: nothing finished, because finishing writes one.
+  // Otherwise the newest turn decides, and it decides the same way whether or not it names this
+  // submission — which is exactly why the link no longer has to be proved to answer safely.
+  return turn === null || turnWasCutOff(turn)
 }
 
 /**
@@ -102,9 +116,9 @@ function turnTheSubmissionOpened(
  *
  *   pending / unknown -> never became a turn, and nothing settled it: cut off.
  *   rejected          -> never ran at all.
- *   accepted          -> it BECAME a turn, so the turn is the evidence, judged by the turn rule.
- *                        Accepted alone proves only that the provider took the message; it is the
- *                        turn's own state that says whether the work was interrupted or finished.
+ *   accepted          -> the provider took the message, so the journal's newest turn is the
+ *                        evidence; see `acceptedSubmissionWasCutOff` for why that answer holds
+ *                        whether or not the turn can be linked back to this send.
  */
 function journalAgreesWorkWasCutOff(
   input: StructuredAgentSessionResumeSetInput,
@@ -124,7 +138,7 @@ function journalAgreesWorkWasCutOff(
   if (submission.dispatchState !== 'accepted') {
     return false
   }
-  return turnWasCutOff(turnTheSubmissionOpened(input, marker.sessionId, submission))
+  return acceptedSubmissionWasCutOff(input, marker.sessionId)
 }
 
 export function structuredAgentSessionResumableSet(

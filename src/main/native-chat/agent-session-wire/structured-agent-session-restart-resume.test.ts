@@ -403,21 +403,58 @@ describe('the resumable set', () => {
     ).toEqual([])
   })
 
-  // Accepted, but the journal cannot prove WHICH turn it became — an unrelated turn, or a host old
-  // enough not to record the link. Without that proof there is no second witness, so this refuses.
+  // QA's case: the LAST chat prompted before quitting. The provider accepted the send, but died
+  // before writing a turn row for it, so there is nothing to link forward TO. An accepted send that
+  // never became a turn cannot be finished work — finishing writes a turn row.
+  it('offers an accepted send the provider never opened a turn for', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [],
+        submissions: [submission('msg-1', 'accepted', 'provider-item-1')]
+      })
+    ).toHaveLength(1)
+  })
+
+  // The same chat when the session's newest turn belongs to an EARLIER exchange that was itself cut
+  // off. Safe under both readings: if that row is really this send's under a key we did not match,
+  // it was interrupted; if it is the earlier exchange's, this send opened no turn at all.
   it.each([
     ['the turn names a different user item', 'provider-item-other', 'provider-item-1'],
     ['the turn records no user item at all', undefined, 'provider-item-1'],
     ['the submission has no provider key', 'provider-item-1', null]
-  ])('refuses an accepted send when %s', (_label, userItemId, providerItemId) => {
-    expect(
-      resumableSet({
-        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
-        items: [turnItem('turn-1', 'interrupted', userItemId)],
-        submissions: [submission('msg-1', 'accepted', providerItemId)]
-      })
-    ).toEqual([])
-  })
+  ])(
+    'offers an accepted send beside an interrupted turn when %s',
+    (_label, userItemId, providerItemId) => {
+      expect(
+        resumableSet({
+          markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+          items: [turnItem('turn-1', 'interrupted', userItemId)],
+          submissions: [submission('msg-1', 'accepted', providerItemId)]
+        })
+      ).toHaveLength(1)
+    }
+  )
+
+  // THE SAFETY EDGE. An unmatched `completed` row might be this very send's finished turn under a
+  // key we failed to recognise, and resuming finished work is the one outcome never worth risking.
+  // The two readings disagree here, so the ambiguity resolves to no.
+  it.each([
+    ['the turn names a different user item', 'provider-item-other', 'provider-item-1'],
+    ['the turn records no user item at all', undefined, 'provider-item-1'],
+    ['the submission has no provider key', 'provider-item-1', null]
+  ])(
+    'refuses an accepted send beside a completed turn when %s',
+    (_label, userItemId, providerItemId) => {
+      expect(
+        resumableSet({
+          markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+          items: [turnItem('turn-1', 'completed', userItemId)],
+          submissions: [submission('msg-1', 'accepted', providerItemId)]
+        })
+      ).toEqual([])
+    }
+  )
 
   it('refuses a submission marker the journal has no record of', () => {
     expect(
