@@ -53,7 +53,9 @@ export function journalClaudeMessage(
   ctx: ClaudeMessageJournalContext,
   message: Record<string, unknown>,
   startsTurn: boolean,
-  observedAt: number
+  observedAt: number,
+  /** Host clock on the submission that produced this send, when known. */
+  requestedAt?: number
 ): boolean {
   const envelope = readClaudeMessageEnvelope(message)
   if (!envelope) {
@@ -128,6 +130,7 @@ export function journalClaudeMessage(
     frame: message,
     startsTurn,
     observedAt,
+    ...(requestedAt === undefined ? {} : { requestedAt }),
     userItemId: agentJournalItemKey(identity)
   })
   if (sendEchoTurn) {

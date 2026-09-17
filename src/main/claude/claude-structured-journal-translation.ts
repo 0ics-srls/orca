@@ -138,8 +138,9 @@ export function createClaudeJournalTranslator(
   const handleMessage = (
     message: Record<string, unknown>,
     startsTurn: boolean,
-    observedAt: number
-  ): boolean => journalClaudeMessage(messageContext, message, startsTurn, observedAt)
+    observedAt: number,
+    requestedAt?: number
+  ): boolean => journalClaudeMessage(messageContext, message, startsTurn, observedAt, requestedAt)
 
   return {
     handle: (event) => {
@@ -196,7 +197,12 @@ export function createClaudeJournalTranslator(
         )
         const kind = claudeProviderFrameKind(event.message)
         if (
-          !handleMessage(event.message, event.startsTurn === true, event.observedAt ?? Date.now())
+          !handleMessage(
+            event.message,
+            event.startsTurn === true,
+            event.observedAt ?? Date.now(),
+            event.requestedAt
+          )
         ) {
           providerFallback.append(
             kind,
