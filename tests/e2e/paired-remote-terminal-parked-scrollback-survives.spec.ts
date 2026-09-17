@@ -8,12 +8,14 @@
  * client-side copy, and the paired-parking capability that licenses the unmount is a static build
  * string that says nothing about whether the host retained this pty's buffer.
  *
- * Oracle: the marker the terminal printed before the park is still in the revealed pane's buffer.
+ * Oracle: a token the test typed into the terminal before the park, echoed back by the fixture, is
+ * still in the revealed pane's buffer. Nothing replays stdin, so a respawned command cannot
+ * reproduce that line — only the pre-park buffer can.
  *
  * The two scenarios are deliberately opposite directions of the same oracle:
  *   - "host retains the buffer" is the control. It fails if the harness never parks, never
- *     reveals, or never painted the marker in the first place — so a green regression case
- *     cannot be green for an unrelated reason.
+ *     reveals, or never echoed the token in the first place — so a green regression case cannot be
+ *     green for an unrelated reason.
  *   - "host retains nothing" is the regression. ORCA_E2E_FORCE_REMOTE_TERMINAL_SNAPSHOT_UNAVAILABLE
  *     makes the host answer `no-serializable-buffer` — the state a client cannot tell apart from a
  *     host that is merely slow. Pre-fix the reveal paints an empty pane.
@@ -25,6 +27,7 @@
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
+
 import os from 'node:os'
 import path from 'node:path'
 import type { Page } from '@stablyai/playwright-test'
@@ -37,24 +40,35 @@ import {
   callEnvironment,
   createPairedHostTerminal,
   openPairedClientTab,
-  readPairedPaneContent,
   waitForPairedPaneMarker,
   type PairedHostTerminal
 } from './helpers/paired-host-terminal'
+import { focusActiveTerminalInput } from './helpers/terminal'
 import { waitForTabParked } from './helpers/terminal-hidden-parking'
 
 const PARK_DELAY_MS = 2_000
 const PAINT_BUDGET_MS = 30_000
 const scratch = mkdtempSync(path.join(os.tmpdir(), 'orca-parked-scrollback-'))
 
-// Why a marker-then-idle fixture: the pane must hold content the park destroys and no live bytes
-// afterwards, so a revealed pane that shows the marker can only have restored it.
+// Why the token arrives over stdin rather than argv or a startup write: a respawn of the same
+// command reprints anything baked into the command, and a startup write only reaches a client
+// that was already subscribed — which the forced-unavailable host snapshot makes racy. Nothing
+// replays stdin, so an echoed line can only come back from the buffer that was there pre-park.
 const fixturePath = path.join(scratch, 'parked-scrollback-terminal.mjs')
 writeFileSync(
   fixturePath,
   [
-    'const marker = process.argv[2]',
-    'process.stdout.write(`${marker}\\r\\n`)',
+    "process.stdout.write('READY\\r\\n')",
+    "process.stdin.setEncoding('utf8')",
+    "let pending = ''",
+    "process.stdin.on('data', (data) => {",
+    '  pending += data',
+    '  const lines = pending.split(/\\r\\n|\\r|\\n/)',
+    "  pending = lines.pop() ?? ''",
+    '  for (const line of lines) {',
+    '    process.stdout.write(`LINE:${line}\\r\\n`)',
+    '  }',
+    '})',
     'process.stdin.resume()'
   ].join('\n')
 )
@@ -67,18 +81,19 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`
 }
 
-function fixtureCommand(marker: string): string {
-  const command = [process.execPath, fixturePath, marker]
+function fixtureCommand(): string {
+  const command = [process.execPath, fixturePath]
   return process.platform === 'win32'
     ? command.map((value) => `"${value.replaceAll('"', '""')}"`).join(' ')
     : command.map(shellQuote).join(' ')
 }
 
 type ParkRevealOutcome = {
-  markerBeforePark: boolean
+  /** The echoed token painted live before the park, so the pane really held it. */
+  tokenBeforePark: boolean
   parked: boolean
-  markerAfterReveal: boolean
-  revealedBufferLength: number
+  /** The same echoed line is back. Nothing replays stdin, so a respawn cannot produce it. */
+  tokenAfterReveal: boolean
 }
 
 async function readHostWorktreeId(page: Page): Promise<string> {
@@ -100,31 +115,32 @@ async function runParkRevealScenario(
   worktreeId: string,
   createdTerminals: string[]
 ): Promise<ParkRevealOutcome> {
-  const marker = `scrollback-${randomUUID()}`
   const target = await createPairedHostTerminal(
     clientPage,
     environmentId,
     worktreeId,
-    fixtureCommand(marker)
+    fixtureCommand()
   )
+  // Two decoys: the most recently hidden tab is exempt from cold-park (#8262), so one decoy hides
+  // the target and the second moves the exemption.
   const decoys: PairedHostTerminal[] = []
   for (let index = 0; index < 2; index += 1) {
     decoys.push(
-      await createPairedHostTerminal(
-        clientPage,
-        environmentId,
-        worktreeId,
-        fixtureCommand(`decoy-${index}-${randomUUID()}`)
-      )
+      await createPairedHostTerminal(clientPage, environmentId, worktreeId, fixtureCommand())
     )
   }
   createdTerminals.push(target.terminal, ...decoys.map((decoy) => decoy.terminal))
 
   await openPairedClientTab(clientPage, worktreeId, target.webTabId)
-  const markerBeforePark = await waitForPairedPaneMarker(
+  await waitForPairedPaneMarker(clientPage, target.webTabId, 'READY', PAINT_BUDGET_MS)
+  const token = `LINE:token-${randomUUID()}`
+  await focusActiveTerminalInput(clientPage)
+  await clientPage.keyboard.type(token.slice('LINE:'.length))
+  await clientPage.keyboard.press('Enter')
+  const tokenBeforePark = await waitForPairedPaneMarker(
     clientPage,
     target.webTabId,
-    marker,
+    token,
     PAINT_BUDGET_MS
   )
 
@@ -137,19 +153,35 @@ async function runParkRevealScenario(
     parked = false
   }
 
+  // Logged, not asserted: on failure this is the whole diagnosis — whether the park left a client
+  // copy at all, and if not, whether the repo catalog ruled the worktree local.
+  const parkDiagnostics = await clientPage.evaluate(
+    ({ webTabId, worktreeId }) => {
+      const state = window.__store?.getState()
+      const layout = state?.terminalLayoutsByTabId?.[webTabId]
+      const repoId = worktreeId.split('::')[0]
+      const repo = (state?.repos ?? []).find((entry) => entry.id === repoId)
+      return {
+        storedBufferLeafIds: Object.keys(layout?.buffersByLeafId ?? {}),
+        storedBufferLength: Object.values(layout?.buffersByLeafId ?? {}).join('').length,
+        layoutRoot: layout?.root ? JSON.stringify(layout.root) : null,
+        repoKnown: repo !== undefined,
+        repoConnectionId: repo?.connectionId ?? null,
+        repoExecutionHostId: repo?.executionHostId ?? null
+      }
+    },
+    { webTabId: target.webTabId, worktreeId }
+  )
+  console.log(`[parked-scrollback] park-diagnostics ${JSON.stringify(parkDiagnostics)}`)
+
   await openPairedClientTab(clientPage, worktreeId, target.webTabId)
-  const markerAfterReveal = await waitForPairedPaneMarker(
+  const tokenAfterReveal = await waitForPairedPaneMarker(
     clientPage,
     target.webTabId,
-    marker,
+    token,
     PAINT_BUDGET_MS
   )
-  return {
-    markerBeforePark,
-    parked,
-    markerAfterReveal,
-    revealedBufferLength: (await readPairedPaneContent(clientPage, target.webTabId)).length
-  }
+  return { tokenBeforePark, parked, tokenAfterReveal }
 }
 
 async function runScenario(
@@ -201,18 +233,14 @@ async function runScenario(
   }
 }
 
+const RESTORED = { tokenBeforePark: true, parked: true, tokenAfterReveal: true }
+
 test.describe('host retains the buffer', () => {
   test('a cold-parked remote terminal restores its scrollback on reveal', async ({
     orcaPage
   }, testInfo) => {
     test.setTimeout(600_000)
-    const outcome = await runScenario(orcaPage, testInfo, 'parked-scrollback-host-retains')
-    expect(outcome).toEqual({
-      markerBeforePark: true,
-      parked: true,
-      markerAfterReveal: true,
-      revealedBufferLength: outcome.revealedBufferLength
-    })
+    expect(await runScenario(orcaPage, testInfo, 'host-retains')).toEqual(RESTORED)
   })
 })
 
@@ -225,12 +253,6 @@ test.describe('host retains nothing', () => {
     orcaPage
   }, testInfo) => {
     test.setTimeout(600_000)
-    const outcome = await runScenario(orcaPage, testInfo, 'parked-scrollback-host-empty')
-    expect(outcome).toEqual({
-      markerBeforePark: true,
-      parked: true,
-      markerAfterReveal: true,
-      revealedBufferLength: outcome.revealedBufferLength
-    })
+    expect(await runScenario(orcaPage, testInfo, 'host-empty')).toEqual(RESTORED)
   })
 })
