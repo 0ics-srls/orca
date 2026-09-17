@@ -25,7 +25,6 @@
  *   selector runs: worktree activity summary     896        896
  *   selector runs: worktree card status inputs 2,688      2,688
  *   selector runs: sleeping-record exemption      23         23
- *   selector runs: tab-bar agent projections      23         23
  *   sidebar rows committed (of 870)                1          1
  *   React commits: retained panes                  1          1
  *   sleeping-agent records read               19,711          0
@@ -56,7 +55,6 @@ import { useTerminalTabColdParking } from './use-terminal-tab-cold-parking'
 import type * as SleepingRecordParkExemptionModule from './sleeping-record-park-exemption'
 import type * as WorktreeAgentActivitySummaryModule from '@/components/sidebar/worktree-agent-activity-summary'
 import type * as WorktreeCardStatusInputsModule from '@/components/sidebar/worktree-card-status-inputs'
-import type * as TabBarAgentTypesModule from '@/components/tab-bar/tab-agent-types-by-tab-id'
 
 Reflect.set(globalThis, 'IS_REACT_ACT_ENVIRONMENT', true)
 
@@ -67,9 +65,6 @@ const AGENT_STATUS_COUNT = 177
 /** "Live or mounted panes: 20–28" in the capture. */
 const MOUNTED_WORKTREE_COUNT = 20
 
-/** What one title update cost on `main`, so a regression reads as a number. */
-const MAIN_SLEEPING_RECORD_READS = 19_711
-
 const reads = { sleepingRecords: 0, agentStatusRows: 0, workspaceTabBuckets: 0 }
 
 /** True per-module selector executions. Cached selectors read no records, so the
@@ -77,8 +72,7 @@ const reads = { sleepingRecords: 0, agentStatusRows: 0, workspaceTabBuckets: 0 }
 const selectorRuns = vi.hoisted(() => ({
   sleepingRecordParkExemption: 0,
   worktreeAgentActivitySummary: 0,
-  worktreeCardStatusInputs: 0,
-  tabBarAgentProjections: 0
+  worktreeCardStatusInputs: 0
 }))
 
 vi.mock('./sleeping-record-park-exemption', async (importOriginal) => {
@@ -122,19 +116,6 @@ vi.mock('@/components/sidebar/worktree-card-status-inputs', async (importOrigina
     selectRuntimePaneTitlesForWorktree: count(actual.selectRuntimePaneTitlesForWorktree),
     selectLivePtyIdsForWorktree: count(actual.selectLivePtyIdsForWorktree),
     selectTerminalLayoutRootsForWorktree: count(actual.selectTerminalLayoutRootsForWorktree)
-  }
-})
-
-vi.mock('@/components/tab-bar/tab-agent-types-by-tab-id', async (importOriginal) => {
-  const actual = await importOriginal<typeof TabBarAgentTypesModule>()
-  return {
-    ...actual,
-    selectTabBarAgentProjections: (
-      ...args: Parameters<typeof actual.selectTabBarAgentProjections>
-    ) => {
-      selectorRuns.tabBarAgentProjections += 1
-      return actual.selectTabBarAgentProjections(...args)
-    }
   }
 })
 
@@ -342,7 +323,6 @@ function resetCounters(): void {
   selectorRuns.sleepingRecordParkExemption = 0
   selectorRuns.worktreeAgentActivitySummary = 0
   selectorRuns.worktreeCardStatusInputs = 0
-  selectorRuns.tabBarAgentProjections = 0
 }
 
 function applyOnePaneTitleUpdate(title: string): void {
@@ -370,32 +350,6 @@ afterEach(() => {
 })
 
 describe('one pane title update at live-capture scale', () => {
-  it('walks no global inventory', () => {
-    mountAtCaptureScale()
-    reads.sleepingRecords = 0
-    reads.agentStatusRows = 0
-
-    applyOnePaneTitleUpdate('next title')
-
-    expect(reads.sleepingRecords).toBe(0)
-    expect(reads.agentStatusRows).toBe(0)
-    expect(MAIN_SLEEPING_RECORD_READS).toBe(SLEEPING_RECORD_COUNT * 23)
-  })
-
-  it('stays flat as unrelated workspaces accumulate', () => {
-    mountAtCaptureScale()
-    reads.sleepingRecords = 0
-    applyOnePaneTitleUpdate('title a')
-    const firstUpdateReads = reads.sleepingRecords
-
-    reads.sleepingRecords = 0
-    applyOnePaneTitleUpdate('title b')
-
-    // Why a ratio and not just 0: this is what "independent of stored scale" means.
-    expect(reads.sleepingRecords).toBe(firstUpdateReads)
-    expect(reads.sleepingRecords).toBeLessThan(SLEEPING_RECORD_COUNT)
-  })
-
   it('still rescans when the sleeping-record inventory itself changes', () => {
     mountAtCaptureScale()
     reads.sleepingRecords = 0
@@ -420,50 +374,35 @@ describe('one pane title update: fanout at live-capture scale', () => {
 
     applyOnePaneTitleUpdate('next title')
 
-    // (a) Zustand visits every listener on every notification, so invocations
-    //     are exactly listeners x notifications.
-    const listenerInvocations = listeners * notifications
-    // (b) selector executions per module, (c) React commits, (d) records scanned.
-    const counts = {
-      listeners,
-      notifications,
-      listenerInvocations,
-      selectorRuns: { ...selectorRuns },
-      committedSidebarRows: [...committedSidebarRows],
-      renders: { ...renders },
-      reads: { ...reads }
-    }
-
-    // The capture saw 5,462–7,478 listeners; this mount must be the same order.
-    expect(counts.listeners).toBeGreaterThan(5_000)
-    expect(counts.listeners).toBeLessThan(8_000)
-    expect(counts.notifications).toBe(1)
+    // The capture saw 5,462–7,478 listeners; this mount must be the same order,
+    // and zustand visits every one of them on each notification.
+    expect(listeners).toBeGreaterThan(5_000)
+    expect(listeners).toBeLessThan(8_000)
+    expect(notifications).toBe(1)
 
     // Every mounted subscriber's selector still runs. That is unchanged by this
     // fix and is inherent to one shared store: notification work stays
     // O(mounted workspaces), ~3,630 instrumented selector executions.
-    expect(counts.selectorRuns.worktreeAgentActivitySummary).toBeGreaterThanOrEqual(WORKSPACE_COUNT)
-    expect(counts.selectorRuns.worktreeCardStatusInputs).toBeGreaterThanOrEqual(WORKSPACE_COUNT * 3)
-    expect(counts.selectorRuns.sleepingRecordParkExemption).toBeGreaterThanOrEqual(
-      MOUNTED_WORKTREE_COUNT
-    )
+    expect(selectorRuns.worktreeAgentActivitySummary).toBeGreaterThanOrEqual(WORKSPACE_COUNT)
+    expect(selectorRuns.worktreeCardStatusInputs).toBeGreaterThanOrEqual(WORKSPACE_COUNT * 3)
+    expect(selectorRuns.sleepingRecordParkExemption).toBeGreaterThanOrEqual(MOUNTED_WORKTREE_COUNT)
 
     // …but every one of those executions is now an identity check. These three
     // counters sit on the state maps themselves, so they catch a walk by ANY of
     // the 5,500 subscribers, not only the four instrumented modules.
-    expect(counts.reads.sleepingRecords).toBe(0)
-    expect(counts.reads.agentStatusRows).toBe(0)
+    expect(reads.sleepingRecords).toBe(0)
+    expect(reads.agentStatusRows).toBe(0)
     // One bucket lookup per workspace consumer is a keyed read; a full-inventory
     // walk would be that many times 870.
-    expect(counts.reads.workspaceTabBuckets).toBeLessThan(WORKSPACE_COUNT * 2)
+    expect(reads.workspaceTabBuckets).toBeLessThan(WORKSPACE_COUNT * 2)
 
     // Only the workspace that owns the changed pane commits — the other 869
     // sidebar rows hold their identities and bail out.
-    expect(counts.committedSidebarRows).toEqual([TARGET_WORKTREE_ID])
-    expect(counts.renders.retainedPanes).toBeLessThanOrEqual(1)
+    expect([...committedSidebarRows]).toEqual([TARGET_WORKTREE_ID])
+    expect(renders.retainedPanes).toBeLessThanOrEqual(1)
   })
 
-  it('re-renders no unrelated sidebar row when a pane title changes', () => {
+  it('stays flat across repeated updates', () => {
     mountAtCaptureScale()
     resetCounters()
 
@@ -471,6 +410,10 @@ describe('one pane title update: fanout at live-capture scale', () => {
     applyOnePaneTitleUpdate('title b')
     applyOnePaneTitleUpdate('title c')
 
+    // Why repeat: one update could be served by a memo warmed at mount; three
+    // prove the cost is independent of how many records the profile stores.
+    expect(reads.sleepingRecords).toBe(0)
+    expect(reads.agentStatusRows).toBe(0)
     expect([...committedSidebarRows]).toEqual([TARGET_WORKTREE_ID])
   })
 })
