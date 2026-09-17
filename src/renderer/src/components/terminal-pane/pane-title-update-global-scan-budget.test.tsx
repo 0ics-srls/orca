@@ -33,7 +33,8 @@ import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import type { SleepingAgentSessionRecord } from '../../../../shared/agent-session-resume'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import { useTerminalTabColdParking } from './use-terminal-tab-cold-parking'
-;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+Reflect.set(globalThis, 'IS_REACT_ACT_ENVIRONMENT', true)
 
 const WORKSPACE_COUNT = 870
 const TERMINAL_TAB_COUNT = 1408
@@ -82,15 +83,16 @@ function buildTabsByWorktree(): Record<string, TerminalTab[]> {
   for (const [index, worktreeId] of worktreeIds.entries()) {
     const count = Math.min(remaining, index < MOUNTED_WORKTREE_COUNT ? 4 : 2)
     remaining -= count
-    tabsByWorktree[worktreeId] = Array.from(
-      { length: count },
-      (_, tabIndex) =>
-        ({
-          id: `tab-${index}-${tabIndex}`,
-          title: `tab ${tabIndex}`,
-          ptyId: `${worktreeId}@@pty-${tabIndex}`
-        }) as TerminalTab
-    )
+    tabsByWorktree[worktreeId] = Array.from({ length: count }, (_, tabIndex) => ({
+      id: `tab-${index}-${tabIndex}`,
+      ptyId: `${worktreeId}@@pty-${tabIndex}`,
+      worktreeId,
+      title: `tab ${tabIndex}`,
+      customTitle: null,
+      color: null,
+      sortOrder: tabIndex,
+      createdAt: 0
+    }))
     if (remaining <= 0) {
       break
     }
@@ -107,15 +109,18 @@ function buildSleepingRecords(): Record<string, SleepingAgentSessionRecord> {
       const worktreeId = worktreeIds[index % WORKSPACE_COUNT]
       const tabId = tabsByWorktree[worktreeId]?.[0]?.id ?? `tab-${index}-0`
       const paneKey = `${tabId}:1`
-      return [
+      const record: SleepingAgentSessionRecord = {
         paneKey,
-        {
-          paneKey,
-          tabId,
-          worktreeId,
-          providerSession: { id: `session-${index}` }
-        } as unknown as SleepingAgentSessionRecord
-      ] as const
+        tabId,
+        worktreeId,
+        agent: 'claude',
+        providerSession: { key: 'session_id', id: `session-${index}` },
+        prompt: 'prompt',
+        state: 'working',
+        capturedAt: 1,
+        updatedAt: 1
+      }
+      return [paneKey, record] as const
     }),
     'sleepingRecords'
   )
@@ -127,17 +132,16 @@ function buildAgentStatuses(): Record<string, AgentStatusEntry> {
     Array.from({ length: AGENT_STATUS_COUNT }, (_, index) => {
       const tabId = seededTerminalTabs[index % seededTerminalTabs.length].id
       const paneKey = `${tabId}:1`
-      return [
+      const entry: AgentStatusEntry = {
         paneKey,
-        {
-          paneKey,
-          state: 'working',
-          updatedAt: now,
-          stateStartedAt: now,
-          stateHistory: [],
-          agentType: 'claude'
-        } as unknown as AgentStatusEntry
-      ] as const
+        state: 'working',
+        prompt: 'prompt',
+        updatedAt: now,
+        stateStartedAt: now,
+        stateHistory: [],
+        agentType: 'claude'
+      }
+      return [paneKey, entry] as const
     }),
     'agentStatusRows'
   )
@@ -175,7 +179,7 @@ function mountAtCaptureScale(): void {
     agentStatusEpoch: 1,
     activeWorktreeId: TARGET_WORKTREE_ID,
     runtimePaneTitlesByTabId: { [TARGET_TAB_ID]: { [TARGET_PANE_ID]: 'initial title' } }
-  } as never)
+  })
 
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -212,10 +216,8 @@ afterEach(() => {
   useAppStore.setState(originalState, true)
 })
 
-// Why `it.fails` in this commit: it pins the before-state in history. The fix
-// commit that follows flips both back to `it`.
 describe('one pane title update at live-capture scale', () => {
-  it.fails('walks no global inventory', () => {
+  it('walks no global inventory', () => {
     mountAtCaptureScale()
     reads.sleepingRecords = 0
     reads.agentStatusRows = 0
@@ -227,7 +229,7 @@ describe('one pane title update at live-capture scale', () => {
     expect(MAIN_SLEEPING_RECORD_READS).toBe(SLEEPING_RECORD_COUNT * 23)
   })
 
-  it.fails('stays flat as unrelated workspaces accumulate', () => {
+  it('stays flat as unrelated workspaces accumulate', () => {
     mountAtCaptureScale()
     reads.sleepingRecords = 0
     applyOnePaneTitleUpdate('title a')
@@ -246,7 +248,7 @@ describe('one pane title update at live-capture scale', () => {
     reads.sleepingRecords = 0
 
     act(() => {
-      useAppStore.setState({ sleepingAgentSessionsByPaneKey: buildSleepingRecords() } as never)
+      useAppStore.setState({ sleepingAgentSessionsByPaneKey: buildSleepingRecords() })
     })
 
     // Why: correctness floor — a real inventory change must still be observed.

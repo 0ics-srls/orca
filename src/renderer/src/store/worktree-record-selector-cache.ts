@@ -34,6 +34,8 @@ export function createWorktreeRecordSelector<TState, TValue extends object>(opti
   readSources: (state: TState) => readonly unknown[]
   build: (state: TState, worktreeId: string) => TValue
   empty: TValue
+  /** Override for values whose emptiness is not `Object.keys` — a Set, for instance. */
+  isEmpty?: (value: TValue) => boolean
 }): (state: TState, worktreeId: string) => TValue {
   let generation: WorktreeRecordGeneration<TValue> | null = null
   return (state, worktreeId) => {
@@ -52,7 +54,7 @@ export function createWorktreeRecordSelector<TState, TValue extends object>(opti
     const built = options.build(state, worktreeId)
     const carried = generation.carried?.get(worktreeId)
     let value = built
-    if (Object.keys(built).length === 0) {
+    if (options.isEmpty ? options.isEmpty(built) : Object.keys(built).length === 0) {
       value = options.empty
     } else if (carried && shallow(carried, built)) {
       value = carried
