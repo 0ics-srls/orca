@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NativeChatMessageRail } from './NativeChatMessageRail'
 
 afterEach(cleanup)
@@ -81,5 +81,53 @@ describe('message rail interaction', () => {
     )
     fireEvent.wheel(screen.getByRole('button', { name: 'Your messages' }), { deltaY: 7, deltaMode })
     expect(element.scrollTop).toBe(expected)
+  })
+
+  // happy-dom has no layout, so these pin which row the panel scrolls to, not
+  // the resulting offset. The offset itself only exists in a real browser.
+  describe('opening position', () => {
+    const scrolled: Element[] = []
+    let scrollIntoView: ReturnType<typeof vi.spyOn>
+
+    beforeEach(() => {
+      scrolled.length = 0
+      scrollIntoView = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function mockScrollIntoView(this: Element) {
+          scrolled.push(this)
+        })
+    })
+    afterEach(() => scrollIntoView.mockRestore())
+
+    it('scrolls the panel to the message the reader is on', async () => {
+      render(
+        <NativeChatMessageRail
+          rail={{ items, ticks: items, activeId: items[2].id, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+      fireEvent.pointerEnter(screen.getByRole('button', { name: 'Your messages' }), {
+        pointerType: 'mouse'
+      })
+      await screen.findByRole('dialog')
+      expect(scrolled).toEqual([screen.getByRole('button', { name: 'Prompt 2' })])
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    })
+
+    it('leaves the panel alone when no message is lit', async () => {
+      render(
+        <NativeChatMessageRail
+          rail={{ items, ticks: items, activeId: null, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+      fireEvent.pointerEnter(screen.getByRole('button', { name: 'Your messages' }), {
+        pointerType: 'mouse'
+      })
+      await screen.findByRole('dialog')
+      expect(scrolled).toEqual([])
+    })
   })
 })

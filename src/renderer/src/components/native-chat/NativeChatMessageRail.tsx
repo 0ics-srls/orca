@@ -1,7 +1,7 @@
 // The rail itself: a column of ticks down the right edge of the transcript, one
 // per user message, with a hover panel that previews them and jumps on click.
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
@@ -56,6 +56,13 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
     },
     []
   )
+  // The panel answers "where am I", so it has to open on the current message
+  // rather than at the top of the thread. The content unmounts on close, so this
+  // ref attaches at the open edge — and again if the reader scrolls the
+  // transcript underneath an open panel, which re-lights a different row.
+  const revealCurrentItem = useCallback((element: HTMLButtonElement | null) => {
+    element?.scrollIntoView({ block: 'nearest' })
+  }, [])
 
   if (!rail.visible) {
     return null
@@ -158,6 +165,7 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
             <li key={item.id}>
               <button
                 type="button"
+                ref={item.id === rail.activeId ? revealCurrentItem : undefined}
                 onClick={() => {
                   onSelect(item)
                   setMode(null)
