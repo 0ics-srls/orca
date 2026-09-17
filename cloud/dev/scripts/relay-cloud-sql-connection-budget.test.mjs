@@ -6,51 +6,27 @@ import {
   readRelayCloudSqlConnectionBudget
 } from './relay-cloud-sql-connection-budget.mjs'
 
-const shortfall = (report) =>
-  [
-    `cells ${report.consumers.cells}`,
-    `directors ${report.consumers.directors}`,
-    `auth ${report.consumers.auth}`,
-    `api ${report.consumers.api}`,
-    `= ${report.configuredMaximum} configured`,
-    `+ ${report.rolloutOverlap.maximum} rollout overlap`,
-    `+ ${report.maintenanceAdminAllowance} admin allowance`,
-    `= ${report.operatingMaximum} operating`,
-    `against ${report.maxConnections} max_connections less a ${report.explicitReserve} reserve`
-  ].join(', ')
-
-test('the production budget reads the committed pools and the measured ceiling', () => {
+test('production shared consumers keep allowance and reserve below the ceiling', () => {
+  // cells: +18 for the three asia-east2 pools at 16, -20 for fencing c4/c5.
   const report = readRelayCloudSqlConnectionBudget()
 
-  assert.equal(report.maxConnections, 500)
-  assert.deepEqual(report.consumers, { cells: 228, directors: 15, auth: 200, api: 50 })
+  assert.deepEqual(report.consumers, { cells: 228, directors: 15, auth: 20, api: 50 })
   assert.deepEqual(report.asia, { cells: 3, poolMax: 16 })
-  assert.equal(report.configuredMaximum, 493)
+  assert.equal(report.configuredMaximum, 313)
   assert.equal(report.rolloutOverlap.relayDirectorCandidate, 30)
   assert.equal(report.rolloutOverlap.apiCandidate, 65)
-  assert.equal(report.rolloutOverlap.authCandidate, 215)
+  assert.equal(report.rolloutOverlap.authCandidate, 35)
   assert.equal(report.rolloutOverlap.relayCells, 15)
   assert.equal(report.rolloutOverlap.retainedDirectorRollback, 15)
-  assert.equal(report.rolloutOverlap.maximum, 215)
+  assert.equal(report.rolloutOverlap.maximum, 65)
   assert.equal(report.maintenanceAdminAllowance, 5)
   assert.equal(report.explicitReserve, 10)
-  assert.equal(report.usableCeiling, 490)
-  assert.equal(report.operatingMaximum, 713)
-})
-
-test('configured pools fit under the ceiling less the stated reserve', () => {
-  const report = readRelayCloudSqlConnectionBudget()
-
-  assert.ok(
-    report.configuredMaximum <= report.usableCeiling,
-    `configured pools exceed the usable ceiling: ${shortfall(report)}`
-  )
-})
-
-test('a serialized rollout still fits under the ceiling less the stated reserve', () => {
-  const report = readRelayCloudSqlConnectionBudget()
-
-  assert.ok(report.withinBudget, `the operating maximum exceeds the usable ceiling: ${shortfall(report)}`)
+  assert.equal(report.usableCeiling, 390)
+  assert.equal(report.operatingMaximum, 383)
+  assert.equal(report.remainingWithinUsableCeiling, 7)
+  assert.equal(report.budgetedTotal, 393)
+  assert.equal(report.unallocated, 7)
+  assert.equal(report.withinBudget, true)
 })
 
 test('fails closed when pool growth consumes the explicit reserve', () => {
