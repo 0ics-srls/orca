@@ -1,7 +1,18 @@
+import { withTimeout } from '../../../shared/promise-timeout-fallback'
 import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { MutationPlan } from './structured-agent-session-mutation-plans'
 import type { AgentSessionTurnContext, TurnOutcome } from './structured-agent-session-turns'
+
+/** Only thrown while the provider dispatch is still unreachable. */
+export class AgentSessionPreDispatchError extends Error {
+  constructor(code: string) {
+    super(code)
+    this.name = 'AgentSessionPreDispatchError'
+  }
+}
+
+export const AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS = 2_000
 
 export async function runSettledAgentSessionMutation<TValue>(input: {
   store: AgentSessionRecordStore
@@ -18,16 +29,24 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
       operationId: input.envelope.clientOperationId,
       outcome
     })
+  let outcome: TurnOutcome<TValue> | undefined
   try {
     if (input.plan.markUnknownBeforeRun) {
       await settle({ status: 'unknown' })
     }
     if (input.plan.beforeRun) {
       // Admission predicates must include provider lifecycle already accepted by the host.
-      await input.context.flushStreamedEvents()
+      const ready = await withTimeout(
+        input.context.flushStreamedEvents().then(() => true),
+        AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
+        false
+      )
+      if (!ready) {
+        throw new AgentSessionPreDispatchError('agent_session_admission_evidence_unavailable')
+      }
       input.plan.beforeRun()
     }
-    const outcome = await input.plan.run(input.context)
+    outcome = await input.plan.run(input.context)
     await settle(
       outcome.ok
         ? (input.plan.settledOutcome?.(outcome.value) ?? {
@@ -44,12 +63,13 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
   } catch (error) {
     try {
       await settle({ status: 'unknown' })
-    } catch (settlementError) {
+    } catch {
       // Bookkeeping must not replace the operation's proof of whether dispatch began.
-      console.warn(
-        '[structured-agent-session] operation uncertainty persistence failed',
-        settlementError
-      )
+      console.warn('[structured-agent-session] operation uncertainty persistence failed')
+    }
+    if (outcome && !outcome.ok) {
+      console.warn('[structured-agent-session] refused operation settlement failed')
+      return outcome
     }
     throw error
   }

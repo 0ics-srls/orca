@@ -318,7 +318,8 @@ describe('the restart-resume surface', () => {
   it('leaves no marker behind when the user quits with the offer still open', async () => {
     const { restartResume, live, recorded } = surface({})
 
-    await restartResume.recordMarkers('quit')
+    restartResume.captureMarkers('quit')
+    await restartResume.recordMarkers()
 
     expect(recorded).toEqual([[]])
     expect(live.size).toBe(0)
@@ -331,7 +332,9 @@ describe('the restart-resume surface', () => {
       ])
     })
 
-    await restartResume.recordMarkers('update')
+    restartResume.captureMarkers('update')
+    restartResume.confirmStoppedMarker(SESSION)
+    await restartResume.recordMarkers()
 
     expect(recorded[0]).toEqual([
       {

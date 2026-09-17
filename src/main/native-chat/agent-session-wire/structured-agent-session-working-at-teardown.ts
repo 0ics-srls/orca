@@ -91,12 +91,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
     // working. A turn blocked on an approval or a question projects as `attention`: the agent is
     // waiting on the USER, and that is not interrupted work to hand back.
     //
-    // This is the SINGLE gate for those sessions, and deliberately has no mirror in the launch-side
-    // predicate. Teardown is the only writer of markers and `attention` exits here, so no marker for
-    // such a session is ever minted and a predicate-side clause would be unreachable. It could not
-    // even re-derive the fact — a later teardown phase cancels the pending prompt — so it would have
-    // to be a captured flag, and a field that is structurally always false reads as a safeguard
-    // while guarding nothing. Do not re-add one.
+    // Provider tail events are re-derived after exit, before eviction cancels pending prompts.
     if (status !== 'working') {
       continue
     }

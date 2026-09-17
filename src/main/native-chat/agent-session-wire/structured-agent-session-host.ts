@@ -23,7 +23,6 @@ import { StructuredAgentSessionHostRuntimeState } from './structured-agent-sessi
 import { attachStructuredAgentSession } from './structured-agent-session-attach-orchestration'
 import {
   createStructuredAgentSessionHolds,
-  evictOwnedStructuredAgentSessions,
   evictHeldStructuredAgentSession,
   type StructuredAgentSessionLifetimeContext
 } from './structured-agent-session-host-lifetime'
@@ -38,10 +37,7 @@ import {
   settleStructuredAgentSessionLateDispatch,
   type StructuredAgentSessionMutationContext
 } from './structured-agent-session-host-mutations'
-import {
-  structuredAgentSessionHostTeardownPhases,
-  tearDownStructuredAgentSessionHost
-} from './structured-agent-session-host-teardown'
+import { flushStructuredAgentSessionHost } from './structured-agent-session-host-teardown'
 import type {
   StructuredAgentSessionCaller,
   StructuredAgentSessionHostDeps,
@@ -259,21 +255,14 @@ export class StructuredAgentSessionHost {
   // Trigger inlined rather than imported: `AgentSessionResumeTrigger` in shared is the canonical
   // type, and this file has no line budget left for the import.
   async flushAllStreamedEvents(options?: { trigger?: 'quit' | 'update' }): Promise<void> {
-    const retainSessionIds = new Set<string>()
-    await tearDownStructuredAgentSessionHost({
-      phases: structuredAgentSessionHostTeardownPhases({
-        holds: this.holds,
-        runtimeState: this.runtimeState,
-        handoffs: this.handoffs,
-        tasks: this.tasks,
-        evictOwnedSessions: () =>
-          evictOwnedStructuredAgentSessions(this.lifetimeContext(), retainSessionIds),
-        recordResumeMarkers: () => this.restartResume.recordMarkers(options?.trigger ?? 'quit')
-      }),
-      sessions: this.sessions,
-      retainSessionIds,
-      acknowledgeSessionRelease: (sessionId) =>
-        this.deps.adapter.acknowledgeSessionRelease?.(sessionId)
+    await flushStructuredAgentSessionHost({
+      ...this.lifetimeContext(),
+      holds: this.holds,
+      handoffs: this.handoffs,
+      tasks: this.tasks,
+      restartResume: this.restartResume,
+      serialize: this.serialize,
+      trigger: options?.trigger ?? 'quit'
     }).finally(() => this.clientDelivery.closeAll())
   }
 

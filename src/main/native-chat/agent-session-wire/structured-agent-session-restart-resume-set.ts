@@ -56,6 +56,9 @@ export type StructuredAgentSessionResumeSetInput = {
   journalTurn: (sessionId: string) => AgentJournalTurnLifecycle | null
   /** The journalled submission with that client message id, for work that never became a turn. */
   journalSubmission: (sessionId: string, clientMessageId: string) => AgentJournalSubmission | null
+  waitingOnUser: (sessionId: string) => boolean
+  /** Only teardown may validate before it rewrites the stopped child's running turn. */
+  providerStopped?: boolean
   latestPrompt: (sessionId: string) => string
   latestUserItemId: (sessionId: string) => string | null
   now: number
@@ -71,8 +74,13 @@ export type StructuredAgentSessionResumeSetInput = {
 
 /** Eviction rewrites `running` -> `interrupted` and never -> `completed`, so a completed turn is
  *  finished work and one still marked `running` was never settled by anyone. */
-function turnWasCutOff(turn: AgentJournalTurnLifecycle | null): boolean {
-  return turn !== null && (turn.state === 'interrupted' || turn.state === 'unverifiable')
+function turnWasCutOff(turn: AgentJournalTurnLifecycle | null, providerStopped = false): boolean {
+  return (
+    turn !== null &&
+    (turn.state === 'interrupted' ||
+      turn.state === 'unverifiable' ||
+      (providerStopped && turn.state === 'running'))
+  )
 }
 
 /** Delivery acknowledgements do not prove turn state: provider events may arrive without one.
@@ -85,7 +93,7 @@ function submissionWorkWasCutOff(
   // No turn row at all: nothing finished, because finishing writes one.
   // Otherwise the newest turn decides, and it decides the same way whether or not it names this
   // submission — which is exactly why the link no longer has to be proved to answer safely.
-  return turn === null || turnWasCutOff(turn)
+  return turn === null || turnWasCutOff(turn, input.providerStopped)
 }
 
 /** Follow every non-rejected submission forward to its turn, including lost acknowledgements. */
@@ -95,7 +103,7 @@ function journalAgreesWorkWasCutOff(
 ): boolean {
   if (marker.work.kind === 'turn') {
     const turn = input.journalTurn(marker.sessionId)
-    return turn?.turnId === marker.work.id && turnWasCutOff(turn)
+    return turn?.turnId === marker.work.id && turnWasCutOff(turn, input.providerStopped)
   }
   const submission = input.journalSubmission(marker.sessionId, marker.work.id)
   if (submission?.clientMessageId !== marker.work.id) {
@@ -131,6 +139,7 @@ export function structuredAgentSessionResumableSet(
       continue
     }
     if (
+      input.waitingOnUser(marker.sessionId) ||
       input.latestUserItemId(marker.sessionId) !== marker.latestUserItemId ||
       !journalAgreesWorkWasCutOff(input, marker)
     ) {

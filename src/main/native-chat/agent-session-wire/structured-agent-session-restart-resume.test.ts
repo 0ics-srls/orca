@@ -15,6 +15,7 @@ import {
   AGENT_SESSION_RESUME_MARKER_TTL_MS,
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
+import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
 import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
@@ -52,6 +53,7 @@ function resumableSet(input: {
     markers: input.markers,
     getRecord: () => record(input.chain === undefined ? {} : { chain: input.chain }),
     supportsRecord: () => true,
+    waitingOnUser: () => projectStructuredAgentSessionStatus(items) === 'attention',
     journalTurn: () => newestStructuredAgentSessionTurn(items),
     journalSubmission: (_sessionId, clientMessageId) =>
       submissions.find((entry) => entry.clientMessageId === clientMessageId) ?? null,
@@ -291,6 +293,7 @@ describe('the resumable set', () => {
       markers: [marker({ providerHandleRoot: CLAUDE_ROOT })],
       getRecord: () => claudeRecord('5aed93d6-advanced-leaf'),
       supportsRecord: () => true,
+      waitingOnUser: () => false,
       journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
       journalSubmission: () => null,
       latestPrompt: () => '',
@@ -307,6 +310,7 @@ describe('the resumable set', () => {
         markers: [marker({ providerHandleRoot: CLAUDE_ROOT })],
         getRecord: () => claudeRecord(null, 'prov-session-2'),
         supportsRecord: () => true,
+        waitingOnUser: () => false,
         journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
         journalSubmission: () => null,
         latestPrompt: () => '',

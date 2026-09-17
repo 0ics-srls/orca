@@ -5,6 +5,7 @@
 // other rejects.
 
 import type {
+  AgentJournalApprovalItem,
   AgentJournalRenderItem,
   AgentJournalSubmission
 } from '../../../shared/agent-session-journal-types'
@@ -89,7 +90,7 @@ export function liveLeaseRecord(): AgentSessionRecord {
 }
 
 /** A prompt the agent is blocked on. The chat is waiting on the USER, not on itself. */
-export function pendingApproval(): AgentJournalRenderItem {
+export function pendingApproval(): AgentJournalRenderItem & { body: AgentJournalApprovalItem } {
   return {
     itemId: 'approval:1',
     revision: 1,

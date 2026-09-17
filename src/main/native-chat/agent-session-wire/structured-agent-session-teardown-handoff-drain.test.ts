@@ -156,59 +156,56 @@ describe('structured agent-session host teardown', () => {
       handoffs: { stopTuiHistoryCatchup: () => undefined, drain: noop },
       tasks: { drainAttaches: noop },
       evictOwnedSessions: noop,
+      captureResumeMarkers: () => {},
       recordResumeMarkers: noop
     })
     expect(phases.map((phase) => phase.name)).toEqual([
-      // First: eviction settles every running turn, so the live signal is gone after it.
-      'record-resume-markers',
+      'capture-resume-markers',
       'dispose-holds',
       'stop-lease-renewal',
       'stop-tui-catchup',
       'drain-handoffs',
       'drain-attaches',
       'evict-owned-sessions',
+      'record-resume-markers',
       'flush-event-sinks'
     ])
   })
 
-  it.each(['capsule', 'events'])(
-    'bounds stalled recovery %s without preventing later cleanup',
-    async (stalled) => {
-      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
-      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const pending = Promise.withResolvers<void>()
-      const cleaned = vi.fn(async () => {})
-      const flush = vi
-        .fn(async () => cleaned())
-        .mockImplementationOnce(() => (stalled === 'events' ? pending.promise : Promise.resolve()))
-      const phases = structuredAgentSessionHostTeardownPhases({
-        holds: { dispose: cleaned },
-        runtimeState: { stopLeaseRenewal: () => {}, flushAllEventSinks: flush },
-        handoffs: { stopTuiHistoryCatchup: () => {}, drain: cleaned },
-        tasks: { drainAttaches: cleaned },
-        evictOwnedSessions: cleaned,
-        recordResumeMarkers: () => (stalled === 'capsule' ? pending.promise : Promise.resolve())
-      })
-      try {
-        const teardown = (async () => {
-          for (const phase of phases) {
-            await phase.run()
-          }
-        })()
-        await vi.advanceTimersByTimeAsync(2000)
-        await teardown
-        expect(cleaned).toHaveBeenCalledTimes(5)
-        expect(warning).toHaveBeenCalledWith(
-          '[structured-agent-session] recording recovery capsule failed',
-          expect.objectContaining({ message: expect.stringContaining('2000ms') })
-        )
-      } finally {
-        pending.resolve()
-        warning.mockRestore()
-        vi.useRealTimers()
-      }
+  it('bounds stalled recovery publication without preventing later cleanup', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const pending = Promise.withResolvers<void>()
+    const cleaned = vi.fn(async () => {})
+    const flush = vi.fn(async () => cleaned())
+    const phases = structuredAgentSessionHostTeardownPhases({
+      holds: { dispose: cleaned },
+      runtimeState: { stopLeaseRenewal: () => {}, flushAllEventSinks: flush },
+      handoffs: { stopTuiHistoryCatchup: () => {}, drain: cleaned },
+      tasks: { drainAttaches: cleaned },
+      evictOwnedSessions: cleaned,
+      captureResumeMarkers: () => {},
+      recordResumeMarkers: () => pending.promise
+    })
+    try {
+      const teardown = (async () => {
+        for (const phase of phases) {
+          await phase.run()
+        }
+      })()
+      await vi.advanceTimersByTimeAsync(2000)
+      await teardown
+      expect(cleaned).toHaveBeenCalledTimes(5)
+      expect(warning).toHaveBeenCalledWith(
+        '[structured-agent-session] recording recovery capsule failed',
+        expect.objectContaining({ message: expect.stringContaining('2000ms') })
+      )
+    } finally {
+      pending.resolve()
+      warning.mockRestore()
+      vi.useRealTimers()
     }
-  )
+  })
 
   it('gives up on a wedged handoff instead of holding the quit open', async () => {
     const request = requests.request('to-tui', 'now', { operationId: hostTestOperationId() })

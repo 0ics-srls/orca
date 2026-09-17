@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
+import { pendingApproval } from './structured-agent-session-restart-resume-test-harness'
 import { restartContinuationEnvelope } from './structured-agent-session-restart-continuation'
 import { STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER } from './structured-agent-session-restart-resume-wiring'
 import {
@@ -220,7 +221,11 @@ it.each([
   { newer: 'completion', settlementFails: false },
   { newer: 'message', settlementFails: false },
   { newer: 'completion', settlementFails: true },
-  { newer: 'message', settlementFails: true }
+  { newer: 'message', settlementFails: true },
+  { newer: 'approval', settlementFails: false },
+  { newer: 'question', settlementFails: false },
+  { newer: 'approval', settlementFails: true },
+  { newer: 'question', settlementFails: true }
 ])(
   'refuses queued $newer before dispatch even if later settlement fails: $settlementFails',
   async ({ newer, settlementFails }) => {
@@ -251,7 +256,13 @@ it.each([
         { provider: 'codex', threadId: THREAD, turnId: 'original-turn', ordinal: 1 },
         newer === 'completion'
           ? { kind: 'turn', turnId: 'original-turn', state: 'completed' }
-          : hostTestMessage('A newer task from another client'),
+          : newer === 'message'
+            ? hostTestMessage('A newer task from another client')
+            : {
+                ...pendingApproval().body,
+                question: 'Which action?',
+                kind: newer === 'approval' ? 'approval' : 'question'
+              },
         { lifecycle: true }
       )
     })
@@ -272,8 +283,7 @@ it.each([
     expect(dispatch).not.toHaveBeenCalled()
     if (settlementFails) {
       expect(warning).toHaveBeenCalledWith(
-        '[structured-agent-session] operation uncertainty persistence failed',
-        expect.any(Error)
+        '[structured-agent-session] operation uncertainty persistence failed'
       )
     }
     warning.mockRestore()

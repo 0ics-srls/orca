@@ -11,7 +11,8 @@ import type {
 import {
   latestStructuredAgentSessionPrompt,
   latestStructuredAgentSessionUserItem,
-  newestStructuredAgentSessionTurn
+  newestStructuredAgentSessionTurn,
+  projectStructuredAgentSessionStatus
 } from '../../../shared/structured-agent-session-projection'
 import type {
   AgentJournalMessageItem,
@@ -71,7 +72,9 @@ export type StructuredAgentSessionRestartResumeSurfaces = {
 }
 
 export type StructuredAgentSessionRestartResume = {
-  recordMarkers: (trigger: AgentSessionResumeTrigger) => Promise<void>
+  captureMarkers: (trigger: AgentSessionResumeTrigger) => void
+  confirmStoppedMarker: (sessionId: string) => void
+  recordMarkers: () => Promise<void>
   list: () => Promise<StructuredAgentSessionResumeCandidate[]>
   resume: (
     sessionIds: readonly string[] | undefined,
@@ -100,6 +103,8 @@ export function createStructuredAgentSessionRestartResume(
 ): StructuredAgentSessionRestartResume {
   const admission = new StructuredAgentSessionResumeAdmission()
   const teardownId = randomUUID()
+  let teardownMarkers = new Map<string, AgentSessionResumeMarker>()
+  const confirmedMarkers = new Map<string, AgentSessionResumeMarker>()
   let claimed: AgentSessionResumeMarker[] | null = null
   let claiming: Promise<void> | undefined
 
@@ -137,7 +142,8 @@ export function createStructuredAgentSessionRestartResume(
 
   const derive = (
     markers: readonly AgentSessionResumeMarker[],
-    leaseState: 'must-be-released' | 'may-be-held'
+    leaseState: 'must-be-released' | 'may-be-held',
+    providerStopped = false
   ): StructuredAgentSessionResumeCandidate[] => {
     const items = new Map<string, AgentJournalRenderItem[]>()
     const itemsFor = (sessionId: string): AgentJournalRenderItem[] => {
@@ -152,6 +158,9 @@ export function createStructuredAgentSessionRestartResume(
       markers,
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
+      waitingOnUser: (sessionId) =>
+        projectStructuredAgentSessionStatus(itemsFor(sessionId)) === 'attention',
+      providerStopped,
       journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
       journalSubmission: (sessionId, clientMessageId) =>
         sessions
@@ -276,17 +285,33 @@ export function createStructuredAgentSessionRestartResume(
   }
 
   return {
-    recordMarkers: async (trigger) =>
-      deps.recoveryCapsule?.record(
+    captureMarkers: (trigger) => {
+      confirmedMarkers.clear()
+      teardownMarkers.clear()
+      teardownMarkers = new Map(
         structuredAgentSessionsWorkingAtTeardown({
           sessions,
           getRecord: deps.store.getRecord,
           trigger,
           teardownId,
           now: surfaces.now()
-        }),
-        surfaces.now()
-      ),
+        }).map((marker) => [marker.sessionId, marker])
+      )
+    },
+    confirmStoppedMarker: (sessionId) => {
+      const marker = teardownMarkers.get(sessionId)
+      // Eviction has stopped the provider and drained its tail, but has not cancelled prompts yet.
+      teardownMarkers.delete(sessionId)
+      try {
+        if (marker && derive([marker], 'may-be-held', true).length === 1) {
+          confirmedMarkers.set(sessionId, marker)
+        }
+      } catch {
+        console.warn('[structured-agent-session] recovery witness validation failed')
+      }
+    },
+    recordMarkers: async () =>
+      deps.recoveryCapsule?.record([...confirmedMarkers.values()], surfaces.now()),
     list,
     /**
      * Turning the offer down, which spends the claim.

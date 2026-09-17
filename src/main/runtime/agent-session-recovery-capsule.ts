@@ -2,13 +2,19 @@ import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import {
+  AGENT_SESSION_RESUME_MARKER_TTL_MS,
   isExpiredAgentSessionResumeMarker,
   parseAgentSessionResumeMarker,
   type AgentSessionResumeMarker
 } from '../../shared/agent-session-resume-marker'
 import { readNodeFileWithinLimit } from '../../shared/node-bounded-file-reader'
 import { stringifyJsonWithinByteLimit } from '../../shared/node-bounded-json-stringify'
-import { durableWriteTempPath, renameDurable, writeTempFileDurable } from '../durable-file-write'
+import {
+  durableWriteTempPath,
+  removeStaleDurableWriteTempFiles,
+  renameDurable,
+  writeTempFileDurable
+} from '../durable-file-write'
 import { withFileTransactionLock } from '../file-transaction-lock'
 
 export const AGENT_SESSION_RECOVERY_CAPSULE_FILE = 'agent-session-recovery.json'
@@ -65,6 +71,9 @@ export class AgentSessionRecoveryCapsule {
 
   private async publish(markers: readonly AgentSessionResumeMarker[]): Promise<void> {
     const { serialized } = stringifyJsonWithinByteLimit({ version: 1, markers }, MAX_CAPSULE_BYTES)
+    await removeStaleDurableWriteTempFiles(this.filePath, {
+      minimumAgeMs: AGENT_SESSION_RESUME_MARKER_TTL_MS
+    })
     const tempPath = durableWriteTempPath(this.filePath)
     try {
       await writeTempFileDurable(tempPath, serialized, 0o600)

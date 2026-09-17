@@ -6,6 +6,12 @@
 // with the global runtime reference already cleared — the one state from which
 // nothing can ever close them.
 
+import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
+import type { StructuredAgentSessionRestartResume } from './structured-agent-session-restart-resume-host'
+import {
+  evictOwnedStructuredAgentSessions,
+  type StructuredAgentSessionLifetimeContext
+} from './structured-agent-session-host-lifetime'
 import { withTimeout } from '../../../shared/promise-timeout-fallback'
 import { agentSessionJournalCloseRetries } from '../agent-session-journal/journal-close-retry'
 import type { StructuredAgentSessionHostSession } from './structured-agent-session-host-types'
@@ -58,22 +64,19 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
   handoffs: { stopTuiHistoryCatchup: () => void; drain: () => Promise<void> }
   tasks: { drainAttaches: () => Promise<void> }
   evictOwnedSessions: () => Promise<void>
+  captureResumeMarkers: () => void
   recordResumeMarkers: () => Promise<void>
 }): StructuredAgentSessionTeardownPhase[] {
   return [
-    // FIRST, because `evict-owned-sessions` settles every running turn to `interrupted` — after it
-    // the live signal this reads is gone. Its failure is swallowed rather than collected: losing a
-    // resume offer is a nuisance, and bookkeeping must never be what stops a quit.
     {
-      name: 'record-resume-markers',
-      run: () =>
-        withPhaseTimeout(async () => {
-          // Capture accepted prompts before eviction cancels their waiting-on-user evidence.
-          await collaborators.runtimeState.flushAllEventSinks()
-          await collaborators.recordResumeMarkers()
-        }, RESUME_MARKER_RECORD_TIMEOUT_MS).catch((error: unknown) => {
-          console.warn('[structured-agent-session] recording recovery capsule failed', error)
-        })
+      name: 'capture-resume-markers',
+      run: () => {
+        try {
+          collaborators.captureResumeMarkers()
+        } catch (error) {
+          console.warn('[structured-agent-session] capturing recovery witnesses failed', error)
+        }
+      }
     },
     { name: 'dispose-holds', run: () => collaborators.holds.dispose() },
     { name: 'stop-lease-renewal', run: () => collaborators.runtimeState.stopLeaseRenewal() },
@@ -86,6 +89,15 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
     {
       name: 'evict-owned-sessions',
       run: () => withPhaseTimeout(collaborators.evictOwnedSessions, CHILD_EVICTION_TIMEOUT_MS)
+    },
+    {
+      name: 'record-resume-markers',
+      run: () =>
+        withPhaseTimeout(collaborators.recordResumeMarkers, RESUME_MARKER_RECORD_TIMEOUT_MS).catch(
+          (error: unknown) => {
+            console.warn('[structured-agent-session] recording recovery capsule failed', error)
+          }
+        )
     },
     { name: 'flush-event-sinks', run: () => collaborators.runtimeState.flushAllEventSinks() }
   ]
@@ -132,4 +144,34 @@ export async function tearDownStructuredAgentSessionHost(input: {
   if (failures.length > 0) {
     throw new AggregateError(failures, 'agent session host teardown failed')
   }
+}
+
+export async function flushStructuredAgentSessionHost(
+  context: StructuredAgentSessionLifetimeContext &
+    Pick<
+      Parameters<typeof structuredAgentSessionHostTeardownPhases>[0],
+      'holds' | 'handoffs' | 'tasks'
+    > & {
+      restartResume: StructuredAgentSessionRestartResume
+      serialize: (sessionId: string, task: () => Promise<void>) => Promise<void>
+      trigger: AgentSessionResumeTrigger
+    }
+): Promise<void> {
+  const retainSessionIds = new Set<string>()
+  await tearDownStructuredAgentSessionHost({
+    phases: structuredAgentSessionHostTeardownPhases({
+      ...context,
+      evictOwnedSessions: () =>
+        evictOwnedStructuredAgentSessions(
+          { ...context, onStoppedWork: context.restartResume.confirmStoppedMarker },
+          retainSessionIds
+        ),
+      captureResumeMarkers: () => context.restartResume.captureMarkers(context.trigger),
+      recordResumeMarkers: context.restartResume.recordMarkers
+    }),
+    sessions: context.sessions,
+    retainSessionIds,
+    acknowledgeSessionRelease: (sessionId) =>
+      context.deps.adapter.acknowledgeSessionRelease?.(sessionId)
+  })
 }

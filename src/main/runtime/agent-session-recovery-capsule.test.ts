@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -196,4 +196,24 @@ it('has no idle work or retained lock timers after publication, take, or failure
   } finally {
     vi.useRealTimers()
   }
+})
+
+it('reclaims expired publication debris without touching recent or unrelated files', async () => {
+  const abandoned = `${filePath}.0.1.abandoned.tmp`
+  const recent = `${filePath}.0.2.recent.tmp`
+  const unrelated = join(directory, 'conversation.tmp')
+  await Promise.all([abandoned, recent, unrelated].map((path) => writeFile(path, 'debris')))
+  const old = new Date(Date.now() - AGENT_SESSION_RESUME_MARKER_TTL_MS - 1000)
+  await utimes(abandoned, old, old)
+  await capsule.record([marker()], NOW)
+  expect(await readdir(directory)).toEqual(
+    expect.arrayContaining([
+      AGENT_SESSION_RECOVERY_CAPSULE_FILE,
+      `${AGENT_SESSION_RECOVERY_CAPSULE_FILE}.0.2.recent.tmp`,
+      'conversation.tmp'
+    ])
+  )
+  expect(await readdir(directory)).not.toContain(
+    `${AGENT_SESSION_RECOVERY_CAPSULE_FILE}.0.1.abandoned.tmp`
+  )
 })

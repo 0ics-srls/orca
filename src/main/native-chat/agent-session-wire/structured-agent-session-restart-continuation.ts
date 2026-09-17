@@ -13,6 +13,7 @@ import {
   AGENT_SESSION_RESTART_CONTINUATION_MESSAGE,
   AGENT_SESSION_RESTART_CONTINUATION_NOTE
 } from '../../../shared/agent-session-restart-continuation'
+import { AgentSessionPreDispatchError } from './structured-agent-session-operation-settlement'
 import { createHash } from 'node:crypto'
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 
@@ -35,7 +36,7 @@ export type StructuredAgentSessionContinuationOutcome = {
 }
 
 /** Only this pre-dispatch failure proves a thrown send did not deliver. */
-export class RestartContinuationSupersededError extends Error {
+export class RestartContinuationSupersededError extends AgentSessionPreDispatchError {
   constructor() {
     super('agent_session_restart_work_superseded')
     this.name = 'RestartContinuationSupersededError'
@@ -134,7 +135,7 @@ export async function continueStructuredAgentSessionAfterRestart(
   }
   const { envelope, body } = restartContinuationEnvelope(sessionId, fence, marker)
   const sent = await deps.send({ envelope, body }).catch((error: unknown) => {
-    if (error instanceof RestartContinuationSupersededError) {
+    if (error instanceof AgentSessionPreDispatchError) {
       throw error
     }
     // Persistence can fail after dispatch; a thrown send is not proof of non-delivery.
