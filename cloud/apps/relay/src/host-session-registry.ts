@@ -1466,6 +1466,13 @@ export class HostSessionRegistry {
             session.socket?.close(RELAY_CLOSE_CODE.DRAINING, 'control activity moved')
             return
           }
+          if (error instanceof Error && error.message === 'assignment_lock_unavailable') {
+            // A per-host transaction held the row, so the batch passed over it
+            // rather than making every other host in the flush wait. The next
+            // tick is 15s away against a 105s lease, and the flush line already
+            // reports the count, so this needs no line of its own.
+            return
+          }
           console.warn('[orca-relay] control activity renewal failed')
         })
         // Terminal handler: a throw inside the async catch above (e.g. a

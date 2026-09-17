@@ -167,6 +167,22 @@ describe('batched control renewals on PostgreSQL', () => {
     }
   })
 
+  it('reports a contended assignment row apart from a missing one', async () => {
+    const probe = new RenewalStatementProbe((userId) =>
+      userId === 'user-b' ? 'assignment_lock_unavailable' : 'renewed'
+    )
+    const store = new RelayAssignmentStore(probe, () => now)
+
+    const outcomes = await store.renewControlActivities([
+      renewal('user-a', 'host000000000001'),
+      renewal('user-b', 'host000000000002')
+    ])
+
+    // Retryable: SKIP LOCKED passed over the row rather than queueing the whole
+    // flush behind whoever held it.
+    expect(outcomes).toEqual(['renewed', 'assignment_lock_unavailable'])
+  })
+
   it('counts one renewal metric per row against the flush latency', async () => {
     const probe = new RenewalStatementProbe((userId) =>
       userId === 'user-b' ? 'assignment_not_found' : 'renewed'

@@ -7,6 +7,10 @@ export type ControlRenewalOutcome =
   | 'activity_cell_not_authoritative'
   | 'control_activity_not_found'
   | 'control_activity_moved'
+  // The host's assignment row was already locked by one of the per-host
+  // transactional paths. Retryable, and never a reason to close a control: the
+  // next tick is 15s away and the lease has 105s on it.
+  | 'assignment_lock_unavailable'
   // Decided per row before the statement runs, so one malformed request cannot
   // cost the rest of the batch its renewal.
   | 'invalid_activity_id'
@@ -21,7 +25,8 @@ export const CONTROL_RENEWAL_STATEMENT_OUTCOMES = new Set<ControlRenewalOutcome>
   'assignment_not_found',
   'activity_cell_not_authoritative',
   'control_activity_not_found',
-  'control_activity_moved'
+  'control_activity_moved',
+  'assignment_lock_unavailable'
 ])
 
 export type ControlRenewalRequest = {
@@ -31,19 +36,24 @@ export type ControlRenewalRequest = {
   expiresAt: number
 }
 
-// LOCK ORDER - every writer in this store locks a host's `relay_assignments` row
-// before that host's migration or activity-lease rows (`assignmentRow` then
-// `lockAssignmentActivities`), and each of those writers only ever touches one
-// host. Batching therefore stays deadlock-free as long as the batch itself
-// acquires its assignment rows in one global order: two batches then queue
-// behind each other in the same sequence, and a single-host writer can only ever
-// hold the row a batch is waiting for, never a row the batch already holds.
-// The order is (user_id, relay_host_id) - the primary key of relay_assignments -
-// applied both here and as the statement's ORDER BY, so the lock order holds
-// whether the planner walks the primary-key index or sorts under the LockRows
-// node. `markMigrationTargetRegistered` is the one writer that locks a migration
-// row without the assignment row first; it takes no further locks, so it can
-// delay a batch but cannot close a cycle with one.
+// LOCK ORDER - (user_id, relay_host_id), the primary key of relay_assignments,
+// applied here and repeated as the statement's ORDER BY so it holds whether the
+// planner walks the primary-key index or sorts under the LockRows node.
+//
+// The batch never waits for an assignment row: SKIP LOCKED reports a contended
+// host separately instead. That is what bounds how long a flush holds its locks
+// to its own execution time, because row locks live until the statement commits,
+// and it is why one host wedged in a per-host transaction cannot stall the
+// renewals of every other host sharing the flush.
+//
+// With no wait on the assignment pass, the deadlock question reduces to the two
+// later passes. Every writer in this store locks a host's assignment row before
+// that host's lease rows (`assignmentRow` then `lockAssignmentActivities`), and
+// a host whose assignment row is held was skipped, so the batch never reaches
+// that host's lease: the lease pass cannot wait either.
+// `markMigrationTargetRegistered` is the one writer that locks a migration row
+// without the assignment row first. It takes no further locks, so it can delay a
+// mid-migration row by up to the pool's lock_timeout but cannot close a cycle.
 export function orderedControlRenewalRows<Row extends { identity: AssignmentIdentity }>(
   rows: readonly Row[]
 ): Row[] {
@@ -55,10 +65,13 @@ export function orderedControlRenewalRows<Row extends { identity: AssignmentIden
 }
 
 // One statement renewing every due control lease on this cell, row-wise over the
-// unnested parameter arrays. Logic per row is identical to the single-row
-// predecessor: lock the assignment, admit the caller's cell either as the current
-// cell or as the source of an active forward migration, lock that host's control
-// lease, push both expiries forward, and report one outcome.
+// unnested parameter arrays. Logic per row is what the single-row predecessor
+// did: lock the assignment, admit the caller's cell either as the current cell or
+// as the source of an active forward migration, lock that host's control lease,
+// push both expiries forward, and report one outcome. The one addition is
+// `present_assignment`, an unlocked probe that separates a host with no
+// assignment row at all from one whose row SKIP LOCKED passed over - the first
+// closes the control, the second retries.
 export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
            SELECT
              renewal.ordinality AS row_index,
@@ -71,6 +84,12 @@ export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
              WITH ORDINALITY AS renewal(
                user_id, relay_host_id, activity_id, cell_id, expires_at, ordinality
              )
+         ), present_assignment AS MATERIALIZED (
+           SELECT input.row_index
+           FROM renewal_input input
+           JOIN relay_assignments assignment
+             ON assignment.user_id = input.user_id
+            AND assignment.relay_host_id = input.relay_host_id
          ), assignment_state AS MATERIALIZED (
            SELECT input.row_index, assignment.cell_id, assignment.assignment_epoch
            FROM renewal_input input
@@ -78,7 +97,7 @@ export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
              ON assignment.user_id = input.user_id
             AND assignment.relay_host_id = input.relay_host_id
            ORDER BY assignment.user_id, assignment.relay_host_id
-           FOR UPDATE OF assignment
+           FOR UPDATE OF assignment SKIP LOCKED
          ), migration_state AS MATERIALIZED (
            SELECT locked.row_index
            FROM assignment_state locked
@@ -134,8 +153,12 @@ export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
          )
          SELECT input.row_index, CASE
            WHEN NOT EXISTS (
-             SELECT 1 FROM assignment_state locked WHERE locked.row_index = input.row_index
+             SELECT 1 FROM present_assignment present
+             WHERE present.row_index = input.row_index
            ) THEN 'assignment_not_found'
+           WHEN NOT EXISTS (
+             SELECT 1 FROM assignment_state locked WHERE locked.row_index = input.row_index
+           ) THEN 'assignment_lock_unavailable'
            WHEN NOT EXISTS (
              SELECT 1 FROM authorization_state authorized
              WHERE authorized.row_index = input.row_index

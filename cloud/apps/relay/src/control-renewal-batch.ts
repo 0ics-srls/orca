@@ -9,9 +9,11 @@ import type {
 // renewals per second become one write transaction instead of ten. Well inside
 // the 105s lease runway, so a host that misses a window is never at risk.
 export const CONTROL_RENEWAL_BATCH_INTERVAL_MS = 1_000
-// Ceiling on the parameter arrays, so a reconnect storm cannot build a statement
-// with thousands of rows behind one lock chain.
-export const CONTROL_RENEWAL_BATCH_MAX_ROWS = 500
+// Ceiling on the parameter arrays. Row locks live until the statement commits,
+// so this is what bounds how long one flush holds them: measured at 11.5ms for
+// 200 rows against a 20,000-row table, and 9.4ms with a host wedged in a
+// per-host transaction.
+export const CONTROL_RENEWAL_BATCH_MAX_ROWS = 200
 // A flush slower than this is the only latency worth a line; the metrics event
 // carries the distribution.
 const CONTROL_RENEWAL_SLOW_FLUSH_MS = 250

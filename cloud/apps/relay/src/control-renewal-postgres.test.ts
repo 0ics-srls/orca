@@ -1,9 +1,11 @@
+import { performance } from 'node:perf_hooks'
 import { ASSIGNMENT_LIMITS, RELAY_PROTOCOL_LIMITS } from '@orca-cloud/relay-contract'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { RelayAssignmentStore } from './assignment-store.js'
 import { CONTROL_RENEWAL_BATCH_SQL } from './control-renewal-statement.js'
 import {
   openRelayDatabase,
+  POSTGRES_LOCK_TIMEOUT_MS,
   type RelayDatabase,
   type RelayLockOptions,
   type SqlRow
@@ -24,8 +26,8 @@ const targetCell = {
 }
 const userId = 'control-renewal-postgres-user'
 // Indexes 0-5 belong to the single-renewal cases below, which mutate their
-// host's migration and lease state; the batch cases own 6-10.
-const identities = Array.from({ length: 11 }, (_, index) => ({
+// host's migration and lease state; the batch cases own 6-12.
+const identities = Array.from({ length: 13 }, (_, index) => ({
   userId,
   relayHostId: `controlrenewal${index + 1}`
 }))
@@ -391,6 +393,52 @@ describePostgres('PostgreSQL control renewal', () => {
       'renewed',
       'activity_cell_not_authoritative'
     ])
+  })
+
+  it('passes over a host whose assignment row is held and renews the rest', async () => {
+    const store = new RelayAssignmentStore(database, () => now)
+    now += 30_000
+    const expiresAt = now + 105_000
+    const held = identities[11]!
+    const free = identities[12]!
+    const locked = signal()
+    const release = signal()
+    // Holds the row the way every per-host transactional path does.
+    const holder = database.transaction(async (transaction) => {
+      await transaction.queryLocked(
+        `SELECT * FROM relay_assignments WHERE user_id = ? AND relay_host_id = ?`,
+        [held.userId, held.relayHostId]
+      )
+      locked.resolve()
+      await release.promise
+    })
+    await locked.promise
+
+    const startedAt = performance.now()
+    const outcomes = await store.renewControlActivities(
+      [held, free].map((identity) => ({
+        identity,
+        activityId: controlId(sourceCell.id),
+        cellId: sourceCell.id,
+        expiresAt
+      }))
+    )
+    const elapsedMs = performance.now() - startedAt
+    release.resolve()
+    await holder
+
+    expect(outcomes).toEqual(['assignment_lock_unavailable', 'renewed'])
+    // It skipped rather than queued: a blocking FOR UPDATE would have spent the
+    // pool's whole lock_timeout here and failed the free host too.
+    expect(elapsedMs).toBeLessThan(POSTGRES_LOCK_TIMEOUT_MS)
+    const lease = (
+      await database.query(
+        `SELECT expires_at FROM relay_assignment_activity_leases
+         WHERE user_id = ? AND relay_host_id = ? AND activity_id = ?`,
+        [free.userId, free.relayHostId, controlId(sourceCell.id)]
+      )
+    )[0]
+    expect(Number(lease!.expires_at)).toBe(expiresAt)
   })
 
   it('uses one autocommitted PostgreSQL statement for a steady renewal', async () => {
