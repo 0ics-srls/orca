@@ -19,7 +19,6 @@ import { readCodexTurnId } from './codex-structured-thread-facts'
 const CODEX_TURN_OPTION_KEYS = new Set([
   'model',
   'effort',
-  'approvalPolicy',
   'approvalsReviewer',
   'personality',
   'serviceTier',
@@ -168,10 +167,15 @@ async function steerActiveCodexTurn(
  */
 export async function startCodexTurn(
   host: CodexTurnHost,
-  input: { clientMessageId: string; body: AgentJournalMessageItem; timeoutMs?: number }
+  input: {
+    clientMessageId: string
+    body: AgentJournalMessageItem
+    requestedAt?: number
+    timeoutMs?: number
+  }
 ): Promise<'admitted' | 'queue-full'> {
   // Armed before the write: the echo can land while the response is in flight.
-  if (!host.dispatchEchoes.arm(input.clientMessageId)) {
+  if (!host.dispatchEchoes.arm(input.clientMessageId, input.requestedAt)) {
     return 'queue-full'
   }
   const expectedOwnerTurnId = currentActiveTurnId(host)
@@ -187,7 +191,7 @@ export async function startCodexTurn(
       }
     }
     // No user input was enqueued. Reuse its correlation for a full-options start.
-    host.dispatchEchoes.arm(input.clientMessageId)
+    host.dispatchEchoes.arm(input.clientMessageId, input.requestedAt)
   }
   await startFreshCodexTurn(host, input)
   return 'admitted'
@@ -201,7 +205,7 @@ export async function startCodexTurn(
  */
 export async function dispatchCodexTurn(
   session: CodexTurnHost,
-  input: { clientMessageId: string; body: AgentJournalMessageItem },
+  input: { clientMessageId: string; body: AgentJournalMessageItem; requestedAt?: number },
   timeoutMs: number | undefined
 ): Promise<AgentSessionDispatchOutcome> {
   try {

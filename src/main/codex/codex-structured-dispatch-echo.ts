@@ -3,7 +3,14 @@ import type { AgentJournalItemIdentity } from '../../shared/agent-session-journa
 /** Maximum sends awaiting an echo or exact owner-turn settlement. */
 export const MAX_CODEX_PENDING_DISPATCH_ECHOES = 256
 
+export type CodexDispatchRequestOrigin = {
+  requestedAt: number
+  sequence: number
+}
+
 type PendingDispatch = {
+  requestedAt: number | null
+  sequence: number
   /** A `turn/start` response is ownership evidence only after this turn starts. */
   startCandidateTurnId: string | null
   ownerTurnId: string | null
@@ -19,7 +26,7 @@ type PendingDispatch = {
  */
 export type CodexDispatchEchoes = {
   /** Arms settlement for a send about to be written; false preserves older waits at capacity. */
-  arm: (clientMessageId: string) => boolean
+  arm: (clientMessageId: string, requestedAt?: number) => boolean
   /** Records one successful steer response, binding only the expected active turn. */
   bindSteerResponse: (
     clientMessageId: string,
@@ -40,6 +47,10 @@ export type CodexDispatchEchoes = {
   abandonTerminal: (turnId: string) => void
   /** Drops an armed send whose write never reached the provider. */
   disarm: (clientMessageId: string) => void
+  /** Submission origin for this exact send, retained until its echo settles it. */
+  requestOrigin: (clientMessageId: string) => CodexDispatchRequestOrigin | null
+  /** Highest causal sequence assigned to a tracked dispatch in this session. */
+  latestSequence: () => number
   clear: () => void
   readonly size: number
 }
@@ -58,10 +69,11 @@ function rememberBounded(values: Set<string>, value: string): void {
 
 export function createCodexDispatchEchoes(): CodexDispatchEchoes {
   const armed = new Map<string, PendingDispatch>()
-  const retired = new Set<string>()
+  const retired = new Map<string, PendingDispatch>()
   const startedTurns = new Set<string>()
   const terminalTurns = new Set<string>()
   const terminalSnapshots = new Map<string, string[]>()
+  let nextSequence = 0
   const rememberTerminalSnapshot = (turnId: string, snapshot: string[]): void => {
     terminalSnapshots.delete(turnId)
     terminalSnapshots.set(turnId, snapshot)
@@ -87,8 +99,16 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
       terminalTurns.clear()
     }
   }
-  const rememberRetired = (clientMessageId: string): void => {
-    rememberBounded(retired, clientMessageId)
+  const rememberRetired = (clientMessageId: string, pending: PendingDispatch): void => {
+    retired.delete(clientMessageId)
+    retired.set(clientMessageId, pending)
+    while (retired.size > MAX_CODEX_PENDING_DISPATCH_ECHOES) {
+      const oldest = retired.keys().next().value
+      if (oldest === undefined) {
+        return
+      }
+      retired.delete(oldest)
+    }
   }
   const bindStartedCandidates = (turnId: string): void => {
     if (terminalTurns.has(turnId)) {
@@ -102,13 +122,24 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
   }
 
   return {
-    arm(clientMessageId) {
-      if (!armed.has(clientMessageId) && armed.size >= MAX_CODEX_PENDING_DISPATCH_ECHOES) {
+    arm(clientMessageId, requestedAt) {
+      const existing = armed.get(clientMessageId)
+      if (existing) {
+        if (existing.requestedAt === null && requestedAt !== undefined) {
+          existing.requestedAt = requestedAt
+        }
+        return true
+      }
+      if (armed.size >= MAX_CODEX_PENDING_DISPATCH_ECHOES) {
         return false
       }
-      armed.delete(clientMessageId)
       retired.delete(clientMessageId)
-      armed.set(clientMessageId, { startCandidateTurnId: null, ownerTurnId: null })
+      armed.set(clientMessageId, {
+        requestedAt: requestedAt ?? null,
+        sequence: nextSequence++,
+        startCandidateTurnId: null,
+        ownerTurnId: null
+      })
       return true
     },
     bindSteerResponse(clientMessageId, expectedTurnId, responseTurnId) {
@@ -165,7 +196,7 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
         const pending = armed.get(clientMessageId)
         if (pending?.ownerTurnId === turnId) {
           armed.delete(clientMessageId)
-          rememberRetired(clientMessageId)
+          rememberRetired(clientMessageId, pending)
         }
       }
       terminalSnapshots.delete(turnId)
@@ -180,12 +211,20 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
       retired.delete(clientMessageId)
       pruneObservedTurns()
     },
+    requestOrigin(clientMessageId) {
+      const origin = armed.get(clientMessageId) ?? retired.get(clientMessageId)
+      return origin?.requestedAt === null || origin === undefined
+        ? null
+        : { requestedAt: origin.requestedAt, sequence: origin.sequence }
+    },
+    latestSequence: () => nextSequence - 1,
     clear: () => {
       armed.clear()
       retired.clear()
       startedTurns.clear()
       terminalTurns.clear()
       terminalSnapshots.clear()
+      nextSequence = 0
     },
     get size() {
       return armed.size
