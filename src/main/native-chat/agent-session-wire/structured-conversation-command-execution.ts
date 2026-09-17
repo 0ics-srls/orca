@@ -16,7 +16,7 @@ import {
   publishConversationCommandLifecycle
 } from './structured-conversation-command-lifecycle'
 import type { StructuredAgentSessionMutationContext } from './structured-agent-session-host-mutations'
-import type { StructuredAgentSessionHost } from './structured-agent-session-host'
+import type { StructuredAgentSessionHost as Host } from './structured-agent-session-host'
 
 type ExecutionOwner = {
   isCurrent: (entry: PendingConversationCommand) => boolean
@@ -24,16 +24,12 @@ type ExecutionOwner = {
   settleWaiter: (entry: PendingConversationCommand, result: ConversationCommandResult) => void
   report: (entry: PendingConversationCommand, error: unknown) => void
 }
-
-const STALE_COMMAND_COMPLETION = new Error('Conversation operation became stale after recovery.')
+type ExecutionHost = Pick<Host, 'attach' | 'close' | 'flushStreamedEvents' | 'hasSession'>
 
 export class StructuredConversationCommandExecution {
   constructor(
     private readonly context: () => StructuredAgentSessionMutationContext,
-    private readonly host: Pick<
-      StructuredAgentSessionHost,
-      'attach' | 'close' | 'flushStreamedEvents' | 'hasSession'
-    >,
+    private readonly host: ExecutionHost,
     private readonly owner: ExecutionOwner
   ) {}
 
@@ -46,7 +42,8 @@ export class StructuredConversationCommandExecution {
     try {
       await this.publishLifecycle(entry, execution.prepared, 'running')
       await this.host.flushStreamedEvents(execution.turn.sessionId)
-      if (!this.owner.isCurrent(entry)) {
+      if (!this.canSettle(entry, execution)) {
+        await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
         return
       }
       providerMaySettleLate = entry.command === 'compact'
@@ -132,7 +129,8 @@ export class StructuredConversationCommandExecution {
         return
       }
     }
-    if (!this.owner.isCurrent(entry)) {
+    if (!this.canSettle(entry, execution)) {
+      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
       return
     }
     if (effectiveOptions) {
@@ -142,7 +140,8 @@ export class StructuredConversationCommandExecution {
         }
       })
     }
-    if (!this.owner.isCurrent(entry)) {
+    if (!this.canSettle(entry, execution)) {
+      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
       return
     }
     const replacementSessionId = execution.prepared.replacementSessionId!
@@ -288,9 +287,8 @@ export class StructuredConversationCommandExecution {
     entry: PendingConversationCommand,
     execution: PreparedConversationCommand
   ): boolean {
-    const command = this.context().deps.store.getRecord(
-      execution.turn.sessionId
-    )?.conversationCommand
+    const store = this.context().deps.store
+    const command = store.getRecord(execution.turn.sessionId)?.conversationCommand
     return this.ownsExecution(entry, execution) && command?.phase === 'prepared'
   }
 

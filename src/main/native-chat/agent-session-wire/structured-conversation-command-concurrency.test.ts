@@ -127,6 +127,32 @@ describe('host conversation command concurrency', () => {
     )
   })
 
+  it('does not start provider work after recovery advances during event flushing', async () => {
+    await host.hold(HOST_TEST_SESSION, 'conversation-surface')
+    const flush = Promise.withResolvers<void>()
+    const flushing = Promise.withResolvers<void>()
+    vi.spyOn(host, 'flushStreamedEvents').mockImplementationOnce(() => {
+      flushing.resolve()
+      return flush.promise
+    })
+    const running = host.conversationCommand(CALLER, commandParams('compact'))
+    await flushing.promise
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: HOST_TEST_SESSION,
+      reason: 'provider exited',
+      cause: 'unexpected-exit',
+      fence,
+      acquisitionGeneration: 'generation-1'
+    })
+    flush.resolve()
+
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(compact).not.toHaveBeenCalled()
+  })
+
   it('retires a provider completion that arrives after recovery advances the generation', async () => {
     await host.hold(HOST_TEST_SESSION, 'conversation-surface')
     const completion = Promise.withResolvers<Record<string, never>>()
