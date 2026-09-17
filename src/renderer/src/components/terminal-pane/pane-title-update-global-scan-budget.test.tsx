@@ -26,7 +26,7 @@
  *   selector runs: worktree card status inputs 2,688      2,688
  *   selector runs: sleeping-record exemption      23         23
  *   selector runs: tab-bar agent projections      23         23
- *   React commits: sidebar rows                    0          0
+ *   sidebar rows committed (of 870)                1          1
  *   React commits: retained panes                  1          1
  *   sleeping-agent records read               19,711          0
  *   agent-status rows read                         0          0
@@ -138,8 +138,12 @@ vi.mock('@/components/tab-bar/tab-agent-types-by-tab-id', async (importOriginal)
   }
 })
 
-/** React commits, counted where the real sidebar row renders. */
-const renders = { sidebarRows: 0, retainedPanes: 0 }
+/** Workspaces whose sidebar-row subtree committed. Why a `Profiler` and not a
+ *  counter in the wrapper: `WorktreeCardStatusSlot` subscribes to the store
+ *  itself, so it can commit without re-executing anything above it. */
+const committedSidebarRows = new Set<string>()
+/** React commits of the retained-pane hooks, which live in the probe body. */
+const renders = { retainedPanes: 0 }
 /** Store notifications; every live listener is visited on each one. */
 let notifications = 0
 
@@ -251,22 +255,26 @@ let root: Root | null = null
 
 const EMPTY_ASSIGNMENTS = new Map<string, { groupId: string; isActiveInGroup: boolean }>()
 const noop = (): void => {}
+function recordSidebarRowCommit(worktreeId: string): void {
+  committedSidebarRows.add(worktreeId)
+}
 
 /** The real sidebar row. `useWorktreeActivityStatus` opens ~6 store
  *  subscriptions per row, which is where the capture's thousands of listeners
  *  come from — the sidebar is not virtualised, so every workspace is mounted. */
 function SidebarRowProbe({ worktreeId }: { worktreeId: string }): React.JSX.Element {
-  renders.sidebarRows += 1
   return (
-    <WorktreeCardStatusSlot
-      worktreeId={worktreeId}
-      showStatus={true}
-      showUnreadAction={false}
-      isUnread={false}
-      unreadTooltip="unread"
-      onToggleUnread={noop}
-      onPointerDown={noop}
-    />
+    <React.Profiler id={worktreeId} onRender={recordSidebarRowCommit}>
+      <WorktreeCardStatusSlot
+        worktreeId={worktreeId}
+        showStatus={true}
+        showUnreadAction={false}
+        isUnread={false}
+        unreadTooltip="unread"
+        onToggleUnread={noop}
+        onPointerDown={noop}
+      />
+    </React.Profiler>
   )
 }
 
@@ -328,7 +336,7 @@ function resetCounters(): void {
   reads.sleepingRecords = 0
   reads.agentStatusRows = 0
   reads.workspaceTabBuckets = 0
-  renders.sidebarRows = 0
+  committedSidebarRows.clear()
   renders.retainedPanes = 0
   notifications = 0
   selectorRuns.sleepingRecordParkExemption = 0
@@ -421,6 +429,7 @@ describe('one pane title update: fanout at live-capture scale', () => {
       notifications,
       listenerInvocations,
       selectorRuns: { ...selectorRuns },
+      committedSidebarRows: [...committedSidebarRows],
       renders: { ...renders },
       reads: { ...reads }
     }
@@ -448,8 +457,9 @@ describe('one pane title update: fanout at live-capture scale', () => {
     // walk would be that many times 870.
     expect(counts.reads.workspaceTabBuckets).toBeLessThan(WORKSPACE_COUNT * 2)
 
-    // Only the pane that actually changed re-renders; no sidebar row does.
-    expect(counts.renders.sidebarRows).toBe(0)
+    // Only the workspace that owns the changed pane commits — the other 869
+    // sidebar rows hold their identities and bail out.
+    expect(counts.committedSidebarRows).toEqual([TARGET_WORKTREE_ID])
     expect(counts.renders.retainedPanes).toBeLessThanOrEqual(1)
   })
 
@@ -461,6 +471,6 @@ describe('one pane title update: fanout at live-capture scale', () => {
     applyOnePaneTitleUpdate('title b')
     applyOnePaneTitleUpdate('title c')
 
-    expect(renders.sidebarRows).toBe(0)
+    expect([...committedSidebarRows]).toEqual([TARGET_WORKTREE_ID])
   })
 })
