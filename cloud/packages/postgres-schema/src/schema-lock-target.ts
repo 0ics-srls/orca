@@ -20,13 +20,57 @@ const NOT_KEYWORD = '(?!(?:CONCURRENTLY|IF|NOT|EXISTS|ON|ONLY)\\b)'
 const IDENTIFIER = `"(?:[^"]|"")*"|${NOT_KEYWORD}[A-Za-z_][A-Za-z0-9_$]*`
 const QUALIFIED = `((?:${IDENTIFIER})(?:\\.(?:${IDENTIFIER}))?)`
 
-const LEADING_COMMENT = /^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/
-
-// A schema string split on ';' hands each statement the comment block written above it, and `\s`
-// never matches '--', so classifying the raw text reads those statements as unknown and drops both
-// their retry handling and their catalog pre-check.
-export function sqlWithoutLeadingComments(statement: string): string {
-  return statement.replace(LEADING_COMMENT, '')
+// Every comment, not only the block a ';'-split schema glues above a statement. A comment between
+// two keywords (`ADD /* note */ COLUMN`) is invisible to the classification regexes AND to the
+// must-parse shapes, so it used to yield no target and no throw: the statement ran with no
+// pre-check at all, which is the one direction this must never fail in. Postgres treats a comment
+// as whitespace, so each becomes a single space. Only classification reads this; the server is
+// always sent the original text.
+export function sqlWithoutComments(statement: string): string {
+  let stripped = ''
+  let quote: string | undefined
+  for (let index = 0; index < statement.length; index += 1) {
+    const character = statement[index]!
+    if (quote !== undefined) {
+      stripped += character
+      if (character !== quote) continue
+      if (statement[index + 1] === quote) {
+        stripped += quote
+        index += 1
+      } else quote = undefined
+      continue
+    }
+    if (character === "'" || character === '"') {
+      quote = character
+      stripped += character
+      continue
+    }
+    if (character === '-' && statement[index + 1] === '-') {
+      const newline = statement.indexOf('\n', index)
+      index = newline === -1 ? statement.length : newline
+      stripped += ' '
+      continue
+    }
+    if (character === '/' && statement[index + 1] === '*') {
+      // Postgres nests block comments, so a depth counter is what closes the right one.
+      let depth = 1
+      index += 2
+      while (index < statement.length && depth > 0) {
+        if (statement[index] === '/' && statement[index + 1] === '*') {
+          depth += 1
+          index += 2
+        } else if (statement[index] === '*' && statement[index + 1] === '/') {
+          depth -= 1
+          index += 2
+        } else index += 1
+      }
+      index -= 1
+      stripped += ' '
+      continue
+    }
+    stripped += character
+  }
+  return stripped.trim()
 }
 
 const CREATE_INDEX = new RegExp(
@@ -59,13 +103,49 @@ const DROP_CONSTRAINT = new RegExp(
 const TAKES_RELATION_LOCK = /^(?:CREATE\s+(?:UNIQUE\s+)?INDEX|ALTER\s+TABLE)\b/i
 
 export function takesRelationLock(statement: string): boolean {
-  return TAKES_RELATION_LOCK.test(sqlWithoutLeadingComments(statement))
+  return TAKES_RELATION_LOCK.test(sqlWithoutComments(statement))
 }
 
-// `"a""b"` is one identifier whose stored name is `a"b`.
-function bareIdentifier(written: string): string {
-  const last = written.split('.').pop() ?? written
-  return last.startsWith('"') ? last.slice(1, -1).replace(/""/g, '"') : last
+// Splitting on '.' is not enough: `"a.b"` is one identifier containing a dot, not two parts. Each
+// part is read quote-aware, with a doubled quote unescaped to one.
+function qualifiedParts(written: string): { text: string; quoted: boolean }[] {
+  const parts: { text: string; quoted: boolean }[] = []
+  let text = ''
+  let quoted = false
+  let wasQuoted = false
+  for (let index = 0; index < written.length; index += 1) {
+    const character = written[index]!
+    if (quoted) {
+      if (character !== '"') {
+        text += character
+        continue
+      }
+      if (written[index + 1] === '"') {
+        text += '"'
+        index += 1
+      } else quoted = false
+      continue
+    }
+    if (character === '"') {
+      quoted = true
+      wasQuoted = true
+    } else if (character === '.') {
+      parts.push({ text, quoted: wasQuoted })
+      text = ''
+      wasQuoted = false
+    } else text += character
+  }
+  parts.push({ text, quoted: wasQuoted })
+  return parts
+}
+
+// Postgres folds an unquoted identifier to lower case before storing it, so `Foo` is `foo` in
+// relname, attname and conname. Comparing the written case would miss the row and rebuild the
+// object on every boot.
+function catalogName(written: string): string {
+  const last = qualifiedParts(written).pop()
+  if (!last) return written
+  return last.quoted ? last.text : last.text.toLowerCase()
 }
 
 // Shapes whose lock target the pre-check must be able to derive. Deliberately looser than the
@@ -80,21 +160,21 @@ const MUST_PARSE = [
 
 // Derived from the statement itself so a renamed index cannot drift away from its pre-check.
 export function schemaLockTarget(statement: string): SchemaLockTarget | undefined {
-  const sql = sqlWithoutLeadingComments(statement)
+  const sql = sqlWithoutComments(statement)
   const index = CREATE_INDEX.exec(sql)
   if (index?.[1] && index[2]) {
-    return { kind: 'index', table: index[2], name: bareIdentifier(index[1]), skipWhen: 'present' }
+    return { kind: 'index', table: index[2], name: catalogName(index[1]), skipWhen: 'present' }
   }
   const column = ADD_COLUMN.exec(sql)
   if (column?.[1] && column[2]) {
-    return { kind: 'column', table: column[1], name: bareIdentifier(column[2]), skipWhen: 'present' }
+    return { kind: 'column', table: column[1], name: catalogName(column[2]), skipWhen: 'present' }
   }
   const added = ADD_CONSTRAINT.exec(sql)
   if (added?.[1] && added[2]) {
     return {
       kind: 'constraint',
       table: added[1],
-      name: bareIdentifier(added[2]),
+      name: catalogName(added[2]),
       skipWhen: 'present'
     }
   }
@@ -103,7 +183,7 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
     return {
       kind: 'constraint',
       table: dropped[1],
-      name: bareIdentifier(dropped[2]),
+      name: catalogName(dropped[2]),
       skipWhen: 'absent'
     }
   }
@@ -113,8 +193,8 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
 const ALTER_TABLE = /^ALTER\s+TABLE\b/i
 
 // A comma that separates ALTER TABLE subcommands rather than sitting inside a type, a default, or a
-// CHECK body. Quotes and parentheses are tracked so `CHECK (r IN ('a', 'b'))` and `NUMERIC(10, 2)`
-// do not read as one.
+// CHECK body. Takes comment-free SQL. Square brackets count as depth too, or an array type or
+// `DEFAULT ARRAY[1, 2]` reads as a second subcommand and fails the boot.
 function hasTopLevelComma(sql: string): boolean {
   let depth = 0
   let quote: string | undefined
@@ -127,16 +207,8 @@ function hasTopLevelComma(sql: string): boolean {
       continue
     }
     if (character === "'" || character === '"') quote = character
-    else if (character === '-' && sql[index + 1] === '-') {
-      const newline = sql.indexOf('\n', index)
-      if (newline === -1) return false
-      index = newline
-    } else if (character === '/' && sql[index + 1] === '*') {
-      const close = sql.indexOf('*/', index + 2)
-      if (close === -1) return false
-      index = close + 1
-    } else if (character === '(') depth += 1
-    else if (character === ')') depth -= 1
+    else if (character === '(' || character === '[') depth += 1
+    else if (character === ')' || character === ']') depth -= 1
     else if (character === ',' && depth === 0) return true
   }
   return false
@@ -147,7 +219,7 @@ function hasTopLevelComma(sql: string): boolean {
 // auto-named `CREATE INDEX ON t(c)` lands here too, because nothing in the text says what the
 // catalog will call it. Fail the boot with the statement instead.
 export function requireSchemaLockTarget(statement: string): SchemaLockTarget | undefined {
-  const sql = sqlWithoutLeadingComments(statement)
+  const sql = sqlWithoutComments(statement)
   // A multi-action ALTER TABLE parses to its FIRST subcommand's target only, so skipping on that
   // one object would silently drop every later action for the life of the database. One action per
   // statement, or no pre-check is possible.

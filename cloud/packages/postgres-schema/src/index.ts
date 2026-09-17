@@ -12,7 +12,7 @@ export {
 export {
   requireSchemaLockTarget,
   schemaLockTarget,
-  sqlWithoutLeadingComments,
+  sqlWithoutComments,
   takesRelationLock,
   type SchemaLockTarget
 } from './schema-lock-target.js'

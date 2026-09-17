@@ -1,7 +1,7 @@
 import { catalogObjectPresence, type SchemaCatalogQuery } from './catalog-object-precheck.js'
 import {
   requireSchemaLockTarget,
-  sqlWithoutLeadingComments,
+  sqlWithoutComments,
   type SchemaLockTarget
 } from './schema-lock-target.js'
 
@@ -118,7 +118,7 @@ export async function applyPostgresSchema(
       summary.skipped += 1
       continue
     }
-    const sql = sqlWithoutLeadingComments(statement)
+    const sql = sqlWithoutComments(statement)
     let attempt = 1
     while (true) {
       try {

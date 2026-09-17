@@ -369,3 +369,22 @@ describe('applyPostgresSchema unparseable statements', () => {
     expect(query).not.toHaveBeenCalled()
   })
 })
+
+describe('applyPostgresSchema statement text', () => {
+  it('sends the original statement, comments included, not the classified form', async () => {
+    // Classification reads a comment-free copy. Rewriting what the server runs would change the
+    // DDL itself, and a comment inside a string literal or a quoted name is part of the statement.
+    const statement = `ALTER TABLE t ADD /* note */ COLUMN c TEXT DEFAULT '-- keep'`
+    const query = vi.fn(async (_sql: string) => undefined)
+    const { catalogQuery, asked } = catalogAnswers([])
+    await applyPostgresSchema([statement], query, { catalogQuery })
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([statement])
+    expect(asked).toEqual([[expect.stringContaining('pg_catalog.pg_attribute'), 't', 'c']])
+  })
+
+  it('sends a comment-prefixed statement unchanged too', async () => {
+    const query = vi.fn(async (_sql: string) => undefined)
+    await applyPostgresSchema([COMMENTED_TABLE], query)
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([COMMENTED_TABLE])
+  })
+})

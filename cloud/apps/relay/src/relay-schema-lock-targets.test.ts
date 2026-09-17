@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   requireSchemaLockTarget,
   schemaLockTarget,
-  sqlWithoutLeadingComments,
+  sqlWithoutComments,
   takesRelationLock,
   type SchemaLockTarget
 } from '@orca-cloud/postgres-schema'
@@ -139,7 +139,7 @@ describe('relay boot-time lock targets', () => {
     }
     const unparsed = relayPostgresSchemaStatements().filter(
       (statement) =>
-        INDEX_OR_ADD_COLUMN.test(sqlWithoutLeadingComments(statement)) &&
+        INDEX_OR_ADD_COLUMN.test(sqlWithoutComments(statement)) &&
         schemaLockTarget(statement) === undefined
     )
     expect(unparsed).toEqual([])
@@ -185,7 +185,7 @@ describe('relay boot-time lock targets', () => {
 
   it('leaves every statement classifiable once its leading comments are stripped', () => {
     for (const statement of relayPostgresSchemaStatements()) {
-      expect(sqlWithoutLeadingComments(statement)).toMatch(/^(?:CREATE|ALTER|DO)\s/i)
+      expect(sqlWithoutComments(statement)).toMatch(/^(?:CREATE|ALTER|DO)\s/i)
     }
   })
 })

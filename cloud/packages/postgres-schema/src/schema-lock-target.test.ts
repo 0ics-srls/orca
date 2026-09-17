@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   requireSchemaLockTarget,
   schemaLockTarget,
-  sqlWithoutLeadingComments,
+  sqlWithoutComments,
   takesRelationLock
 } from './schema-lock-target.js'
 
@@ -19,21 +19,138 @@ CREATE TABLE IF NOT EXISTS relay_cells (
   cell_id TEXT PRIMARY KEY
 )`
 
-describe('sqlWithoutLeadingComments', () => {
+describe('sqlWithoutComments', () => {
   it('strips the line comments a split schema glues above a statement', () => {
-    expect(sqlWithoutLeadingComments(COMMENTED_INDEX)).toMatch(/^CREATE INDEX IF NOT EXISTS/)
+    expect(sqlWithoutComments(COMMENTED_INDEX)).toMatch(/^CREATE INDEX IF NOT EXISTS/)
   })
 
   it('strips a leading block comment', () => {
-    expect(sqlWithoutLeadingComments('/* note */\n  ALTER TABLE t ADD COLUMN c TEXT')).toBe(
+    expect(sqlWithoutComments('/* note */\n  ALTER TABLE t ADD COLUMN c TEXT')).toBe(
       'ALTER TABLE t ADD COLUMN c TEXT'
     )
   })
 
-  it('leaves a trailing comment alone', () => {
-    expect(sqlWithoutLeadingComments('SELECT 1 -- note')).toBe('SELECT 1 -- note')
+  it('strips a comment sitting between two keywords', () => {
+    expect(sqlWithoutComments('ALTER TABLE t ADD /* note */ COLUMN c TEXT')).toBe(
+      'ALTER TABLE t ADD   COLUMN c TEXT'
+    )
+  })
+
+  it('strips a trailing comment', () => {
+    expect(sqlWithoutComments('SELECT 1 -- note')).toBe('SELECT 1')
+  })
+
+  it('closes the inner block comment first when they nest', () => {
+    expect(sqlWithoutComments('ALTER TABLE t /* a /* b */ c */ ADD COLUMN d TEXT')).toBe(
+      'ALTER TABLE t   ADD COLUMN d TEXT'
+    )
+  })
+
+  it('leaves a comment marker inside a string literal alone', () => {
+    expect(sqlWithoutComments(`ALTER TABLE t ADD COLUMN c TEXT DEFAULT '-- not a comment'`)).toBe(
+      `ALTER TABLE t ADD COLUMN c TEXT DEFAULT '-- not a comment'`
+    )
+  })
+
+  it('leaves a comment marker inside a quoted identifier alone', () => {
+    expect(sqlWithoutComments('ALTER TABLE t ADD COLUMN "a/* b */c" TEXT')).toBe(
+      'ALTER TABLE t ADD COLUMN "a/* b */c" TEXT'
+    )
   })
 })
+
+describe('comments between keywords', () => {
+  // Before this, the classification regexes and the must-parse shapes both needed `ADD COLUMN`
+  // contiguous, so this statement derived NO target and threw NOTHING: the DDL ran with no
+  // pre-check, taking ACCESS EXCLUSIVE on every boot.
+  it('derives a column target through a comment between ADD and COLUMN', () => {
+    expect(requireSchemaLockTarget('ALTER TABLE t ADD /* note */ COLUMN c TEXT')).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'c',
+      skipWhen: 'present'
+    })
+  })
+
+  it('derives an index target through a line comment before ON', () => {
+    expect(
+      requireSchemaLockTarget('CREATE INDEX IF NOT EXISTS i\n-- why this index exists\nON t(c)')
+    ).toEqual({ kind: 'index', table: 't', name: 'i', skipWhen: 'present' })
+  })
+
+  it('still counts a commented statement as taking a relation lock', () => {
+    expect(takesRelationLock('/* note */ ALTER TABLE t ADD COLUMN c TEXT')).toBe(true)
+  })
+
+  it('does not read a comment marker inside a quoted name as a comment', () => {
+    expect(schemaLockTarget('ALTER TABLE t ADD COLUMN "a--b" TEXT')).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'a--b',
+      skipWhen: 'present'
+    })
+  })
+})
+
+describe('catalog name folding', () => {
+  it('reads a quoted identifier containing a dot as one name', () => {
+    expect(schemaLockTarget('CREATE INDEX IF NOT EXISTS "a.b" ON t(c)')).toEqual({
+      kind: 'index',
+      table: 't',
+      name: 'a.b',
+      skipWhen: 'present'
+    })
+  })
+
+  it('folds an unquoted name to lower case, the form the catalog stores', () => {
+    expect(schemaLockTarget('CREATE INDEX IF NOT EXISTS Foo ON Bar(c)')).toEqual({
+      kind: 'index',
+      table: 'Bar',
+      name: 'foo',
+      skipWhen: 'present'
+    })
+  })
+
+  it('keeps a quoted name in its written case', () => {
+    expect(schemaLockTarget('CREATE INDEX IF NOT EXISTS public."Mixed.Name" ON t(c)')).toEqual({
+      kind: 'index',
+      table: 't',
+      name: 'Mixed.Name',
+      skipWhen: 'present'
+    })
+  })
+
+  it('unescapes a doubled quote and leaves the qualified table text as written', () => {
+    expect(schemaLockTarget('ALTER TABLE App."My Table" ADD COLUMN "od""d" TEXT')).toEqual({
+      kind: 'column',
+      table: 'App."My Table"',
+      name: 'od"d',
+      skipWhen: 'present'
+    })
+  })
+
+  it('folds an unquoted column name too', () => {
+    expect(schemaLockTarget('ALTER TABLE t ADD COLUMN IF NOT EXISTS HostCooldownMs BIGINT')).toEqual(
+      { kind: 'column', table: 't', name: 'hostcooldownms', skipWhen: 'present' }
+    )
+  })
+})
+
+describe('square brackets in an ALTER TABLE', () => {
+  it.each([
+    ['an array type', 'ALTER TABLE t ADD COLUMN c bigint[] DEFAULT ARRAY[1, 2]'],
+    ['a nested array default', "ALTER TABLE t ADD COLUMN c TEXT[] DEFAULT ARRAY['a', 'b']"]
+  ])('does not read a comma inside %s as a second subcommand', (_label, statement) => {
+    expect(() => requireSchemaLockTarget(statement)).not.toThrow()
+  })
+
+  it('still catches a second subcommand after an array default', () => {
+    expect(() =>
+      requireSchemaLockTarget('ALTER TABLE t ADD COLUMN a bigint[] DEFAULT ARRAY[1, 2], ADD COLUMN b TEXT')
+    ).toThrow(/unparsed_schema_lock_target/)
+  })
+})
+
 
 describe('takesRelationLock', () => {
   it('classifies a comment-prefixed CREATE INDEX by its first SQL keyword', () => {
@@ -235,11 +352,13 @@ describe('multi-action ALTER TABLE', () => {
     expect(() => requireSchemaLockTarget(statement)).not.toThrow()
   })
 
-  it('throws on a block comment sitting where the column name belongs', () => {
-    // Unparseable for an ordinary reason, and still the right answer: no target means no pre-check.
-    expect(() =>
-      requireSchemaLockTarget('ALTER TABLE t ADD COLUMN /* note */ a TEXT')
-    ).toThrow(/unparsed_schema_lock_target/)
+  it('derives through a block comment sitting where the column name belongs', () => {
+    expect(requireSchemaLockTarget('ALTER TABLE t ADD COLUMN /* note */ a TEXT')).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'a',
+      skipWhen: 'present'
+    })
   })
 
   it('leaves a multi-column CREATE INDEX alone', () => {
