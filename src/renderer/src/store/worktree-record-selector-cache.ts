@@ -8,7 +8,7 @@ type WorktreeRecordGeneration<TValue> = {
 
 /** Why not `Object.keys`: a `Set`/`Map` value has none, so the default check
  *  would collapse every non-empty one onto the shared empty identity. */
-function isEmptyValue(value: object): boolean {
+function isEmptyValue<TValue extends object>(value: TValue): boolean {
   return value instanceof Set || value instanceof Map
     ? value.size === 0
     : Object.keys(value).length === 0
