@@ -112,12 +112,26 @@ describe('Claude structured approval presentation', () => {
     expect(item.detail?.endsWith('…')).toBe(true)
   })
 
-  it('keeps generic denial behavior unchanged', () => {
-    const prompt = approvalPrompt({ command: 'rm output.txt' }, { toolName: 'Bash' })
+  it('keeps generic approval and denial behavior unchanged', () => {
+    const prompt = approvalPrompt(
+      { command: 'rm output.txt' },
+      {
+        toolName: 'Bash',
+        suggestions: [{ type: 'addRules', rules: [], behavior: 'allow', destination: 'session' }]
+      }
+    )
 
     expect(applyClaudePromptAnswer({ prompt }, 'deny')).toEqual({
       behavior: 'deny',
       message: 'User denied this action.',
+      toolUseID: 'tool-approval'
+    })
+    expect(applyClaudePromptAnswer({ prompt }, 'allowForSession')).toEqual({
+      behavior: 'allow',
+      updatedInput: { command: 'rm output.txt' },
+      updatedPermissions: [
+        { type: 'addRules', rules: [], behavior: 'allow', destination: 'session' }
+      ],
       toolUseID: 'tool-approval'
     })
   })
@@ -125,7 +139,10 @@ describe('Claude structured approval presentation', () => {
   it('asks Claude to revise a rejected plan while accepting legacy session replies', () => {
     const prompt = approvalPrompt(
       { plan: '# Release' },
-      { subject: { kind: 'plan', text: '# Release' } }
+      {
+        subject: { kind: 'plan', text: '# Release' },
+        suggestions: [{ type: 'addRules', rules: [], behavior: 'allow', destination: 'session' }]
+      }
     )
 
     expect(applyClaudePromptAnswer({ prompt }, 'deny')).toEqual({

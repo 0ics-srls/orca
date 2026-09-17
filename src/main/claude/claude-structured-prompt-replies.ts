@@ -88,7 +88,9 @@ function approvalResponse(prompt: ClaudePendingPrompt, optionId: string): Permis
     return {
       behavior: 'allow',
       updatedInput: prompt.input,
-      ...(decision === 'allowForSession' && prompt.suggestions.length > 0
+      ...(decision === 'allowForSession' &&
+      prompt.subject?.kind !== 'plan' &&
+      prompt.suggestions.length > 0
         ? { updatedPermissions: prompt.suggestions }
         : {}),
       toolUseID: prompt.toolUseId
