@@ -34,12 +34,16 @@ export function useStructuredConversationCommand(args: {
   retire: () => void
 } {
   const { blocked, fence, items, mutate, onReconciled, sessionId, target } = args
-  const claim = useRef(new StructuredConversationCommandClaim())
+  const claimRef = useRef<StructuredConversationCommandClaim | null>(null)
+  if (claimRef.current === null) {
+    claimRef.current = new StructuredConversationCommandClaim()
+  }
+  const claim = claimRef.current
   const operationIds = useRef(new Map<AgentSessionConversationCommand, string>())
   const requestScope = structuredAgentSessionMutationScope(target, sessionId)
 
   useEffect(() => {
-    const settledOperationIds = claim.current.applyStreamSnapshot(items)
+    const settledOperationIds = claim.applyStreamSnapshot(items)
     for (const operationId of settledOperationIds) {
       for (const [command, candidate] of operationIds.current) {
         if (candidate === operationId) {
@@ -48,31 +52,31 @@ export function useStructuredConversationCommand(args: {
       }
       onReconciled(operationId)
     }
-  }, [items, onReconciled])
+  }, [claim, items, onReconciled])
 
   // A restart supersedes whatever the previous fence still owed.
   useEffect(() => {
-    const current = claim.current
+    const current = claim
     const ids = operationIds.current
     return () => {
       ids.delete('compact')
       current.reset(true)
     }
-  }, [fence])
+  }, [claim, fence])
 
   useLayoutEffect(() => {
-    const current = claim.current
+    const current = claim
     const ids = operationIds.current
     return () => {
       ids.clear()
       current.reset()
     }
-  }, [requestScope])
+  }, [claim, requestScope])
 
   return {
     run: (command) => {
-      if (claim.current.isRunning) {
-        return claim.current.run({
+      if (claim.isRunning) {
+        return claim.run({
           command,
           operationId: '',
           blocked,
@@ -83,7 +87,7 @@ export function useStructuredConversationCommand(args: {
       // this command's terminal frame.
       const operationId = operationIds.current.get(command) ?? structuredSessionOperationId()
       operationIds.current.set(command, operationId)
-      return claim.current
+      return claim
         .run({
           command,
           operationId,
@@ -100,7 +104,7 @@ export function useStructuredConversationCommand(args: {
               onReconciled(operationId)
               return { status: 'unresolved' }
             }
-            if (!claim.current.isOperationOutstanding(operationId)) {
+            if (!claim.isOperationOutstanding(operationId)) {
               onReconciled(operationId)
             }
             if (disposition.status === 'refused') {
@@ -123,10 +127,10 @@ export function useStructuredConversationCommand(args: {
           return outcome
         })
     },
-    isRunning: () => claim.current.isRunning,
+    isRunning: () => claim.isRunning,
     retire: () => {
       operationIds.current.clear()
-      claim.current.reset()
+      claim.reset()
     }
   }
 }
