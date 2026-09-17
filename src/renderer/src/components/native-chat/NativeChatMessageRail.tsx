@@ -35,6 +35,7 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
   const [mode, setMode] = useState<'hover' | 'interactive' | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const currentItemRef = useRef<HTMLButtonElement>(null)
   const restoreFocus = useRef(false)
   const cancelClose = (): void => {
     if (closeTimer.current !== null) {
@@ -61,8 +62,13 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
   // ref attaches at the open edge — and again if the reader scrolls the
   // transcript underneath an open panel, which re-lights a different row.
   const revealCurrentItem = useCallback((element: HTMLButtonElement | null) => {
+    currentItemRef.current = element
     element?.scrollIntoView({ block: 'nearest' })
   }, [])
+  const resolveInteractiveItem = useCallback(
+    () => currentItemRef.current ?? contentRef.current?.querySelector<HTMLButtonElement>('button'),
+    []
+  )
 
   if (!rail.visible) {
     return null
@@ -101,7 +107,7 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
               event.preventDefault()
               restoreFocus.current = true
               setMode('interactive')
-              contentRef.current?.querySelector('button')?.focus()
+              resolveInteractiveItem()?.focus()
             }
           }}
           // The rail overlays the transcript without being inside it, so a wheel
@@ -150,8 +156,9 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
           setMode('interactive')
         }}
         onOpenAutoFocus={(event) => {
-          if (mode === 'hover') {
-            event.preventDefault()
+          event.preventDefault()
+          if (mode === 'interactive') {
+            resolveInteractiveItem()?.focus()
           }
         }}
         onCloseAutoFocus={(event) => {
