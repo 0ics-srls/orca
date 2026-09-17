@@ -60,6 +60,20 @@ const HANDSHAKE_STRING_FIELDS: Readonly<Record<HandshakeMessage['type'], readonl
   'orca-relay-handshake-credential-mismatch': []
 }
 
+// Optional fields are peer-supplied too, so the parser only proves the type of what it returns if
+// it refuses a present-but-wrong one. `endpointCredential` survives today only because its single
+// reader compares it and never interpolates it; the next reader to log it would restore the bug
+// this function exists to stop. Absent stays absent — refusing that would break a bridge that
+// legitimately presents no credential.
+const HANDSHAKE_OPTIONAL_STRING_FIELDS: Readonly<
+  Record<HandshakeMessage['type'], readonly string[]>
+> = {
+  'orca-relay-handshake': ['endpointCredential'],
+  'orca-relay-handshake-ok': [],
+  'orca-relay-handshake-mismatch': [],
+  'orca-relay-handshake-credential-mismatch': []
+}
+
 export function parseHandshakeMessage(payload: Buffer): HandshakeMessage {
   const parsed: unknown = JSON.parse(payload.toString('utf-8'))
   if (typeof parsed !== 'object' || parsed === null) {
@@ -79,6 +93,11 @@ export function parseHandshakeMessage(payload: Buffer): HandshakeMessage {
   }
   for (const field of required) {
     if (typeof msg[field] !== 'string') {
+      throw new Error(`Handshake field ${field} is not a string`)
+    }
+  }
+  for (const field of HANDSHAKE_OPTIONAL_STRING_FIELDS[t as HandshakeMessage['type']]) {
+    if (msg[field] !== undefined && typeof msg[field] !== 'string') {
       throw new Error(`Handshake field ${field} is not a string`)
     }
   }

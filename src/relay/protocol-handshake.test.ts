@@ -100,6 +100,36 @@ describe('handshake framing', () => {
     }
   })
 
+  // endpointCredential is the one optional field, and it is the most pre-auth thing on the frame.
+  // Its only reader compares it, so a non-string refuses today by inequality rather than by type —
+  // which is luck, not a guarantee. Prove it at the parser, where every reader shares it.
+  it('rejects a present endpointCredential that is not a string', () => {
+    for (const endpointCredential of [{ toString: 1 }, 7, null, ['secret'], true]) {
+      const payload = Buffer.from(
+        JSON.stringify({ type: 'orca-relay-handshake', version: '0.1.0', endpointCredential })
+      )
+      expect(
+        () => parseHandshakeMessage(payload),
+        `endpointCredential=${JSON.stringify(endpointCredential)}`
+      ).toThrow(/Handshake field endpointCredential is not a string/)
+    }
+  })
+
+  // Absent must stay absent: a bridge that legitimately presents no credential is the common case,
+  // and refusing it here would close every unauthenticated-endpoint connection in the fleet.
+  it('still accepts a handshake with no endpointCredential, and one with a string', () => {
+    const bare = Buffer.from(JSON.stringify({ type: 'orca-relay-handshake', version: '0.1.0' }))
+    expect(parseHandshakeMessage(bare)).toEqual({ type: 'orca-relay-handshake', version: '0.1.0' })
+    const withCredential = Buffer.from(
+      JSON.stringify({ type: 'orca-relay-handshake', version: '0.1.0', endpointCredential: 'sec' })
+    )
+    expect(parseHandshakeMessage(withCredential)).toEqual({
+      type: 'orca-relay-handshake',
+      version: '0.1.0',
+      endpointCredential: 'sec'
+    })
+  })
+
   it('still accepts a credential-mismatch reply, which carries no fields', () => {
     const payload = Buffer.from(
       JSON.stringify({ type: 'orca-relay-handshake-credential-mismatch' })
