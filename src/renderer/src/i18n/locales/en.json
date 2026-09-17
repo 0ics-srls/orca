@@ -1968,7 +1968,19 @@
         "whatIsSentBody": "Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.",
         "selectAgent": "Reconnect {{value0}} chat \"{{value1}}\" in {{value2}}",
         "projects": "Folder workspaces",
-        "resumeSelected": "Reconnect {{value0}}"
+        "resumeSelected": "Reconnect {{value0}}",
+        "continueUnconfirmed": "Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.",
+        "continueUnconfirmed_one": "Continuation delivery is unconfirmed for {{value0}} chat. Open it to check before sending another message.",
+        "continueUnconfirmed_other": "Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.",
+        "reconnectUnconfirmed": "Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.",
+        "reconnectUnconfirmed_one": "Reconnection is unconfirmed for {{value0}} chat. You can still open it normally.",
+        "reconnectUnconfirmed_other": "Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.",
+        "continueRefused": "{{value0}} chats could not be continued. Open them to continue manually.",
+        "continueRefused_one": "{{value0}} chat could not be continued. Open it to continue manually.",
+        "continueRefused_other": "{{value0}} chats could not be continued. Open them to continue manually.",
+        "reconnectRefused": "{{value0}} chats could not be reconnected. You can still open them normally.",
+        "reconnectRefused_one": "{{value0}} chat could not be reconnected. You can still open it normally.",
+        "reconnectRefused_other": "{{value0}} chats could not be reconnected. You can still open them normally."
       },
       "StarNagCard": {
         "92b0f9d921": "is authenticated and try again.",

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Info, RotateCcw } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Checkbox } from './ui/checkbox'
 import {
@@ -17,6 +16,11 @@ import { translate } from '@/i18n/i18n'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
 import { ResumeOnRestartGroups } from './NativeChatResumeOnRestartGroups'
+import {
+  announceRestartResults,
+  announceRestartUnconfirmed,
+  type RestartActionOutcome
+} from './native-chat-restart-action-notifications'
 import {
   allResumeSessionIds,
   selectedResumeSessionIds,
@@ -40,46 +44,9 @@ import {
  * re-acquires the provider at the same cursor.
  */
 
-type ResumeOutcome = { sessionId: string; outcome: 'resumed' | 'refused' }
-
 // Structured sessions run on the machine hosting the runtime; both launch resolvers refuse anything
 // else, so there is no remote target to aim this at.
 const LOCAL = { kind: 'local' } as const
-
-function announceResumed(count: number): void {
-  if (count <= 0) {
-    return
-  }
-  toast(
-    count === 1
-      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Reconnected 1 chat')
-      : translate(
-          'auto.components.NativeChatResumeOnRestartModal.resumedMany',
-          'Reconnected {{value0}} chats',
-          {
-            value0: count
-          }
-        )
-  )
-}
-
-function announceContinued(count: number): void {
-  if (count <= 0) {
-    return
-  }
-  toast(
-    count === 1
-      ? translate(
-          'auto.components.NativeChatResumeOnRestartModal.continuedOne',
-          'Reconnected 1 chat and asked it to continue'
-        )
-      : translate(
-          'auto.components.NativeChatResumeOnRestartModal.continuedMany',
-          'Reconnected {{value0}} chats and asked them to continue',
-          { value0: count }
-        )
-  )
-}
 
 /** Shows the LITERAL message, read from the same constant the host sends, so the popover cannot
  *  drift into describing something other than what goes out. */
@@ -173,13 +140,19 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         }
         if (autoResume) {
           // Identical call to the buttons below; the host re-derives eligibility either way.
-          const result = await callStructuredAgentSession<{ results: ResumeOutcome[] }>(
+          const result = await callStructuredAgentSession<{ results: RestartActionOutcome[] }>(
             LOCAL,
             'agentSession.restartResume',
             {}
-          )
+          ).catch(() => {
+            announceRestartUnconfirmed(offered.sessions.length, 'reconnect')
+            return null
+          })
+          if (!result) {
+            return []
+          }
           // Automatic must never be silent: someone who ticked the box months ago still sees this.
-          announceResumed(result.results.filter((entry) => entry.outcome === 'resumed').length)
+          announceRestartResults(allResumeSessionIds(offered.sessions), result.results, 'reconnect')
           return []
         }
         return offered.sessions
@@ -213,20 +186,30 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
       setBusy(true)
       try {
         void persistPreference()
-        const result = await callStructuredAgentSession<{ results: ResumeOutcome[] }>(
+        const result = await callStructuredAgentSession<{ results: RestartActionOutcome[] }>(
           LOCAL,
           'agentSession.restartResume',
           sessionIds ? { sessionIds } : {}
         )
         const settled = new Set(result.results.map((entry) => entry.sessionId))
         const remaining = candidates.filter((candidate) => !settled.has(candidate.sessionId))
-        announceResumed(result.results.filter((entry) => entry.outcome === 'resumed').length)
+        announceRestartResults(
+          sessionIds ?? allResumeSessionIds(candidates),
+          result.results,
+          'reconnect'
+        )
         setCandidates(remaining)
         // An empty result means the host settled none of them — never leave the dialog sitting open
         // behind a button that did nothing.
         if (remaining.length === 0 || result.results.length === 0) {
           setResolved(true)
         }
+      } catch {
+        announceRestartUnconfirmed(
+          (sessionIds ?? allResumeSessionIds(candidates)).length,
+          'reconnect'
+        )
+        setResolved(true)
       } finally {
         setBusy(false)
       }
@@ -247,9 +230,12 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
       try {
         void persistPreference()
         const result = await callStructuredAgentSession<{
-          continued: { sessionId: string; outcome: 'continued' | 'refused' }[]
+          continued: RestartActionOutcome[]
         }>(LOCAL, 'agentSession.restartContinue', { sessionIds })
-        announceContinued(result.continued.filter((entry) => entry.outcome === 'continued').length)
+        announceRestartResults(sessionIds, result.continued, 'continue')
+        setResolved(true)
+      } catch {
+        announceRestartUnconfirmed(sessionIds.length, 'continue')
         setResolved(true)
       } finally {
         setBusy(false)

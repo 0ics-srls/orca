@@ -72,7 +72,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
   sessions: ReadonlyMap<string, WorkingCandidateSession>
   getRecord: (sessionId: string) => AgentSessionRecord | null
   trigger: AgentSessionResumeTrigger
-  /** Identity of the launch that is dying. Only the launch immediately after it may act on these. */
+  /** Stable teardown identity for continuation deduplication, not launch ancestry. */
   teardownId: string
   now: number
 }): AgentSessionResumeMarker[] {

@@ -182,6 +182,40 @@ it.each(['turn', 'message'] as const)(
   }
 )
 
+it('refuses a completed turn even when its original delivery acknowledgement is unknown', async () => {
+  const { host, store, acquire, dispatch } = await interruptedRestart('submission', false)
+  expect(await host.restartResume.list()).toHaveLength(1)
+  await host.hold(SESSION, 'pane')
+  expect(host.journalSnapshot(SESSION).submissions[0]?.dispatchState).toBe('unknown')
+  const events = acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing resumed provider event sink')
+  }
+  const admitting = Promise.withResolvers<void>()
+  const proceed = Promise.withResolvers<void>()
+  const admit = store.admitMutationOperation
+  vi.spyOn(store, 'admitMutationOperation').mockImplementationOnce(async (input) => {
+    admitting.resolve()
+    await proceed.promise
+    return admit(input)
+  })
+  const continuing = host.restartResume.continueAfterRestart([SESSION], 'modal')
+  await admitting.promise
+  events.appendItem(
+    { provider: 'codex', threadId: THREAD, turnId: 'original-turn', ordinal: 1 },
+    { kind: 'turn', turnId: 'original-turn', state: 'completed' }
+  )
+  await host.flushStreamedEvents(SESSION)
+  proceed.resolve()
+  expect((await continuing).resumed).toMatchObject([
+    { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
+  ])
+  expect(dispatch).not.toHaveBeenCalled()
+  expect(host.journalSnapshot(SESSION).submissions).toHaveLength(1)
+  host.release(SESSION, 'pane')
+  expect(host.isHeld(SESSION)).toBe(false)
+})
+
 it('replays the same logical continuation through the durable send ledger', async () => {
   const { host, store, dispatch, marker } = await interruptedRestart()
   if (!marker) {

@@ -342,8 +342,7 @@ describe('the resumable set', () => {
     ).toEqual([])
   })
 
-  // A submission never became a turn, so its dispatch state carries the same evidence a turn state
-  // does: settled to `unknown` by the close path, or still `pending` because nothing settled it.
+  // With no turn, an unanswered submission remains evidence of interrupted work.
   it.each(['pending', 'unknown'] as const)(
     'offers a send left %s, which nothing ever answered',
     (dispatchState) => {
@@ -455,6 +454,19 @@ describe('the resumable set', () => {
           markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
           items: [turnItem('turn-1', 'completed', userItemId)],
           submissions: [submission('msg-1', 'accepted', providerItemId)]
+        })
+      ).toEqual([])
+    }
+  )
+
+  it.each(['pending', 'unknown'] as const)(
+    'refuses a %s dispatch whose turn completed after the teardown witness',
+    (dispatchState) => {
+      expect(
+        resumableSet({
+          markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+          items: [turnItem('turn-1', 'completed', 'provider-item-1')],
+          submissions: [submission('msg-1', dispatchState)]
         })
       ).toEqual([])
     }

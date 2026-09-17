@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { act, StrictMode } from 'react'
+import { toast } from 'sonner'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../store'
@@ -48,6 +49,7 @@ function checkbox(index: number): HTMLElement {
 
 beforeEach(() => {
   rpc.mockReset()
+  vi.mocked(toast).mockClear()
   useAppStore.setState(useAppStore.getInitialState(), true)
   useAppStore.setState({
     settings: { ...getDefaultSettings(''), experimentalStructuredNativeChat: true },
@@ -150,4 +152,76 @@ it('dispatches the selected action while a future preference save is still pendi
   ])
   await act(async () => saved.reject(new Error('settings write failed')))
   expect(rpc).toHaveBeenCalledTimes(2)
+})
+
+it.each(['pending', 'unknown', 'refused', 'missing'])(
+  'reports a %s continuation instead of silently closing',
+  async (outcome) => {
+    rpc.mockImplementation(async (_target, method) =>
+      method === 'agentSession.restartResumable'
+        ? { sessions: offered }
+        : {
+            continued:
+              outcome === 'missing' ? [] : offered.map(({ sessionId }) => ({ sessionId, outcome }))
+          }
+    )
+    await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+    await act(async () => button('Reconnect and continue').click())
+    const notices = vi
+      .mocked(toast)
+      .mock.calls.map(([text]) => text)
+      .join(' ')
+    expect(notices).toContain(
+      outcome === 'pending' || outcome === 'unknown' ? 'unconfirmed' : 'could not be continued'
+    )
+    expect(notices).not.toContain('asked them to continue')
+    expect(rpc).toHaveBeenCalledTimes(2)
+  }
+)
+
+it('reports refused and newly ineligible reconnects', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : { results: [{ sessionId: 'a', outcome: 'refused' }] }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => button('Reconnect all').click())
+  expect(toast).toHaveBeenCalledWith(expect.stringContaining('2 chats could not be reconnected'))
+})
+
+it.each(['Reconnect all', 'Reconnect and continue'])(
+  'reports a lost %s response without retrying the action',
+  async (label) => {
+    rpc.mockImplementation(async (_target, method) => {
+      if (method === 'agentSession.restartResumable') {
+        return { sessions: offered }
+      }
+      throw new Error('response lost')
+    })
+    await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+    await act(async () => button(label).click())
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+  }
+)
+
+it('keeps an unconfirmed delivery visible when another chat was refused', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : {
+          continued: [
+            { sessionId: 'a', outcome: 'unknown' },
+            { sessionId: 'b', outcome: 'refused' }
+          ]
+        }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => button('Reconnect and continue').click())
+  expect(toast).toHaveBeenCalledWith('1 chat could not be continued. Open it to continue manually.')
+  expect(vi.mocked(toast).mock.calls.at(-1)?.[0]).toBe(
+    'Continuation delivery is unconfirmed for 1 chat. Open it to check before sending another message.'
+  )
 })
