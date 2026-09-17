@@ -49,6 +49,7 @@ function recordStateReads(state: AppState, run: (observed: AppState) => void): S
   run(
     new Proxy(state, {
       get: (target, key) => {
+        // oxlint-disable-next-line anti-slop/no-reflect-get -- Proxy `get` trap: the key is a raw string|symbol, not a typed property of the target.
         const value: unknown = Reflect.get(target, key)
         if (typeof key !== 'string') {
           return value
@@ -68,6 +69,7 @@ function recordStateReads(state: AppState, run: (observed: AppState) => void): S
             if (typeof entryKey === 'string') {
               entryKeys.add(entryKey)
             }
+            // oxlint-disable-next-line anti-slop/no-reflect-get -- Proxy `get` trap: the key is a raw string|symbol, not a typed property of the target.
             return Reflect.get(entries, entryKey)
           }
         })
@@ -90,6 +92,7 @@ function recordPublicationReads(
         if (typeof key === 'string') {
           reads.add(key)
         }
+        // oxlint-disable-next-line anti-slop/no-reflect-get -- Proxy `get` trap: the key is a raw string|symbol, not a typed property of the target.
         return Reflect.get(target, key)
       }
     })
