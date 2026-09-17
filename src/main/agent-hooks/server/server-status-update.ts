@@ -39,9 +39,6 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
       resolver: this.executionBindingResolver
     })
-    if (binding.suppress && binding.previous) {
-      return binding.previous
-    }
     payload = binding.payload
     if (!this.canWriteLegacyStatusRow(payload)) {
       return undefined

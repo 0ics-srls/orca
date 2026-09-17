@@ -32,8 +32,11 @@ export function cloneAgentSessionSurface(
 }
 
 export function cloneAgentStatusExecutionBinding(
-  binding: AgentStatusExecutionBinding
-): AgentStatusExecutionBinding {
+  binding: AgentStatusExecutionBinding | undefined
+): AgentStatusExecutionBinding | undefined {
+  if (!binding) {
+    return undefined
+  }
   return {
     runId: binding.runId,
     attachment: { executionId: binding.attachment.executionId },
@@ -43,9 +46,12 @@ export function cloneAgentStatusExecutionBinding(
 }
 
 export function agentStatusExecutionBindingsEqual(
-  left: AgentStatusExecutionBinding,
-  right: AgentStatusExecutionBinding
+  left: AgentStatusExecutionBinding | undefined,
+  right: AgentStatusExecutionBinding | undefined
 ): boolean {
+  if (!left || !right) {
+    return left === right
+  }
   return (
     left.runId === right.runId &&
     left.attachment.executionId === right.attachment.executionId &&
@@ -63,7 +69,9 @@ export function cloneAgentSessionOwnerBinding(
     phase: owner.phase,
     ptyId: owner.ptyId,
     surface: cloneAgentSessionSurface(owner.surface),
-    statusBinding: cloneAgentStatusExecutionBinding(owner.statusBinding)
+    ...(owner.statusBinding
+      ? { statusBinding: cloneAgentStatusExecutionBinding(owner.statusBinding) }
+      : {})
   }
 }
 

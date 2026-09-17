@@ -8,6 +8,7 @@ import {
   ClaimedAgentPtyOwnerRegistry,
   MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES
 } from './claimed-agent-pty-owner'
+import type { LiveAgentSessionOwner } from './claimed-agent-pty-owner-snapshot'
 
 function claim(
   identityDigest = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -153,11 +154,15 @@ describe('ClaimedAgentPtyOwnerRegistry', () => {
       isLive: (owner) => owner.ptyId !== 'pty-old'
     })
 
-    expect(replacement.owner.statusBinding.runId).not.toBe(first.owner.statusBinding.runId)
-    expect(replacement.owner.statusBinding.attachment.executionId).not.toBe(
-      first.owner.statusBinding.attachment.executionId
+    const firstBinding = first.owner.statusBinding
+    const replacementBinding = replacement.owner.statusBinding
+    expect(firstBinding).toBeDefined()
+    expect(replacementBinding).toBeDefined()
+    expect(replacementBinding?.runId).not.toBe(firstBinding?.runId)
+    expect(replacementBinding?.attachment.executionId).not.toBe(
+      firstBinding?.attachment.executionId
     )
-    expect(replacement.owner.statusBinding.continuityOf).toBe(first.owner.statusBinding.runId)
+    expect(replacementBinding?.continuityOf).toBe(firstBinding?.runId)
   })
 
   it('uses the lower execution host binding when it adopts an owner', async () => {
@@ -189,26 +194,54 @@ describe('ClaimedAgentPtyOwnerRegistry', () => {
     expect(result.owner.statusBinding).not.toEqual(provisionalBinding)
   })
 
-  it('rejects a lower owner that omits the execution binding', async () => {
+  it('keeps its own binding when a lower host returns an owner without one', async () => {
     const registry = new ClaimedAgentPtyOwnerRegistry()
 
-    await expect(
-      registry.ensure({
-        claim: claim(),
-        surface,
-        spawn: async () => ({
+    // A host that predates run identity is still a valid owner. For a fresh create this host
+    // already stamped its binding into the spawn env, so that binding stays authoritative.
+    const created = await registry.ensure({
+      claim: claim(),
+      surface,
+      spawn: async () => ({
+        ptyId: 'pty-unbound',
+        owner: {
+          claim: claim(),
+          generation: 'generation-unbound',
+          phase: 'live',
           ptyId: 'pty-unbound',
-          owner: {
-            claim: claim(),
-            generation: 'generation-unbound',
-            phase: 'live',
-            ptyId: 'pty-unbound',
-            surface
-          }
-        })
+          surface
+        }
       })
-    ).rejects.toThrow('agent_session_ownership_unknown')
-    expect(registry.find(claim())).toBeNull()
+    })
+
+    expect(created.disposition).toBe('created')
+    expect(created.owner.statusBinding?.runId).toEqual(expect.any(String))
+    expect(registry.find(claim())).not.toBeNull()
+  })
+
+  it('leaves identity absent when it adopts a lower owner that has none', async () => {
+    const registry = new ClaimedAgentPtyOwnerRegistry()
+
+    // Adoption must report what the lower host actually holds. Inventing a binding here would
+    // name a run whose process never received it, which reads as identity the host cannot prove.
+    const adopted = await registry.ensure({
+      claim: claim(),
+      surface,
+      spawn: async () => ({
+        ptyId: 'pty-adopted',
+        disposition: 'adopted',
+        owner: {
+          claim: claim(),
+          generation: 'generation-adopted',
+          phase: 'live',
+          ptyId: 'pty-adopted',
+          surface
+        }
+      })
+    })
+
+    expect(adopted.disposition).toBe('adopted')
+    expect(adopted.owner.statusBinding).toBeUndefined()
   })
 
   it('does not let a late liveness result adopt a released generation', async () => {
@@ -378,7 +411,7 @@ describe('ClaimedAgentPtyOwnerRegistry', () => {
     const newOwner = { ...oldOwner, generation: 'generation-new' }
     registry.reconcileAuthoritative([oldOwner])
     registry.reconcileAuthoritative([newOwner])
-    const isLive = vi.fn((owner: typeof newOwner) => owner.generation === 'generation-new')
+    const isLive = vi.fn((owner: LiveAgentSessionOwner) => owner.generation === 'generation-new')
 
     await expect(
       registry.ensure({

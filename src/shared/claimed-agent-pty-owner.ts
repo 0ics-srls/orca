@@ -6,23 +6,20 @@ import type {
   AgentSessionSurfaceBinding
 } from './agent-session-host-authority'
 import {
-  agentStatusExecutionBindingsEqual,
   agentSessionClaimKey,
   agentSessionClaimsEqual,
-  agentSessionSurfacesEqual,
   buildClaimedAgentPtyOwnerIndex,
   cloneAgentSessionClaim,
   cloneAgentSessionOwner,
   cloneAgentSessionSurface,
-  cloneAgentStatusExecutionBinding,
   countClaimedAgentPtyOwners,
-  parseSpawnedAgentSessionOwner,
   prepareRegisteredAgentSessionOwner,
   reconcileClaimedAgentPtyOwnerSnapshot,
   scopedAgentSessionClaimsEqual,
   type LiveAgentSessionOwner
 } from './claimed-agent-pty-owner-snapshot'
 import type { AgentStatusExecutionBinding } from './agent-status-execution-binding'
+import { promoteSpawnedAgentSessionOwner } from './claimed-agent-pty-owner-promotion'
 
 export { agentSessionOwnerBindingsEqual } from './claimed-agent-pty-owner-snapshot'
 
@@ -94,7 +91,14 @@ export class ClaimedAgentPtyOwnerRegistry {
         }
         return await this.ensure(args)
       }
-      continuityOf = live.statusBinding.runId
+      // Why re-read: `live` was captured before the awaited liveness probe. A concurrent ensure
+      // can have promoted a replacement in between, and chaining from the stale run would fork
+      // the lineage instead of continuing it.
+      const supersededBy = this.live.get(key)
+      continuityOf =
+        supersededBy?.ptyId === live.ptyId && supersededBy.generation === live.generation
+          ? live.statusBinding?.runId
+          : supersededBy?.statusBinding?.runId
       this.release(live.ptyId, live.generation)
     }
 
@@ -136,40 +140,13 @@ export class ClaimedAgentPtyOwnerRegistry {
     let promotedOwner: LiveOwner | null = null
     try {
       const spawned = await args.spawn({ generation, statusBinding })
-      const canonicalOwner = parseSpawnedAgentSessionOwner(spawned.owner)
-      const owner: LiveOwner = canonicalOwner
-        ? {
-            claim: cloneClaim(canonicalOwner.claim),
-            generation: canonicalOwner.generation,
-            phase: 'live',
-            ptyId: canonicalOwner.ptyId,
-            surface: cloneSurface(canonicalOwner.surface),
-            statusBinding: cloneAgentStatusExecutionBinding(canonicalOwner.statusBinding)
-          }
-        : {
-            claim: requestedClaim,
-            generation,
-            phase: 'live',
-            ptyId: spawned.ptyId,
-            surface: requestedSurface,
-            statusBinding
-          }
-      if (
-        owner.ptyId !== spawned.ptyId ||
-        !scopedAgentSessionClaimsEqual(owner.claim, requestedClaim)
-      ) {
-        throw new Error('agent_session_ownership_unknown')
-      }
-      if (
-        !spawned.owner &&
-        (!agentSessionSurfacesEqual(owner.surface, requestedSurface) ||
-          owner.generation !== generation ||
-          !agentStatusExecutionBindingsEqual(owner.statusBinding, statusBinding))
-      ) {
-        // Why: a lower host owner is authoritative; without one, a fresh spawn
-        // must retain this reservation's generation, surface, and status binding.
-        throw new Error('agent_session_ownership_unknown')
-      }
+      const owner = promoteSpawnedAgentSessionOwner({
+        spawned,
+        requestedClaim,
+        requestedSurface,
+        generation,
+        statusBinding
+      })
       const reservation = this.reserved.get(key)
       if (reservation?.generation !== generation) {
         throw new Error('agent_session_ownership_unknown')

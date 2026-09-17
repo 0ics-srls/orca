@@ -36,10 +36,14 @@ function retainedOwnerBytes(owner: unknown, ptyId: string): number | null {
     owner.surface.tabId,
     owner.surface.leafId,
     owner.surface.terminalHandle,
-    owner.statusBinding.runId,
-    owner.statusBinding.attachment.executionId,
-    owner.statusBinding.role,
-    ...(owner.statusBinding.continuityOf ? [owner.statusBinding.continuityOf] : [])
+    ...(owner.statusBinding
+      ? [
+          owner.statusBinding.runId,
+          owner.statusBinding.attachment.executionId,
+          owner.statusBinding.role,
+          ...(owner.statusBinding.continuityOf ? [owner.statusBinding.continuityOf] : [])
+        ]
+      : [])
   ].reduce((total, value) => total + Buffer.byteLength(value, 'utf8'), 0)
 }
 

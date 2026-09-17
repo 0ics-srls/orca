@@ -17,7 +17,6 @@ function isEnrichedStatus(
 export type ReportedExecutionBindingResolution = {
   payload: AgentHookEventPayload
   previous?: EnrichedAgentHookEventPayload
-  suppress: boolean
   replacement: boolean
 }
 
@@ -40,10 +39,11 @@ export function resolveReportedExecutionBinding(args: {
           reported
         })
       : null
-  if (reported && !resolved && previous?.runId && previous.executionId) {
-    // A delayed prior owner or inherited claim cannot rewrite the confirmed subject.
-    return { payload, previous, suppress: true, replacement: false }
-  }
+  // Why an unresolvable claim only costs the claim: the owner registry is empty for any pane the
+  // current process did not launch — after an app restart, once the PTY exits, and for every spooled
+  // event replayed from a window when Orca was down. Withholding the state transition there would
+  // latch the row on whatever it last said, with nothing re-deriving it. Identity fails closed; the
+  // state machine does not.
   if (!reported && !alreadyVerified && previous?.runId && previous.executionId) {
     // Mixed-version emitters may omit the claim; retain the known subject while applying
     // their status transition, but never accept a replacement identity from that event.
@@ -90,5 +90,5 @@ export function resolveReportedExecutionBinding(args: {
     previous.executionId &&
     (previous.runId !== resolved.runId || previous.executionId !== resolved.attachment.executionId)
   )
-  return { payload, previous, suppress: false, replacement }
+  return { payload, previous, replacement }
 }

@@ -25,16 +25,20 @@ export function createAgentStatusExecutionBindingResolver(
   return (candidate) => {
     const matches = owners.list().filter((owner) => {
       const binding = owner.statusBinding
+      // Why the POST route is not a predicate: the route is the weakest evidence on the event and
+      // is the thing a replayed vendor hook forges. An unguessable run token that matches a live
+      // owner outranks it; making the route a condition would reject the correct owner precisely
+      // when the route lies, which is the misattribution this identity exists to end.
       return (
+        binding !== undefined &&
         owner.phase === 'live' &&
         makePaneKey(owner.surface.tabId, owner.surface.leafId) === candidate.paneKey &&
         (!candidate.worktreeId ||
           worktreeIdsEqual(owner.surface.worktreeId, candidate.worktreeId)) &&
-        (!candidate.source || owner.claim.agent === candidate.source) &&
         binding.runId === candidate.reported.runId &&
         binding.attachment.executionId === candidate.reported.executionId
       )
     })
-    return matches.length === 1 ? matches[0].statusBinding : null
+    return matches.length === 1 ? (matches[0].statusBinding ?? null) : null
   }
 }

@@ -35,7 +35,7 @@ export const AGENT_SESSION_RPC_ERROR_CODES = [
 
 export const AGENT_SESSION_CLAIM_DIGEST_VERSION = 1 as const
 
-export const AGENT_SESSION_EXECUTION_OWNER_PROTOCOL_VERSION = 3 as const
+export const AGENT_SESSION_EXECUTION_OWNER_PROTOCOL_VERSION = 2 as const
 export const AGENT_SESSION_CREATE_OPERATION_PROTOCOL_VERSION = 1 as const
 
 export const AGENT_SESSION_OPERATION_FUTURE_SKEW_MS = 5 * 60 * 1000
@@ -88,7 +88,8 @@ export type AgentSessionOwnerBinding = {
   phase: 'reserved' | 'live'
   ptyId: string
   surface: AgentSessionSurfaceBinding
-  statusBinding: AgentStatusExecutionBinding
+  /** Absent from a host that predates run identity; absence means unknown, never 'no agent'. */
+  statusBinding?: AgentStatusExecutionBinding
 }
 
 export type AgentSessionClaimedSpawnResult = {
@@ -201,7 +202,10 @@ export function isAgentSessionOwnerBinding(value: unknown): value is AgentSessio
     (owner.phase === 'reserved' || owner.phase === 'live') &&
     isBoundedWireString(owner.ptyId, 4096) &&
     isAgentSessionSurfaceBinding(owner.surface) &&
-    parseAgentStatusExecutionBinding(owner.statusBinding) !== null
+    // Why optional: an owner from a host that predates run identity is still a valid owner.
+    // Requiring the field here would make every preserved older daemon's listing fatal.
+    (owner.statusBinding === undefined ||
+      parseAgentStatusExecutionBinding(owner.statusBinding) !== null)
   )
 }
 
