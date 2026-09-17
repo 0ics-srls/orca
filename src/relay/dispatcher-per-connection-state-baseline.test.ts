@@ -79,6 +79,12 @@ describe('relay dispatcher per-connection state', () => {
         d.requestAborts.create(id, 1)
       }
 
+      // The ledger is the one container with no per-client teardown: an entry is reclaimed by its
+      // own lease's release(), never by closeClient. `ledgerClientBytes` returning to baseline
+      // below is therefore load-bearing -- it is the proof that normal closes settle every queued
+      // and in-flight entry. An entry that did somehow survive a close would not be reclaimed, and
+      // that is a gap to close, not a contract to pin.
+      //
       // The census must be able to find things: these two are the containers that stay 0 unless
       // deliberately loaded, so assert they actually moved before trusting that they came back.
       expect(census(d).clients).toBe(CLIENTS_PER_CYCLE + 1)
@@ -95,23 +101,6 @@ describe('relay dispatcher per-connection state', () => {
       }
       expect(census(d)).toEqual(baseline)
     }
-    d.dispose()
-  })
-
-  // Why this is separate: the ledger is the one container with no per-client teardown. Every other
-  // container is reclaimed by closeClient; a ledger entry is reclaimed only by its own lease's
-  // release(). Normal closes settle every queued and in-flight entry, so this never fires in
-  // practice -- but nothing in the close path would reclaim an entry that did survive.
-  it('does not reclaim a publication-ledger entry on client close', () => {
-    vi.useFakeTimers()
-    const d = newDispatcher()
-    const id = d.attachClient(() => {})
-    d.publicationLedger.clientBytes.set('stranded-key', 4096)
-
-    d.detachClient(id)
-
-    expect(d.clients.size).toBe(1)
-    expect(d.publicationLedger.clientBytes.has('stranded-key')).toBe(true)
     d.dispose()
   })
 })

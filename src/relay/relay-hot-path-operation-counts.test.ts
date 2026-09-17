@@ -47,11 +47,29 @@ class CountingMap<K, V> extends Map<K, V> {
 type ProbedDispatcher = {
   attachClient: (w: (b: Buffer) => void) => number
   clients: Map<number, unknown>
-  publicationLedger: { clientBytes: Map<string, number> }
+  publicationLedger: {
+    clientBytes: Map<string, number>
+    readonly retainedBytes: number
+    readonly relayLowBytes: number
+    readonly clientHighBytes: number
+    tryReserve: (m: readonly { clientKey: string; bytes: number }[]) => unknown[] | null
+  }
   notifyLegacyCapacityIfLow: () => void
   activeClients: () => unknown[]
+  activeClientKeys: () => string[]
   tryPublishToClients: (clients: unknown[], msg: unknown, lane: string) => boolean
   dispose: () => void
+}
+
+/** Reserves through the real lease path until aggregate retention clears the relay low-water mark. */
+function loadLedgerAboveLowWater(d: ProbedDispatcher): void {
+  const ledger = d.publicationLedger
+  for (const clientKey of d.activeClientKeys()) {
+    if (ledger.retainedBytes > ledger.relayLowBytes) {
+      return
+    }
+    ledger.tryReserve([{ clientKey, bytes: ledger.clientHighBytes }])
+  }
 }
 
 function dispatcherWithClients(clientCount: number): {
@@ -125,7 +143,10 @@ describe('relay hot-path operation counts', () => {
     expect(index.has(1)).toBe(false)
   })
 
-  it('notifyLegacyCapacity costs exactly one ledger lookup per active client', () => {
+  // Scope: this is the idle arm, where every key has to be read whatever the call shape is. It
+  // guards against a per-client lookup becoming a per-client scan; it does NOT guard the thunk --
+  // the counts below are identical with and without it. The loaded arm is the next test.
+  it('notifyLegacyCapacity costs exactly one ledger lookup per active client when idle', () => {
     vi.useFakeTimers()
     for (const clientCount of [50, 100, 200, 400]) {
       const { d, clients, ledger } = dispatcherWithClients(clientCount)
@@ -134,6 +155,29 @@ describe('relay hot-path operation counts', () => {
 
       expect(clients.visits, `clients enumerated at n=${clientCount}`).toBe(clientCount)
       expect(ledger.getCalls, `ledger lookups at n=${clientCount}`).toBe(clientCount)
+      d.dispose()
+    }
+  })
+
+  // Why the loaded ledger is the one that measures the thunk: the aggregate ceiling answers first
+  // and on its own, so a caller passing an eager array has already built one key string per client
+  // before learning they were never going to be read. That is the whole saving, and it is invisible
+  // below the low-water mark -- which is why counting an idle dispatcher guards nothing.
+  it('does not enumerate clients at all once the aggregate ceiling answers', () => {
+    vi.useFakeTimers()
+    for (const clientCount of [50, 100, 200, 400]) {
+      const { d, clients, ledger } = dispatcherWithClients(clientCount)
+      loadLedgerAboveLowWater(d)
+      // The census must be able to find things: a reserve that silently failed would leave the
+      // ledger idle and make every count below pass for the wrong reason.
+      expect(d.publicationLedger.retainedBytes).toBeGreaterThan(d.publicationLedger.relayLowBytes)
+      clients.visits = 0
+      ledger.getCalls = 0
+
+      d.notifyLegacyCapacityIfLow()
+
+      expect(clients.visits, `clients enumerated at n=${clientCount}`).toBe(0)
+      expect(ledger.getCalls, `ledger lookups at n=${clientCount}`).toBe(0)
       d.dispose()
     }
   })
