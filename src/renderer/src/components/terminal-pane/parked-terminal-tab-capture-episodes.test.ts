@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { RepoConnection } from '../../../../shared/workspace-session-terminal-buffers'
 import { captureNewlyParkedTerminalTabs } from './parked-terminal-tab-capture-episodes'
 import { shutdownBufferCaptures } from './shutdown-buffer-captures'
 
-const REMOTE_REPO = { id: 'repo', connectionId: 'conn-1', executionHostId: null }
-const LOCAL_REPO = { id: 'repo', connectionId: null, executionHostId: 'local' }
+const REMOTE_REPO: RepoConnection = { id: 'repo', connectionId: 'conn-1', executionHostId: null }
+const LOCAL_REPO: RepoConnection = { id: 'repo', connectionId: null, executionHostId: 'local' }
 const WORKTREE_ID = 'repo::/repo/worktree'
 
-const storeState = { repos: [REMOTE_REPO] as { id: string }[] }
+const storeState: { repos: RepoConnection[] } = { repos: [REMOTE_REPO] }
 
 vi.mock('../../store', () => ({
   useAppStore: { getState: () => storeState }
