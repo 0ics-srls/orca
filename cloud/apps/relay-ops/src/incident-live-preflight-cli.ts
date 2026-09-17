@@ -6,8 +6,10 @@ import { createGcloudClient } from './gcloud-client.js'
 import { suppliedIdentityToken } from './incident-monitor-cli.js'
 import { AdmissionSelectorSchema, type AdmissionSelector } from './incident-selector.js'
 import {
+  cellProbeStreakKey,
   evaluateIncidentSample,
   FRESHNESS_FAILURE_CODES,
+  INCIDENT_MONITOR_THRESHOLDS,
   preDrainDryRunPassed,
   type IncidentFailure,
   type IncidentSample
@@ -16,7 +18,10 @@ import { createIncidentSampleCollector } from './incident-monitor-sources.js'
 
 const FRESHNESS_RETRY_ATTEMPTS = 5
 const FRESHNESS_RETRY_INTERVAL_MS = 15_000
-const MONITOR_EVIDENCE_MAX_AGE_MS = 5 * 60_000
+// 10 min, not 5: the same-cap job reaches this check ~5 min after the monitor
+// completes (runner queue ~2 min, gate job ~80 s, checkout ~60 s); on 2026-09-17
+// a green gate died at 302 s. The live samples below hold every wave to now.
+const MONITOR_EVIDENCE_MAX_AGE_MS = 10 * 60_000
 // Matches the same-cap cell job timeout-minutes; bounds each predecessor wave.
 const WAVE_PREDECESSOR_TIMEOUT_MS = 75 * 60_000
 const WAVE_INDEX_PATTERN = /^[0-3]$/
@@ -167,7 +172,16 @@ export async function runIncidentLivePreflight(
   const wait = dependencies.wait ?? ((ms: number) => new Promise<void>((resolveWait) => {
     setTimeout(resolveWait, ms)
   }))
-  const attempts = freshnessRetryCount === 1 ? FRESHNESS_RETRY_ATTEMPTS : 1
+  const freshnessAttempts = freshnessRetryCount === 1 ? FRESHNESS_RETRY_ATTEMPTS : 1
+  // Why: this single sample decides a mutating wave, so an Asia cell's ~30 s
+  // "no healthy upstream" window could fail a wave here even after the 15-minute
+  // gate learned to ride it out. Hold the two to the same tolerance. Unlike the
+  // freshness retry this needs no flag, because a per-cell probe breach is never
+  // the operator's call to waive.
+  const cellProbeAttempts = 1 + INCIDENT_MONITOR_THRESHOLDS.cellProbeToleranceSamples
+  const attempts = Math.max(freshnessAttempts, cellProbeAttempts)
+  let freshnessRetries = freshnessAttempts - 1
+  let cellProbeRetries = cellProbeAttempts - 1
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const evaluation = evaluateIncidentSample(
       await collect(),
@@ -177,22 +191,33 @@ export async function runIncidentLivePreflight(
       state.capacityCellId
     )
     if (evaluation.status === 'green') return
-    const freshnessOnly = evaluation.failures.every((failure) =>
+    const freshnessFailures = evaluation.failures.filter((failure) =>
       FRESHNESS_FAILURE_CODES.has(failure.code)
     )
+    // Per-cell probe breaches only. Director and auth probes are absent here on
+    // purpose and fail the wave on their first bad sample.
+    const cellProbeFailures = evaluation.failures.filter((failure) =>
+      !FRESHNESS_FAILURE_CODES.has(failure.code) && cellProbeStreakKey(failure) !== null
+    )
+    const retryable =
+      freshnessFailures.length + cellProbeFailures.length === evaluation.failures.length &&
+      (freshnessFailures.length === 0 || freshnessRetries > 0) &&
+      (cellProbeFailures.length === 0 || cellProbeRetries > 0)
     // Waiting must never carry the mutation past the same evidence-age bound
     // the entry check enforces, so the wave budget also caps the retry window.
     const budgetExhausted =
       now() + FRESHNESS_RETRY_INTERVAL_MS - completedAt > maxEvidenceAgeMs
-    if (!freshnessOnly || attempt === attempts || budgetExhausted) {
+    if (!retryable || attempt === attempts || budgetExhausted) {
       throw new Error(
         `relay live preflight failed: ${evaluation.failures
           .map(describeFailure)
         .join(',')}`
       )
     }
+    if (freshnessFailures.length > 0) freshnessRetries--
+    if (cellProbeFailures.length > 0) cellProbeRetries--
     console.warn(
-      `relay live preflight awaiting fresh evidence (${attempt}/${attempts - 1})`
+      `relay live preflight re-sampling after tolerable failure (${attempt}/${attempts - 1})`
     )
     await wait(FRESHNESS_RETRY_INTERVAL_MS)
   }

@@ -2355,7 +2355,8 @@
         "0f3066256e": "Previous match",
         "42e466b9f1": "Regex",
         "90c61387d9": "Case sensitive",
-        "e07012f26e": "Search..."
+        "e07012f26e": "Search...",
+        "10e039b591": "No results"
       },
       "UpdateCard": {
         "68b235d264": "Restart to Update",
@@ -17237,6 +17238,8 @@
         "countOne": "1 tool call",
         "countN": "{{value0}} tool calls",
         "moreCalls": "+{{value0}} more",
+        "failedCount": "{{value0}} failed",
+        "failedCallsLabel": "Failed tool calls: {{value0}}",
         "runningPreview": "Running {{preview}}",
         "runningCommand": "Running command",
         "runningNamedPreview": "Running {{toolName}} {{preview}}",
@@ -17276,6 +17279,7 @@
         "command": "Background command",
         "monitor": "Background monitor",
         "task": "Background task",
+        "outputFile": "Output: {{value0}}",
         "detailsUnavailable": "Task details are unavailable for this session.",
         "countAgentsOne": "1 agent",
         "countAgentsMany": "{{value0}} agents",
@@ -17362,7 +17366,10 @@
         "cancel": "Cancel",
         "reason": "Reason",
         "blockedPath": "Blocked path",
-        "askRule": "Ask rule"
+        "askRule": "Ask rule",
+        "plan": {
+          "file": "Plan file"
+        }
       },
       "launchPromptNotDelivered": "Not delivered — check the terminal",
       "structuredSessionCloseFailed": "Could not close this chat session",

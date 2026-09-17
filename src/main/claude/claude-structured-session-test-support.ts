@@ -83,6 +83,8 @@ export function fakeClaude(
       closeCount: 0,
       pid: 4321,
       closed: false,
+      pauseReading: () => {},
+      resumeReading: () => {},
       initializationResult: async () => {
         connection.calls.push({ subtype: 'initialize' })
         if (options.exitBeforeInit) {
