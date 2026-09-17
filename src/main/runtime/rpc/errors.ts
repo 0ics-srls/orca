@@ -7,8 +7,6 @@ import { computerUseErrorRecoveryData } from '../../../shared/computer-use-error
 import { COMPUTER_ERROR_CODES } from '../../../shared/runtime-types'
 import { LINEAR_ERROR_CODES } from '../../../shared/linear/agent-access'
 import { AGENT_SESSION_RPC_ERROR_CODES } from '../../../shared/agent-session-host-authority'
-import { isAgentSessionPtyWriteRefusedError } from '../../../shared/agent-session-pty-write-admission'
-import { aiVaultResumeRefusalCopy } from '../../../shared/agent-session-pty-write-refusal-copy'
 import { ARTIFACT_SHARING_DISABLED_CODE } from '../../../shared/artifact-sharing-gate'
 import { AGENT_SKILL_SHARING_DISABLED_CODE } from '../../../shared/agent-skill-sharing-gate'
 import {
@@ -26,6 +24,7 @@ import { GIT_DIFF_TOO_LARGE_CODE } from '../../../shared/git-diff-transport-budg
 import { AUTOMATION_OWNER_CONFLICT_CODES } from '../../../shared/automation-owner-conflict'
 import { ARCHIVE_HOOK_FAILED_REMOVAL_CODE } from '../../../shared/worktree/archive-hook-removal-gate'
 import { NESTED_WORKER_DEPTH_EXCEEDED_CODE } from '../../../shared/nested-worker-depth'
+import { StructuredSessionResumeRefusedError } from '../../ai-vault/structured-session-resume-refusal'
 
 export function successResponse(id: string, meta: RpcEnvelopeMeta, result: unknown): RpcSuccess {
   return {
@@ -152,15 +151,9 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
 
 export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknown): RpcFailure {
   const message = error instanceof Error ? error.message : String(error)
-  // A history resume refused by an owner: the code stays the token clients switch
-  // on, while the message becomes copy a reader can act on. Without this the
-  // envelope carries only the token, and a client that renders `error.message` —
-  // which mobile does — shows the reader `agent_session_conflict`.
-  if (isAgentSessionPtyWriteRefusedError(error) && error.context?.operation === 'history-resume') {
-    return errorResponse(id, meta, error.refusal.code, aiVaultResumeRefusalCopy(error.refusal), {
-      agentSessionRefusal: error.refusal,
-      operation: error.context.operation,
-      workspaceId: error.context.workspaceId
+  if (error instanceof StructuredSessionResumeRefusedError) {
+    return errorResponse(id, meta, error.refusal.code, error.displayMessage, {
+      agentSessionRefusal: error.refusal
     })
   }
   if (

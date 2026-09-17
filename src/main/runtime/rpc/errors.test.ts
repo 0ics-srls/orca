@@ -16,6 +16,7 @@ import {
 } from '../../../shared/nested-worker-depth'
 import { OrchestrationError } from '../orchestration/orchestration-error'
 import { AgentSessionPtyWriteRefusedError } from '../../../shared/agent-session-pty-write-admission'
+import { StructuredSessionResumeRefusedError } from '../../ai-vault/structured-session-resume-refusal'
 
 class LineageError extends Error {
   code = 'LINEAGE_PARENT_NOT_FOUND'
@@ -307,13 +308,11 @@ describe('history resume refused by an owner', () => {
     ownerPid: 4242,
     runtimeFence: 7
   }
-  const context = { operation: 'history-resume' as const, workspaceId: 'ws-1' }
-
   it('sends copy a reader can act on, keeping the code clients switch on', () => {
     const failure = mapRuntimeError(
       'req-1',
       { runtimeId: 'runtime-1' },
-      new AgentSessionPtyWriteRefusedError({ ...refusal, code: 'agent_session_conflict' }, context)
+      new StructuredSessionResumeRefusedError({ ...refusal, code: 'agent_session_conflict' })
     )
 
     // The defect this pins: without the mapping the reader is shown the token.
@@ -323,8 +322,6 @@ describe('history resume refused by an owner', () => {
     )
     expect(failure.error.code).toBe('agent_session_conflict')
     expect(failure.error.data).toMatchObject({
-      operation: 'history-resume',
-      workspaceId: 'ws-1',
       agentSessionRefusal: { sessionId: 'orca-session-1', ownerPid: 4242 }
     })
   })
@@ -333,10 +330,10 @@ describe('history resume refused by an owner', () => {
     const failure = mapRuntimeError(
       'req-1',
       { runtimeId: 'runtime-1' },
-      new AgentSessionPtyWriteRefusedError(
-        { ...refusal, code: 'agent_session_ownership_unknown' },
-        context
-      )
+      new StructuredSessionResumeRefusedError({
+        ...refusal,
+        code: 'agent_session_ownership_unknown'
+      })
     )
 
     expect(failure.error.code).toBe('agent_session_ownership_unknown')
@@ -348,10 +345,11 @@ describe('history resume refused by an owner', () => {
     const failure = mapRuntimeError(
       'req-1',
       { runtimeId: 'runtime-1' },
-      new AgentSessionPtyWriteRefusedError(
-        { ...refusal, code: 'agent_session_conflict', ownerRuntimeKind: 'tui' },
-        context
-      )
+      new StructuredSessionResumeRefusedError({
+        ...refusal,
+        code: 'agent_session_conflict',
+        ownerRuntimeKind: 'tui'
+      })
     )
 
     expect(failure.error.message).toContain('terminal')

@@ -146,23 +146,14 @@ export function reevaluateAgentSessionPtyWriteAdmission(args: {
   return next
 }
 
-/** What the refused caller was attempting, when that is not a PTY write. */
-export type AgentSessionRefusalContext = {
-  operation: 'history-resume'
-  /** Workspace holding the owning session, so a client can offer to go there. */
-  workspaceId: string
-}
-
 export class AgentSessionPtyWriteRefusedError extends Error {
   readonly refusal: AgentSessionPtyWriteRefusal
-  readonly context: AgentSessionRefusalContext | null
 
-  constructor(refusal: AgentSessionPtyWriteRefusal, context?: AgentSessionRefusalContext) {
+  constructor(refusal: AgentSessionPtyWriteRefusal) {
     // Why: callers that already switch on `error.message` as an RPC code keep working unchanged.
     super(refusal.code)
     this.name = 'AgentSessionPtyWriteRefusedError'
     this.refusal = refusal
-    this.context = context ?? null
   }
 }
 

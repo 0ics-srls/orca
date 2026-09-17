@@ -1,5 +1,4 @@
 import { agentSessionLeaseAdmitsWriter } from '../../shared/agent-session-lease-adjudication'
-import { AgentSessionPtyWriteRefusedError } from '../../shared/agent-session-pty-write-admission'
 import type { AiVaultListResult, AiVaultSession } from '../../shared/ai-vault-types'
 import type { AiVaultPrepareSessionResumeArgs } from '../../shared/ai-vault-resume-preparation'
 import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
@@ -7,6 +6,7 @@ import {
   listStructuredProviderSessionOwnership,
   type StructuredProviderSessionOwnership
 } from '../native-chat/agent-session-wire/structured-provider-session-ownership'
+import { StructuredSessionResumeRefusedError } from './structured-session-resume-refusal'
 
 export function projectStructuredAiVaultSessions(
   result: AiVaultListResult,
@@ -178,22 +178,16 @@ function parseResumeInvocation(command: string): ResumeInvocation | null {
   }
 }
 
-// The message stays the bare code, so every caller that already switches on it keeps
-// working; the refusal rides alongside it so a client can say who owns the session
-// rather than printing the token at the reader.
 function refuseLegacyWriter(ownership: StructuredProviderSessionOwnership): never {
   const lease = ownership.lease
-  throw new AgentSessionPtyWriteRefusedError(
-    {
-      code: agentSessionLeaseAdmitsWriter(lease)
-        ? 'agent_session_conflict'
-        : 'agent_session_ownership_unknown',
-      sessionId: ownership.sessionId,
-      ownerRuntimeKind: lease.runtimeKind,
-      handoffStage: lease.handoffStage,
-      ownerPid: lease.ownerProcess?.pid ?? null,
-      runtimeFence: lease.runtimeFence
-    },
-    { operation: 'history-resume', workspaceId: ownership.workspaceId }
-  )
+  throw new StructuredSessionResumeRefusedError({
+    code: agentSessionLeaseAdmitsWriter(lease)
+      ? 'agent_session_conflict'
+      : 'agent_session_ownership_unknown',
+    sessionId: ownership.sessionId,
+    ownerRuntimeKind: lease.runtimeKind,
+    handoffStage: lease.handoffStage,
+    ownerPid: lease.ownerProcess?.pid ?? null,
+    runtimeFence: lease.runtimeFence
+  })
 }
