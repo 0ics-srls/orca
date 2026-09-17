@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from './orca-runtime'
 import { getDefaultWorkspaceSession } from '../../shared/constants'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import type { TerminalLayoutSnapshot, TerminalTab } from '../../shared/terminal-tab-types'
 import { makePaneKey } from '../../shared/stable-pane-id'
 import { spawnSurfaceClaimSequence } from './pty-recorded-surface-topology'
 
@@ -18,21 +19,39 @@ const DROPPED_PTY = 'pty-cli-created'
 const KEPT_INCARNATION = 'inc-kept'
 const DROPPED_INCARNATION = 'inc-dropped'
 
+function persistedTab(id: string): TerminalTab {
+  return {
+    id,
+    ptyId: null,
+    worktreeId: WORKTREE_ID,
+    title: '',
+    customTitle: null,
+    color: null,
+    sortOrder: 0,
+    createdAt: 1
+  }
+}
+
+/** Only ptyIdsByLeafId is read by indexPersistedPtySurfaceBindings; the rest stays inert. */
+function persistedLayout(leafId: string, ptyId: string): TerminalLayoutSnapshot {
+  return {
+    root: null,
+    activeLeafId: null,
+    expandedLeafId: null,
+    ptyIdsByLeafId: { [leafId]: ptyId }
+  }
+}
+
 /** A session that still persists both panes, exactly as it is between a graph drop and the next save. */
 function sessionStillHoldingBothPanes(): WorkspaceSessionState {
   const session = getDefaultWorkspaceSession()
   session.tabsByWorktree = {
-    [WORKTREE_ID]: [
-      { id: 'tab-kept', title: '', type: 'terminal' },
-      { id: 'tab-dropped', title: '', type: 'terminal' }
-    ]
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: listTerminals reads only the tab ids and the layouts keyed off them.
-  } as never
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: only ptyIdsByLeafId is read by indexPersistedPtySurfaceBindings.
+    [WORKTREE_ID]: [persistedTab('tab-kept'), persistedTab('tab-dropped')]
+  }
   session.terminalLayoutsByTabId = {
-    'tab-kept': { ptyIdsByLeafId: { [KEPT_LEAF]: KEPT_PTY } },
-    'tab-dropped': { ptyIdsByLeafId: { [DROPPED_LEAF]: DROPPED_PTY } }
-  } as never
+    'tab-kept': persistedLayout(KEPT_LEAF, KEPT_PTY),
+    'tab-dropped': persistedLayout(DROPPED_LEAF, DROPPED_PTY)
+  }
   session.terminalPtyIncarnationsByPaneKey = {
     [makePaneKey('tab-kept', KEPT_LEAF)]: KEPT_INCARNATION,
     [makePaneKey('tab-dropped', DROPPED_LEAF)]: DROPPED_INCARNATION
@@ -165,14 +184,13 @@ describe('terminal inventory after a pane is dropped', () => {
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recordPtyWorktree is protected; reaching it is the only way to stamp a pane the graph never published.
     const stamp = runtime as unknown as {
       recordPtyWorktree: (ptyId: string, worktreeId: string, state: Record<string, unknown>) => void
+      graphSequence: number
     }
     stamp.recordPtyWorktree(DROPPED_PTY, WORKTREE_ID, {
       connected: true,
       tabId: 'tab-dropped',
       paneKey: `tab-dropped:${DROPPED_LEAF}`,
-      surfaceRecordedAtGraphSequence: spawnSurfaceClaimSequence(
-        (runtime as unknown as { graphSequence: number }).graphSequence
-      )
+      surfaceRecordedAtGraphSequence: spawnSurfaceClaimSequence(stamp.graphSequence)
     })
 
     const { terminals } = await runtime.listTerminals(`id:${WORKTREE_ID}`)

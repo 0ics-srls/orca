@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from './orca-runtime'
 import { getDefaultWorkspaceSession } from '../../shared/constants'
-import type { RuntimeMobileSessionTabsSnapshot } from '../../shared/runtime-types'
+import type {
+  RuntimeMobileSessionTabsSnapshot,
+  RuntimeMobileSessionTerminalTab
+} from '../../shared/runtime-types'
 
 /**
  * Closing a tab is not a handover to a new publisher.
@@ -41,22 +44,19 @@ function makeStore() {
   }
 }
 
-function terminalTab(parentTabId: string, leafId: string) {
+function terminalTab(parentTabId: string, leafId: string): RuntimeMobileSessionTerminalTab {
   return {
-    type: 'terminal' as const,
+    type: 'terminal',
     id: `${parentTabId}::${leafId}`,
     parentTabId,
     leafId,
     title: 'Terminal',
-    isActive: true,
-    status: 'ready' as const,
-    terminal: `term_${parentTabId}`
+    isActive: true
   }
 }
 
 /** A worktree the live renderer generation published, holding two terminals. */
-function storedSnapshot(): RuntimeMobileSessionTabsSnapshot {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this suite reads only the epoch, version and tabs.
+function storedSnapshot(tabs: RuntimeMobileSessionTerminalTab[]): RuntimeMobileSessionTabsSnapshot {
   return {
     worktree: WORKTREE_ID,
     publicationEpoch: LIVE_EPOCH,
@@ -64,29 +64,35 @@ function storedSnapshot(): RuntimeMobileSessionTabsSnapshot {
     activeGroupId: null,
     activeTabId: `tab-a::${LEAF_ID}`,
     activeTabType: 'terminal',
-    tabs: [terminalTab('tab-a', LEAF_ID), terminalTab('tab-b', LEAF_ID)]
-  } as RuntimeMobileSessionTabsSnapshot
+    tabs
+  }
 }
 
 function closeOneTab(): RuntimeMobileSessionTabsSnapshot {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: makeStore covers the reads this suite drives.
   const runtime = new OrcaRuntimeService(makeStore() as never)
-  const snapshot = storedSnapshot()
+  const closedTab = terminalTab('tab-a', LEAF_ID)
+  const snapshot = storedSnapshot([closedTab, terminalTab('tab-b', LEAF_ID)])
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: closeHeadlessMobileTerminalTab is protected; reaching it is the only way to drive a headless close.
   const internals = runtime as unknown as {
     closeHeadlessMobileTerminalTab: (
       worktreeId: string,
       snapshot: RuntimeMobileSessionTabsSnapshot,
-      tab: ReturnType<typeof terminalTab>,
+      tab: RuntimeMobileSessionTerminalTab,
       options?: Record<string, unknown>
     ) => void
     mobileSessionTabsByWorktree: Map<string, RuntimeMobileSessionTabsSnapshot>
   }
   internals.mobileSessionTabsByWorktree.set(WORKTREE_ID, snapshot)
-  internals.closeHeadlessMobileTerminalTab(WORKTREE_ID, snapshot, snapshot.tabs[0] as never, {
+  internals.closeHeadlessMobileTerminalTab(WORKTREE_ID, snapshot, closedTab, {
     allowMissingPersistedTab: true,
     killPtys: false
   })
-  return internals.mobileSessionTabsByWorktree.get(WORKTREE_ID) as RuntimeMobileSessionTabsSnapshot
+  const published = internals.mobileSessionTabsByWorktree.get(WORKTREE_ID)
+  if (!published) {
+    throw new Error(`the close published no snapshot for ${WORKTREE_ID}`)
+  }
+  return published
 }
 
 describe('closing a headless mobile terminal tab', () => {

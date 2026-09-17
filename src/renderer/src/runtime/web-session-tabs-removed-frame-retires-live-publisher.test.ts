@@ -195,12 +195,12 @@ describe('a removal frame must not retire the publisher that is still live', () 
     const removedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, removalFrame())
     expect(admits(removalFrame(), removedReceived)).toBe(true)
 
-    const placeholder = {
+    const placeholder: RuntimeMobileSessionTabsResult = {
       ...liveFrame(1),
       publicationEpoch: UNPUBLISHED_WORKTREE_PUBLICATION_EPOCH,
       snapshotVersion: 0,
       tabs: []
-    } as RuntimeMobileSessionTabsResult
+    }
     const placeholderReceived = recordReceivedWebSessionTabsSnapshot(
       ENVIRONMENT_ID,
       placeholder,
