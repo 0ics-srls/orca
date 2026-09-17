@@ -19,6 +19,25 @@ const overflowItems = Array.from({ length: 20 }, (_, index) => ({
   hasImages: false
 }))
 
+function retainClosingPopover(): ReturnType<typeof vi.spyOn> {
+  const getStyle = window.getComputedStyle.bind(window)
+  return vi.spyOn(window, 'getComputedStyle').mockImplementation((element, ...args) => {
+    const style = getStyle(element, ...args)
+    if (element.getAttribute('data-slot') !== 'popover-content') {
+      return style
+    }
+    return new Proxy(style, {
+      get: (target, property) =>
+        property === 'animationName'
+          ? element.getAttribute('data-state') === 'closed'
+            ? 'exit'
+            : 'enter'
+          : // oxlint-disable-next-line anti-slop/no-reflect-get -- Proxy trap passes CSSStyleDeclaration properties through unchanged.
+            Reflect.get(target, property)
+    })
+  })
+}
+
 describe('message rail interaction', () => {
   it('opens from the keyboard, reaches prompts, jumps, and restores focus', async () => {
     const user = userEvent.setup()
@@ -89,6 +108,80 @@ describe('message rail interaction', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Overflow prompt 0' }))
     )
+  })
+
+  it('refocuses the current prompt when closed content is reopened before unmount', async () => {
+    const styleSpy = retainClosingPopover()
+    const user = userEvent.setup()
+    try {
+      render(
+        <NativeChatMessageRail
+          rail={{
+            items: overflowItems,
+            ticks: overflowItems,
+            activeId: overflowItems[12].id,
+            visible: true
+          }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+      const trigger = screen.getByRole('button', { name: 'Your messages' })
+      trigger.focus()
+      await user.keyboard('{Enter}')
+      await user.keyboard('{Escape}')
+      await waitFor(() =>
+        expect(
+          document.querySelector('[data-slot="popover-content"]')?.getAttribute('data-state')
+        ).toBe('closed')
+      )
+
+      trigger.focus()
+      fireEvent.click(trigger)
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole('button', { name: 'Overflow prompt 12' })
+        )
+      )
+    } finally {
+      styleSpy.mockRestore()
+    }
+  })
+
+  it('preserves interactive focus when the current prompt changes', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <NativeChatMessageRail
+        rail={{
+          items: overflowItems,
+          ticks: overflowItems,
+          activeId: overflowItems[12].id,
+          visible: true
+        }}
+        scrollRef={{ current: document.createElement('div') }}
+        onSelect={vi.fn()}
+      />
+    )
+    const trigger = screen.getByRole('button', { name: 'Your messages' })
+    trigger.focus()
+    await user.keyboard('{Enter}')
+    const focusedPrompt = screen.getByRole('button', { name: 'Overflow prompt 12' })
+    expect(document.activeElement).toBe(focusedPrompt)
+
+    rerender(
+      <NativeChatMessageRail
+        rail={{
+          items: overflowItems,
+          ticks: overflowItems,
+          activeId: overflowItems[13].id,
+          visible: true
+        }}
+        scrollRef={{ current: document.createElement('div') }}
+        onSelect={vi.fn()}
+      />
+    )
+
+    expect(document.activeElement).toBe(focusedPrompt)
   })
 
   it('keeps focus in the transcript while a hover preview opens and closes', async () => {
@@ -184,6 +277,37 @@ describe('message rail interaction', () => {
       rerender(
         <NativeChatMessageRail
           rail={{ items: shiftedItems, ticks: shiftedItems, activeId: items[2].id, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+
+      expect(scrolled).toEqual([screen.getByRole('button', { name: 'Prompt 2' })])
+    })
+
+    it('rechecks the current row when the same number of messages is reordered', async () => {
+      const { rerender } = render(
+        <NativeChatMessageRail
+          rail={{ items, ticks: items, activeId: items[2].id, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+      fireEvent.pointerEnter(screen.getByRole('button', { name: 'Your messages' }), {
+        pointerType: 'mouse'
+      })
+      await screen.findByRole('dialog')
+      scrolled.length = 0
+
+      const reorderedItems = [items[2], items[0], items[1]]
+      rerender(
+        <NativeChatMessageRail
+          rail={{
+            items: reorderedItems,
+            ticks: reorderedItems,
+            activeId: items[2].id,
+            visible: true
+          }}
           scrollRef={{ current: document.createElement('div') }}
           onSelect={vi.fn()}
         />
