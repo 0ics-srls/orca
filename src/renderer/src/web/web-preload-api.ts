@@ -2,7 +2,8 @@ import type { PreloadApi } from '../../../preload/api-types'
 import type { StatsSummary } from '../../../shared/process-stats-types'
 import { createWebE2EApi } from './preload-api/web-e2e-api'
 import {
-  createAccountsApi,
+  createClaudeAccountsApi,
+  createCodexAccountsApi,
   createGrokAccountsApi,
   createMiniMaxCredentialsApi
 } from './preload-api/web-agent-accounts-api'
@@ -106,13 +107,17 @@ function createWebPreloadApi(): Partial<PreloadApi> {
     rateLimits: createRateLimitsApi(),
     minimaxCredentials: createMiniMaxCredentialsApi(),
     grokAccounts: createGrokAccountsApi(),
-    codexAccounts: createAccountsApi(),
-    claudeAccounts: createAccountsApi(),
+    codexAccounts: createCodexAccountsApi(),
+    claudeAccounts: createClaudeAccountsApi(),
     cli: createCliApi(),
     macosTccPrompts: createMacosTccPromptsApi(),
     codexConfigSync: {
       status: () =>
-        Promise.resolve({ state: 'synced', reason: null, systemConfigPath: '' } as const)
+        Promise.resolve({
+          state: 'synced',
+          reason: null,
+          systemConfigPath: ''
+        } as const)
     },
     developerPermissions: createDeveloperPermissionsApi(),
     computerUsePermissions: createComputerUsePermissionsApi(),

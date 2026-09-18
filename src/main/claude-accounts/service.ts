@@ -76,6 +76,7 @@ export class ClaudeAccountService {
   }
 
   async addAccount(target?: ClaudeAccountAddTarget): Promise<ClaudeRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.add(target))
   }
 
@@ -87,6 +88,7 @@ export class ClaudeAccountService {
   }
 
   async reauthenticateAccount(accountId: string): Promise<ClaudeRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.reauthenticate(accountId))
   }
 
@@ -107,6 +109,20 @@ export class ClaudeAccountService {
 
   cancelPendingLogin(): boolean {
     return this.cancelPendingClaudeLogin?.() ?? false
+  }
+
+  /**
+   * Why: an abandoned login holds the mutation queue for its whole deadline, so
+   * the next add would sit behind it with a spinner and no browser, then inherit
+   * the abandoned login's timeout failure. Cancelling before enqueueing — never
+   * inside the queue, which the abandoned login owns — frees it immediately.
+   */
+  private supersedePendingLogin(): void {
+    if (this.cancelPendingLogin()) {
+      console.info(
+        '[claude-accounts] Cancelled a pending Claude login superseded by a new request.'
+      )
+    }
   }
 
   getRuntimeConfigDir(target?: ClaudeAccountSelectionTarget): string {

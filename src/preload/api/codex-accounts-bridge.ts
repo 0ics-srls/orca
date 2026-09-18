@@ -5,6 +5,15 @@ export const codexAccountsApi = {
   list: () => ipcRenderer.invoke('codexAccounts:list'),
   add: (args?: { runtime?: 'host' | 'wsl'; wslDistro?: string | null }) =>
     ipcRenderer.invoke('codexAccounts:add', args),
+  cancelPendingLogin: (): Promise<boolean> =>
+    ipcRenderer.invoke('codexAccounts:cancelPendingLogin'),
+  getPendingLoginUrl: (): Promise<string | null> =>
+    ipcRenderer.invoke('codexAccounts:pendingLoginUrl'),
+  onPendingLoginUrlChanged: (callback: (url: string | null) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, url: string | null): void => callback(url)
+    ipcRenderer.on('codexAccounts:pendingLoginUrlChanged', listener)
+    return () => ipcRenderer.removeListener('codexAccounts:pendingLoginUrlChanged', listener)
+  },
   reauthenticate: (args: { accountId: string; activateIfSelectionWasEmpty?: boolean }) =>
     ipcRenderer.invoke('codexAccounts:reauthenticate', args),
   remove: (args: { accountId: string }) => ipcRenderer.invoke('codexAccounts:remove', args),

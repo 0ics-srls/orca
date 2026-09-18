@@ -42,6 +42,10 @@ export function getClaudeAccountErrorDescription(error: unknown): string {
   )
 }
 
+export function isCodexAccountCancellation(error: unknown): boolean {
+  return getCodexAccountErrorDescription(error).toLowerCase() === 'codex sign-in was cancelled.'
+}
+
 export function isClaudeAccountCancellation(error: unknown): boolean {
   return getClaudeAccountErrorDescription(error).toLowerCase() === 'claude sign-in was cancelled.'
 }

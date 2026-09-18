@@ -7,13 +7,19 @@ import { parseWslUncPath } from '../../shared/wsl-paths'
 import { resolveCodexCommand } from '../codex-cli/command'
 import { getSpawnArgsForWindows } from '../win32-utils'
 import { runWslProcess } from '../wsl/wsl-runner'
+import { parseCodexLoginAuthUrl } from './codex-login-auth-url'
 import {
   buildWslCodexAvailabilityScript,
   buildWslCodexLoginArgs,
   WSL_CODEX_AVAILABILITY_TIMEOUT_MS
 } from './wsl-codex-command'
 
-const LOGIN_TIMEOUT_MS = 120_000
+export const CODEX_LOGIN_CANCELLED_MESSAGE = 'Codex sign-in was cancelled.'
+
+// Why: matches Claude's window. Signing in through a copied link — a second
+// browser, a password manager, an incognito window — routinely outlasts two
+// minutes, and the old 120s deadline failed those users mid-flow.
+const LOGIN_TIMEOUT_MS = 180_000
 const MAX_LOGIN_OUTPUT_CHARS = 4_000
 const WINDOWS_LOGIN_AUTH_POLL_INTERVAL_MS = 500
 const WINDOWS_LOGIN_POST_AUTH_EXIT_GRACE_MS = 5_000
@@ -50,6 +56,10 @@ type CodexLoginSessionDependencies = {
     child: CodexLoginChild,
     interactiveLogin?: WindowsHostInteractiveLoginSpawn | null
   ) => void
+  /** Registers the handle that abandons this login; called with null once it settles. */
+  setCancel?: (cancel: (() => boolean) | null) => void
+  /** The browser link codex printed, published as soon as it is complete. */
+  onAuthUrl?: (url: string) => void
 }
 
 function readLoginAuthSnapshot(authJsonPath: string): string | null | undefined {
@@ -76,9 +86,43 @@ function loginAuthChanged(
   return initial !== undefined && current !== undefined && current !== null && current !== initial
 }
 
+type LoginCancellation = {
+  isCancelled: () => boolean
+  setSpawnedCancel: (cancel: () => boolean) => void
+}
+
 export async function runCodexLoginSession(
   managedHomePath: string,
   dependencies: CodexLoginSessionDependencies
+): Promise<void> {
+  let cancelSpawnedLogin: (() => boolean) | null = null
+  let cancelled = false
+  dependencies.setCancel?.(() => {
+    if (cancelled) {
+      return false
+    }
+    cancelled = true
+    // Why: a cancel before the spawn has no tree to kill, yet it still counts —
+    // the pre-spawn probe reads the flag instead of opening a browser nobody
+    // is waiting for.
+    return cancelSpawnedLogin?.() ?? true
+  })
+  try {
+    await runCodexLoginProcess(managedHomePath, dependencies, {
+      isCancelled: () => cancelled,
+      setSpawnedCancel: (cancel) => {
+        cancelSpawnedLogin = cancel
+      }
+    })
+  } finally {
+    dependencies.setCancel?.(null)
+  }
+}
+
+async function runCodexLoginProcess(
+  managedHomePath: string,
+  dependencies: CodexLoginSessionDependencies,
+  cancellation: LoginCancellation
 ): Promise<void> {
   const wslInfo = parseWslUncPath(managedHomePath)
   if (wslInfo) {
@@ -90,6 +134,9 @@ export async function runCodexLoginSession(
   const initialAuthSnapshot = wslInfo
     ? null
     : readLoginAuthSnapshot(join(managedHomePath, 'auth.json'))
+  if (cancellation.isCancelled()) {
+    throw new Error(CODEX_LOGIN_CANCELLED_MESSAGE)
+  }
 
   await new Promise<void>((resolvePromise, rejectPromise) => {
     const spawnConfig = wslInfo
@@ -112,10 +159,19 @@ export async function runCodexLoginSession(
 
     let settled = false
     let output = ''
+    let publishedAuthUrl = false
     const appendOutput = (chunk: Buffer): void => {
       output = `${output}${chunk.toString()}`
       if (output.length > MAX_LOGIN_OUTPUT_CHARS) {
         output = output.slice(-MAX_LOGIN_OUTPUT_CHARS)
+      }
+      if (publishedAuthUrl) {
+        return
+      }
+      const authUrl = parseCodexLoginAuthUrl(output)
+      if (authUrl) {
+        publishedAuthUrl = true
+        dependencies.onAuthUrl?.(authUrl)
       }
     }
 
@@ -152,6 +208,15 @@ export async function runCodexLoginSession(
       cleanupListeners()
       callback()
     }
+
+    cancellation.setSpawnedCancel(() => {
+      if (settled) {
+        return false
+      }
+      dependencies.killProcessTree(child, spawnConfig.interactiveLogin)
+      settle(() => rejectPromise(new Error(CODEX_LOGIN_CANCELLED_MESSAGE)))
+      return true
+    })
 
     const timeoutError = new Error('Codex sign-in took too long to finish. Please try again.')
     timeout = setTimeout(() => {
@@ -247,7 +312,10 @@ function createHostLoginSpawn(managedHomePath: string): {
   return {
     command: spawnCmd,
     args: spawnArgs,
-    env: withCliRuntimeOnPath(codexCommand, { ...process.env, CODEX_HOME: managedHomePath }),
+    env: withCliRuntimeOnPath(codexCommand, {
+      ...process.env,
+      CODEX_HOME: managedHomePath
+    }),
     codexCommand,
     interactiveLogin
   }
@@ -275,7 +343,9 @@ async function assertWslCodexCliAvailable(wslInfo: {
   if (result.code !== 0 || result.timedOut) {
     throw new Error(
       `Codex CLI is not available in WSL ${wslInfo.distro}. Install Codex in that distro or switch Account location to Windows.`,
-      { cause: new Error(result.stderr.trim() || `codex lookup exited with ${result.code}`) }
+      {
+        cause: new Error(result.stderr.trim() || `codex lookup exited with ${result.code}`)
+      }
     )
   }
 }
