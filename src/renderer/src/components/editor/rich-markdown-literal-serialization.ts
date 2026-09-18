@@ -62,7 +62,9 @@ function destNeedsEscape(dest: string): boolean {
     if (!bare) {
       continue
     }
-    if (character === '(' || character === ')') return true
+    if (character === '(' || character === ')') {
+      return true
+    }
   }
   return false
 }
