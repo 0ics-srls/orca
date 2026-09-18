@@ -53,17 +53,22 @@ const RichMarkdownLink = Link.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
-      rawHref: { default: null, rendered: false }
+      rawHref: { default: null, rendered: false },
+      originalHref: { default: null, rendered: false }
     }
   },
   parseMarkdown: (token, helpers) =>
     helpers.applyMark('link', helpers.parseInline(token.tokens || []), {
       href: token.href,
       title: token.title || null,
-      rawHref: extractRawDestination(token.raw)
+      rawHref: extractRawDestination(token.raw),
+      originalHref: token.href
     }),
   renderMarkdown: (node, helpers) => {
-    const href = node.attrs?.rawHref ?? node.attrs?.href ?? ''
+    const href =
+      node.attrs?.rawHref && node.attrs?.href === node.attrs?.originalHref
+        ? node.attrs.rawHref
+        : (node.attrs?.href ?? '')
     const title = node.attrs?.title ?? ''
     const text = helpers.renderChildren(node)
     return title ? `[${text}](${href} "${title}")` : `[${text}](${href})`
@@ -179,7 +184,8 @@ export function createRichMarkdownExtensions({
       addAttributes() {
         return {
           ...this.parent?.(),
-          rawSrc: { default: null, rendered: false }
+          rawSrc: { default: null, rendered: false },
+          originalSrc: { default: null, rendered: false }
         }
       },
       parseMarkdown: (token, helpers) =>
@@ -187,10 +193,14 @@ export function createRichMarkdownExtensions({
           src: token.href,
           alt: token.text || '',
           title: token.title,
-          rawSrc: extractRawDestination(token.raw)
+          rawSrc: extractRawDestination(token.raw),
+          originalSrc: token.href
         }),
       renderMarkdown: (node) => {
-        const src = node.attrs?.rawSrc ?? node.attrs?.src ?? ''
+        const src =
+          node.attrs?.rawSrc && node.attrs?.src === node.attrs?.originalSrc
+            ? node.attrs.rawSrc
+            : (node.attrs?.src ?? '')
         const alt = node.attrs?.alt ?? ''
         const title = node.attrs?.title ?? ''
         return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`
