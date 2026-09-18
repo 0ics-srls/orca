@@ -110,7 +110,7 @@ export function reconcileSerializedMarkdown({
       source: stripTrailingNewlines(originalSourceLf),
       base: baseLf,
       edited: stripTrailingNewlines(editedLf),
-      trailing: (editedLf.match(/\n+$/)?.[0] ?? '') + originalTrailingNewlines
+      trailing: editedLf.match(/\n+$/)?.[0] || originalTrailingNewlines
     })
   }
   attempts.push({ source: originalSourceLf, base: baseLf, edited: editedLf, trailing: '' })

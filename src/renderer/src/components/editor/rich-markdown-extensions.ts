@@ -282,7 +282,6 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
-    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
