@@ -38,6 +38,7 @@ import { createRichMarkdownHtmlSuperscriptLink } from './rich-markdown-html-supe
 import type { RichMarkdownHtmlSuperscriptLinkContext } from './rich-markdown-html-superscript-link-context'
 import { RichMarkdownOrderedList } from './rich-markdown-ordered-list'
 import { RichMarkdownCodeSpanPadding } from './rich-markdown-code-span-padding'
+import { RichMarkdownListItem } from './rich-markdown-list-item'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
@@ -74,6 +75,7 @@ export function createRichMarkdownExtensions({
       link: false,
       code: false,
       codeBlock: false,
+      listItem: false,
       orderedList: false,
       paragraph: false
     }),
@@ -215,6 +217,7 @@ export function createRichMarkdownExtensions({
       inline: true
     }),
     RichMarkdownOrderedList,
+    RichMarkdownListItem,
     RichMarkdownTaskList,
     TaskItem.configure({
       nested: true
