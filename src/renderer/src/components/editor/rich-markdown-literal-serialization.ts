@@ -308,9 +308,10 @@ export function preserveLiteralMarkdownSource(
     pairBlocks(json, editor.state.doc, false, blocks)
     try {
       const output = manager.serialize(json)
-      return hasEscapedEntityMark(json)
+      const withEntities = hasEscapedEntityMark(json)
         ? output.replace(/&(?!amp;|lt;|gt;|#\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
         : output
+      return hasOnlyEscapedMarks(json) ? withEntities.replace(/\\\$(?=\d)/g, '$') : withEntities
     } finally {
       blocks = undefined
     }
@@ -322,6 +323,16 @@ function hasEscapedEntityMark(node: JSONContent): boolean {
     node.marks?.some((mark) => mark.type === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK) ||
     node.content?.some((child) => hasEscapedEntityMark(child))
   )
+}
+
+function hasOnlyEscapedMarks(node: JSONContent): boolean {
+  if (
+    node.type === 'text' &&
+    node.marks?.some((mark) => mark.type !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
+  ) {
+    return false
+  }
+  return !(node.content ?? []).some((child) => !hasOnlyEscapedMarks(child))
 }
 
 function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
