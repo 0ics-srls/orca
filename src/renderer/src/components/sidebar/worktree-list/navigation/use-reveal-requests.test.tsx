@@ -103,12 +103,24 @@ describe('revealing a filtered workspace', () => {
   it('explains the filter reset and leaves filters intact when dismissed', async () => {
     await render()
     await act(async () => requestScrollToCurrentWorkspaceReveal())
-    expect(document.body.textContent).toContain('Revealing it will clear your sidebar filters.')
+    expect(document.body.textContent).toContain(
+      'Revealing it will adjust only the filters hiding it.'
+    )
     expect(args.clearFilters).not.toHaveBeenCalled()
     expect(state.revealWorktreeInSidebar).not.toHaveBeenCalled()
     await click('Keep filters')
     expect(args.clearFilters).not.toHaveBeenCalled()
     expect(state.revealWorktreeInSidebar).not.toHaveBeenCalled()
+  })
+
+  it('delegates to the minimal filter revealer when provided', async () => {
+    const revealWorkspaceFilters = vi.fn()
+    args = { ...args, revealWorkspaceFilters }
+    await render()
+    await act(async () => requestScrollToCurrentWorkspaceReveal())
+    await click('Adjust filters and reveal')
+    expect(revealWorkspaceFilters).toHaveBeenCalledWith(args.worktrees[0])
+    expect(args.clearFilters).not.toHaveBeenCalled()
   })
 
   it('clears filters and reveals on the original execution host only after confirmation', async () => {
@@ -117,7 +129,7 @@ describe('revealing a filtered workspace', () => {
       requestScrollToCurrentWorkspaceReveal()
       requestScrollToCurrentWorkspaceReveal()
     })
-    await click('Clear filters and reveal')
+    await click('Adjust filters and reveal')
     expect(args.clearFilters).toHaveBeenCalledTimes(1)
     expect(state.revealWorktreeInSidebar).toHaveBeenCalledWith('wt-1', {
       behavior: 'smooth',
@@ -174,7 +186,7 @@ describe('revealing a filtered workspace', () => {
     await act(async () => requestScrollToCurrentWorkspaceReveal())
     args = { ...args, visibleWorktrees: args.worktrees }
     await render()
-    await click('Clear filters and reveal')
+    await click('Adjust filters and reveal')
     expect(args.clearFilters).not.toHaveBeenCalled()
     expect(state.revealWorktreeInSidebar).toHaveBeenCalledTimes(1)
   })
@@ -184,7 +196,7 @@ describe('revealing a filtered workspace', () => {
     await act(async () => requestScrollToCurrentWorkspaceReveal())
     args = { ...args, currentSidebarWorktreeId: 'wt-2' }
     await render()
-    await click('Clear filters and reveal')
+    await click('Adjust filters and reveal')
     expect(args.clearFilters).not.toHaveBeenCalled()
     expect(state.revealWorktreeInSidebar).not.toHaveBeenCalled()
   })
@@ -219,7 +231,7 @@ describe('revealing a filtered workspace', () => {
       await act(async () => requestScrollToCurrentWorkspaceRevealAndRename())
       expect(args.clearFilters).not.toHaveBeenCalled()
       if (filtered) {
-        await click('Clear filters and reveal')
+        await click('Adjust filters and reveal')
         expect(args.clearFilters).toHaveBeenCalledTimes(1)
       } else {
         expect(document.querySelector('[role="dialog"]')).toBeNull()
