@@ -16,7 +16,7 @@ const openGate = vi.hoisted(() => ({
 }))
 
 // Models Windows delete-pending rmdir: the first removal wins and every later one gets EPERM.
-const deletePendingGate = vi.hoisted(() => ({ removed: null as Set<string> | null }))
+const deletePendingGate = vi.hoisted((): { removed: Set<string> | null } => ({ removed: null }))
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFsPromises>()
