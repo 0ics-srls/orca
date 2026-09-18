@@ -124,22 +124,25 @@ describe('findDetailsBlockStart cost on documents without a toggle', () => {
     expect(codeSpanSpy).toHaveBeenCalledTimes(paragraphs.length)
   })
 
-  it.skipIf(process.env.ORCA_DETAILS_SCAN_BENCH !== '1')('benchmarks a large toggle-free document', () => {
-    const paragraphs = Array.from(
-      { length: 300 },
-      (_, index) => `Paragraph ${index} ${'lorem ipsum dolor sit amet '.repeat(25)}`
-    )
-    const document = paragraphs.join('\n\n')
+  it.skipIf(process.env.ORCA_DETAILS_SCAN_BENCH !== '1')(
+    'benchmarks a large toggle-free document',
+    () => {
+      const paragraphs = Array.from(
+        { length: 300 },
+        (_, index) => `Paragraph ${index} ${'lorem ipsum dolor sit amet '.repeat(25)}`
+      )
+      const document = paragraphs.join('\n\n')
 
-    const started = performance.now()
-    let offset = 0
-    for (const paragraph of paragraphs) {
-      expect(findDetailsBlockStart(document.slice(offset))).toBe(-1)
-      offset += paragraph.length + 2
+      const started = performance.now()
+      let offset = 0
+      for (const paragraph of paragraphs) {
+        expect(findDetailsBlockStart(document.slice(offset))).toBe(-1)
+        offset += paragraph.length + 2
+      }
+
+      process.stdout.write(`${JSON.stringify({ elapsedMs: performance.now() - started })}\n`)
     }
-
-    process.stdout.write(`${JSON.stringify({ elapsedMs: performance.now() - started })}\n`)
-  })
+  )
 
   it('still finds a toggle that follows a long run of prose', () => {
     const prose = Array.from({ length: 300 }, (_, index) => `Paragraph ${index}.`).join('\n\n')
@@ -194,4 +197,9 @@ describe('findDetailsBlockStart with a non-breaking space after a fence closer',
 
     expect(findDetailsBlockStart(content)).toBe(-1)
   })
+})
+
+it('does not hide text behind escaped backticks or invalid fence info', () => {
+  expect(markdownCodeSpanRanges('\\`literal\\`', [])).toEqual([])
+  expect(markdownFenceRanges('```bad`info\nbody')).toEqual([])
 })
