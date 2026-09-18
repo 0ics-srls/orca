@@ -292,9 +292,9 @@ export default function MobilePage(): React.JSX.Element {
 
   // Why: entering the flow must mint a fresh pairing token — clear stale QR
   // state so we never flash an expired code from a previous session.
-  const enterFlow = (): void => {
-    // Why: the bump belongs here, not in the stage effect — an effect runs a render
-    // after Step 2 is already visible, so the auto-mint sees the old visit settled.
+  const beginPairingVisit = (): void => {
+    pairingRequestIdRef.current += 1
+    setPairLoading(false)
     setPairingFlowVisit((visit) => visit + 1)
     hasGeneratedRef.current = false
     setPairQrDataUrl(null)
@@ -302,19 +302,17 @@ export default function MobilePage(): React.JSX.Element {
     setPairingUrl(null)
     setPairingQrError(false)
     setRelayMintFailure(null)
+  }
+
+  const enterFlow = (): void => {
+    beginPairingVisit()
     showFirstPairingFlow()
   }
 
   // Why: from the paired summary, "Pair another device" jumps straight to
   // Step 2 since the app is presumably already installed on the user's phone.
   const pairAnotherDevice = (): void => {
-    setPairingFlowVisit((visit) => visit + 1)
-    hasGeneratedRef.current = false
-    setPairQrDataUrl(null)
-    setPairQrSize(null)
-    setPairingUrl(null)
-    setPairingQrError(false)
-    setRelayMintFailure(null)
+    beginPairingVisit()
     showPairAnotherDeviceFlow()
   }
 

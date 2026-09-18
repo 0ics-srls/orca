@@ -606,6 +606,27 @@ describe('MobilePage pairing connection mode', () => {
     })
   })
 
+  it('does not let an abandoned mint populate a new pairing visit', async () => {
+    const user = userEvent.setup()
+    let resolveAbandonedMint: ((value: Record<string, unknown>) => void) | undefined,
+      resolveCurrentMint: ((value: Record<string, unknown>) => void) | undefined
+    getPairingQR
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveAbandonedMint = resolve)))
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveCurrentMint = resolve)))
+    await openPairingStep()
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(2))
+
+    resolveAbandonedMint?.({ available: true, qrDataUrl: 'abandoned' })
+
+    resolveCurrentMint?.({ available: true, qrDataUrl: 'current' })
+    await waitFor(() => expect(screen.getByTestId('pairing-qr')).toHaveTextContent('current'))
+  })
+
   it('mints "Pair another device" against the resolved address, not the default', async () => {
     window.api.mobile.listDevices = vi.fn().mockResolvedValue({
       devices: [{ deviceId: 'phone-1', name: 'Pixel', pairedAt: 1, lastSeenAt: 2 }]
