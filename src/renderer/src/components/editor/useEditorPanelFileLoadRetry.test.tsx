@@ -338,9 +338,9 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
     ).toBe(false)
   })
 
-  // Why both shapes: a host may put the bare code on the message, or the code on `.code`
-  // with prose on `.message` (runtime-rpc-result.test.ts). Either must reach the same
-  // terminal state — matching only the rendered text would strand the second forever.
+  // Why both host answers: a host may put the bare code on the message, or the code on
+  // `.code` with prose on `.message` (runtime-rpc-result.test.ts). Either must reach the
+  // same terminal state — matching only the rendered text would strand the second forever.
   it.each([
     ['bare code as message', { loadError: WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE }],
     [
@@ -349,7 +349,7 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
     ]
   ])(
     'keeps a dirty mirrored tab (%s): bounded retries end in a truthful terminal message, not a close',
-    (_shape, failure) => {
+    (_hostAnswer, failure) => {
       const file = makeFile({
         id: 'mirror-1',
         filePath: '/home/user/project/NOTES.md',
