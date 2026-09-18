@@ -95,12 +95,14 @@ function openFile(
 
 function renderEditPath({
   content,
+  savedContent = '# Saved',
   language = 'markdown',
   viewMode = 'rich',
   mode = 'edit',
   onOpenMarkdownPreview
 }: {
   content: string
+  savedContent?: string
   language?: 'markdown' | 'typescript'
   viewMode?: 'source' | 'rich' | 'preview'
   mode?: 'edit' | 'markdown-preview'
@@ -108,7 +110,7 @@ function renderEditPath({
 }) {
   const activeFile = openFile(language, mode)
   const fileContents = {
-    [activeFile.id]: { content: '# Saved', isBinary: false }
+    [activeFile.id]: { content: savedContent, isBinary: false }
   }
   const editorDrafts = { [activeFile.id]: content }
   const model = getEditorPanelRenderModel({
@@ -309,7 +311,10 @@ describe('inline Markdown render classification', () => {
   })
 
   it('offers the Preview toggle once rich mode falls back to source for this content', () => {
-    const fallback = renderEditPath({ content: '[reference]: https://example.com' })
+    const fallback = renderEditPath({
+      content: '[reference]: https://example.com',
+      savedContent: '[reference]: https://example.com'
+    })
     expect(fallback.model.availableEditorToggleModes).toEqual([
       'source',
       'rich',
