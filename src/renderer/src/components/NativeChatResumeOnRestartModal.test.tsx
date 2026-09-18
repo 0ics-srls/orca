@@ -8,6 +8,10 @@ import { useAppStore } from '../store'
 import { getDefaultSettings } from '../../../shared/constants'
 import { NativeChatResumeOnRestartModal } from './NativeChatResumeOnRestartModal'
 import type { ResumeCandidate } from './native-chat-resume-on-restart-grouping'
+import {
+  clearNativeChatResumeOnRestartCandidates,
+  getNativeChatResumeOnRestartSnapshot
+} from './native-chat-resume-on-restart-store'
 
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('@/runtime/structured-agent-session-client', () => ({
@@ -49,6 +53,7 @@ function checkbox(index: number): HTMLElement {
 
 beforeEach(() => {
   rpc.mockReset()
+  clearNativeChatResumeOnRestartCandidates()
   vi.mocked(toast).mockClear()
   useAppStore.setState(useAppStore.getInitialState(), true)
   useAppStore.setState({
@@ -68,6 +73,7 @@ afterEach(() => {
   act(() => root.unmount())
   container.remove()
   useAppStore.setState(useAppStore.getInitialState(), true)
+  clearNativeChatResumeOnRestartCandidates()
 })
 
 it.each([
@@ -87,17 +93,44 @@ it.each([
   await act(async () => checkbox(2).click())
   await act(async () => button(label).click())
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
-  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
-    ['agentSession.restartResumable', undefined],
-    [method, method === 'agentSession.restartResumableDismiss' ? {} : { sessionIds: ['a'] }]
-  ])
+  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual(
+    method === 'agentSession.restartResumableDismiss'
+      ? [['agentSession.restartResumable', undefined]]
+      : [
+          ['agentSession.restartResumable', undefined],
+          [method, { sessionIds: ['a'] }]
+        ]
+  )
   await act(async () =>
     action.resolve({
       results: [{ sessionId: 'a', outcome: 'resumed' }],
       continued: [{ sessionId: 'a', outcome: 'continued' }]
     })
   )
-  expect(rpc).toHaveBeenCalledTimes(2)
+  expect(rpc).toHaveBeenCalledTimes(method === 'agentSession.restartResumableDismiss' ? 1 : 2)
+})
+
+it('keeps Not now available through the status-bar snapshot', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => button('Not now').click())
+  expect(rpc).toHaveBeenCalledTimes(1)
+  expect(getNativeChatResumeOnRestartSnapshot().candidates).toHaveLength(2)
+})
+
+it('fully dismisses the offer only through Dismiss all', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable' ? { sessions: offered } : { dismissed: 2 }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => button('Dismiss all').click())
+  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+    ['agentSession.restartResumable', undefined],
+    ['agentSession.restartResumableDismiss', {}]
+  ])
+  expect(getNativeChatResumeOnRestartSnapshot().candidates).toEqual([])
 })
 
 it('automatically reconnects once when the launch begins opted in', async () => {

@@ -347,6 +347,23 @@ describe('the restart-resume surface', () => {
     expect(live.size).toBe(0)
   })
 
+  it('persists a snoozed claimed offer across the next teardown', async () => {
+    const { restartResume, recorded } = surface({})
+
+    expect(await restartResume.list()).toHaveLength(1)
+    await restartResume.recordMarkers()
+
+    expect(recorded).toEqual([
+      [
+        expect.objectContaining({
+          sessionId: SESSION,
+          recordedAt: NOW,
+          trigger: 'quit'
+        })
+      ]
+    ])
+  })
+
   it('re-marks a session whose resume is already running when the next quit lands', async () => {
     const { restartResume, recorded } = surface({
       sessions: new Map([

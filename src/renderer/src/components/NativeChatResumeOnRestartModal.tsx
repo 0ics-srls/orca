@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Info, RotateCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import { Checkbox } from './ui/checkbox'
@@ -26,6 +26,13 @@ import {
   selectedResumeSessionIds,
   type ResumeCandidate
 } from './native-chat-resume-on-restart-grouping'
+import {
+  clearNativeChatResumeOnRestartCandidates,
+  consumeNativeChatResumeOnRestartDialogRequest,
+  getNativeChatResumeOnRestartSnapshot,
+  setNativeChatResumeOnRestartCandidates,
+  subscribeNativeChatResumeOnRestart
+} from './native-chat-resume-on-restart-store'
 
 /**
  * What would be reconnected, shown before anything runs.
@@ -39,9 +46,9 @@ import {
  * Reconnecting restores the session at the point it stopped; it does NOT continue the interrupted
  * reply — that was measured. Every user-facing string here has to keep saying so.
  *
- * Turning the offer down spends the markers. A prompt that returns at every launch is worse than
- * the problem it solves, and nothing is lost: opening a chat takes a resume-capable hold, which
- * re-acquires the provider at the same cursor.
+ * Closing the offer is a snooze and keeps the markers available to the status bar. Explicitly
+ * dismissing all markers abandons this launch recovery offer; opening a chat still takes a
+ * resume-capable hold, which re-acquires the provider at the same cursor.
  */
 
 // Structured sessions run on the machine hosting the runtime; both launch resolvers refuse anything
@@ -90,6 +97,11 @@ function ContinuationExplainer(): React.JSX.Element {
 }
 
 export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
+  const restartSnapshot = useSyncExternalStore(
+    subscribeNativeChatResumeOnRestart,
+    getNativeChatResumeOnRestartSnapshot,
+    getNativeChatResumeOnRestartSnapshot
+  )
   const structuredEnabled = useAppStore(
     (store) => store.settings?.experimentalStructuredNativeChat === true
   )
@@ -169,6 +181,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         setListedAt(Date.now())
         setCandidates(offered)
         setSelected(new Set(allResumeSessionIds(offered)))
+        setNativeChatResumeOnRestartCandidates(offered)
       }
     })
     return () => {
@@ -201,6 +214,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           'reconnect'
         )
         setCandidates(remaining)
+        setNativeChatResumeOnRestartCandidates(remaining)
         // An empty result means the host settled none of them — never leave the dialog sitting open
         // behind a button that did nothing.
         if (remaining.length === 0 || result.results.length === 0) {
@@ -246,14 +260,31 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     [persistPreference]
   )
 
-  /** Any close is a decline, and a decline spends the markers so this cannot return every launch. */
-  const decline = useCallback(async (): Promise<void> => {
+  /** Closing is a snooze. The explicit dismiss action below is the only destructive path. */
+  const decline = useCallback((): void => {
     setResolved(true)
     void persistPreference()
-    await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {}).catch(
-      () => undefined
-    )
   }, [persistPreference])
+
+  const dismissAll = useCallback(async (): Promise<void> => {
+    setBusy(true)
+    try {
+      await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {})
+      clearNativeChatResumeOnRestartCandidates()
+      setCandidates([])
+      setResolved(true)
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!restartSnapshot.openRequested) {
+      return
+    }
+    consumeNativeChatResumeOnRestartDialogRequest()
+    setResolved(false)
+  }, [restartSnapshot.openRequested])
 
   if (!structuredEnabled || resolved || candidates.length === 0) {
     return null
@@ -268,7 +299,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
       open
       onOpenChange={(next) => {
         if (!next && !busy) {
-          void decline()
+          decline()
         }
       }}
     >
@@ -360,7 +391,10 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         </label>
 
         <DialogFooter className="sm:justify-between">
-          <Button variant="secondary" size="sm" disabled={busy} onClick={() => void decline()}>
+          <Button variant="destructive" size="sm" disabled={busy} onClick={() => void dismissAll()}>
+            {translate('auto.components.NativeChatResumeOnRestartModal.dismissAll', 'Dismiss all')}
+          </Button>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={decline}>
             {translate('auto.components.NativeChatResumeOnRestartModal.notNow', 'Not now')}
           </Button>
           <span className="flex items-center gap-1.5">

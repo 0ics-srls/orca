@@ -1,5 +1,5 @@
-// Recovery offers live in memory only after an atomic take of the advisory capsule.
-// A crash after take loses the offer; ordinary chat acquisition remains independent.
+// Recovery offers live in memory after an atomic take of the advisory capsule. Unconsumed offers
+// are written back during orderly teardown; a crash after take can still lose the offer.
 
 import { randomUUID } from 'node:crypto'
 import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
@@ -321,11 +321,17 @@ export function createStructuredAgentSessionRestartResume(
         console.warn('[structured-agent-session] recovery witness validation failed')
       }
     },
-    recordMarkers: async () =>
-      deps.recoveryCapsule?.record([...confirmedMarkers.values()], surfaces.now()),
+    recordMarkers: async () => {
+      // Preserve a snoozed launch offer if Orca exits before the user acts on it.
+      const markers = new Map([
+        ...confirmedMarkers,
+        ...(claimed ?? []).map((marker) => [marker.sessionId, marker] as const)
+      ])
+      await deps.recoveryCapsule?.record([...markers.values()], surfaces.now())
+    },
     list,
     /**
-     * Turning the offer down, which spends the claim.
+     * Explicitly abandoning the offer, which spends the claim.
      *
      * A prompt that returns at every launch is worse than the problem it solves. Nothing is lost:
      * the first resume-capable hold on a childless session re-acquires the provider at the same
