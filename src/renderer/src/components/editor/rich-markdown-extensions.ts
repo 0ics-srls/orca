@@ -76,18 +76,6 @@ const RichMarkdownBlockMath = BlockMath.extend({
   markdownTokenizer: {
     name: 'blockMath',
     level: 'block',
-    start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
-    tokenize: (src: string) => {
-      const match = src.match(BLOCK_MATH_PATTERN)
-      if (!match) return undefined
-      return { type: 'blockMath', raw: match[0], latex: match[1].trim() }
-    }
-  }
-})
-const RichMarkdownBlockMath = BlockMath.extend({
-  markdownTokenizer: {
-    name: 'blockMath',
-    level: 'block',
     // Why: marked cuts the paragraph at the returned index + 1; pointing at the newline keeps
     // the indent out of the paragraph and lets the block tokenizer see the whole opener line.
     start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
