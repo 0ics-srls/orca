@@ -39,6 +39,7 @@ import type { RichMarkdownHtmlSuperscriptLinkContext } from './rich-markdown-htm
 import { RichMarkdownOrderedList } from './rich-markdown-ordered-list'
 import { RichMarkdownCodeSpanPadding } from './rich-markdown-code-span-padding'
 import { RichMarkdownListItem } from './rich-markdown-list-item'
+import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
@@ -255,6 +256,7 @@ export function createRichMarkdownExtensions({
       }
     }),
     RichMarkdownCodeSpanPadding,
+    RichMarkdownProseEntities,
     createRichMarkdownAnnotationHighlightExtension()
   ]
 
