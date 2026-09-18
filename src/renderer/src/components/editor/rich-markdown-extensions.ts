@@ -42,17 +42,11 @@ import { RichMarkdownListItem } from './rich-markdown-list-item'
 import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
-import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown'
 
 const lowlight = createCachedLowlight(createLowlight(common))
-
-const RichMarkdownLink = Link.extend({
-  // Keep link priority below code so linked code labels serialize correctly.
-  priority: 90
-})
 
 // Why: Pandoc's rule keeps money as text — both `$` must touch the formula, the closing one
 // must not be followed by a digit, and an escaped `\$` never closes.
@@ -134,7 +128,7 @@ export function createRichMarkdownExtensions({
       lowlight,
       defaultLanguage: null
     }),
-    RichMarkdownLink.configure({
+    Link.configure({
       openOnClick: false,
       autolink: true,
       linkOnPaste: true
@@ -295,7 +289,6 @@ export function createRichMarkdownExtensions({
         gfm: true
       }
     }),
-    RichMarkdownEscapedCharacter,
     RichMarkdownCodeSpanPadding,
     RichMarkdownProseEntities,
     createRichMarkdownAnnotationHighlightExtension()
