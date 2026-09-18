@@ -1,9 +1,10 @@
 import type { MarkdownToken } from '@tiptap/core'
 import {
-  getMarkdownFenceRanges,
-  isInsideMarkdownFenceRange,
+  isInsideRange,
+  markdownCodeSpanRanges,
+  markdownFenceRanges,
   type MarkdownFenceRanges
-} from './markdown-fence-scanner'
+} from './markdown-scan-ranges'
 
 // Toggle summaries can render at heading scales 1–5, mirroring the plain
 // heading levels the slash menu / toolbar dropdown offer (h1–h5).
@@ -92,12 +93,38 @@ export function renderDetailsAttributes(attrs: Record<string, unknown> | undefin
   return attributes.join(' ')
 }
 
+export function findDetailsBlockStart(content: string): number {
+  if (!content.includes('<details')) {
+    return -1
+  }
+  const fenceRanges = markdownFenceRanges(content)
+  const codeSpanRanges = markdownCodeSpanRanges(content)
+  const tagPattern = /<details\b/gi
+
+  for (;;) {
+    const match = tagPattern.exec(content)
+    if (!match) {
+      return -1
+    }
+    const index = match.index
+    if (isInsideRange(index, fenceRanges) || isInsideRange(index, codeSpanRanges)) {
+      continue
+    }
+    const lineStart = content.lastIndexOf('\n', index - 1) + 1
+    const indent = content.slice(lineStart, index)
+    if (indent.length <= 3 && /^ *$/.test(indent)) {
+      return index
+    }
+  }
+}
+
 export function matchDetailsHtmlBlock(
   content: string,
   start: number,
   // Ranges depend only on `content`, so callers scanning one body repeatedly
   // compute them once and share them across sibling matches.
-  precomputedFenceRanges?: MarkdownFenceRanges
+  precomputedFenceRanges?: MarkdownFenceRanges,
+  precomputedCodeSpanRanges?: MarkdownFenceRanges
 ): DetailsHtmlBlock | null {
   const openingMatch = content.slice(start).match(/^<details\b[^>]*>/i)
   if (!openingMatch) {
@@ -106,7 +133,8 @@ export function matchDetailsHtmlBlock(
 
   const detailsTagPattern = /<\/?details\b[^>]*>/gi
   detailsTagPattern.lastIndex = start
-  const fenceRanges = precomputedFenceRanges ?? getMarkdownFenceRanges(content)
+  const fenceRanges = precomputedFenceRanges ?? markdownFenceRanges(content)
+  const codeSpanRanges = precomputedCodeSpanRanges ?? markdownCodeSpanRanges(content)
 
   let depth = 0
 
@@ -117,7 +145,10 @@ export function matchDetailsHtmlBlock(
     }
 
     const tag = tagMatch[0]
-    if (tagMatch.index !== start && isInsideMarkdownFenceRange(tagMatch.index, fenceRanges)) {
+    if (
+      tagMatch.index !== start &&
+      (isInsideRange(tagMatch.index, fenceRanges) || isInsideRange(tagMatch.index, codeSpanRanges))
+    ) {
       continue
     }
 
@@ -250,6 +281,7 @@ function stripEditableNestedDetails(bodyHtml: string, nestingLevel: number): str
   let index = 0
   // Why: without sharing this, N sibling toggles rescan the whole body N times.
   let fenceRanges: MarkdownFenceRanges | null = null
+  let codeSpanRanges: MarkdownFenceRanges | null = null
 
   for (;;) {
     const nestedStart = indexOfAsciiIgnoreCase(bodyHtml, '<details', index)
@@ -261,8 +293,9 @@ function stripEditableNestedDetails(bodyHtml: string, nestingLevel: number): str
       return null
     }
 
-    fenceRanges ??= getMarkdownFenceRanges(bodyHtml)
-    const nested = matchDetailsHtmlBlock(bodyHtml, nestedStart, fenceRanges)
+    fenceRanges ??= markdownFenceRanges(bodyHtml)
+    codeSpanRanges ??= markdownCodeSpanRanges(bodyHtml)
+    const nested = matchDetailsHtmlBlock(bodyHtml, nestedStart, fenceRanges, codeSpanRanges)
     if (!nested || !isEditableDetailsHtmlBlock(nested, nestingLevel + 1)) {
       return null
     }
