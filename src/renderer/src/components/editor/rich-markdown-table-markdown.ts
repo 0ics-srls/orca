@@ -64,22 +64,23 @@ function separatorCell(width: number, align: TableCellAlign): string {
 
 function extractRows(node: JSONContent, helpers: MarkdownRendererHelpers): TableCell[][] {
   return (node.content ?? []).map((rowNode) =>
-    (rowNode.content ?? []).map((cellNode) => ({
-      text: collapseWhitespace(
-        (cellNode.content?.length ?? 0) > 1
-          ? cellNode.content
+    (rowNode.content ?? []).map((cellNode) => {
+      const content = cellNode.content ?? []
+      const rendered =
+        content.length > 1
+          ? content
               .map((child) => helpers.renderChildren(child))
               .join(CELL_LINE_SEPARATOR)
               .split(CELL_LINE_SEPARATOR)
               .join('\n')
               .replace(/[ \t]*\r?\n[ \t]*/g, '<br>')
-          : cellNode.content
-            ? helpers.renderChildren(cellNode.content)
-            : ''
-      ),
-      isHeader: cellNode.type === 'tableHeader',
-      align: normalizeAlign(cellNode.attrs)
-    }))
+          : helpers.renderChildren(content)
+      return {
+        text: collapseWhitespace(rendered),
+        isHeader: cellNode.type === 'tableHeader',
+        align: normalizeAlign(cellNode.attrs)
+      }
+    })
   )
 }
 
