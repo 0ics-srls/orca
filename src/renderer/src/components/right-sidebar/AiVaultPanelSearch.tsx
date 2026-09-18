@@ -29,8 +29,19 @@ function hostSkipReason(outcome: AiVaultSearchHostOutcome['outcome']): string | 
   }
 }
 
+/**
+ * Why `scope-unknown` is usually dropped: a computer that simply does not have
+ * this project is the ordinary case, and under Workspace at most one ever has
+ * it, so naming the rest would put a line under every search that says nothing.
+ * It is worth saying only when it explains an empty result — when no computer
+ * resolved the scope. `needs-update` always shows: it is actionable.
+ */
 function describeSkippedHosts(hosts: readonly AiVaultSearchHostOutcome[]): string | null {
+  const anyResolved = hosts.some((entry) => entry.outcome === 'searched')
   const skipped = hosts.flatMap((entry) => {
+    if (entry.outcome === 'scope-unknown' && anyResolved) {
+      return []
+    }
     const reason = hostSkipReason(entry.outcome)
     const label = getExecutionHostLabel(parseExecutionHostId(entry.executionHostId)?.id ?? null)
     return reason ? [`${label} (${reason})`] : []

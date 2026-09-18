@@ -2,7 +2,7 @@ import { resolveSessionSearchLimit, SESSION_SEARCH_LIMIT_MAX } from './ai-vault-
 import { z } from 'zod'
 import { AI_VAULT_AGENTS, AI_VAULT_SCOPE_PATHS_MAX_COUNT } from './ai-vault-types'
 import {
-  AiVaultSearchResolvedScopeSchema,
+  AiVaultSearchResolvedWithinSchema,
   AiVaultSearchScopeIdentitySchema
 } from './ai-vault-search-scope'
 
@@ -115,7 +115,7 @@ export const AiVaultSearchResponseSchema = z.discriminatedUnion('kind', [
     durationMs: z.number().nonnegative(),
     debug: AiVaultSearchDebugSchema.optional(),
     /** Present only when the request carried `within`; absent means an older host. */
-    resolvedWithin: AiVaultSearchResolvedScopeSchema.optional(),
+    resolvedWithin: AiVaultSearchResolvedWithinSchema.optional(),
     hosts: z.array(AiVaultSearchHostOutcomeSchema).optional()
   }),
   z.object({

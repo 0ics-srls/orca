@@ -56,7 +56,7 @@ describe('scope identity on the search request', () => {
 
   it('carries the acknowledgement and the scope-unknown answer on the response', () => {
     for (const response of [
-      { ...searchResults(), resolvedWithin: { kind: 'project', paths: 3 } },
+      { ...searchResults(), resolvedWithin: true },
       { kind: 'unavailable', reason: 'scope-unknown' }
     ]) {
       expect(AiVaultSearchResponseSchema.parse(response)).toEqual(response)
@@ -83,10 +83,7 @@ describe('acknowledgement of a scoped search', () => {
 
   it('reads a present acknowledgement as scoped', () => {
     expect(
-      isUnacknowledgedScopedSearch(
-        { within },
-        { ...searchResults(), resolvedWithin: { kind: 'workspace', paths: 2 } }
-      )
+      isUnacknowledgedScopedSearch({ within }, { ...searchResults(), resolvedWithin: true })
     ).toBe(false)
   })
 

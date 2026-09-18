@@ -6,11 +6,8 @@ import {
   resolveRuntimePath
 } from '../../shared/cross-platform-path'
 import { isFolderRepo } from '../../shared/repo-kind'
-import {
-  isRuntimePathAbsoluteForRepo,
-  resolveConfiguredWorktreeBasePaths,
-  resolveWorkspaceLayoutPath
-} from '../../shared/worktree/configured-worktree-base-path'
+import { resolveConfiguredWorktreeBasePaths } from '../../shared/worktree/configured-worktree-base-path'
+import { buildKnownOrcaWorkspaceLayouts } from '../../shared/worktree/ownership'
 import type { SessionSearchScopeCatalog } from './session-search-scope-catalog'
 
 type ScopeRepo = SessionSearchScopeCatalog['repos'][number]
@@ -49,35 +46,41 @@ export class ScopePathSet {
 }
 
 /**
- * The directory Orca creates this repo's worktrees in, when that directory
- * belongs to this repo alone.
+ * The directories Orca creates this repo's worktrees in, past and present, where
+ * such a directory belongs to this repo alone.
  *
- * A repo-level base path is an explicit statement that the directory holds this
- * project's workspaces, so it always counts. The global workspace root only
- * counts when nesting puts this repo's worktrees in their own subdirectory —
- * flat placement makes it every project's root, and scoping to it would widen a
- * project search to the whole machine. A remote repo under an absolute desktop
- * workspace root has neither: SSH places those worktrees beside the checkout,
- * and the parent of a checkout is not a directory this project owns.
+ * `buildKnownOrcaWorkspaceLayouts` is the same enumeration worktree ownership
+ * uses, so a workspace root the user has since moved away from — its history is
+ * persisted for exactly this reason — is covered here too, and a desktop-local
+ * absolute root is already excluded for a remote repo.
  *
- * Nothing is lost when this is null. Every worktree Orca registered is still
+ * Which of those layouts can be claimed: a repo-level base path is an explicit
+ * statement that the directory holds this project's workspaces, so it always
+ * counts. A global root counts only where nesting puts this repo's worktrees in
+ * their own subdirectory; flat placement makes that root every project's, and
+ * claiming it would widen a project search to the whole machine.
+ *
+ * Nothing is lost when this is empty. Every worktree Orca registered is still
  * listed individually; only the folding is.
  */
-export function managedWorktreeDirectory(
+export function managedWorktreeDirectories(
   repo: ScopeRepo,
   settings: SessionSearchScopeCatalog['settings']
-): string | null {
-  const configured = resolveConfiguredWorktreeBasePaths(repo)[0]
-  if (configured) {
-    return configured
+): string[] {
+  if (isFolderRepo(repo)) {
+    return []
   }
-  if (isFolderRepo(repo) || !settings.nestWorkspaces) {
-    return null
-  }
-  if (repo.connectionId && isRuntimePathAbsoluteForRepo(repo.path, settings.workspaceDir)) {
-    return null
-  }
-  const workspaceRoot = resolveWorkspaceLayoutPath(repo.path, settings.workspaceDir)
+  const configured = new Set(
+    resolveConfiguredWorktreeBasePaths(repo).map(normalizeRuntimePathForComparison)
+  )
   const repoName = getRuntimePathBasename(repo.path).replace(/\.git$/, '')
-  return repoName ? resolveRuntimePath(workspaceRoot, repoName) : null
+  const directories: string[] = []
+  for (const layout of buildKnownOrcaWorkspaceLayouts(settings, repo)) {
+    if (configured.has(normalizeRuntimePathForComparison(layout.path))) {
+      directories.push(layout.path)
+    } else if (layout.nestWorkspaces && repoName) {
+      directories.push(resolveRuntimePath(layout.path, repoName))
+    }
+  }
+  return directories
 }

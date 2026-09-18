@@ -82,7 +82,7 @@ describe('AiVaultPanelSearch', () => {
     )
   })
 
-  it('names a computer skipped for the scope or for its version in a merge', () => {
+  it('names a computer needing an update, and stays quiet about computers that simply lack the scope', () => {
     const response = searchResults()
     renderPanel(
       panelSearch({
@@ -90,6 +90,7 @@ describe('AiVaultPanelSearch', () => {
         response: {
           ...response,
           hosts: [
+            { executionHostId: 'local', outcome: 'searched' },
             { executionHostId: 'ssh:box', outcome: 'scope-unknown' },
             { executionHostId: 'runtime:old', outcome: 'needs-update' }
           ]
@@ -97,9 +98,26 @@ describe('AiVaultPanelSearch', () => {
       })
     )
 
-    expect(screen.getByRole('status').textContent).toBe(
-      'Not searched: box (scope not found there) · old (needs an update)'
+    expect(screen.getByRole('status').textContent).toBe('Not searched: old (needs an update)')
+  })
+
+  it('names the scope when it explains an empty result, because no computer had it', () => {
+    const response = searchResults()
+    renderPanel(
+      panelSearch({
+        hits: [],
+        response: {
+          ...response,
+          hits: [],
+          hosts: [
+            { executionHostId: 'local', outcome: 'scope-unknown' },
+            { executionHostId: 'ssh:box', outcome: 'scope-unknown' }
+          ]
+        }
+      })
     )
+
+    expect(screen.getByRole('status').textContent).toContain('box (scope not found there)')
   })
 
   it('stays silent when every computer answered', () => {

@@ -1,4 +1,4 @@
-import type { ExecutionHostId } from '../../shared/execution-host'
+import type { GlobalSettings } from '../../shared/global-settings-types'
 import type { Project, ProjectHostSetup } from '../../shared/project-types'
 import type { Repo } from '../../shared/repo-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
@@ -24,12 +24,11 @@ export type SessionSearchScopeCatalog = {
   >[]
   /** Registered workspaces of this host, keyed by worktree id. */
   worktreeMeta: Readonly<Record<string, Pick<WorktreeMeta, 'projectId' | 'priorWorktreeIds'>>>
-  settings: { workspaceDir: string; nestWorkspaces: boolean }
+  settings: Pick<GlobalSettings, 'workspaceDir' | 'nestWorkspaces' | 'workspaceDirHistory'>
 }
 
-export type SessionSearchScopeCatalogSource = (
-  executionHostId: ExecutionHostId
-) => SessionSearchScopeCatalog | null
+/** Bound to one execution host by whoever installs it: the host that answers. */
+export type SessionSearchScopeCatalogSource = () => SessionSearchScopeCatalog | null
 
 // Why a source and not a value: the desktop composition root owns the store, and
 // this module is imported by the relay too — where no such store exists and every
@@ -42,10 +41,8 @@ export function installSessionSearchScopeCatalogSource(
   readCatalog = source
 }
 
-export function sessionSearchScopeCatalog(
-  executionHostId: ExecutionHostId
-): SessionSearchScopeCatalog | null {
-  return readCatalog?.(executionHostId) ?? null
+export function sessionSearchScopeCatalog(): SessionSearchScopeCatalog | null {
+  return readCatalog?.() ?? null
 }
 
 export function resetSessionSearchScopeCatalogForTests(): void {

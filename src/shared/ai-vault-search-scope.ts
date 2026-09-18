@@ -19,15 +19,11 @@ export const AiVaultSearchScopeIdentitySchema = z.discriminatedUnion('kind', [
 /**
  * The host's acknowledgement that it understood `within` and narrowed to it.
  *
- * A count, not the paths: host paths are withheld over the relay, and the only
- * question a client has to answer is whether the host scoped at all. A `results`
- * answer to a `within` request without this field came from a host that predates
- * the field and silently searched everything.
+ * Presence is the whole signal, so it carries nothing: host paths are withheld
+ * over the relay, and no reader has a use for a count. A `results` answer to a
+ * `within` request without this field came from a host that predates the field
+ * and silently searched everything.
  */
-export const AiVaultSearchResolvedScopeSchema = z.object({
-  kind: z.enum(['workspace', 'project']),
-  paths: z.number().int().nonnegative()
-})
+export const AiVaultSearchResolvedWithinSchema = z.literal(true)
 
 export type AiVaultSearchScopeIdentity = z.infer<typeof AiVaultSearchScopeIdentitySchema>
-export type AiVaultSearchResolvedScope = z.infer<typeof AiVaultSearchResolvedScopeSchema>

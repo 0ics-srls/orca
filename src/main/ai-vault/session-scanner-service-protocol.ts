@@ -82,7 +82,13 @@ export type AiVaultServiceRequestBody =
       operation: 'firstPrompt'
       request: ReadAiVaultFirstUserPromptArgs
     }
-  | { type: 'request'; operation: 'searchSessions'; request: AiVaultSearchRequest }
+  | {
+      type: 'request'
+      operation: 'searchSessions'
+      request: AiVaultSearchRequest
+      /** Host-resolved scope paths; deliberately outside `request` so no wire cap applies. */
+      hostScopePaths?: readonly string[]
+    }
   | { type: 'request'; operation: 'searchStatus' }
   | { type: 'request'; operation: 'searchReconcile' }
   | { type: 'request'; operation: 'searchClear' }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { AiVaultSearchRequestSchema } from '../../shared/ai-vault-search-contract'
 import { fakeSearchService } from '../../shared/ai-vault-search-test-fixture'
-import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import {
   installSessionSearchScopeCatalogSource,
   resetSessionSearchScopeCatalogForTests
@@ -29,12 +29,9 @@ describe('scope identity at the search choke point', () => {
       { query: 'needle', within: { kind: 'workspace', worktreeId: 'repo-1::/work/app' } },
       'ipc'
     )
-    expect(service.search).toHaveBeenCalledWith({
-      query: 'needle',
-      limit: 20,
-      filters: { scopePaths: ['/work/app'] }
-    })
-    expect(response).toMatchObject({ resolvedWithin: { kind: 'workspace', paths: 1 } })
+    // Beside the request, not inside `filters.scopePaths`, which carries a wire cap.
+    expect(service.search).toHaveBeenCalledWith({ query: 'needle', limit: 20 }, ['/work/app'])
+    expect(response).toMatchObject({ resolvedWithin: true })
   })
 
   it('never forwards the identity to the engine, which only knows paths', async () => {
@@ -46,11 +43,10 @@ describe('scope identity at the search choke point', () => {
       'ipc'
     )
     // An exact match, so a leaked `within` would fail here as an extra key.
-    expect(service.search).toHaveBeenCalledWith({
-      query: 'needle',
-      limit: 20,
-      filters: { scopePaths: ['/work/app', '/home/me/orca/workspaces/app'] }
-    })
+    expect(service.search).toHaveBeenCalledWith({ query: 'needle', limit: 20 }, [
+      '/work/app',
+      '/home/me/orca/workspaces/app'
+    ])
   })
 
   it('answers scope-unknown rather than searching everything it has', async () => {
@@ -66,17 +62,39 @@ describe('scope identity at the search choke point', () => {
     expect(service.search).not.toHaveBeenCalled()
   })
 
-  it('reports being switched off ahead of a scope it could never have resolved', async () => {
+  it('answers scope-unknown on a host with no catalog at all, such as the relay', async () => {
     const service = fakeSearchService()
-    service.status.mockResolvedValue({ ...unavailableSessionSearchStatus(), enabled: false })
     setSessionSearchService(service)
-    // No catalog: every host without a profile store, the relay included.
     expect(
       await searchSessionService(
         { query: 'needle', within: { kind: 'workspace', worktreeId: 'repo-1::/work/app' } },
         'ipc'
       )
-    ).toEqual({ kind: 'unavailable', reason: 'disabled' })
+    ).toEqual({ kind: 'unavailable', reason: 'scope-unknown' })
+    expect(service.status).not.toHaveBeenCalled()
+  })
+
+  it('carries more paths than the request field could hold, and the request still re-parses', async () => {
+    const worktreeMeta: Record<string, Record<string, never>> = {}
+    for (let index = 0; index < 100; index++) {
+      worktreeMeta[`repo-1::/home/me/ws/wt-${index}`] = {}
+    }
+    const service = fakeSearchService()
+    setSessionSearchService(service)
+    installSessionSearchScopeCatalogSource(() => ({
+      ...CATALOG,
+      worktreeMeta,
+      settings: { workspaceDir: '/home/me/ws', nestWorkspaces: false }
+    }))
+    await searchSessionService(
+      { query: 'needle', within: { kind: 'project', projectKey: 'repo:repo-1' } },
+      'ipc'
+    )
+    const call = service.search.mock.lastCall
+    expect(call?.[1]).toHaveLength(101)
+    // The scanner child re-parses the request it is handed; 101 paths inside
+    // `filters.scopePaths` would be refused there and surface as "not ready".
+    expect(() => AiVaultSearchRequestSchema.parse(call?.[0])).not.toThrow()
   })
 
   it('leaves an unscoped search unnarrowed and unacknowledged', async () => {
@@ -84,7 +102,7 @@ describe('scope identity at the search choke point', () => {
     setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
     const response = await searchSessionService({ query: 'needle' }, 'ipc')
-    expect(service.search).toHaveBeenCalledWith({ query: 'needle', limit: 20 })
+    expect(service.search).toHaveBeenCalledWith({ query: 'needle', limit: 20 }, undefined)
     expect(response).not.toHaveProperty('resolvedWithin')
   })
 
@@ -93,10 +111,9 @@ describe('scope identity at the search choke point', () => {
     setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
     await searchSessionService({ query: 'needle', filters: { scopePaths: ['/other'] } }, 'ipc')
-    expect(service.search).toHaveBeenCalledWith({
-      query: 'needle',
-      limit: 20,
-      filters: { scopePaths: ['/other'] }
-    })
+    expect(service.search).toHaveBeenCalledWith(
+      { query: 'needle', limit: 20, filters: { scopePaths: ['/other'] } },
+      undefined
+    )
   })
 })

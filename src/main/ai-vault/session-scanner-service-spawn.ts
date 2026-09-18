@@ -96,9 +96,15 @@ export function readAiVaultFirstUserPromptInService(
 }
 
 export function searchSessionsInService(
-  request: AiVaultSearchRequest
+  request: AiVaultSearchRequest,
+  hostScopePaths?: readonly string[]
 ): Promise<AiVaultSearchResponse> {
-  return getSharedClient().request({ type: 'request', operation: 'searchSessions', request })
+  return getSharedClient().request({
+    type: 'request',
+    operation: 'searchSessions',
+    request,
+    ...(hostScopePaths ? { hostScopePaths } : {})
+  })
 }
 
 export function sessionSearchStatusInService(): Promise<AiVaultSearchStatus> {

@@ -24,9 +24,9 @@ export function createChildSessionSearchService(
   }
 ): SessionSearchService {
   return {
-    search: async (request) => {
+    search: async (request, hostScopePaths) => {
       try {
-        return await calls.search(request)
+        return await calls.search(request, hostScopePaths)
       } catch {
         return { kind: 'unavailable', reason: 'not-ready' }
       }

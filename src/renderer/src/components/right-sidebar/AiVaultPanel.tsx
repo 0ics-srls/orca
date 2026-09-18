@@ -158,12 +158,12 @@ export default function AiVaultPanel(): React.JSX.Element {
   } = useAiVaultSessionRefresh(scopePaths, executionHostScope, sessionLimit)
   // Why an identity and not paths: a project's worktrees are the host's to
   // enumerate, and a repo with hundreds of them has no path list a request can carry.
-  const search = useAiVaultPanelSearch(
-    query,
-    agents,
-    aiVaultSearchScopeIdentity({ scope, activeWorktreeId: activeWorktree?.id, activeProjectKey }),
-    executionHostScope
+  const searchWithin = useMemo(
+    () =>
+      aiVaultSearchScopeIdentity({ scope, activeWorktreeId: activeWorktree?.id, activeProjectKey }),
+    [activeProjectKey, activeWorktree?.id, scope]
   )
+  const search = useAiVaultPanelSearch(query, agents, searchWithin, executionHostScope)
   const { searching, searchHits } = search
   const sessions = searching ? search.sessions : history
   // Deliberately blind to the active repo/worktree: rebuilding these session

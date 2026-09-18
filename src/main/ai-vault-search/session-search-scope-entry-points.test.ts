@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AiVaultHandler } from '../../relay/ai-vault-handler'
 import type { RelayDispatcher } from '../../relay/dispatcher'
 import { createSessionSearchClient } from '../../shared/ai-vault-search-client'
+import { isUnacknowledgedScopedSearch } from '../../shared/ai-vault-search-scope-acknowledgement'
 import { fakeSearchService } from '../../shared/ai-vault-search-test-fixture'
 import { searchAllExecutionHosts } from '../ipc/ai-vault-search-all-hosts'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
@@ -48,7 +49,7 @@ describe('every search entry point carries the scope identity through', () => {
     setSessionSearchService(fakeSearchService())
     installSessionSearchScopeCatalogSource(() => CATALOG)
     expect(await searchSessionService({ query: 'needle', within: WITHIN }, 'ipc')).toMatchObject({
-      resolvedWithin: { kind: 'workspace', paths: 1 }
+      resolvedWithin: true
     })
   })
 
@@ -66,14 +67,14 @@ describe('every search entry point carries the scope identity through', () => {
         method: 'aiVault.searchSessions',
         params: { query: 'needle', within: WITHIN }
       })
-    ).toMatchObject({ ok: true, result: { resolvedWithin: { kind: 'workspace', paths: 1 } } })
+    ).toMatchObject({ ok: true, result: { resolvedWithin: true } })
   })
 
   it('resolves and acknowledges over the relay entry point', async () => {
     setSessionSearchService(fakeSearchService())
     installSessionSearchScopeCatalogSource(() => CATALOG)
     expect(await relayHandler()({ query: 'needle', within: WITHIN })).toMatchObject({
-      resolvedWithin: { kind: 'workspace', paths: 1 }
+      resolvedWithin: true
     })
   })
 
@@ -97,12 +98,48 @@ describe('the shared remote client', () => {
       'relay'
     )
     expect(await client.searchSessions({ query: 'needle', within: WITHIN })).toMatchObject({
-      resolvedWithin: { kind: 'workspace', paths: 1 }
+      resolvedWithin: true
     })
   })
 })
 
 describe('an all-computers merge across mixed host versions', () => {
+  it('acknowledges the scope it merged, so the reader does not read the merge as an old host', async () => {
+    const response = await searchAllExecutionHosts({ query: 'needle', within: WITHIN }, [
+      {
+        executionHostId: 'local',
+        search: async () => ({
+          kind: 'results',
+          hits: [],
+          page: { cursor: null, hasMore: false },
+          generation: 1,
+          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
+          durationMs: 1,
+          resolvedWithin: true as const
+        })
+      }
+    ])
+    expect(response).toMatchObject({ resolvedWithin: true })
+    expect(isUnacknowledgedScopedSearch({ within: WITHIN }, response)).toBe(false)
+  })
+
+  it('does not acknowledge a scope that was never asked for', async () => {
+    const response = await searchAllExecutionHosts({ query: 'needle' }, [
+      {
+        executionHostId: 'local',
+        search: async () => ({
+          kind: 'results',
+          hits: [],
+          page: { cursor: null, hasMore: false },
+          generation: 1,
+          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
+          durationMs: 1
+        })
+      }
+    ])
+    expect(response).not.toHaveProperty('resolvedWithin')
+  })
+
   it('drops an old host’s unscoped hits and names it as needing an update', async () => {
     const response = await searchAllExecutionHosts({ query: 'needle', within: WITHIN }, [
       {
@@ -114,7 +151,7 @@ describe('an all-computers merge across mixed host versions', () => {
           generation: 1,
           truncated: { candidates: false, snippets: 0, query: false, freshness: false },
           durationMs: 1,
-          resolvedWithin: { kind: 'workspace', paths: 1 }
+          resolvedWithin: true
         })
       },
       {

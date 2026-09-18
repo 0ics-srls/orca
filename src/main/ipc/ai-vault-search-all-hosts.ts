@@ -87,7 +87,13 @@ export async function searchAllExecutionHosts(
     walks.map((walk) => fetchHostPage(walk, resumed?.hosts[walk.executionHostId] ?? null))
   )
   const hits = await drainMergedPage(walks, limit, sort)
-  return mergedSearchResponse(walks, { limit, sort }, hits, Date.now() - startedAt)
+  return mergedSearchResponse(
+    walks,
+    { limit, sort },
+    hits,
+    Date.now() - startedAt,
+    request.within !== undefined
+  )
 }
 
 /** Every leg answers in the merged order; the cursor and debug are this merge's own. */
@@ -237,7 +243,8 @@ function mergedSearchResponse(
   walks: readonly HostWalk[],
   query: { limit: number; sort: MergedSort },
   hits: AiVaultSearchHit[],
-  durationMs: number
+  durationMs: number,
+  scoped: boolean
 ): AiVaultSearchResponse {
   const hosts: AiVaultSearchHostOutcome[] = []
   const nextHosts: Record<string, MergedSearchCursorEntry> = {}
@@ -270,6 +277,10 @@ function mergedSearchResponse(
     generation: 0,
     truncated,
     durationMs,
+    // The merge is a host in its own right to the reader: it understood `within`
+    // and every hit here came from a leg that resolved it. Legs that did not are
+    // reported one by one through `hosts`, not by withholding this.
+    ...(scoped ? { resolvedWithin: true as const } : {}),
     hosts
   }
 }

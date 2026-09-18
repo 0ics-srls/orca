@@ -1,5 +1,9 @@
 import { vi } from 'vitest'
-import type { AiVaultSearchHit, AiVaultSearchResponse } from './ai-vault-search-types'
+import type {
+  AiVaultSearchHit,
+  AiVaultSearchRequest,
+  AiVaultSearchResponse
+} from './ai-vault-search-types'
 import { unavailableSessionSearchStatus } from './ai-vault-search-client'
 
 export function searchHit(): AiVaultSearchHit {
@@ -32,7 +36,13 @@ export function searchResults(): Extract<AiVaultSearchResponse, { kind: 'results
 
 export function fakeSearchService() {
   return {
-    search: vi.fn(async (): Promise<AiVaultSearchResponse> => searchResults()),
+    search: vi.fn(
+      async (
+        _request: AiVaultSearchRequest,
+        // Host-resolved scope paths; typed here so a caller's arguments are visible to `mock.calls`.
+        _hostScopePaths?: readonly string[]
+      ): Promise<AiVaultSearchResponse> => searchResults()
+    ),
     status: vi.fn(async () => ({
       ...unavailableSessionSearchStatus(),
       enabled: true,

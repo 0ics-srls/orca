@@ -3,8 +3,6 @@ import type { Repo } from '../../../../shared/repo-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { toAiVaultProjectKey } from '../../../../shared/ai-vault-project-key'
 
-export { toAiVaultProjectKey } from '../../../../shared/ai-vault-project-key'
-
 export function resolveActiveProjectKey(
   activeRepo: Repo | null,
   activeWorktree: Worktree | null,

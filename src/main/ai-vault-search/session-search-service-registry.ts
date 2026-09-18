@@ -5,12 +5,10 @@ import {
   AiVaultSearchStatusSchema
 } from '../../shared/ai-vault-search-contract'
 import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import { sessionSearchScopeCatalog } from './session-search-scope-catalog'
 import { resolveSessionSearchScope } from './session-search-scope-resolution'
 import type {
   AiVaultSearchRequest,
-  AiVaultSearchResolvedScope,
   AiVaultSearchResponse,
   AiVaultSearchStatus
 } from '../../shared/ai-vault-search-types'
@@ -41,14 +39,14 @@ export async function searchSessionService(
   // relay hosts all turn an identity into paths the same way, exactly once.
   const scoped = applySessionSearchScope(parsed)
   if (scoped === null) {
-    return unresolvedScopeAnswer(current)
+    return { kind: 'unavailable', reason: 'scope-unknown' }
   }
-  const { request, resolvedWithin } = scoped
+  const { request, hostScopePaths } = scoped
   const freshness =
     request.freshness === 'wait-until-current'
       ? await reconcileWithin(current, freshnessTimeoutMs)
       : false
-  const result = AiVaultSearchResponseSchema.parse(await current.search(request))
+  const result = AiVaultSearchResponseSchema.parse(await current.search(request, hostScopePaths))
   if (result.kind !== 'results') {
     return result
   }
@@ -57,14 +55,15 @@ export async function searchSessionService(
     ...fields,
     hits: result.hits.map((hit) => redactForTransport(hit, transport)),
     truncated: { ...result.truncated, freshness: result.truncated.freshness || freshness },
-    ...(resolvedWithin ? { resolvedWithin } : {}),
+    ...(hostScopePaths ? { resolvedWithin: true as const } : {}),
     ...(request.debug && debug ? { debug } : {})
   }
 }
 
 type ScopedSessionSearch = {
   request: AiVaultSearchRequest
-  resolvedWithin?: AiVaultSearchResolvedScope
+  /** Absent for an unscoped request, which still searches everything. */
+  hostScopePaths?: readonly string[]
 }
 
 /**
@@ -77,17 +76,13 @@ function applySessionSearchScope(parsed: AiVaultSearchRequest): ScopedSessionSea
   if (!within) {
     return { request }
   }
-  const resolution = resolveSessionSearchScope(
-    within,
-    sessionSearchScopeCatalog(LOCAL_EXECUTION_HOST_ID)
-  )
+  const resolution = resolveSessionSearchScope(within, sessionSearchScopeCatalog())
   if (resolution.kind === 'unknown') {
     return null
   }
-  return {
-    request: { ...request, filters: { ...request.filters, scopePaths: resolution.paths } },
-    resolvedWithin: { kind: resolution.identity, paths: resolution.paths.length }
-  }
+  // The paths ride beside the request, never inside `filters.scopePaths`: that
+  // field is capped for the clients that write it, and a host's own answer is not.
+  return { request, hostScopePaths: resolution.paths }
 }
 
 export async function sessionSearchServiceStatus(
@@ -101,18 +96,6 @@ export async function sessionSearchServiceStatus(
     ),
     transport
   )
-}
-
-/**
- * A host that cannot resolve the scope reports being switched off first. Consent
- * is the answer the reader can act on, and the relay's index ships off, so every
- * scoped search there would otherwise blame a scope that host never indexes.
- */
-async function unresolvedScopeAnswer(
-  current: SessionSearchService
-): Promise<AiVaultSearchResponse> {
-  const status = await current.status().catch(() => null)
-  return { kind: 'unavailable', reason: status && !status.enabled ? 'disabled' : 'scope-unknown' }
 }
 
 async function reconcileWithin(current: SessionSearchService, timeoutMs: number): Promise<boolean> {

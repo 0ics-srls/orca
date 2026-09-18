@@ -16,6 +16,8 @@ vi.mock('@/store', () => ({
 }))
 
 const AGENTS = ['codex' as const]
+// Stable, the way the panel memoizes it: the hook keys its request on the reference.
+const WORKSPACE = { kind: 'workspace', worktreeId: 'repo-1::/work/app' } as const
 const searchSessions =
   vi.fn<
     (request: AiVaultSearchRequest, scope?: ExecutionHostScope) => Promise<AiVaultSearchResponse>
@@ -96,12 +98,7 @@ describe('the panel hook under a scope identity', () => {
   it('reports a host that answered without acknowledging the scope, and shows none of its hits', async () => {
     searchSessions.mockResolvedValue({ ...searchResults(), hits: [searchHit()] })
     const { result, unmount } = renderHook(() =>
-      useAiVaultPanelSearch(
-        'needle',
-        AGENTS,
-        { kind: 'workspace', worktreeId: 'repo-1::/work/app' },
-        'ssh:build-box'
-      )
+      useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
     )
     await debounce()
     expect(result.current.needsUpdate).toBe(true)
@@ -113,15 +110,10 @@ describe('the panel hook under a scope identity', () => {
     searchSessions.mockResolvedValue({
       ...searchResults(),
       hits: [searchHit()],
-      resolvedWithin: { kind: 'workspace', paths: 2 }
+      resolvedWithin: true
     })
     const { result, unmount } = renderHook(() =>
-      useAiVaultPanelSearch(
-        'needle',
-        AGENTS,
-        { kind: 'workspace', worktreeId: 'repo-1::/work/app' },
-        'ssh:build-box'
-      )
+      useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
     )
     await debounce()
     expect(result.current.needsUpdate).toBe(false)
@@ -129,14 +121,9 @@ describe('the panel hook under a scope identity', () => {
     unmount()
   })
 
-  it('does not restart the search when the caller rebuilds the identity each render', async () => {
+  it('does not restart the search while the identity holds', async () => {
     const { rerender, unmount } = renderHook(() =>
-      useAiVaultPanelSearch(
-        'needle',
-        AGENTS,
-        { kind: 'workspace', worktreeId: 'repo-1::/work/app' },
-        'ssh:build-box'
-      )
+      useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
     )
     await debounce()
     rerender()

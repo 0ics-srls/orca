@@ -12,7 +12,11 @@ import { sessionSearchHistoryCutoffMs } from './session-search-retention-policy'
 import { openSessionSearchDatabase, removeSessionSearchDatabase } from './session-search-schema'
 import type { SessionSearchScanRoots } from './session-search-scan-roots'
 import type { SessionSearchIndexerOptions } from './session-search-indexer-options'
-import { createSessionSearchService, type SessionSearchService } from './session-search-service'
+import {
+  createSessionSearchService,
+  type SessionSearchHostScopePaths,
+  type SessionSearchService
+} from './session-search-service'
 
 export type SessionSearchInstanceOptions = {
   databasePath: string
@@ -77,12 +81,15 @@ export class SessionSearchInstance {
     this.closeLive()
   }
 
-  async search(request: AiVaultSearchRequest): Promise<AiVaultSearchResponse> {
+  async search(
+    request: AiVaultSearchRequest,
+    hostScopePaths?: SessionSearchHostScopePaths
+  ): Promise<AiVaultSearchResponse> {
     const live = this.live
     if (!live) {
       return { kind: 'unavailable', reason: this.settings.enabled ? 'not-ready' : 'disabled' }
     }
-    return live.service.search(request)
+    return live.service.search(request, hostScopePaths)
   }
 
   status(): AiVaultSearchStatus {

@@ -18,13 +18,37 @@ function paths(resolution: ReturnType<typeof resolveSessionSearchScope>): string
 }
 
 describe('workspace scope', () => {
-  it('resolves to the workspace directory', () => {
+  it('resolves a registered workspace to its directory', () => {
     expect(
       resolveSessionSearchScope(
         { kind: 'workspace', worktreeId: 'repo-1::/work/feature' },
-        catalog()
+        catalog({ worktreeMeta: { 'repo-1::/work/feature': {} } })
       )
-    ).toEqual({ kind: 'resolved', identity: 'workspace', paths: ['/work/feature'] })
+    ).toEqual({ kind: 'resolved', paths: ['/work/feature'] })
+  })
+
+  it('resolves the repo checkout, which no worktree row has to vouch for', () => {
+    expect(
+      resolveSessionSearchScope({ kind: 'workspace', worktreeId: 'repo-1::/work/app' }, catalog())
+    ).toEqual({ kind: 'resolved', paths: ['/work/app'] })
+  })
+
+  it('refuses a directory the client named that this host has not registered', () => {
+    expect(
+      resolveSessionSearchScope(
+        { kind: 'workspace', worktreeId: 'repo-1::/etc' },
+        catalog({ worktreeMeta: { 'repo-1::/work/feature': {} } })
+      )
+    ).toEqual({ kind: 'unknown' })
+  })
+
+  it('answers with the host’s own spelling of a registered id, not the caller’s', () => {
+    expect(
+      resolveSessionSearchScope(
+        { kind: 'workspace', worktreeId: 'repo-1::/work/Feature/' },
+        catalog({ worktreeMeta: { 'repo-1::/work/Feature': {} } })
+      )
+    ).toEqual({ kind: 'resolved', paths: ['/work/Feature'] })
   })
 
   it('adds the directories the workspace occupied before it was renamed', () => {
@@ -115,7 +139,41 @@ describe('project scope', () => {
       { kind: 'project', projectKey: 'repo:repo-1' },
       catalog({ repos: [{ id: 'repo-1', path: '/work/app', worktreeBasePath: '/trees/app' }] })
     )
-    expect(paths(resolution)).toEqual(['/trees/app', '/work/app'])
+    // The global nested root stays in: a worktree created before the base path
+    // was set still lives there, which is why ownership enumerates both.
+    expect(paths(resolution)).toEqual(['/home/me/orca/workspaces/app', '/trees/app', '/work/app'])
+  })
+
+  it('hands a flat layout one path per worktree, with no cap to squeeze them through', () => {
+    const worktreeMeta: Record<string, Record<string, never>> = {}
+    for (let index = 0; index < 100; index++) {
+      worktreeMeta[`repo-1::/home/me/ws/wt-${index}`] = {}
+    }
+    const resolution = resolveSessionSearchScope(
+      { kind: 'project', projectKey: 'repo:repo-1' },
+      catalog({ settings: { workspaceDir: '/home/me/ws', nestWorkspaces: false }, worktreeMeta })
+    )
+    // 100 worktrees plus the checkout: past AI_VAULT_SCOPE_PATHS_MAX_COUNT, which
+    // is why these never travel through the request's `filters.scopePaths`.
+    expect(paths(resolution)).toHaveLength(101)
+  })
+
+  it('covers a workspace root the user has since moved away from', () => {
+    const resolution = resolveSessionSearchScope(
+      { kind: 'project', projectKey: 'repo:repo-1' },
+      catalog({
+        settings: {
+          workspaceDir: '/home/me/orca/workspaces',
+          nestWorkspaces: true,
+          workspaceDirHistory: [{ path: '/old/workspaces', nestWorkspaces: true }]
+        }
+      })
+    )
+    expect(paths(resolution)).toEqual([
+      '/home/me/orca/workspaces/app',
+      '/old/workspaces/app',
+      '/work/app'
+    ])
   })
 
   it('claims no managed directory under flat placement, where the root is every project’s', () => {

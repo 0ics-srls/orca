@@ -24,11 +24,12 @@ it('forwards every call to the child and returns what it answered', async () => 
   const calls = stubCalls()
   const service = createChildSessionSearchService(calls)
 
-  expect(await service.search({ query: 'ledger' })).toEqual({
+  expect(await service.search({ query: 'ledger' }, ['/work/app'])).toEqual({
     kind: 'unavailable',
     reason: 'disabled'
   })
-  expect(calls.search).toHaveBeenCalledWith({ query: 'ledger' })
+  // Host-resolved paths ride beside the request, never inside it.
+  expect(calls.search).toHaveBeenCalledWith({ query: 'ledger' }, ['/work/app'])
   expect(await service.status()).toEqual(indexingStatus)
   await service.reconcile()
   expect(calls.reconcile).toHaveBeenCalledTimes(1)
