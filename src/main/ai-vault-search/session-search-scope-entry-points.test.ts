@@ -78,14 +78,16 @@ describe('every search entry point carries the scope identity through', () => {
     })
   })
 
-  it('answers scope-unknown over the relay, which carries no repo catalog of its own', async () => {
+  it('hands the relay’s own verdict down, that host carrying no repo catalog', async () => {
     const service = fakeSearchService()
-    service.status.mockResolvedValue({ ...(await service.status()), enabled: true })
     setSessionSearchService(service)
-    expect(await relayHandler()({ query: 'needle', within: WITHIN })).toEqual({
-      kind: 'unavailable',
-      reason: 'scope-unknown'
-    })
+    await relayHandler()({ query: 'needle', within: WITHIN })
+    expect(service.search).toHaveBeenCalledWith(
+      { query: 'needle', limit: 20 },
+      {
+        kind: 'unknown'
+      }
+    )
   })
 })
 

@@ -90,7 +90,7 @@ export class SessionScannerServiceSearch {
       value: instance
         ? await instance.search(
             AiVaultSearchRequestSchema.parse(request.request),
-            request.hostScopePaths
+            request.hostScope
           )
         : { kind: 'unavailable', reason: 'disabled' }
     }

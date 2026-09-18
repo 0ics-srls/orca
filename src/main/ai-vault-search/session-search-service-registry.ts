@@ -7,11 +7,7 @@ import {
 import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import { sessionSearchScopeCatalog } from './session-search-scope-catalog'
 import { resolveSessionSearchScope } from './session-search-scope-resolution'
-import type {
-  AiVaultSearchRequest,
-  AiVaultSearchResponse,
-  AiVaultSearchStatus
-} from '../../shared/ai-vault-search-types'
+import type { AiVaultSearchResponse, AiVaultSearchStatus } from '../../shared/ai-vault-search-types'
 import {
   redactForTransport,
   redactStatusForTransport,
@@ -36,17 +32,19 @@ export async function searchSessionService(
     return { kind: 'unavailable', reason: 'no-service' }
   }
   // The one place every entry point funnels through, so native, WSL, SSH and
-  // relay hosts all turn an identity into paths the same way, exactly once.
-  const scoped = applySessionSearchScope(parsed)
-  if (scoped === null) {
-    return { kind: 'unavailable', reason: 'scope-unknown' }
-  }
-  const { request, hostScopePaths } = scoped
+  // relay hosts all turn an identity into paths the same way, exactly once. The
+  // verdict is handed to the service rather than answered here: a host that is
+  // off or still starting owes the reader that answer first, and it is the
+  // service that makes it.
+  const { within, ...request } = parsed
+  const hostScope = within
+    ? resolveSessionSearchScope(within, sessionSearchScopeCatalog())
+    : undefined
   const freshness =
     request.freshness === 'wait-until-current'
       ? await reconcileWithin(current, freshnessTimeoutMs)
       : false
-  const result = AiVaultSearchResponseSchema.parse(await current.search(request, hostScopePaths))
+  const result = AiVaultSearchResponseSchema.parse(await current.search(request, hostScope))
   if (result.kind !== 'results') {
     return result
   }
@@ -55,34 +53,9 @@ export async function searchSessionService(
     ...fields,
     hits: result.hits.map((hit) => redactForTransport(hit, transport)),
     truncated: { ...result.truncated, freshness: result.truncated.freshness || freshness },
-    ...(hostScopePaths ? { resolvedWithin: true as const } : {}),
+    ...(hostScope ? { resolvedWithin: true as const } : {}),
     ...(request.debug && debug ? { debug } : {})
   }
-}
-
-type ScopedSessionSearch = {
-  request: AiVaultSearchRequest
-  /** Absent for an unscoped request, which still searches everything. */
-  hostScopePaths?: readonly string[]
-}
-
-/**
- * Turns this host's scope identity into this host's paths. Null means the host
- * does not know the workspace or project, which is an answer — never a reason to
- * fall back to searching everything.
- */
-function applySessionSearchScope(parsed: AiVaultSearchRequest): ScopedSessionSearch | null {
-  const { within, ...request } = parsed
-  if (!within) {
-    return { request }
-  }
-  const resolution = resolveSessionSearchScope(within, sessionSearchScopeCatalog())
-  if (resolution.kind === 'unknown') {
-    return null
-  }
-  // The paths ride beside the request, never inside `filters.scopePaths`: that
-  // field is capped for the clients that write it, and a host's own answer is not.
-  return { request, hostScopePaths: resolution.paths }
 }
 
 export async function sessionSearchServiceStatus(

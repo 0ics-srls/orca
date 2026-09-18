@@ -8,22 +8,30 @@ import type { SessionSearchIndexer } from './session-search-indexer'
 import { SessionSearchCursorError } from './session-search-page-cursor'
 
 /**
- * Paths a host resolved from a scope identity, handed to the engine beside the
- * request rather than inside `filters.scopePaths`.
+ * What the answering host made of a scope identity. Absent means the request
+ * carried none and still searches everything.
  *
- * Why not that field: it is a wire field, capped at 64 entries for the clients
- * that fill it in by hand. A project whose worktrees do not share one managed
- * directory resolves to one path per worktree, and 100 of them would be refused
- * by the very schema the request is re-parsed with inside the scanner child.
- * These paths never cross a wire — the host that resolved them is the host that
- * searches — so no cap applies to them.
+ * Why the paths ride here and not in `filters.scopePaths`: that is a wire field,
+ * capped at 64 entries for the clients that fill it in by hand. A project whose
+ * worktrees do not share one managed directory resolves to one path per
+ * worktree, and 100 of them would be refused by the very schema the request is
+ * re-parsed with inside the scanner child. These paths never cross a wire — the
+ * host that resolved them is the host that searches — so no cap applies.
+ *
+ * Why `unknown` travels here rather than being answered by the caller: a host
+ * that is switched off or still starting owes the reader that answer, for a
+ * scoped request exactly as for an unscoped one. Those answers are made below,
+ * after consent and readiness are checked, so the verdict has to arrive where
+ * they are made and not before.
  */
-export type SessionSearchHostScopePaths = readonly string[]
+export type SessionSearchHostScope =
+  | { kind: 'resolved'; paths: readonly string[] }
+  | { kind: 'unknown' }
 
 export type SessionSearchService = {
   search(
     req: AiVaultSearchRequest,
-    hostScopePaths?: SessionSearchHostScopePaths
+    hostScope?: SessionSearchHostScope
   ): Promise<AiVaultSearchResponse>
   status(): Promise<AiVaultSearchStatus>
   reconcile(): Promise<void>
@@ -39,14 +47,19 @@ export function createSessionSearchService({
   return {
     reconcile: () => indexer.reconcile({ full: true }),
     status: async () => ({ enabled: true, ...indexer.status(), generation: engine.generation() }),
-    search: async (request, hostScopePaths) => {
+    search: async (request, hostScope) => {
+      // Reached only through a live index, so consent and readiness are already
+      // answered: an unresolvable scope is this host's last word, not a fallback.
+      if (hostScope?.kind === 'unknown') {
+        return { kind: 'unavailable', reason: 'scope-unknown' }
+      }
       if (request.cursor === '') {
         return { kind: 'malformed-cursor' }
       }
       try {
         const result = engine.search(
-          hostScopePaths
-            ? { ...request, filters: { ...request.filters, scopePaths: hostScopePaths } }
+          hostScope
+            ? { ...request, filters: { ...request.filters, scopePaths: hostScope.paths } }
             : request
         )
         return {

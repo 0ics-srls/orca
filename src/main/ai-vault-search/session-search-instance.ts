@@ -14,7 +14,7 @@ import type { SessionSearchScanRoots } from './session-search-scan-roots'
 import type { SessionSearchIndexerOptions } from './session-search-indexer-options'
 import {
   createSessionSearchService,
-  type SessionSearchHostScopePaths,
+  type SessionSearchHostScope,
   type SessionSearchService
 } from './session-search-service'
 
@@ -83,13 +83,15 @@ export class SessionSearchInstance {
 
   async search(
     request: AiVaultSearchRequest,
-    hostScopePaths?: SessionSearchHostScopePaths
+    hostScope?: SessionSearchHostScope
   ): Promise<AiVaultSearchResponse> {
     const live = this.live
+    // Consent and readiness first, for a scoped request exactly as for an
+    // unscoped one: a host the user can switch on must say so, not blame a scope.
     if (!live) {
       return { kind: 'unavailable', reason: this.settings.enabled ? 'not-ready' : 'disabled' }
     }
-    return live.service.search(request, hostScopePaths)
+    return live.service.search(request, hostScope)
   }
 
   status(): AiVaultSearchStatus {

@@ -40,7 +40,7 @@ export function installInProcessSessionSearchService(args: {
   })
   instance.apply(args.settings)
   setSessionSearchService({
-    search: (request, hostScopePaths) => instance.search(request, hostScopePaths),
+    search: (request, hostScope) => instance.search(request, hostScope),
     status: async () => instance.status(),
     reconcile: () => instance.reconcile()
   })

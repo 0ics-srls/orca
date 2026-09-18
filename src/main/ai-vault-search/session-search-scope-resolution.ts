@@ -8,19 +8,16 @@ import {
 } from '../../shared/worktree/id'
 import { areRuntimePathsEqual } from '../../shared/worktree/ownership'
 import type { SessionSearchScopeCatalog } from './session-search-scope-catalog'
+import type { SessionSearchHostScope } from './session-search-service'
 import { managedWorktreeDirectories, ScopePathSet } from './session-search-scope-paths'
-
-export type SessionSearchScopeResolution =
-  | { kind: 'resolved'; paths: string[] }
-  /** This host has no such workspace or project. Never a reason to search everything. */
-  | { kind: 'unknown' }
 
 type ScopeRepo = SessionSearchScopeCatalog['repos'][number]
 
+/** `unknown` says this host has no such workspace or project. Never a reason to search everything. */
 export function resolveSessionSearchScope(
   within: AiVaultSearchScopeIdentity,
   catalog: SessionSearchScopeCatalog | null
-): SessionSearchScopeResolution {
+): SessionSearchHostScope {
   if (!catalog) {
     return { kind: 'unknown' }
   }

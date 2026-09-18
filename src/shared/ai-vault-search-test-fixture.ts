@@ -39,8 +39,9 @@ export function fakeSearchService() {
     search: vi.fn(
       async (
         _request: AiVaultSearchRequest,
-        // Host-resolved scope paths; typed here so a caller's arguments are visible to `mock.calls`.
-        _hostScopePaths?: readonly string[]
+        // The host's scope verdict, declared so `mock.calls` records it. Typed
+        // loosely because its type is a host-side one and this fixture is shared.
+        _hostScope?: unknown
       ): Promise<AiVaultSearchResponse> => searchResults()
     ),
     status: vi.fn(async () => ({
