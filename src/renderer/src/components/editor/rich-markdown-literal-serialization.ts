@@ -280,7 +280,12 @@ export function preserveLiteralMarkdownSource(
         }
       }
     }
-    if (shouldTryDollar(info.block) && /\$/.test(result) && !proves(result, info.block)) {
+    if (
+      shouldTryDollar(info.block) &&
+      !isPlainEscapedBlock &&
+      /\$/.test(result) &&
+      !proves(result, info.block)
+    ) {
       const dollared = escapeBareDollarsSkippingCode(result)
       if (dollared !== result && proves(dollared, info.block)) {
         result = dollared
