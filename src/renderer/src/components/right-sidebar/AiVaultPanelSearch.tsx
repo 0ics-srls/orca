@@ -63,7 +63,7 @@ export function AiVaultPanelSearch({
   onDismiss: () => void
   children: ReactNode
 }) {
-  const { localConsent, response, error, loading, retry: onRetry } = search
+  const { consentOffer, response, error, loading, retry: onRetry } = search
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
   async function enable() {
@@ -83,7 +83,7 @@ export function AiVaultPanelSearch({
   }
   const unavailable = response?.kind === 'unavailable' ? response.reason : null
   let message: string | null = null
-  if (localConsent) {
+  if (consentOffer) {
     message = translate(
       'sessionSearch.panel.consent',
       'Enable full-text search? Orca builds an index on this computer from local agent transcripts, including full conversations and up to 3,072 characters per tool output. Content is not redacted. Authenticated paired clients can search it.'
@@ -135,7 +135,8 @@ export function AiVaultPanelSearch({
       )
     }
   }
-  if (!search.searching) {
+  // The offer sits above the legacy title filter's own results, so it is not a wall.
+  if (!search.searching && !consentOffer) {
     return children
   }
   if (response?.kind === 'results' && search.hits.length === 0) {
@@ -155,7 +156,7 @@ export function AiVaultPanelSearch({
         >
           {message && <p>{message}</p>}
           {skippedHosts && <p>{skippedHosts}</p>}
-          {localConsent ? (
+          {consentOffer ? (
             <>
               {saveError && (
                 <p className="text-destructive">

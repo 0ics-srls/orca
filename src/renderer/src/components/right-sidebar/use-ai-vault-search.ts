@@ -146,20 +146,24 @@ export function useAiVaultPanelSearch(
   const host = parseExecutionHostId(executionHostScope)?.id ?? null
   const scope: ExecutionHostScope | null =
     executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ? ALL_EXECUTION_HOSTS_SCOPE : host
-  const searching = query.trim().length > 0
+  const trimmed = query.trim()
   const localConsent = executionHostScope === 'local' && !isWebClientLocation() && !policy.enabled
+  // Until indexing is on the box is still the legacy title filter, so the panel must not
+  // switch into search mode; the offer below invites the user to turn indexing on instead.
+  const searching = trimmed.length > 0 && !localConsent
+  const consentOffer = trimmed.length > 0 && localConsent
   // `within` is memoized by the caller; a fresh object per render would restart
   // the search on every render and never let one settle.
   const request = useMemo(
     () =>
-      searching && scope && !localConsent && agents.length > 0
+      searching && scope && agents.length > 0
         ? {
-            query: query.trim(),
+            query: trimmed,
             filters: { agents: [...agents] },
             ...(within ? { within } : {})
           }
         : null,
-    [searching, scope, localConsent, agents, query, within]
+    [searching, scope, agents, trimmed, within]
   )
   const search = useAiVaultSearch(request, scope, JSON.stringify(policy))
   const sessions = useMemo(
@@ -181,7 +185,7 @@ export function useAiVaultPanelSearch(
     sessions,
     searchHits,
     searching,
-    localConsent,
+    consentOffer,
     host,
     resetKey: JSON.stringify([scope, request])
   }
