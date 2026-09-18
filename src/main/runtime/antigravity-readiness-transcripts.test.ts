@@ -6,8 +6,8 @@
  * Antigravity prints: the transcripts do. Six are recorded from a live `agy`; the rest name
  * themselves as skipped until someone can reach them.
  *
- * Four cases are pinned as KNOWN DEFECT: on real output the shipped detector refuses the ready
- * screen and accepts the live model picker. Those assert what it does, not what it should.
+ * One case is pinned as a KNOWN DEFECT: the shipped detector refuses a ready screen whose retained
+ * tail ends on the error block. That asserts what it does, not what it should.
  *
  * Capture protocol: docs/reference/agent-pty-transcript-capture.md
  * What each transcript decides: docs/reference/antigravity-readiness-evidence.md
@@ -84,8 +84,7 @@ const TRANSCRIPTS: readonly TranscriptCase[] = [
     name: 'antigravity-dialog-model-picker',
     capture: 'C',
     what: 'model picker owning the screen',
-    expectReady: false,
-    knownDefect: "accepted: the picker's own `Gemini 3.x Flash` rows satisfy the model rule"
+    expectReady: false
   },
   {
     name: 'antigravity-dialog-command-palette',

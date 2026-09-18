@@ -368,6 +368,19 @@ describe('Antigravity readiness does not absorb its own startup dialog', () => {
     expect(detectTerminalWaitBlockedReason(waitText)).toBe('agent-interactive-prompt')
   })
 
+  it('rejects a stale composer caret while the Antigravity model picker is active', () => {
+    const waitText = waitTextFor([
+      'Antigravity CLI 1.2.0',
+      '>',
+      'Switch Model',
+      '> Gemini 3.8 Flash',
+      'Gemini 3.7 Flash (current)',
+      'Keyboard: ↑/↓ Navigate · enter Select · esc Go Back'
+    ])
+
+    expect(isKnownReadyPromptPreview(waitText)).toBe(false)
+  })
+
   // Discriminating: a stale dialog above a reprinted Gemini ready screen must stop being reported,
   // which is the whole point of the dismissed-modal rule.
   it('clears once a Gemini ready screen replaces the dialog', () => {

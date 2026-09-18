@@ -50,6 +50,15 @@ export function isKnownReadyPromptPreview(preview: string): boolean {
   if (readyIndex === null) {
     return false
   }
+  const antigravityReadyIndex = findAntigravityReadyPromptIndex(normalized)
+  const modelPickerIndex = findActiveAntigravityModelPickerIndex(normalized)
+  if (
+    antigravityReadyIndex !== null &&
+    modelPickerIndex !== null &&
+    modelPickerIndex > antigravityReadyIndex
+  ) {
+    return false
+  }
   const blockedSignal = findTerminalWaitBlockedSignal(normalized)
   if (blockedSignal !== null && blockedSignal.index > readyIndex) {
     return false
@@ -157,6 +166,16 @@ function findAntigravityReadyPromptIndex(normalized: string): number | null {
   }
 
   return promptIndex
+}
+
+// Why: the model picker keeps the ready composer's bare caret in scrollback while its selected row
+// is labeled, so that stale caret must not satisfy tui-idle until the picker emits its exit marker.
+function findActiveAntigravityModelPickerIndex(normalized: string): number | null {
+  const pickerIndex = normalized.lastIndexOf('switch model')
+  if (pickerIndex === -1 || normalized.lastIndexOf('antigravity cli') > pickerIndex) {
+    return null
+  }
+  return normalized.lastIndexOf('exited /model command') > pickerIndex ? null : pickerIndex
 }
 
 export const TERMINAL_WAIT_BLOCKED_SENTINEL_RE =
