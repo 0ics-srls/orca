@@ -258,7 +258,11 @@ export function latestStructuredAgentSessionUserItem(
 ): AgentJournalRenderItem | null {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index]
-    if (item?.body.kind === 'message' && item.body.role === 'user' && isRootAgentJournalItem(item)) {
+    if (
+      item?.body.kind === 'message' &&
+      item.body.role === 'user' &&
+      isRootAgentJournalItem(item)
+    ) {
       return item
     }
   }
