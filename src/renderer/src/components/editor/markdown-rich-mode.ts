@@ -215,8 +215,12 @@ function containsDefinitionNode(node: { type: string; children?: unknown[] }): b
   if (!Array.isArray(node.children)) {
     return false
   }
-  return node.children.some((child) =>
-    containsDefinitionNode(child as { type: string; children?: unknown[] })
+  return node.children.some((child) => isDefinitionTreeNode(child) && containsDefinitionNode(child))
+}
+
+function isDefinitionTreeNode(value: unknown): value is { type: string; children?: unknown[] } {
+  return (
+    typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string'
   )
 }
 
