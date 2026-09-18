@@ -1,0 +1,1663 @@
+{
+  "observedAt": "2026-09-18T03:05:29.428984+00:00",
+  "currentMain": "9c921360090667e02363fe6e4dee98410665427a",
+  "mergePolicy": {
+    "mergeCommitAllowed": false,
+    "squashMergeAllowed": true,
+    "rebaseMergeAllowed": true
+  },
+  "pullRequests": [
+    {
+      "number": 20903,
+      "title": "Withdrawn: terminal editor timers already have an owning cleanup",
+      "url": "https://github.com/stablyai/orca/pull/20903",
+      "state": "CLOSED",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-terminal-editor-close",
+      "headRefOid": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20904,
+      "title": "Withdrawn: canceling deferred diff disposal retains Monaco models",
+      "url": "https://github.com/stablyai/orca/pull/20904",
+      "state": "CLOSED",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-diff-model-disposal",
+      "headRefOid": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20905,
+      "title": "fix(renderer): cancel signout auth retry on unmount",
+      "url": "https://github.com/stablyai/orca/pull/20905",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-signout-retry",
+      "headRefOid": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20906,
+      "title": "fix(renderer): cancel copied prompt reset on unmount",
+      "url": "https://github.com/stablyai/orca/pull/20906",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-prompt-reset",
+      "headRefOid": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20908,
+      "title": "fix(renderer): dispose global listeners during HMR",
+      "url": "https://github.com/stablyai/orca/pull/20908",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-renderer-hmr",
+      "headRefOid": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20909,
+      "title": "fix(main,preload): tear down renderer relay and preload listeners",
+      "url": "https://github.com/stablyai/orca/pull/20909",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-relay-preload",
+      "headRefOid": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "c2e588e985b139995538e3e57cd48915357e9eea",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20910,
+      "title": "fix(main): release hang watchdog quit listener on shutdown",
+      "url": "https://github.com/stablyai/orca/pull/20910",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-hang-watchdog",
+      "headRefOid": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20924,
+      "title": "fix(renderer): release parked terminal scroll intents",
+      "url": "https://github.com/stablyai/orca/pull/20924",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "7ec2986fd11e2de3964546657c0069a00f0676d6",
+      "headRefName": "np-oom-scan-scroll-intent",
+      "headRefOid": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20941,
+      "title": "fix(stats): bound retained events during stalled writes",
+      "url": "https://github.com/stablyai/orca/pull/20941",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-stats-retention",
+      "headRefOid": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20946,
+      "title": "fix(relay): bound cyclic process-table traversal",
+      "url": "https://github.com/stablyai/orca/pull/20946",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-relay-process-cycles",
+      "headRefOid": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20947,
+      "title": "fix(daemon): pause producers when stream backlogs grow",
+      "url": "https://github.com/stablyai/orca/pull/20947",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "7f23d4463d79d6180f180947d0b5bf4fe20931de",
+      "headRefName": "np-oom-scan-daemon-stream-backpressure",
+      "headRefOid": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20949,
+      "title": "fix(browser): bound CDP output for stalled clients",
+      "url": "https://github.com/stablyai/orca/pull/20949",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "e6a41081a3cc723ade11e719286ca6bd67c68884",
+      "headRefName": "np-oom-scan-cdp-backpressure",
+      "headRefOid": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20955,
+      "title": "Fix terminal hyperlink metadata retention during redraws",
+      "url": "https://github.com/stablyai/orca/pull/20955",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "357c9780f8bffa10a21d004449d8d6d9846a9310",
+      "headRefName": "np-oom-scan-osc-link-retirement",
+      "headRefOid": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20960,
+      "title": "Detach retained CI and terminal tails from oversized strings",
+      "url": "https://github.com/stablyai/orca/pull/20960",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "9ed561c1d2505184946b39a27614002f0145de40",
+      "headRefName": "np-oom-scan-retained-text-slices",
+      "headRefOid": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "isDraft": false,
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20963,
+      "title": "Bound AI Vault transcript record assembly before allocation",
+      "url": "https://github.com/stablyai/orca/pull/20963",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "b0d46e2d3d7940548346bc6bf8af6c4e6d3266d2",
+      "headRefName": "np-oom-scan-transcript-record-budget",
+      "headRefOid": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20965,
+      "title": "Bound invisible WebGL glyph cache entries",
+      "url": "https://github.com/stablyai/orca/pull/20965",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "feb04ec254585ba69587699d41f80a72dda2cb27",
+      "headRefName": "np-oom-scan-webgl-empty-glyph-cache",
+      "headRefOid": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20976,
+      "title": "Enforce the legacy transcript import budget while reading",
+      "url": "https://github.com/stablyai/orca/pull/20976",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "f78483ec29891ab11f49bb25e6cd628837b1242e",
+      "headRefName": "np-oom-scan-legacy-import-source-budget",
+      "headRefOid": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20978,
+      "title": "Release provider children after structured session holds disappear",
+      "url": "https://github.com/stablyai/orca/pull/20978",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "headRefName": "np-oom-scan-structured-resume-holds",
+      "headRefOid": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "isDraft": false,
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20980,
+      "title": "Release completed scanner cancellation IDs",
+      "url": "https://github.com/stablyai/orca/pull/20980",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "headRefName": "np-oom-scan-scanner-late-cancel",
+      "headRefOid": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20981,
+      "title": "Bound terminal contrast-color caches",
+      "url": "https://github.com/stablyai/orca/pull/20981",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "headRefName": "np-oom-scan-contrast-cache",
+      "headRefOid": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20986,
+      "title": "fix(ai-vault): release retired search write fences",
+      "url": "https://github.com/stablyai/orca/pull/20986",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "e39b432c40d34348159be0bb0a630bc6c25c0130",
+      "headRefName": "np-oom-scan-search-write-fences",
+      "headRefOid": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20992,
+      "title": "fix(terminal): release erased cell backing strings",
+      "url": "https://github.com/stablyai/orca/pull/20992",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-contrast-cache",
+      "baseRefOid": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "headRefName": "np-oom-scan-terminal-cell-retention",
+      "headRefOid": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 20996,
+      "title": "fix(runtime): fence terminal snapshot completion by owner",
+      "url": "https://github.com/stablyai/orca/pull/20996",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-headless-snapshot-ownership",
+      "headRefOid": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21000,
+      "title": "fix(pty): reconcile daemon exits after synthetic notifications",
+      "url": "https://github.com/stablyai/orca/pull/21000",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-daemon-late-exit",
+      "headRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "827dabf9582a92820d340c58452b66468f5e2199",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21001,
+      "title": "fix(terminal): retire explicitly closed pending split connections",
+      "url": "https://github.com/stablyai/orca/pull/21001",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "170ebce1f2bd4474a48b40694d46a6b27e4ba767",
+      "headRefName": "np-oom-scan-pending-split-close",
+      "headRefOid": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21002,
+      "title": "fix(sessions): stop transcript catch-up after TUI owner close",
+      "url": "https://github.com/stablyai/orca/pull/21002",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-tui-transcript-close",
+      "headRefOid": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21005,
+      "title": "fix(terminal): retire captured remote handles when pending panes close",
+      "url": "https://github.com/stablyai/orca/pull/21005",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-pending-split-close",
+      "baseRefOid": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "headRefName": "np-oom-scan-pending-runtime-close",
+      "headRefOid": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21006,
+      "title": "fix(sessions): cancel transcript acquisition during host teardown",
+      "url": "https://github.com/stablyai/orca/pull/21006",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-tui-transcript-acquisition",
+      "headRefOid": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21009,
+      "title": "fix(log-tail): retire watches with their renderer lifetime",
+      "url": "https://github.com/stablyai/orca/pull/21009",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-local-log-tail",
+      "headRefOid": "8da602c7e3a74655f98039705bbfede174078e79",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "8da602c7e3a74655f98039705bbfede174078e79",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21010,
+      "title": "fix(browser): release page callbacks when a guest is destroyed",
+      "url": "https://github.com/stablyai/orca/pull/21010",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-browser-destroyed-guest",
+      "headRefOid": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21011,
+      "title": "fix(runtime): preserve exited PTY authority across queued graphs",
+      "url": "https://github.com/stablyai/orca/pull/21011",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "baseRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "headRefName": "np-oom-scan-queued-terminal-graph-exit",
+      "headRefOid": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21012,
+      "title": "fix(browser): fence late registration replies to their guest owner",
+      "url": "https://github.com/stablyai/orca/pull/21012",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-browser-registration-replies",
+      "headRefOid": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21014,
+      "title": "fix(runtime): reject stale inventory after PTY lifecycle changes",
+      "url": "https://github.com/stablyai/orca/pull/21014",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-stale-pty-inventory",
+      "headRefOid": "099f3396524554fc6725a7f0b727434dc7369527",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "099f3396524554fc6725a7f0b727434dc7369527",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21018,
+      "title": "fix(runtime): terminate nonblank tail scan at the first row",
+      "url": "https://github.com/stablyai/orca/pull/21018",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-terminal-tail-termination",
+      "headRefOid": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21019,
+      "title": "fix(runtime): preserve observed exit during explicit terminal close",
+      "url": "https://github.com/stablyai/orca/pull/21019",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "baseRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "headRefName": "np-oom-scan-observed-terminal-exit",
+      "headRefOid": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21020,
+      "title": "fix(runtime): persist acknowledged terminal tab retirement",
+      "url": "https://github.com/stablyai/orca/pull/21020",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-acknowledged-tab-retirement",
+      "headRefOid": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21021,
+      "title": "fix(claude): enforce history window quota while reading",
+      "url": "https://github.com/stablyai/orca/pull/21021",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-claude-history-window-budget",
+      "headRefOid": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21022,
+      "title": "fix(projects): release processed repository scan records",
+      "url": "https://github.com/stablyai/orca/pull/21022",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-nested-repo-queue",
+      "headRefOid": "97338c35d95151b744cc653f328a1180f17dd182",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "97338c35d95151b744cc653f328a1180f17dd182",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21024,
+      "title": "fix(claude): stream transcript ancestry proofs",
+      "url": "https://github.com/stablyai/orca/pull/21024",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-claude-branch-streaming",
+      "headRefOid": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21112,
+      "title": "fix: stop xterm reflow retaining and overwriting trimmed rows",
+      "url": "https://github.com/stablyai/orca/pull/21112",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-terminal-cell-retention",
+      "baseRefOid": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "headRefName": "np-oom-scan-xterm-reflow-retention",
+      "headRefOid": "061913804c35af189d00f8a9574dcb226b971ba6",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "061913804c35af189d00f8a9574dcb226b971ba6",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21113,
+      "title": "fix: persist closing never-started local terminal tabs",
+      "url": "https://github.com/stablyai/orca/pull/21113",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "2e3a24c30f4c57d040d66e3dad75315fcc379eb0",
+      "headRefName": "np-oom-scan-local-empty-tab-retirement",
+      "headRefOid": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21128,
+      "title": "fix: enforce the crash dump size limit during reading",
+      "url": "https://github.com/stablyai/orca/pull/21128",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-crashpad-read-limit",
+      "headRefOid": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21129,
+      "title": "fix: bound audio queued behind local speech recognition",
+      "url": "https://github.com/stablyai/orca/pull/21129",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-speech-audio-budget",
+      "headRefOid": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21131,
+      "title": "fix: release completed runtime RPC queue payloads",
+      "url": "https://github.com/stablyai/orca/pull/21131",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-rpc-consumed-queue",
+      "headRefOid": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21135,
+      "title": "fix: release aborted auth filesystem waiters",
+      "url": "https://github.com/stablyai/orca/pull/21135",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-auth-wait-retention",
+      "headRefOid": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21136,
+      "title": "fix: retire stale GitLab host cache generations",
+      "url": "https://github.com/stablyai/orca/pull/21136",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-gitlab-host-retirement",
+      "headRefOid": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21138,
+      "title": "fix: release Codex prompt claims after turn completion",
+      "url": "https://github.com/stablyai/orca/pull/21138",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "f36a7cecf2b8f1c43b4fa19052cdc845a6abdb13",
+      "headRefName": "np-oom-scan-codex-prompt-claims",
+      "headRefOid": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21139,
+      "title": "fix: release completed terminal spawn inputs",
+      "url": "https://github.com/stablyai/orca/pull/21139",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "f36a7cecf2b8f1c43b4fa19052cdc845a6abdb13",
+      "headRefName": "np-oom-scan-completed-spawn-inputs",
+      "headRefOid": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "66d12af6a54cc928f269dae02c399db7d8431f03",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21140,
+      "title": "fix: release native PTY spawn environment after setup",
+      "url": "https://github.com/stablyai/orca/pull/21140",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "631b51f508a98cc6d50378d1223fd4565a8c5bea",
+      "headRefName": "np-oom-scan-native-pty-spawn-env",
+      "headRefOid": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21142,
+      "title": "Skip empty chunks in streamed agent text",
+      "url": "https://github.com/stablyai/orca/pull/21142",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "631b51f508a98cc6d50378d1223fd4565a8c5bea",
+      "headRefName": "np-oom-scan-empty-streamed-deltas",
+      "headRefOid": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21144,
+      "title": "fix: release canceled working-directory waiter references",
+      "url": "https://github.com/stablyai/orca/pull/21144",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "c2962a765abd3eba6a8a58d9374eedaea3b6dd49",
+      "headRefName": "np-oom-scan-working-directory-waits",
+      "headRefOid": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21150,
+      "title": "fix: release completed SSH writer queue entries",
+      "url": "https://github.com/stablyai/orca/pull/21150",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "fbe7b194b8b6e05bf945aaef67ab3b3789f110fd",
+      "headRefName": "np-oom-scan-ssh-writer-prefix",
+      "headRefOid": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21160,
+      "title": "fix: fence viewport state after browser guest retirement",
+      "url": "https://github.com/stablyai/orca/pull/21160",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "headRefName": "np-oom-scan-viewport-owner-state",
+      "headRefOid": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21162,
+      "title": "fix: release retired daemon owner incarnation metadata",
+      "url": "https://github.com/stablyai/orca/pull/21162",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "0699d73fd63e26a1bb024dfab88109a8583dd80d",
+      "headRefName": "np-oom-scan-daemon-owner-incarnations",
+      "headRefOid": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21164,
+      "title": "fix: release completed browser results after host close",
+      "url": "https://github.com/stablyai/orca/pull/21164",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "0699d73fd63e26a1bb024dfab88109a8583dd80d",
+      "headRefName": "np-oom-scan-closed-browser-results",
+      "headRefOid": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21167,
+      "title": "fix: avoid retaining foreign SSH file frames before metadata",
+      "url": "https://github.com/stablyai/orca/pull/21167",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "0e3b71f6056b55e2d0c65868afa2057fe5dcccc1",
+      "headRefName": "np-oom-scan-ssh-file-metadata",
+      "headRefOid": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21175,
+      "title": "fix: retire unowned paired-host session partitions on GUI removal",
+      "url": "https://github.com/stablyai/orca/pull/21175",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-local-empty-tab-retirement",
+      "baseRefOid": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "headRefName": "np-oom-scan-paired-host-session-retirement",
+      "headRefOid": "c86d273251cad3c9bc4a731651443659dab7e6d1",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "c86d273251cad3c9bc4a731651443659dab7e6d1",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21178,
+      "title": "fix: retire closed editor models from the app shell",
+      "url": "https://github.com/stablyai/orca/pull/21178",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "560c42e1d196f53299b49bf248bdb807f2ffe45b",
+      "headRefName": "np-oom-scan-closed-editor-models",
+      "headRefOid": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "number": 21185,
+      "title": "fix(plugins): retire log owners after successful uninstall",
+      "url": "https://github.com/stablyai/orca/pull/21185",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "779667c1e765d3584d04c2bca19f4153458fbffa",
+      "headRefName": "np-oom-scan-plugin-log-retirement",
+      "headRefOid": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

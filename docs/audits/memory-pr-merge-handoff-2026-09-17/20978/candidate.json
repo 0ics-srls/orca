@@ -1,0 +1,77 @@
+{
+  "number": 20978,
+  "topic": "np-oom-scan-structured-resume-holds",
+  "oldHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+  "main": "d7d3bcfc6653592be78ef5c6ea3298153eea4209",
+  "conflictedTree": "e3353d2d9061090f3cd9433a8cef3418d8cf290c",
+  "resolvedTree": "6edbf950ed6a0077a8b4ac8e90af0896a1ca1224",
+  "candidateCommit": "7b0ddd7cc0a1022345eaffabb4d6c30105db1679",
+  "conflicts": ["tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts"],
+  "resolution": "Keep PR RuntimeSubscriptionRegistry import; retain main removal of unused computeAgentSessionPayloadFingerprint. No production conflict or manual production edits.",
+  "product": [
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+      "identicalPublished": true,
+      "sha256": "4933ee2123b02cd114fc2b3c56cc06e43cc384802bd9e4c5174fa03053beb83a"
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+      "identicalPublished": true,
+      "sha256": "c95e27518d6cb09f1c97e5ff18bbb9fc5b15c7680d4a99e90cc14353d602230f"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+      "identicalPublished": true,
+      "sha256": "26a8c39ee74a3781ef001372e7931abaf7656312abd900ca9c32f24bdaaa3ac8"
+    }
+  ],
+  "testScope": "40 targeted tests across3 suites passed against exact candidate repository graph; installed package dependencies remain the worktree installation. No full typecheck or native cross-version execution.",
+  "mergeBase": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+  "mainRelativeChangedPaths": [
+    "docs/audits/structured-hold-retention/README.md",
+    "docs/audits/structured-hold-retention/reproduce.mjs",
+    "docs/audits/structured-hold-retention/results.json",
+    "src/main/native-chat/agent-session-wire/structured-agent-session-hold-resume-race.test.ts",
+    "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+    "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+    "src/main/runtime/rpc/methods/structured-agent-session-hold.test.ts",
+    "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+    "tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts"
+  ],
+  "mainRelativeProductionChangedLines": 49,
+  "validation": {
+    "diffCheck": {
+      "exitCode": 0,
+      "range": "d7d3bcfc6653592be78ef5c6ea3298153eea4209..7b0ddd7cc0a1022345eaffabb4d6c30105db1679"
+    },
+    "resolvedFixtureLint": {
+      "exitCode": 0,
+      "log": "notes/pr-merge-selection/20978/resolved-fixture-lint.log",
+      "scope": "Only the resolved cross-version fixture exported inside notes; does not replace full candidate typecheck."
+    },
+    "exactTreeTests": {
+      "state": "passed",
+      "files": 3,
+      "tests": 40,
+      "exitCode": 0,
+      "durationSeconds": 288.55,
+      "log": "notes/pr-merge-selection/20978/exact-tree-tests.log",
+      "graph": "notes/pr-merge-selection/20978/exact-tree-graph.json",
+      "verifiedRepositorySourceCount": 3144,
+      "fullCrossVersionFixtureExecuted": false,
+      "fullTypecheckExecuted": false,
+      "boundary": "All loaded repository module bytes reverified against published candidate. Includes the two holds suites and real runtime/RPC hold integration suite. Most time was strict Git source transformation; test execution2.78s."
+    },
+    "holdsExactTreeTests": {
+      "state": "passed",
+      "files": 2,
+      "tests": 27,
+      "exitCode": 0,
+      "log": "notes/pr-merge-selection/20978/holds-exact-tree-tests.log",
+      "graph": "notes/pr-merge-selection/20978/holds-exact-tree-graph.json",
+      "verifiedRepositorySourceCount": 13,
+      "boundary": "All loaded repository modules hash-verified against candidate commit; installed dependencies remain the worktree installation. No native provider execution."
+    }
+  },
+  "completedAt": "2026-09-18T03:17:33.593146+00:00"
+}

@@ -1,0 +1,23 @@
+[
+  "src/main/claude/claude-background-task-resume.test.ts",
+  "src/main/claude/claude-background-task-retention.test.ts",
+  "src/main/claude/claude-background-task-row-journal.test.ts",
+  "src/main/claude/claude-background-task-rows.test.ts",
+  "src/main/claude/claude-background-task-terminal-frames.test.ts",
+  "src/main/claude/claude-background-task-tracker.test.ts",
+  "src/main/claude/claude-background-task-turn-resumption.test.ts",
+  "src/main/claude/claude-structured-journal-translation-background-tasks.test.ts",
+  "src/main/claude/claude-subagent-task-frames.test.ts",
+  "src/main/daemon/terminal-mouse-tail-retention.test.ts",
+  "src/main/plugins/plugin-worker-output-retention.test.ts",
+  "src/main/ports/advertised-url-retention.test.ts",
+  "src/main/runtime/recent-pty-output-retention.test.ts",
+  "src/renderer/src/components/terminal-pane/terminal-capped-buffer-retention.test.ts",
+  "src/shared/check-job-log-retention.test.ts",
+  "src/shared/claude-background-task-status.test.ts",
+  "src/shared/command-code-output-retention.test.ts",
+  "src/shared/native-chat-background-task-row.test.ts",
+  "src/shared/terminal-kitty-keyboard-tail-retention.test.ts",
+  "src/shared/terminal-osc133-carry-retention.test.ts",
+  "src/shared/worker-transcript-background-task-text.test.ts"
+]

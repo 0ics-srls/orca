@@ -1,0 +1,50 @@
+2026-09-18T03:25:01.0052830Z ⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+2026-09-18T03:25:01.0053436Z 
+2026-09-18T03:25:01.0053879Z Vitest caught 1 unhandled error during the test run.
+2026-09-18T03:25:01.0054934Z This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+2026-09-18T03:25:01.0069496Z 
+2026-09-18T03:25:01.0070330Z ⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+2026-09-18T03:25:01.0071166Z ReferenceError: window is not defined
+2026-09-18T03:25:01.0073972Z  ❯ resolveUpdatePriority node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:1308:7
+2026-09-18T03:25:01.0076367Z  ❯ requestUpdateLane node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:16345:11
+2026-09-18T03:25:01.0078764Z  ❯ dispatchSetState node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:9126:14
+2026-09-18T03:25:01.0080488Z  ❯ Timeout._onTimeout src/renderer/src/components/right-sidebar/use-subagent-sessions.ts:19:43
+2026-09-18T03:25:01.0097692Z      17|     let cancelled = false
+2026-09-18T03:25:01.0098633Z      18|     setShowLoading(false)
+2026-09-18T03:25:01.0100229Z      19|     const loadingTimer = setTimeout(() => setShowLoading(true), 200)
+2026-09-18T03:25:01.0101644Z        |                                           ^
+2026-09-18T03:25:01.0103063Z      20|     setState((previous) => ({ ...previous, status: 'loading' }))
+2026-09-18T03:25:01.0104317Z      21|     window.api.aiVault
+2026-09-18T03:25:01.0105750Z  ❯ listOnTimeout node:internal/timers:685:17
+2026-09-18T03:25:01.0107096Z  ❯ processTimers node:internal/timers:618:7
+2026-09-18T03:25:01.0107609Z 
+2026-09-18T03:25:01.0109102Z This error originated in "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+2026-09-18T03:25:01.0110972Z ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+2026-09-18T03:25:01.0111221Z 
+2026-09-18T03:25:01.0111252Z 
+2026-09-18T03:25:01.0167235Z  Test Files  1115 passed | 5 skipped (1120)
+2026-09-18T03:25:01.0272124Z       Tests  10321 passed | 22 skipped (10343)
+2026-09-18T03:25:01.0273499Z      Errors  1 error
+2026-09-18T03:25:01.0274170Z    Start at  03:18:58
+2026-09-18T03:25:01.0293608Z    Duration  362.31s (transform 78.22s, setup 25.17s, import 469.16s, tests 309.75s, environment 53.37s)
+2026-09-18T03:25:01.0296121Z 
+2026-09-18T03:25:01.0417839Z 
+2026-09-18T03:25:01.0450838Z ##[error]ReferenceError: window is not defined
+ ❯ resolveUpdatePriority node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:1308:7
+ ❯ requestUpdateLane node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:16345:11
+ ❯ dispatchSetState node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js:9126:14
+ ❯ Timeout._onTimeout src/renderer/src/components/right-sidebar/use-subagent-sessions.ts:19:43
+
+This error originated in "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+2026-09-18T03:25:01.5101118Z ##[error]Process completed with exit code 1.
+2026-09-18T03:25:01.5177087Z ##[group]Run actions/upload-artifact@v7
+2026-09-18T03:25:01.5177422Z with:
+2026-09-18T03:25:01.5177665Z   name: unit-shard-node-24-5-attempt-1
+2026-09-18T03:25:01.5177973Z   path: ci-shards/
+2026-09-18T03:25:01.5178203Z   retention-days: 14
+2026-09-18T03:25:01.5178447Z   if-no-files-found: warn
+2026-09-18T03:25:01.5178699Z   compression-level: 6
+2026-09-18T03:25:01.5178940Z   overwrite: false
+2026-09-18T03:25:01.5179205Z   include-hidden-files: false
+2026-09-18T03:25:01.5179465Z   archive: true

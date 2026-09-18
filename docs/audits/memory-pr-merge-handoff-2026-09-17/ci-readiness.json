@@ -1,0 +1,2061 @@
+{
+  "observedAt": "2026-09-18T03:05:29.428984+00:00",
+  "namedMain": "9c921360090667e02363fe6e4dee98410665427a",
+  "status": "complete-initial-selection-readiness",
+  "policyFile": "notes/pr-merge-selection/ci-policy.json",
+  "boundary": "Exact initial heads/status and production LoC/behavior selection. Only selected red heads had leaf contexts fetched; all such connections were complete. Existing same-job annotation/log evidence establishes historical causes. Replacement runs and any later heads must be checked after root integration. No merges, branch updates, reruns or source edits performed by this reviewer.",
+  "pullRequests": [
+    {
+      "number": 20903,
+      "head": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+      "baseRefName": "main",
+      "state": "CLOSED",
+      "riskCategory": "withdrawn",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 11,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20904,
+      "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "baseRefName": "main",
+      "state": "CLOSED",
+      "riskCategory": "withdrawn",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 16,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20905,
+      "head": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 9,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 20906,
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Pending (11 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 20,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 20908,
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Pending (4 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 122,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20909,
+      "head": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 111,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20910,
+      "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 4,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547782",
+          "startedAt": "2026-09-16T07:49:43Z",
+          "completedAt": "2026-09-16T07:50:38Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547780",
+          "startedAt": "2026-09-16T07:53:48Z",
+          "completedAt": "2026-09-16T07:55:02Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104714299505",
+          "startedAt": "2026-09-16T08:03:28Z",
+          "completedAt": "2026-09-16T08:03:30Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547782",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547780",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 20924,
+      "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 17,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 20941,
+      "head": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 4,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070237926/job/104709930441",
+          "startedAt": "2026-09-16T07:46:50Z",
+          "completedAt": "2026-09-16T07:47:42Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070237926/job/104709930321",
+          "startedAt": "2026-09-16T07:46:50Z",
+          "completedAt": "2026-09-16T07:48:10Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070237926/job/104711823377",
+          "startedAt": "2026-09-16T07:55:14Z",
+          "completedAt": "2026-09-16T07:55:16Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [],
+      "historicalLogEvidence": "docs/audits/memory-pr-ci-review-2026-09-17.md explicitly records cached current-job logs for this head and the same failing job URL; no redundant log download.",
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 20946,
+      "head": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 6,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 20947,
+      "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 568,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20949,
+      "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 39,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20955,
+      "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "extra-review",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 136,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20960,
+      "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "requiresPrs": [],
+      "assessment": "eligible-await-conflict-resolution-and-green-checks",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 72,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Resolve conflict, review resulting source and production LoC, and require successful replacement checks."
+    },
+    {
+      "number": 20963,
+      "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 21,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20965,
+      "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "extra-review",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 216,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20976,
+      "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 17,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20978,
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "requiresPrs": [],
+      "assessment": "eligible-await-conflict-resolution-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 49,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830087",
+          "startedAt": "2026-09-16T08:03:27Z",
+          "completedAt": "2026-09-16T08:04:21Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830254",
+          "startedAt": "2026-09-16T08:03:26Z",
+          "completedAt": "2026-09-16T08:04:51Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104716902040",
+          "startedAt": "2026-09-16T08:11:46Z",
+          "completedAt": "2026-09-16T08:11:49Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830087",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830254",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "'NativeChatMessage' is declared but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104716902040",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Resolve current-main conflict without widening production scope, recount lines, validate holder/child lifecycle, and require successful checks."
+    },
+    {
+      "number": 20980,
+      "head": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 3,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 20981,
+      "head": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "extra-review",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 454,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20986,
+      "head": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 69,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070233999/job/104709915270",
+          "startedAt": "2026-09-16T07:46:46Z",
+          "completedAt": "2026-09-16T07:47:46Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070233999/job/104709915345",
+          "startedAt": "2026-09-16T07:46:46Z",
+          "completedAt": "2026-09-16T07:48:08Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070233999/job/104711763229",
+          "startedAt": "2026-09-16T07:54:45Z",
+          "completedAt": "2026-09-16T07:54:48Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [],
+      "historicalLogEvidence": "docs/audits/memory-pr-ci-review-2026-09-17.md explicitly records cached current-job logs for this head and the same failing job URL; no redundant log download.",
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 20992,
+      "head": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "baseRefName": "np-oom-scan-contrast-cache",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [20981],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE from canceled duplicate; same-head PR Checks succeeded",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 1066,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 20996,
+      "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 48,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647880",
+          "startedAt": "2026-09-16T08:01:45Z",
+          "completedAt": "2026-09-16T08:02:43Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647912",
+          "startedAt": "2026-09-16T07:58:13Z",
+          "completedAt": "2026-09-16T07:59:39Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104716859397",
+          "startedAt": "2026-09-16T08:11:37Z",
+          "completedAt": "2026-09-16T08:11:40Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647880",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647912",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "'NativeChatMessage' is declared but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104716859397",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            }
+          ],
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 21000,
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 75,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419289",
+          "startedAt": "2026-09-16T09:48:58Z",
+          "completedAt": "2026-09-16T09:49:53Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419305",
+          "startedAt": "2026-09-16T09:48:58Z",
+          "completedAt": "2026-09-16T09:50:22Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104748546880",
+          "startedAt": "2026-09-16T09:56:10Z",
+          "completedAt": "2026-09-16T09:56:12Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419289",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419305",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104748546880",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 21001,
+      "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Pending (13 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 240,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21002,
+      "head": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 1,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271942",
+          "startedAt": "2026-09-16T08:26:43Z",
+          "completedAt": "2026-09-16T08:27:35Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271888",
+          "startedAt": "2026-09-16T08:26:43Z",
+          "completedAt": "2026-09-16T08:28:15Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104723338437",
+          "startedAt": "2026-09-16T08:33:36Z",
+          "completedAt": "2026-09-16T08:33:39Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271942",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271888",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104723338437",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 21005,
+      "head": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+      "baseRefName": "np-oom-scan-pending-split-close",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [21001],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE; inherited unused import; replacement checks still pending",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 200,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21006,
+      "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 131,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21009,
+      "head": "8da602c7e3a74655f98039705bbfede174078e79",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+2)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 156,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21010,
+      "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Pending (10 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 61,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21011,
+      "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [21000],
+      "assessment": "eligible-await-parent-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 22,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114479",
+          "startedAt": "2026-09-16T09:54:40Z",
+          "completedAt": "2026-09-16T09:55:36Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114466",
+          "startedAt": "2026-09-16T09:54:40Z",
+          "completedAt": "2026-09-16T09:55:57Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104750323872",
+          "startedAt": "2026-09-16T10:02:01Z",
+          "completedAt": "2026-09-16T10:02:04Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114479",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114466",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "After #21000 is merged, retarget to main preserving only child delta; refresh onto current main and require successful checks."
+    },
+    {
+      "number": 21012,
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 46,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524211",
+          "startedAt": "2026-09-16T09:26:26Z",
+          "completedAt": "2026-09-16T09:27:17Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524270",
+          "startedAt": "2026-09-16T09:26:26Z",
+          "completedAt": "2026-09-16T09:27:55Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104741812157",
+          "startedAt": "2026-09-16T09:33:45Z",
+          "completedAt": "2026-09-16T09:33:48Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524211",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524270",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 21014,
+      "head": "099f3396524554fc6725a7f0b727434dc7369527",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 27,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21018,
+      "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 3,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105066",
+          "startedAt": "2026-09-16T09:54:38Z",
+          "completedAt": "2026-09-16T09:55:24Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105054",
+          "startedAt": "2026-09-16T09:55:14Z",
+          "completedAt": "2026-09-16T09:56:48Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104750171327",
+          "startedAt": "2026-09-16T10:01:32Z",
+          "completedAt": "2026-09-16T10:01:34Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105066",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105054",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "Refresh onto corrected current main and require successful replacement checks; retain exact PR scope."
+    },
+    {
+      "number": 21019,
+      "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [21000],
+      "assessment": "eligible-await-parent-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 10,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158064",
+          "startedAt": "2026-09-16T09:54:49Z",
+          "completedAt": "2026-09-16T09:55:41Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158071",
+          "startedAt": "2026-09-16T09:54:49Z",
+          "completedAt": "2026-09-16T09:56:30Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104750303046",
+          "startedAt": "2026-09-16T10:01:58Z",
+          "completedAt": "2026-09-16T10:02:01Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158064",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158071",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import",
+      "recommendedAction": "After #21000 is merged, retarget to main preserving only child delta; refresh onto current main and require successful checks."
+    },
+    {
+      "number": 21020,
+      "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 151,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21021,
+      "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+1)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 11,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21022,
+      "head": "97338c35d95151b744cc653f328a1180f17dd182",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [],
+      "assessment": "eligible-await-current-main-refresh-and-green-checks",
+      "historicalCI": "Raw FAILURE: static analysis, typecheck (+3)",
+      "currentLeafChecksReviewed": true,
+      "productionChangedLines": 10,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "currentFailingChecks": [
+        {
+          "__typename": "CheckRun",
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697205",
+          "startedAt": "2026-09-16T10:26:54Z",
+          "completedAt": "2026-09-16T10:27:52Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697107",
+          "startedAt": "2026-09-16T10:26:53Z",
+          "completedAt": "2026-09-16T10:28:10Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701211",
+          "startedAt": "2026-09-16T10:26:53Z",
+          "completedAt": "2026-09-16T10:33:13Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701210",
+          "startedAt": "2026-09-16T10:26:53Z",
+          "completedAt": "2026-09-16T10:32:28Z"
+        },
+        {
+          "__typename": "CheckRun",
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104759725492",
+          "startedAt": "2026-09-16T10:33:53Z",
+          "completedAt": "2026-09-16T10:33:57Z"
+        }
+      ],
+      "currentContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+      "historicalAnnotationEvidence": [
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697205",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "title": "",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "title": "eslint(no-unused-vars)",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "title": "unicorn(prefer-array-flat-map)",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "title": "unicorn(prefer-array-flat-map)",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697107",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "title": "",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "title": "",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701211",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "title": "",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/main/native-chat/transcript-watch-liveness.test.ts",
+                "title": "src/main/native-chat/transcript-watch-liveness.test.ts > native chat transcript watcher liveness > replaces a same-size prefix rewrite with an unchanged trailing boundary",
+                "message": "AssertionError: expected \"vi.fn()\" to be called once, but got 2 times\n \u276f src/main/native-chat/transcript-watch-liveness.test.ts:183:26\n\n",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701210",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "title": "",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/lib/browser-history-match.performance.test.ts",
+                "title": "src/renderer/src/lib/browser-history-match.performance.test.ts > browser history match performance budget > prepares a cold corpus within budget",
+                "message": "AssertionError: expected 2.711498000000006 to be less than 2\n \u276f src/renderer/src/lib/browser-history-match.performance.test.ts:50:35\n\n",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        },
+        {
+          "sameCurrentJobUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104759725492",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "title": "",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          },
+          "source": "docs/audits/memory-pr-validation-2026-09-16.json"
+        }
+      ],
+      "failureClassification": "inherited-unused-NativeChatMessage-import-plus-unresolved-watcher-and-performance-test-leaves",
+      "recommendedAction": "Refresh onto corrected current main, then require passing full checks including prior watcher/performance leaves; do not label earlier leaves as proved flakes.",
+      "independentFailureReview": "notes/pr-merge-selection/21022-ci-diagnosis.md",
+      "recommendationAfterIndependentReview": "Fresh successful full CI on the updated head is sufficient; no scanner-patch-specific blocker found. Existing main already corrects browser-history timing sampling. Watcher has a source-supported baseline race mechanism; exact old-job interleaving remains unproven."
+    },
+    {
+      "number": 21024,
+      "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 217,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21112,
+      "head": "061913804c35af189d00f8a9574dcb226b971ba6",
+      "baseRefName": "np-oom-scan-terminal-cell-retention",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [20981, 20992],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE from canceled duplicate; same-head PR Checks succeeded",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 197,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21113,
+      "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 363,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21128,
+      "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 16,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21129,
+      "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 169,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21131,
+      "head": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 9,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21135,
+      "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 48,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21136,
+      "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 44,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21138,
+      "head": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 2,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21139,
+      "head": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 53,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21140,
+      "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 3,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21142,
+      "head": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 4,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21144,
+      "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 62,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21150,
+      "head": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 12,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21160,
+      "head": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Pending (10 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 11,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21162,
+      "head": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 6,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21164,
+      "head": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "eligible-current-green-clean",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 9,
+      "behaviorEligible": true,
+      "scopeEligible": true,
+      "recommendedAction": "Merge reviewed exact head with squash, after checking head and base have not changed; preserve topic branch if children remain."
+    },
+    {
+      "number": 21167,
+      "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 120,
+      "behaviorEligible": true,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21175,
+      "head": "c86d273251cad3c9bc4a731651443659dab7e6d1",
+      "baseRefName": "np-oom-scan-local-empty-tab-retirement",
+      "state": "OPEN",
+      "riskCategory": "low-observed-risk",
+      "rollup": "FAILURE",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "requiresPrs": [21113],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Raw FAILURE; inherited unused import; replacement checks still pending",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 147,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21178,
+      "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Green at snapshot",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 398,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    },
+    {
+      "number": 21185,
+      "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "baseRefName": "main",
+      "state": "OPEN",
+      "riskCategory": "explicit-decision",
+      "rollup": "SUCCESS",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "requiresPrs": [],
+      "assessment": "outside-authorized-selection",
+      "historicalCI": "Pending (7 checks)",
+      "currentLeafChecksReviewed": false,
+      "productionChangedLines": 198,
+      "behaviorEligible": false,
+      "scopeEligible": false,
+      "recommendedAction": "Keep open (or withdrawn) and report production changed LoC, risk and tradeoffs."
+    }
+  ],
+  "leafContextsObservedAt": "2026-09-18T03:09:05.613572+00:00",
+  "counts": {
+    "outside-authorized-selection": 28,
+    "eligible-current-green-clean": 18,
+    "eligible-await-current-main-refresh-and-green-checks": 9,
+    "eligible-await-conflict-resolution-and-green-checks": 2,
+    "eligible-await-parent-refresh-and-green-checks": 2
+  },
+  "currentMainUnusedImportControl": {
+    "main": "9c921360090667e02363fe6e4dee98410665427a",
+    "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+    "readSucceeded": true,
+    "exactNativeChatMessageTokenPresent": false
+  }
+}

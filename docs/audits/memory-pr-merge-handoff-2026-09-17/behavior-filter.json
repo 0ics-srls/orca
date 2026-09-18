@@ -1,0 +1,619 @@
+{
+  "observedAt": "2026-09-18T03:06:16.804239+00:00",
+  "scope": "Read-only filtering of the original 59 reviewed PRs. This is the behavior gate only, independent of changed production LoC, current head identity, dependency eligibility, and current CI. Root must apply those separate gates.",
+  "interpretation": "Conservative exclusions retain fixes with newly observable failed reads, retry/refusal behavior, or discarded pairing-local state, even where they enforce an existing intended safety policy. Ordinary cleanup after explicit retirement and unchanged protocol semantics remain eligible. No universal zero-regression claim.",
+  "rows": [
+    {
+      "number": 20903,
+      "reviewedCurrentHead": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+      "priorCategory": "withdrawn",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification withdrawn: Withdrawn: composed terminal hooks already cleared these timers. The PR added duplicate cleanup without a demonstrated leak benefit.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20903.json",
+      "dependencies": []
+    },
+    {
+      "number": 20904,
+      "reviewedCurrentHead": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "priorCategory": "withdrawn",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification withdrawn: Withdrawn: canceling deferred disposal prevented both kept Monaco diff models from being released on permanent unmount; the base disposed them.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20904.json",
+      "dependencies": []
+    },
+    {
+      "number": 20905,
+      "reviewedCurrentHead": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Unmount cancels a queued sign-out auth retry; mounted behavior keeps the same 500 ms cadence and three-attempt limit.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20905.json",
+      "dependencies": []
+    },
+    {
+      "number": 20906,
+      "reviewedCurrentHead": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Copy feedback resets 1.5 seconds after the latest completed copy. Correction preserves clipboard write/telemetry but prevents late completion from creating an unmounted timer.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20906.json",
+      "dependencies": []
+    },
+    {
+      "number": 20908,
+      "reviewedCurrentHead": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Dev hot reload releases old listeners. Correction keeps the pagehide flush while pending Clear/Undo transactions still need it, then retires it.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20908.json",
+      "dependencies": []
+    },
+    {
+      "number": 20909,
+      "reviewedCurrentHead": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Dead renderer requests reject promptly instead of waiting up to 20 seconds. Repeated preload installation stops duplicating drop/find listeners.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20909.json",
+      "dependencies": []
+    },
+    {
+      "number": 20910,
+      "reviewedCurrentHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A stopped or exited macOS watchdog releases its quit listener; heartbeat and shutdown behavior stay unchanged. Linux/Windows bypass this path.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20910.json",
+      "dependencies": []
+    },
+    {
+      "number": 20924,
+      "reviewedCurrentHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Explicitly closed parked leaves release scroll-intent entries. Surviving parked leaves retain pinned viewport state for remount.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20924.json",
+      "dependencies": []
+    },
+    {
+      "number": 20941,
+      "reviewedCurrentHead": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "Existing 10,000-event serialized history and public cumulative summaries are unchanged. The newly bounded object is a private transient event array; no additional user-accessible history is removed.",
+      "additionalCallerReferences": [
+        "src/main/stats/collector.ts:69",
+        "src/main/stats/collector.ts:118",
+        "src/main/stats/collector.ts:249"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20941.json",
+      "dependencies": []
+    },
+    {
+      "number": 20946,
+      "reviewedCurrentHead": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Duplicate or cyclic process-table rows no longer grow traversal forever; ordinary foreground agent selection stays unchanged.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20946.json",
+      "dependencies": []
+    },
+    {
+      "number": 20947,
+      "reviewedCurrentHead": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: A stalled viewer now pauses output producers. If it remains connected without draining, the child can block indefinitely; detach or drain permits resumption.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20947.json",
+      "dependencies": []
+    },
+    {
+      "number": 20949,
+      "reviewedCurrentHead": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: A CDP client exceeding 64 MiB or 4096 queued frames is disconnected. Pending automation commands/events may be lost; reconnect does not imply replay.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20949.json",
+      "dependencies": []
+    },
+    {
+      "number": 20955,
+      "reviewedCurrentHead": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "priorCategory": "extra-review",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification extra-review: Stale OSC 8 link entries retire after checking live cells, open attributes, and saved cursors. Live links/history remain; periodic full-buffer scanning adds work.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20955.json",
+      "dependencies": []
+    },
+    {
+      "number": 20960,
+      "reviewedCurrentHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Bounded retained tails own their string bytes instead of pinning large parents. Text and existing limits remain unchanged; copying adds bounded work.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20960.json",
+      "dependencies": []
+    },
+    {
+      "number": 20963,
+      "reviewedCurrentHead": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: A newly rejected local JSONL record above 10 MiB omits its whole session from that scan. The cursor stays before the record; later appends do not recover it.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20963.json",
+      "dependencies": []
+    },
+    {
+      "number": 20965,
+      "reviewedCurrentHead": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "priorCategory": "extra-review",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification extra-review: A 4096-entry bound affects only derived empty-glyph results. Terminal data stays; high-cardinality empty glyphs can require extra rasterization.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20965.json",
+      "dependencies": []
+    },
+    {
+      "number": 20976,
+      "reviewedCurrentHead": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: a source growing beyond the existing 16 MiB import budget during reading can now fail a previously successful import/recovery. Existing journal/source remain, but the user can see missing restoration or an import error.",
+      "additionalCallerReferences": [
+        "src/main/native-chat/agent-session-journal/journal-legacy-import.ts:134",
+        "src/main/native-chat/transcript-stream-lines.ts:27",
+        "src/main/native-chat/agent-session-wire/agent-session-journal-recovery.ts:110"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20976.json",
+      "dependencies": []
+    },
+    {
+      "number": 20978,
+      "reviewedCurrentHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A provider child acquired after its last holder disappears enters the existing 15-second release clock. Active turns/new holders still preserve it; journals remain.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20978.json",
+      "dependencies": []
+    },
+    {
+      "number": 20980,
+      "reviewedCurrentHead": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Admitted queued/running scanner requests still cancel. Late or unknown cancellation IDs are ignored once no request owns them.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20980.json",
+      "dependencies": []
+    },
+    {
+      "number": 20981,
+      "reviewedCurrentHead": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "priorCategory": "extra-review",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification extra-review: A shared 4096-entry contrast-cache bound evicts derived values only. Colors and history stay; cache churn recomputes results. Desktop/mobile patch integration is included.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20981.json",
+      "dependencies": []
+    },
+    {
+      "number": 20986,
+      "reviewedCurrentHead": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Deletion fences release after their owning read settles. Search rows, retained history, and protection against late resurrection remain unchanged.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20986.json",
+      "dependencies": []
+    },
+    {
+      "number": 20992,
+      "reviewedCurrentHead": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: Overwritten terminal cells release dead combined text and cached strings; live text stays. The published synthetic ASCII benchmark is about 5% slower.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20992.json",
+      "dependencies": [20981]
+    },
+    {
+      "number": 20996,
+      "reviewedCurrentHead": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Late snapshots cannot repopulate a retired/replaced terminal owner. Current owners still receive seeded history and live writes.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20996.json",
+      "dependencies": []
+    },
+    {
+      "number": 21000,
+      "reviewedCurrentHead": "827dabf9582a92820d340c58452b66468f5e2199",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A late physical daemon exit still performs authoritative cleanup after a synthetic renderer exit; the renderer receives only one notification.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21000.json",
+      "dependencies": []
+    },
+    {
+      "number": 21001,
+      "reviewedCurrentHead": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Explicit close can retire a captured local/SSH PTY while attach is pending. Published correction restores running-work confirmation; ordinary detach preserves the process.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21001.json",
+      "dependencies": []
+    },
+    {
+      "number": 21002,
+      "reviewedCurrentHead": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "Watcher stops after successful owner shutdown and durable lease transition. The pre-existing writer already rejects the released lease; no new demonstrated transcript loss, history quota, or active-owner cancellation.",
+      "additionalCallerReferences": [
+        "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-owner-close.ts:33"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21002.json",
+      "dependencies": []
+    },
+    {
+      "number": 21005,
+      "reviewedCurrentHead": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Explicit pending-pane close can retire its scoped paired-host handle after corrected confirmation and ownership checks. Normal detach and replacement owners remain protected.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21005.json",
+      "dependencies": [21001]
+    },
+    {
+      "number": 21006,
+      "reviewedCurrentHead": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "Host teardown cancels work owned by the retired host and prevents a late launch after teardown. An interrupted operation can report stopped, but no valid live-host operation is newly limited; durable history remains.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21006.json",
+      "dependencies": []
+    },
+    {
+      "number": 21009,
+      "reviewedCurrentHead": "8da602c7e3a74655f98039705bbfede174078e79",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Dead or navigated renderers cannot admit late log watchers; stale watcher errors cannot close a successor. Live authorized subscriptions remain unchanged.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21009.json",
+      "dependencies": []
+    },
+    {
+      "number": 21010,
+      "reviewedCurrentHead": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Destroyed guests release callbacks without app-triggered cancellation of active downloads. Correction keeps completion/cancel routing until settlement; explicit page close still cancels.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21010.json",
+      "dependencies": []
+    },
+    {
+      "number": 21011,
+      "reviewedCurrentHead": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A queued graph cannot mark a host-confirmed exited PTY connected again. History stays addressable; a newly admitted process can establish fresh ownership.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21011.json",
+      "dependencies": [21000]
+    },
+    {
+      "number": 21012,
+      "reviewedCurrentHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Late registration/repair replies cannot mutate closed or replacement browser guests. Hidden current guests and current success/failure paths still work.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21012.json",
+      "dependencies": []
+    },
+    {
+      "number": 21014,
+      "reviewedCurrentHead": "099f3396524554fc6725a7f0b727434dc7369527",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: a census racing PTY lifecycle changes can now return terminal_liveness_unavailable and require retry. This prevents stale state, but is an explicitly recorded new user-visible refusal under repeated churn.",
+      "additionalCallerReferences": [
+        "src/main/runtime/orca-runtime-invalidate-all-handles-for-pty.ts:119",
+        "src/main/runtime/orca-runtime-on-pty-exit.ts:33"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21014.json",
+      "dependencies": []
+    },
+    {
+      "number": 21018,
+      "reviewedCurrentHead": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A backward screen scan terminates when leading rows are blank. Existing last-N nonblank-line selection and prompt recognition remain.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21018.json",
+      "dependencies": []
+    },
+    {
+      "number": 21019,
+      "reviewedCurrentHead": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A witnessed same-incarnation physical exit prevents a redundant fallback kill when later aggregate close verification returns false.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21019.json",
+      "dependencies": [21000]
+    },
+    {
+      "number": 21020,
+      "reviewedCurrentHead": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: new identity witness can refuse a raced explicit close as stale-terminal and require a user retry. The safety improvement is correct, but does not meet literal no negative user-facing trade-off.",
+      "additionalCallerReferences": [
+        "src/main/runtime/orca-runtime-close-mobile-session-tab.ts:214"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21020.json",
+      "dependencies": []
+    },
+    {
+      "number": 21021,
+      "reviewedCurrentHead": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: a transcript growing past the existing 16 MiB allowance can now yield an inconsistent history boundary rather than a formerly accepted full read. Reconciliation can remain unknown rather than resolving an unsettled submission.",
+      "additionalCallerReferences": [
+        "src/main/claude/claude-structured-history-window.ts:285",
+        "src/main/native-chat/agent-session-journal/journal-submission-reconciler.ts:181"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21021.json",
+      "dependencies": []
+    },
+    {
+      "number": 21022,
+      "reviewedCurrentHead": "97338c35d95151b744cc653f328a1180f17dd182",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Consumed breadth-first discovery slots release paths and ignore arrays. Traversal order, ignore inheritance, limits, and progress results remain.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21022.json",
+      "dependencies": []
+    },
+    {
+      "number": 21024,
+      "reviewedCurrentHead": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: bounded observation of the initially opened file prefix can newly return incomplete evidence and require retry when required ancestry arrives in concurrent appends. It does not reduce a content quota, but the recorded retry is a possible user-visible cost.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21024.json",
+      "dependencies": []
+    },
+    {
+      "number": 21112,
+      "reviewedCurrentHead": "061913804c35af189d00f8a9574dcb226b971ba6",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Reflow stops retaining out-of-capacity rows through negative array properties. Expected live tail, cursor, markers, and configured history capacity stay.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21112.json",
+      "dependencies": [20981, 20992]
+    },
+    {
+      "number": 21113,
+      "reviewedCurrentHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Explicit close durably removes a never-started local terminal tab so stale saves cannot revive it. Any binding/history/pin/owner excludes this narrow path.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21113.json",
+      "dependencies": []
+    },
+    {
+      "number": 21128,
+      "reviewedCurrentHead": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: a crash dump growing past the existing 64 MiB allowance can now be skipped, losing a crash signature that the racy old reader could capture. This affects diagnostic completeness, not live user data, but retains a concrete negative output trade-off.",
+      "additionalCallerReferences": ["src/main/crash-reporting/crashpad-capture.ts:299"],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21128.json",
+      "dependencies": []
+    },
+    {
+      "number": 21129,
+      "reviewedCurrentHead": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: An 8 MiB/1024-frame audio backlog stops dictation with an error. New capture and accepted-but-undelivered transcript can be lost; already inserted text remains.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21129.json",
+      "dependencies": []
+    },
+    {
+      "number": 21131,
+      "reviewedCurrentHead": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Consumed RPC queue slots release completed payloads. Accepted requests retain existing execution and cancellation outcomes.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21131.json",
+      "dependencies": []
+    },
+    {
+      "number": 21135,
+      "reviewedCurrentHead": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Abandoned auth polls release callbacks/errors while siblings keep sharing the native read. Existing result-versus-abort ordering remains.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21135.json",
+      "dependencies": []
+    },
+    {
+      "number": 21136,
+      "reviewedCurrentHead": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A reconnect reuses one successful GitLab host list for its execution generation. Native, WSL distro, and other SSH-host caches remain isolated.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21136.json",
+      "dependencies": []
+    },
+    {
+      "number": 21138,
+      "reviewedCurrentHead": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Completed Codex turns release claimed prompt objects even after lookup eviction. Active other-turn approvals and journal data stay.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21138.json",
+      "dependencies": []
+    },
+    {
+      "number": 21139,
+      "reviewedCurrentHead": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Live terminal closures stop retaining the completed creation request, environment, seed chunk array, and cancellation signal; process operations/history stay available.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21139.json",
+      "dependencies": []
+    },
+    {
+      "number": 21140,
+      "reviewedCurrentHead": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. The PTY exit closure captures its spawn-time boolean instead of the entire arguments/environment object. PATH and returned process operations stay available.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21140.json",
+      "dependencies": []
+    },
+    {
+      "number": 21142,
+      "reviewedCurrentHead": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Empty deltas stop appending empty array entries, but still create/dirty streams and preserve scheduled/explicit empty-snapshot flush behavior.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21142.json",
+      "dependencies": []
+    },
+    {
+      "number": 21144,
+      "reviewedCurrentHead": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Canceled cwd callers release signal/error/resolver references; the shared native stat stays owned and later callers can still join it.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21144.json",
+      "dependencies": []
+    },
+    {
+      "number": 21150,
+      "reviewedCurrentHead": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Completed SSH writes release bytes and receipt closures during rolling backlog. Queued/in-flight data retain their completion and disposal outcomes.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21150.json",
+      "dependencies": []
+    },
+    {
+      "number": 21160,
+      "reviewedCurrentHead": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Retired browser guests cannot commit late viewport/UA state to a successor. Integration preserves current main process-wide UA identity.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21160.json",
+      "dependencies": []
+    },
+    {
+      "number": 21162,
+      "reviewedCurrentHead": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Provider invalidation removes orphan incarnation metadata whose routes already disappeared. Current routes keep their incarnation fences.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21162.json",
+      "dependencies": []
+    },
+    {
+      "number": 21164,
+      "reviewedCurrentHead": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Host close promptly releases completed browser results while still tracking running handlers and cancellation. Live deduplication/cache limits remain.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21164.json",
+      "dependencies": []
+    },
+    {
+      "number": 21167,
+      "reviewedCurrentHead": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": true,
+      "reason": "Own metadata listener is installed synchronously before subsequent ordered chunks. Supported shipped relay already emits metadata first; unrelated frames are dropped without changing supported-peer file results. A peer violating that existing contract would lose premature chunks.",
+      "additionalCallerReferences": [
+        "src/main/ssh/ssh-filesystem-stream-reader.ts",
+        "src/main/ssh/ssh-channel-multiplexer.ts",
+        "src/relay/fs-handler-file-read.ts"
+      ],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21167.json",
+      "dependencies": []
+    },
+    {
+      "number": 21175,
+      "reviewedCurrentHead": "c86d273251cad3c9bc4a731651443659dab7e6d1",
+      "priorCategory": "low-observed-risk",
+      "behaviorEligible": false,
+      "reason": "Conservative strict-filter exclusion: GUI unpairing newly drops the removed server client session/UI mirror. Remote processes and host journals remain, but restoration of the removed pairing-local UI cache on re-pair cannot be promised.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21175.json",
+      "dependencies": [21113]
+    },
+    {
+      "number": 21178,
+      "reviewedCurrentHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: Last/hidden editor close now releases models like ordinary close. Reopen no longer accidentally preserves closed-model undo or view caches; live drafts/history remain.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21178.json",
+      "dependencies": []
+    },
+    {
+      "number": 21185,
+      "reviewedCurrentHead": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "priorCategory": "explicit-decision",
+      "behaviorEligible": false,
+      "reason": "Excluded by existing review classification explicit-decision: Successful uninstall clears that installation\u2019s 200-row log history. Same-key reinstall starts fresh; installed, disabled/crashed, and failed-removal history keeps its policy.",
+      "additionalCallerReferences": [],
+      "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21185.json",
+      "dependencies": []
+    }
+  ]
+}

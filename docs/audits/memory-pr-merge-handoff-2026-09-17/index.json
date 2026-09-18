@@ -1,0 +1,223 @@
+{
+  "observedAt": "2026-09-18T03:37:28.250423+00:00",
+  "files": [
+    {
+      "path": "current.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/current.json",
+      "sourceSha256": "65eb9be3daafbe95b2fbd3e65fbe450ce3a6edb78172a5bc892995d2efd62b62",
+      "sha256": "65eb9be3daafbe95b2fbd3e65fbe450ce3a6edb78172a5bc892995d2efd62b62",
+      "bytes": 50699
+    },
+    {
+      "path": "selected.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/selected.json",
+      "sourceSha256": "72f80a4b257cabbeda618436f0752d74120d7a2cc1f1a9665f5975053c07b314",
+      "sha256": "c5a29809b5255e954fb7c4c31ca41807f089fcc4fb0c0d6b35bca77377839c4b",
+      "bytes": 50836
+    },
+    {
+      "path": "loc.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/loc.json",
+      "sourceSha256": "61928e123b37a176a2cdff017aff8739c9e8d97a241825e5c51d6f1f89a682d0",
+      "sha256": "4ef189a6e9a5d990167a36e65396e43eecaa2ebb5d7cd2fc1c9f2d5f22201981",
+      "bytes": 406454
+    },
+    {
+      "path": "behavior-filter.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/behavior-filter.json",
+      "sourceSha256": "915c63ab75c1d0ff61c9dbefa0c88069256cdc0bf0a2a8b0fc3bb2878c8d1e5c",
+      "sha256": "73130d7868befd369f54d33c721ca74d91776505b5e22f75d933b107a4949ca1",
+      "bytes": 36873
+    },
+    {
+      "path": "fixture-exclusion-evidence.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/fixture-exclusion-evidence.json",
+      "sourceSha256": "3cc65f35de76a62ffe6a675526ff03473f399447c3ba79b9d73dd9bc82f7ba63",
+      "sha256": "3cc65f35de76a62ffe6a675526ff03473f399447c3ba79b9d73dd9bc82f7ba63",
+      "bytes": 8026
+    },
+    {
+      "path": "ci-policy.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/ci-policy.json",
+      "sourceSha256": "925e22a5d779eafef1a7cb52db0df9ed4e30623ce98bafaa276319f0d87ddc2f",
+      "sha256": "925e22a5d779eafef1a7cb52db0df9ed4e30623ce98bafaa276319f0d87ddc2f",
+      "bytes": 2597
+    },
+    {
+      "path": "ci-readiness.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/ci-readiness.json",
+      "sourceSha256": "cbd015eb6e882eb84f36fba9b41e283653b8a3455d01c05cd823b3dfd0968e1e",
+      "sha256": "54649f448fcd184e3be812ee0c34f072dc9dcc95bfa2a98c0e5d579d003ab901",
+      "bytes": 85360
+    },
+    {
+      "path": "branch-refresh-validation.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/branch-refresh-validation.json",
+      "sourceSha256": "6321cfbfcacfd1f7854bf7296fb0a40b5283985e7e79f60a3bfaf18b49fd63d7",
+      "sha256": "6321cfbfcacfd1f7854bf7296fb0a40b5283985e7e79f60a3bfaf18b49fd63d7",
+      "bytes": 4758
+    },
+    {
+      "path": "preflight.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/preflight.json",
+      "sourceSha256": "b5cb2c2bbb8457e7ced033539ecbb1762e63b10f315de4ca38c944207e8b46d3",
+      "sha256": "e5536321fb766e05171e3725e6d0313ed11110444c2f51fcbd56818c7577b60b",
+      "bytes": 56872
+    },
+    {
+      "path": "actions.jsonl",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/actions.jsonl",
+      "sourceSha256": "28189f0425e03a9e8b1701002ce705c254ae8e1c5d1105647d413b301cccbcc2",
+      "sha256": "28189f0425e03a9e8b1701002ce705c254ae8e1c5d1105647d413b301cccbcc2",
+      "bytes": 130180
+    },
+    {
+      "path": "checks-latest.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/checks-latest.json",
+      "sourceSha256": "1b7fdf9c676332b1829d532406211e824ea857b7059398aae57463e3fb772186",
+      "sha256": "1b7fdf9c676332b1829d532406211e824ea857b7059398aae57463e3fb772186",
+      "bytes": 17364
+    },
+    {
+      "path": "20960-integration/candidate.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/candidate.json",
+      "sourceSha256": "6932c6c98737be86c2c2d7bcc9ec8d2f2a4b44f487971b9eb6cc12bba37a8794",
+      "sha256": "6932c6c98737be86c2c2d7bcc9ec8d2f2a4b44f487971b9eb6cc12bba37a8794",
+      "bytes": 690
+    },
+    {
+      "path": "20960-integration/validation.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/validation.json",
+      "sourceSha256": "f28ccadd02a075cba10009dab0c14b933adec75fd78736bc29c0288c41a1b24b",
+      "sha256": "f28ccadd02a075cba10009dab0c14b933adec75fd78736bc29c0288c41a1b24b",
+      "bytes": 1645
+    },
+    {
+      "path": "20960-integration/conflict-control.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/conflict-control.json",
+      "sourceSha256": "6d21d9c7bc435da4642062176e7baf9e93bf1375fefe353a7b3be0d9c4b09901",
+      "sha256": "6d21d9c7bc435da4642062176e7baf9e93bf1375fefe353a7b3be0d9c4b09901",
+      "bytes": 358
+    },
+    {
+      "path": "20960-integration/loaded-graph.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/loaded-graph.json",
+      "sourceSha256": "4b0d2ca202d2a210ff86d72d439ac1696b16eabf9ddcf1b5f648b69ac29e180e",
+      "sha256": "0d190d4d29fd205f2f017f6fbdb7eb8d28be91d7c94be0b0047d713bbbc30d48",
+      "bytes": 38610
+    },
+    {
+      "path": "20960-integration/tests.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/tests.json",
+      "sourceSha256": "5a373886cb448fbfb3a60f461af289b39c0698ddc36f4b98a9f9ad4d6b51fc67",
+      "sha256": "5a373886cb448fbfb3a60f461af289b39c0698ddc36f4b98a9f9ad4d6b51fc67",
+      "bytes": 1295
+    },
+    {
+      "path": "20960-integration/tests.log",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20960-integration/tests.log",
+      "sourceSha256": "f6d01be2715d7c602a20f5e24edb80c90aac9a40044af93b3c93e230a7c51110",
+      "sha256": "f6d01be2715d7c602a20f5e24edb80c90aac9a40044af93b3c93e230a7c51110",
+      "bytes": 241
+    },
+    {
+      "path": "20978/candidate.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20978/candidate.json",
+      "sourceSha256": "3e2a1fe271bc81976378ed5909944325a208ef020e9ffe50a0de5a418e353556",
+      "sha256": "21c15e8cde622b9ec90db8fc88bf2c85697903b3f8c3a969dd1321ba02fae502",
+      "bytes": 3960
+    },
+    {
+      "path": "20978/exact-tree-graph.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20978/exact-tree-graph.json",
+      "sourceSha256": "31a5a85b7732474ba72640a9a05b4dd5b895be880da0b63b8df1146181281e42",
+      "sha256": "7c01bdbc29c55a4f257281b079e669fb13195f82d9bb68205a4d05b09a3940a9",
+      "bytes": 513618
+    },
+    {
+      "path": "20978/exact-tree-tests.log",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20978/exact-tree-tests.log",
+      "sourceSha256": "30f4c590111cd1af975ca59759afbae0cd3fcdbc937a2c8b7f53ebe5300654c1",
+      "sha256": "30f4c590111cd1af975ca59759afbae0cd3fcdbc937a2c8b7f53ebe5300654c1",
+      "bytes": 240
+    },
+    {
+      "path": "20941-shard5-provenance.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20941-shard5-provenance.json",
+      "sourceSha256": "0e59827c5b2b62b0d3798aa882575b9eb8f7ebdfd8652c57769ff4b0656a3d78",
+      "sha256": "0e59827c5b2b62b0d3798aa882575b9eb8f7ebdfd8652c57769ff4b0656a3d78",
+      "bytes": 3002
+    },
+    {
+      "path": "20941-shard5-failure-excerpt.log",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20941-shard5-failure-excerpt.log",
+      "sourceSha256": "1324ca8cb9693f29c01e3d85c7fee5eceee0a5147fa63845dd29f94be0165f01",
+      "sha256": "1324ca8cb9693f29c01e3d85c7fee5eceee0a5147fa63845dd29f94be0165f01",
+      "bytes": 4054
+    },
+    {
+      "path": "20941-shard5-diagnosis.md",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20941-shard5-diagnosis.md",
+      "sourceSha256": "74c4f6f52a86f0d06c8a0512ef0e11643eb2495bca33a8343e243e03c1ce9293",
+      "sha256": "74c4f6f52a86f0d06c8a0512ef0e11643eb2495bca33a8343e243e03c1ce9293",
+      "bytes": 4024
+    },
+    {
+      "path": "20941-shard5.log",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/20941-shard5.log",
+      "sourceSha256": "3c3d12dfd0150cd226e732efe427f10765d9409016225c6581c33d3b6d207ee0",
+      "sha256": "3c3d12dfd0150cd226e732efe427f10765d9409016225c6581c33d3b6d207ee0",
+      "bytes": 1015336
+    },
+    {
+      "path": "final.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/final.json",
+      "sourceSha256": "27e269cfd71dca84502862f656f83b7dc185ef604b9161eaee2dd15ec41e66a1",
+      "sha256": "27e269cfd71dca84502862f656f83b7dc185ef604b9161eaee2dd15ec41e66a1",
+      "bytes": 53043
+    },
+    {
+      "path": "final-loc.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/final-loc.json",
+      "sourceSha256": "fffca093353ef6baca2048ba0490c80c5d2d695a9709a6aacf42f5e84ce42a38",
+      "sha256": "8d1654791d5472e940c8c85d76934f96d4a0aefd07bd426486d2c7b1887825d7",
+      "bytes": 412871
+    },
+    {
+      "path": "stack-merge-authorization.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/stack-merge-authorization.json",
+      "sourceSha256": "c7e1ac7c93d390959d9aa4f680a42a604f11cdec7cc5c1bfcea4b2a145ae9bed",
+      "sha256": "c7e1ac7c93d390959d9aa4f680a42a604f11cdec7cc5c1bfcea4b2a145ae9bed",
+      "bytes": 1220
+    },
+    {
+      "path": "21011-post-parent-merge-check.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/21011-post-parent-merge-check.json",
+      "sourceSha256": "c1f816816bc414fcb286bc9c2092d0c507226fc8e18aa1c67620e4b434de9932",
+      "sha256": "87acf0e4469e227490330bdcf7d48b9896f50436e0b2e5f25830d7ba21457bbf",
+      "bytes": 2570
+    },
+    {
+      "path": "21019-post-parent-merge-check.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/21019-post-parent-merge-check.json",
+      "sourceSha256": "1654d860b703b241f81e635e25953eeb8854a4df92859f9ad12aa45af69c4076",
+      "sha256": "4f10219e91cc50dbd4e161a32b6ffda43ea16bc04ee651993f8fe1442f57c396",
+      "bytes": 1975
+    },
+    {
+      "path": "landing-validation.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/landing-validation.json",
+      "sourceSha256": "4c3caec2e8b5bb19b0daca216cf1755ca61cb47ac14c1dc30b4c7bb53a421914",
+      "sha256": "4c3caec2e8b5bb19b0daca216cf1755ca61cb47ac14c1dc30b4c7bb53a421914",
+      "bytes": 30183
+    },
+    {
+      "path": "companion-checks.json",
+      "source": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/companion-checks.json",
+      "sourceSha256": "4e07d958f27ff62e0beb378186d569a8aa19dc47041fae73b9ce909564259b19",
+      "sha256": "4e07d958f27ff62e0beb378186d569a8aa19dc47041fae73b9ce909564259b19",
+      "bytes": 14852
+    }
+  ],
+  "scope": "Structured JSON may be formatter-normalized with semantic equality checked and both source/destination hashes recorded; raw logs/JSONL are retained verbatim. Historical source paths inside copied evidence identify its capture location."
+}

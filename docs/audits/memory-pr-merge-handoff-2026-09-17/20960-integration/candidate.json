@@ -1,0 +1,16 @@
+{
+  "number": 20960,
+  "topicHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+  "main": "9c921360090667e02363fe6e4dee98410665427a",
+  "automaticMergeTree": "f92f149dcd3e139670a5a36365127d01b762de08",
+  "tree": "4484a46823bf1abf005d5fdd6eae2cf72a6a0890",
+  "commit": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+  "resolvedPaths": [
+    {
+      "path": "src/main/claude/claude-background-task-frames.ts",
+      "blob": "7be5b190588c67980af8433959d6dc42fba99888",
+      "resolution": "Keep both imports: current-main backgroundTaskFallbackText and PR ownRetainedString. All merged function bodies preserved."
+    }
+  ],
+  "publication": "Candidate only; no ref updated or push performed."
+}

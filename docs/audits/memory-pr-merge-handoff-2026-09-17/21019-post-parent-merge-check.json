@@ -1,0 +1,59 @@
+{
+  "observedAt": "2026-09-18T03:32:48.313622+00:00",
+  "number": 21019,
+  "main": "c3c051dfa62860e0eec6dfc37b81106eba394125",
+  "childHead": "58cf21c110cd3f6bc80e8d3c7114613ca89f0d76",
+  "parentSquashCommit": "41059f65b25d9ea1f67a3ed92ca795d98450a667",
+  "reviewedParent": "827dabf9582a92820d340c58452b66468f5e2199",
+  "reviewedChild": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+  "boundary": "No refs or source files changed. Merge-tree and temporary index write Git tree objects only. This proves exact tree scope, not full CI on the resulting main tree.",
+  "passed": true,
+  "mergeTreeExitCode": 0,
+  "mergeTreeOutput": ["10e935f04788d3444850b3f0f793b5fa970d9058"],
+  "actualMergeTree": "10e935f04788d3444850b3f0f793b5fa970d9058",
+  "originalPatchApplyExitCode": 0,
+  "originalPatchApplyStderr": "",
+  "expectedTreeFromOriginalChildDelta": "10e935f04788d3444850b3f0f793b5fa970d9058",
+  "exactOriginalChildDeltaOnly": true,
+  "allResultDeltaPaths": [
+    {
+      "path": "docs/audits/terminal-close-observed-exit/README.md",
+      "added": "37",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/terminal-close-observed-exit/reproduce.mjs",
+      "added": "132",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/terminal-close-observed-exit/results.json",
+      "added": "359",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-stop-explicitly-closed-tab-ptys.ts",
+      "added": "10",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/terminal-close-observed-exit-test-fixture.ts",
+      "added": "158",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/terminal-close-observed-exit.test.ts",
+      "added": "61",
+      "deleted": "0"
+    }
+  ],
+  "productionDelta": [
+    {
+      "path": "src/main/runtime/orca-runtime-stop-explicitly-closed-tab-ptys.ts",
+      "added": "10",
+      "deleted": "0"
+    }
+  ],
+  "productionChangedLines": 10,
+  "below100ProductionChangedLines": true
+}

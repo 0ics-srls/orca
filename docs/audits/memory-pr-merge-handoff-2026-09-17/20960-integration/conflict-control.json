@@ -1,0 +1,8 @@
+{
+  "path": "src/main/claude/claude-background-task-frames.ts",
+  "candidate": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+  "main": "9c921360090667e02363fe6e4dee98410665427a",
+  "topic": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+  "candidateSha256": "0d1eb32706a63e2d4c800dabcc3d478025311635bfd42c826e7fdf5aa12f0fc3",
+  "exactMainPlusOriginalFix": true
+}

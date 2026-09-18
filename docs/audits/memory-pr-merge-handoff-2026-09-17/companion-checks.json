@@ -1,0 +1,400 @@
+{
+  "observedAt": "2026-09-18T03:36:19.915498+00:00",
+  "pullRequests": [
+    {
+      "number": 20960,
+      "checks": [
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105471289446",
+          "name": "verify",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469641960",
+          "name": "e2e / ssh docker watcher isolation",
+          "state": "IN_PROGRESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468608933",
+          "name": "typecheck",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609827",
+          "name": "test / tests node 24 2/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609870",
+          "name": "test / tests node 24 7/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469641933",
+          "name": "e2e / changed e2e specs",
+          "state": "IN_PROGRESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468608891",
+          "name": "package",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609865",
+          "name": "test / tests node 24 6/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468608775",
+          "name": "static analysis",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609816",
+          "name": "test / tests node 24 8/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469643143",
+          "name": "e2e / localhost SSH terminal and hooks",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469642846",
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609847",
+          "name": "test / tests node 24 4/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609810",
+          "name": "test / tests node 24 5/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609016",
+          "name": "e2e / build e2e app",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609792",
+          "name": "test / tests node 24 3/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468608989",
+          "name": "e2e / prepare Electron native cache",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609794",
+          "name": "test / tests node 24 1/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468608900",
+          "name": "package (windows)",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610289",
+          "name": "shell contracts",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610065",
+          "name": "Codex index-heal contract",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610501",
+          "name": "Git compatibility",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610250",
+          "name": "e2e / ssh browser network route",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610557",
+          "name": "prepare test native cache node 24",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610036",
+          "name": "orcad browser provider",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610573",
+          "name": "xterm patch sync",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610558",
+          "name": "cross-version wire compatibility",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610085",
+          "name": "real IME",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468609945",
+          "name": "real WSL terminal",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105468610520",
+          "name": "managed hooks on Node 18",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105467930597",
+          "name": "detect code-relevant changes",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520274/job/105467929403",
+          "name": "test vs non-test LoC",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105467930434",
+          "name": "root directory guard",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520301/job/105467929674",
+          "name": "native-smoke (windows-latest)",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520301/job/105467929854",
+          "name": "mac-native-owner-smoke",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520301/job/105467929881",
+          "name": "native-smoke (ubuntu-22.04)",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520301/job/105467930712",
+          "name": "linux",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520301/job/105467930709",
+          "name": "windows",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302519729",
+          "name": "pullfrog",
+          "state": "SUCCESS"
+        }
+      ],
+      "nonSuccess": [
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469641960",
+          "name": "e2e / ssh docker watcher isolation",
+          "state": "IN_PROGRESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302520492/job/105469641933",
+          "name": "e2e / changed e2e specs",
+          "state": "IN_PROGRESS"
+        }
+      ]
+    },
+    {
+      "number": 21000,
+      "checks": [
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105470206588",
+          "name": "verify",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167555",
+          "name": "test / tests node 24 2/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167539",
+          "name": "test / tests node 24 7/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167551",
+          "name": "test / tests node 24 6/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167504",
+          "name": "test / tests node 24 8/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105468023617",
+          "name": "e2e / ssh docker watcher isolation",
+          "state": "IN_PROGRESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105468023553",
+          "name": "e2e / changed e2e specs",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167481",
+          "name": "test / tests node 24 4/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467166941",
+          "name": "package",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167460",
+          "name": "test / tests node 24 3/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105468024756",
+          "name": "e2e / localhost SSH terminal and hooks",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105468024754",
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167112",
+          "name": "e2e / build e2e app",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167094",
+          "name": "e2e / prepare Electron native cache",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167464",
+          "name": "test / tests node 24 1/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467166878",
+          "name": "static analysis",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167452",
+          "name": "test / tests node 24 5/8",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467166942",
+          "name": "package (windows)",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467166848",
+          "name": "typecheck",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168028",
+          "name": "real WSL terminal",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167826",
+          "name": "Codex index-heal contract",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168251",
+          "name": "shell contracts",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168266",
+          "name": "real IME",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167909",
+          "name": "orcad browser provider",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168115",
+          "name": "managed hooks on Node 18",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168068",
+          "name": "xterm patch sync",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167945",
+          "name": "prepare test native cache node 24",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467167960",
+          "name": "Git compatibility",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168100",
+          "name": "cross-version wire compatibility",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467168284",
+          "name": "e2e / ssh browser network route",
+          "state": "SKIPPED"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467076943",
+          "name": "detect code-relevant changes",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105467076792",
+          "name": "root directory guard",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302230953/job/105467076193",
+          "name": "test vs non-test LoC",
+          "state": "SUCCESS"
+        },
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302229372",
+          "name": "pullfrog",
+          "state": "SUCCESS"
+        }
+      ],
+      "nonSuccess": [
+        {
+          "link": "https://github.com/stablyai/orca/actions/runs/35302231280/job/105468023617",
+          "name": "e2e / ssh docker watcher isolation",
+          "state": "IN_PROGRESS"
+        }
+      ]
+    }
+  ],
+  "policy": "PR Checks verify intentionally excludes E2E. Required aggregate passed before merging; report outstanding companions without claiming they passed."
+}

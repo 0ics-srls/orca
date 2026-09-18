@@ -1,0 +1,421 @@
+{
+  "observedAt": "2026-09-18T03:35:41.568740+00:00",
+  "pullRequests": [
+    {
+      "number": 20941,
+      "state": "OPEN",
+      "headRefOid": "7c6e8a9ba9cf9794aaaadcf946e6cfc4be457b61",
+      "baseRefName": "main",
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "7c6e8a9ba9cf9794aaaadcf946e6cfc4be457b61",
+              "statusCheckRollup": {
+                "state": "SUCCESS",
+                "contexts": {
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Mjg"
+                  },
+                  "nodes": [
+                    {
+                      "__typename": "CheckRun",
+                      "name": "detect code-relevant changes",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470526773",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test vs non-test LoC",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224782/job/105467056519",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR test LoC"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "root directory guard",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470547202",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "static analysis",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470543953",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "typecheck",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527384",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "Git compatibility",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527169",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "Codex index-heal contract",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527368",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "xterm patch sync",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470551405",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "shell contracts",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470551536",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "prepare test native cache node 24",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527494",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "orcad browser provider",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470556101",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "cross-version wire compatibility",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470556763",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "managed hooks on Node 18",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527433",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "package",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470548240",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "package (windows)",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527450",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "e2e",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527453",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "real IME",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527373",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "real WSL terminal",
+                      "status": "COMPLETED",
+                      "conclusion": "SKIPPED",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527372",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 1/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527779",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 2/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527890",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 3/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470528206",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 4/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470528118",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 5/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527504",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 6/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470528197",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 7/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470527989",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "test / tests node 24 8/8",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105470529369",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "verify",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105471537828",
+                      "checkSuite": {
+                        "workflowRun": {
+                          "workflow": {
+                            "name": "PR Checks"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "CheckRun",
+                      "name": "pullfrog",
+                      "status": "COMPLETED",
+                      "conclusion": "SUCCESS",
+                      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35302224489",
+                      "checkSuite": {
+                        "workflowRun": null
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+[
+  {
+    "number": 20996,
+    "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+    "path": "src/main/runtime/headless-hydration-ownership-test-fixture.ts",
+    "namedReferenceMatches": [
+      "a664619361bcf6cf4409d0b50480c87830ed1ce5:src/main/runtime/headless-hydration-ownership.test.ts:10:} from './headless-hydration-ownership-test-fixture'",
+      "a664619361bcf6cf4409d0b50480c87830ed1ce5:src/main/runtime/headless-seed-ownership.test.ts:11:} from './headless-hydration-ownership-test-fixture'"
+    ]
+  },
+  {
+    "number": 21000,
+    "head": "827dabf9582a92820d340c58452b66468f5e2199",
+    "path": "src/main/ipc/pty/daemon-late-exit-test-fixture.ts",
+    "namedReferenceMatches": [
+      "827dabf9582a92820d340c58452b66468f5e2199:src/main/ipc/pty/daemon-late-exit.test.ts:2:import { startLateExitHarness } from './daemon-late-exit-test-fixture'"
+    ]
+  },
+  {
+    "number": 21001,
+    "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+    "path": "src/renderer/src/components/terminal-pane/pending-split-close-test-fixture.ts",
+    "namedReferenceMatches": [
+      "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a:src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts:2:import { preparePendingSplitClose } from './pending-split-close-test-fixture'",
+      "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a:src/renderer/src/components/terminal-pane/pending-split-close.test.ts:2:import { makeCloseTestTab, preparePendingSplitClose } from './pending-split-close-test-fixture'"
+    ]
+  },
+  {
+    "number": 21005,
+    "head": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+    "path": "src/renderer/src/components/terminal-pane/pending-runtime-pane-close-test-fixture.ts",
+    "namedReferenceMatches": [
+      "649b8b7fa74c7784be5fed6a70970915e4d96dc9:src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts:3:import { preparePendingRuntimeClose } from './pending-runtime-pane-close-test-fixture'",
+      "649b8b7fa74c7784be5fed6a70970915e4d96dc9:src/renderer/src/components/terminal-pane/pending-runtime-pane-close.test.ts:2:import { preparePendingRuntimeClose } from './pending-runtime-pane-close-test-fixture'"
+    ]
+  },
+  {
+    "number": 21006,
+    "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+    "path": "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown-test-fixture.ts",
+    "namedReferenceMatches": [
+      "5333f0f4e1d8be5bceefc467a9e28feb5a422554:src/main/native-chat/agent-session-wire/structured-tui-transcript-ownership.test.ts:8:import { createTuiTranscriptTeardownFixture } from './structured-tui-transcript-teardown-test-fixture'",
+      "5333f0f4e1d8be5bceefc467a9e28feb5a422554:src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown.test.ts:9:import { createTuiTranscriptTeardownFixture } from './structured-tui-transcript-teardown-test-fixture'"
+    ]
+  },
+  {
+    "number": 21010,
+    "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+    "path": "src/main/browser/browser-manager-destroyed-guest-test-fixture.ts",
+    "namedReferenceMatches": [
+      "2c57430b40dbc6d196fc4435b6a48649e711790c:src/main/browser/browser-manager-destroyed-guest-downloads.test.ts:18:} from './browser-manager-destroyed-guest-test-fixture'",
+      "2c57430b40dbc6d196fc4435b6a48649e711790c:src/main/browser/browser-manager-destroyed-guest.test.ts:18:} from './browser-manager-destroyed-guest-test-fixture'"
+    ]
+  },
+  {
+    "number": 21014,
+    "head": "099f3396524554fc6725a7f0b727434dc7369527",
+    "path": "src/main/runtime/pty-inventory-lifecycle-fixture.ts",
+    "namedReferenceMatches": [
+      "099f3396524554fc6725a7f0b727434dc7369527:src/main/runtime/pty-inventory-lifecycle-admission.test.ts:11:} from './pty-inventory-lifecycle-fixture'",
+      "099f3396524554fc6725a7f0b727434dc7369527:src/main/runtime/pty-inventory-lifecycle-scope.test.ts:12:} from './pty-inventory-lifecycle-fixture'"
+    ]
+  },
+  {
+    "number": 21019,
+    "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+    "path": "src/main/runtime/terminal-close-observed-exit-test-fixture.ts",
+    "namedReferenceMatches": [
+      "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1:src/main/runtime/terminal-close-observed-exit.test.ts:5:} from './terminal-close-observed-exit-test-fixture'"
+    ]
+  },
+  {
+    "number": 21020,
+    "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+    "path": "src/main/runtime/acknowledged-terminal-tab-retirement-fixture.ts",
+    "namedReferenceMatches": [
+      "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9:src/main/runtime/acknowledged-terminal-tab-retirement.test.ts:9:} from './acknowledged-terminal-tab-retirement-fixture'"
+    ]
+  },
+  {
+    "number": 21113,
+    "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+    "path": "src/main/ipc/session-empty-terminal-tab-retirement-fixture.ts",
+    "namedReferenceMatches": [
+      "718ead7ea9f6296d69ceb7d1460a3579116fe85f:src/main/ipc/session-empty-terminal-tab-retirement.test.ts:17:} from './session-empty-terminal-tab-retirement-fixture'",
+      "718ead7ea9f6296d69ceb7d1460a3579116fe85f:src/main/ipc/session-empty-terminal-tab-runtime-owner.test.ts:15:} from './session-empty-terminal-tab-retirement-fixture'"
+    ]
+  },
+  {
+    "number": 21129,
+    "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+    "path": "src/main/speech/stt-audio-pending-test-fixture.ts",
+    "namedReferenceMatches": [
+      "1f231d6147852a729fcbe4d2b5ad7262391fee27:src/main/speech/stt-audio-pending-budget.test.ts:38:import { MockWorker, service, start, samples, stop } from './stt-audio-pending-test-fixture'"
+    ]
+  },
+  {
+    "number": 21129,
+    "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+    "path": "src/main/speech/stt-audio-test-worker.ts",
+    "namedReferenceMatches": [
+      "1f231d6147852a729fcbe4d2b5ad7262391fee27:src/main/speech/stt-audio-pending-budget.test.ts:3:  Worker: (await import('./stt-audio-test-worker')).SttAudioTestWorker",
+      "1f231d6147852a729fcbe4d2b5ad7262391fee27:src/main/speech/stt-audio-pending-test-fixture.ts:2:import { SttAudioTestWorker as MockWorker } from './stt-audio-test-worker'"
+    ]
+  },
+  {
+    "number": 21178,
+    "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+    "path": "src/renderer/src/components/editor/editor-model-lifetime-fixture.ts",
+    "namedReferenceMatches": [
+      "29820ed587cab4f2ab31a9306ca2180355b3e745:src/renderer/src/components/editor/closed-editor-model-lifetime.test.ts:9:} from './editor-model-lifetime-fixture'",
+      "29820ed587cab4f2ab31a9306ca2180355b3e745:src/renderer/src/components/editor/closed-editor-model-reentrancy.test.ts:8:} from './editor-model-lifetime-fixture'",
+      "29820ed587cab4f2ab31a9306ca2180355b3e745:src/renderer/src/components/editor/closed-editor-model-registry.test.ts:10:} from './editor-model-lifetime-fixture'",
+      "29820ed587cab4f2ab31a9306ca2180355b3e745:src/renderer/src/components/editor/closed-editor-model-shell.test.tsx:15:} from './editor-model-lifetime-fixture'"
+    ]
+  },
+  {
+    "number": 21185,
+    "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+    "path": "src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts",
+    "namedReferenceMatches": [
+      "7ac04b01a2c97451fd5e2df3af79745bac36a1cc:src/main/plugins/plugin-uninstall-lifecycle.test.ts:15:} from './__mocks__/plugin-uninstall-log-test-fixture'",
+      "7ac04b01a2c97451fd5e2df3af79745bac36a1cc:src/main/plugins/plugin-uninstall-log-retention.test.ts:17:} from './__mocks__/plugin-uninstall-log-test-fixture'",
+      "7ac04b01a2c97451fd5e2df3af79745bac36a1cc:src/main/plugins/plugin-uninstall-ordering.test.ts:21:} from './__mocks__/plugin-uninstall-log-test-fixture'"
+    ]
+  },
+  {
+    "number": 21185,
+    "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+    "path": "src/main/plugins/plugin-uninstall-worker-fixture.ts",
+    "namedReferenceMatches": [
+      "7ac04b01a2c97451fd5e2df3af79745bac36a1cc:src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts:13:import { UninstallWorkerPort } from '../plugin-uninstall-worker-fixture'"
+    ]
+  }
+]

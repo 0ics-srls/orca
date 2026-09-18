@@ -1,0 +1,43 @@
+{
+  "repository": "stablyai/orca",
+  "observedAt": "2026-09-18T03:05:49Z",
+  "repositorySettings": {
+    "allow_merge_commit": false,
+    "allow_squash_merge": true,
+    "allow_rebase_merge": true,
+    "allow_auto_merge": true,
+    "delete_branch_on_merge": false,
+    "default_branch": "main"
+  },
+  "protectionEvidence": {
+    "classicProtectionEndpoint": "404 Not Found; this alone cannot distinguish absent protection from hidden configuration",
+    "rulesetsIncludingParents": [],
+    "requiredChecksProbe": "gh pr checks 20905 --required reported no required checks",
+    "conclusion": "No enforced required-check list was exposed by these read-only probes. Do not use admin bypass. Gate eligible merges on evidence from current-head PR Checks and relevant companion jobs."
+  },
+  "mergeRecommendation": {
+    "method": "squash",
+    "requireExactReviewedHead": true,
+    "deleteBranches": false,
+    "reason": "Merge commits are disabled. Keeping branches avoids disrupting remaining stacked PRs. Refresh child base and eligibility after its parent is squash-merged."
+  },
+  "dependencyEdges": [
+    [20981, 20992],
+    [20992, 21112],
+    [21001, 21005],
+    [21000, 21011],
+    [21000, 21019],
+    [21113, 21175]
+  ],
+  "overlapNotes": [
+    "21011 and 21014 must retain both independent exit/inventory ownership fences.",
+    "20955, 20965 and the 20981/20992/21112 stack overlap generated xterm payloads; existing branch-specific guards do not prove arbitrary combined order.",
+    "21175 is now based on 21113 and adapts its fixture to the parent's required runtime argument."
+  ],
+  "historicalFailureNotes": [
+    "Old static/typecheck failures on 25 heads matched an unused NativeChatMessage import introduced on their baseline; current main removed it. Refreshing checks must actually test corrected main.",
+    "20906 additionally had an unresolved watcher timeout; 20981, 21009 and 21010 had async React window-is-not-defined teardown failures; 21022 had watcher multiplicity and a performance threshold miss. Baseline provenance does not prove these leaves harmless.",
+    "20992 and 21112 final prior snapshot retained canceled duplicate failures alongside successful same-head PR Checks runs. Inspect successful replacement run IDs rather than relabel raw rollups."
+  ],
+  "locAccountingWarning": "The repository's PR LoC script labels every non-test path Prod, including docs and audit evidence. Actual production-source additions plus deletions should be identified explicitly if used for the user's threshold; do not silently substitute net lines or all non-test lines."
+}

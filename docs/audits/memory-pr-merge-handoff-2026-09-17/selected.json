@@ -1,0 +1,1406 @@
+{
+  "criteria": "Production additions + deletions <100; low observed risk; no identified negative user-facing tradeoff",
+  "selected": [
+    {
+      "number": 20905,
+      "title": "fix(renderer): cancel signout auth retry on unmount",
+      "url": "https://github.com/stablyai/orca/pull/20905",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-signout-retry",
+      "headRefOid": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 8,
+        "deletions": 1,
+        "changed": 9,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20905,
+        "reviewedCurrentHead": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Unmount cancels a queued sign-out auth retry; mounted behavior keeps the same 500 ms cadence and three-attempt limit.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20905.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20906,
+      "title": "fix(renderer): cancel copied prompt reset on unmount",
+      "url": "https://github.com/stablyai/orca/pull/20906",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-prompt-reset",
+      "headRefOid": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 19,
+        "deletions": 1,
+        "changed": 20,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20906,
+        "reviewedCurrentHead": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Copy feedback resets 1.5 seconds after the latest completed copy. Correction preserves clipboard write/telemetry but prevents late completion from creating an unmounted timer.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20906.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20910,
+      "title": "fix(main): release hang watchdog quit listener on shutdown",
+      "url": "https://github.com/stablyai/orca/pull/20910",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-hang-watchdog",
+      "headRefOid": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 4,
+        "deletions": 0,
+        "changed": 4,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20910,
+        "reviewedCurrentHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A stopped or exited macOS watchdog releases its quit listener; heartbeat and shutdown behavior stay unchanged. Linux/Windows bypass this path.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20910.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20924,
+      "title": "fix(renderer): release parked terminal scroll intents",
+      "url": "https://github.com/stablyai/orca/pull/20924",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "7ec2986fd11e2de3964546657c0069a00f0676d6",
+      "headRefName": "np-oom-scan-scroll-intent",
+      "headRefOid": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 16,
+        "deletions": 1,
+        "changed": 17,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20924,
+        "reviewedCurrentHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Explicitly closed parked leaves release scroll-intent entries. Surviving parked leaves retain pinned viewport state for remount.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20924.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20941,
+      "title": "fix(stats): bound retained events during stalled writes",
+      "url": "https://github.com/stablyai/orca/pull/20941",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-stats-retention",
+      "headRefOid": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 4,
+        "deletions": 0,
+        "changed": 4,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20941,
+        "reviewedCurrentHead": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "Existing 10,000-event serialized history and public cumulative summaries are unchanged. The newly bounded object is a private transient event array; no additional user-accessible history is removed.",
+        "additionalCallerReferences": [
+          "src/main/stats/collector.ts:69",
+          "src/main/stats/collector.ts:118",
+          "src/main/stats/collector.ts:249"
+        ],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20941.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20946,
+      "title": "fix(relay): bound cyclic process-table traversal",
+      "url": "https://github.com/stablyai/orca/pull/20946",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "headRefName": "np-oom-scan-relay-process-cycles",
+      "headRefOid": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 6,
+        "deletions": 0,
+        "changed": 6,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20946,
+        "reviewedCurrentHead": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Duplicate or cyclic process-table rows no longer grow traversal forever; ordinary foreground agent selection stays unchanged.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20946.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20960,
+      "title": "Detach retained CI and terminal tails from oversized strings",
+      "url": "https://github.com/stablyai/orca/pull/20960",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "9ed561c1d2505184946b39a27614002f0145de40",
+      "headRefName": "np-oom-scan-retained-text-slices",
+      "headRefOid": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "isDraft": false,
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 14,
+        "additions": 54,
+        "deletions": 18,
+        "changed": 72,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20960,
+        "reviewedCurrentHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Bounded retained tails own their string bytes instead of pinning large parents. Text and existing limits remain unchanged; copying adds bounded work.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20960.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20978,
+      "title": "Release provider children after structured session holds disappear",
+      "url": "https://github.com/stablyai/orca/pull/20978",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "headRefName": "np-oom-scan-structured-resume-holds",
+      "headRefOid": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "isDraft": false,
+      "mergeable": "CONFLICTING",
+      "mergeStateStatus": "DIRTY",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 3,
+        "additions": 37,
+        "deletions": 12,
+        "changed": 49,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20978,
+        "reviewedCurrentHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A provider child acquired after its last holder disappears enters the existing 15-second release clock. Active turns/new holders still preserve it; journals remain.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20978.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20980,
+      "title": "Release completed scanner cancellation IDs",
+      "url": "https://github.com/stablyai/orca/pull/20980",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "headRefName": "np-oom-scan-scanner-late-cancel",
+      "headRefOid": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 3,
+        "deletions": 0,
+        "changed": 3,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20980,
+        "reviewedCurrentHead": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Admitted queued/running scanner requests still cancel. Late or unknown cancellation IDs are ignored once no request owns them.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20980.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20986,
+      "title": "fix(ai-vault): release retired search write fences",
+      "url": "https://github.com/stablyai/orca/pull/20986",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "e39b432c40d34348159be0bb0a630bc6c25c0130",
+      "headRefName": "np-oom-scan-search-write-fences",
+      "headRefOid": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 3,
+        "additions": 54,
+        "deletions": 15,
+        "changed": 69,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20986,
+        "reviewedCurrentHead": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Deletion fences release after their owning read settles. Search rows, retained history, and protection against late resurrection remain unchanged.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20986.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 20996,
+      "title": "fix(runtime): fence terminal snapshot completion by owner",
+      "url": "https://github.com/stablyai/orca/pull/20996",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "15cac68802361f3b9075630335d3e6d379c2a909",
+      "headRefName": "np-oom-scan-headless-snapshot-ownership",
+      "headRefOid": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 4,
+        "additions": 40,
+        "deletions": 8,
+        "changed": 48,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 20996,
+        "reviewedCurrentHead": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Late snapshots cannot repopulate a retired/replaced terminal owner. Current owners still receive seeded history and live writes.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/20996.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21000,
+      "title": "fix(pty): reconcile daemon exits after synthetic notifications",
+      "url": "https://github.com/stablyai/orca/pull/21000",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-daemon-late-exit",
+      "headRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "827dabf9582a92820d340c58452b66468f5e2199",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 7,
+        "additions": 47,
+        "deletions": 28,
+        "changed": 75,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21000,
+        "reviewedCurrentHead": "827dabf9582a92820d340c58452b66468f5e2199",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A late physical daemon exit still performs authoritative cleanup after a synthetic renderer exit; the renderer receives only one notification.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21000.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21002,
+      "title": "fix(sessions): stop transcript catch-up after TUI owner close",
+      "url": "https://github.com/stablyai/orca/pull/21002",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-tui-transcript-close",
+      "headRefOid": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 1,
+        "deletions": 0,
+        "changed": 1,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21002,
+        "reviewedCurrentHead": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "Watcher stops after successful owner shutdown and durable lease transition. The pre-existing writer already rejects the released lease; no new demonstrated transcript loss, history quota, or active-owner cancellation.",
+        "additionalCallerReferences": [
+          "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-owner-close.ts:33"
+        ],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21002.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21010,
+      "title": "fix(browser): release page callbacks when a guest is destroyed",
+      "url": "https://github.com/stablyai/orca/pull/21010",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-browser-destroyed-guest",
+      "headRefOid": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 4,
+        "additions": 55,
+        "deletions": 6,
+        "changed": 61,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21010,
+        "reviewedCurrentHead": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Destroyed guests release callbacks without app-triggered cancellation of active downloads. Correction keeps completion/cancel routing until settlement; explicit page close still cancels.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21010.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21011,
+      "title": "fix(runtime): preserve exited PTY authority across queued graphs",
+      "url": "https://github.com/stablyai/orca/pull/21011",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "baseRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "headRefName": "np-oom-scan-queued-terminal-graph-exit",
+      "headRefOid": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 3,
+        "additions": 13,
+        "deletions": 9,
+        "changed": 22,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21011,
+        "reviewedCurrentHead": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A queued graph cannot mark a host-confirmed exited PTY connected again. History stays addressable; a newly admitted process can establish fresh ownership.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21011.json",
+        "dependencies": [21000]
+      }
+    },
+    {
+      "number": 21012,
+      "title": "fix(browser): fence late registration replies to their guest owner",
+      "url": "https://github.com/stablyai/orca/pull/21012",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-browser-registration-replies",
+      "headRefOid": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 2,
+        "additions": 38,
+        "deletions": 8,
+        "changed": 46,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21012,
+        "reviewedCurrentHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Late registration/repair replies cannot mutate closed or replacement browser guests. Hidden current guests and current success/failure paths still work.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21012.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21018,
+      "title": "fix(runtime): terminate nonblank tail scan at the first row",
+      "url": "https://github.com/stablyai/orca/pull/21018",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-terminal-tail-termination",
+      "headRefOid": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 2,
+        "deletions": 1,
+        "changed": 3,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21018,
+        "reviewedCurrentHead": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A backward screen scan terminates when leading rows are blank. Existing last-N nonblank-line selection and prompt recognition remain.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21018.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21019,
+      "title": "fix(runtime): preserve observed exit during explicit terminal close",
+      "url": "https://github.com/stablyai/orca/pull/21019",
+      "state": "OPEN",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "baseRefOid": "827dabf9582a92820d340c58452b66468f5e2199",
+      "headRefName": "np-oom-scan-observed-terminal-exit",
+      "headRefOid": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 10,
+        "deletions": 0,
+        "changed": 10,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21019,
+        "reviewedCurrentHead": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A witnessed same-incarnation physical exit prevents a redundant fallback kill when later aggregate close verification returns false.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21019.json",
+        "dependencies": [21000]
+      }
+    },
+    {
+      "number": 21022,
+      "title": "fix(projects): release processed repository scan records",
+      "url": "https://github.com/stablyai/orca/pull/21022",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "headRefName": "np-oom-scan-nested-repo-queue",
+      "headRefOid": "97338c35d95151b744cc653f328a1180f17dd182",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "97338c35d95151b744cc653f328a1180f17dd182",
+              "statusCheckRollup": {
+                "state": "FAILURE"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 8,
+        "deletions": 2,
+        "changed": 10,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21022,
+        "reviewedCurrentHead": "97338c35d95151b744cc653f328a1180f17dd182",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Consumed breadth-first discovery slots release paths and ignore arrays. Traversal order, ignore inheritance, limits, and progress results remain.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21022.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21131,
+      "title": "fix: release completed runtime RPC queue payloads",
+      "url": "https://github.com/stablyai/orca/pull/21131",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-rpc-consumed-queue",
+      "headRefOid": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 5,
+        "deletions": 4,
+        "changed": 9,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21131,
+        "reviewedCurrentHead": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Consumed RPC queue slots release completed payloads. Accepted requests retain existing execution and cancellation outcomes.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21131.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21135,
+      "title": "fix: release aborted auth filesystem waiters",
+      "url": "https://github.com/stablyai/orca/pull/21135",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-auth-wait-retention",
+      "headRefOid": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 2,
+        "additions": 27,
+        "deletions": 21,
+        "changed": 48,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21135,
+        "reviewedCurrentHead": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Abandoned auth polls release callbacks/errors while siblings keep sharing the native read. Existing result-versus-abort ordering remains.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21135.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21136,
+      "title": "fix: retire stale GitLab host cache generations",
+      "url": "https://github.com/stablyai/orca/pull/21136",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "headRefName": "np-oom-scan-gitlab-host-retirement",
+      "headRefOid": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 33,
+        "deletions": 11,
+        "changed": 44,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21136,
+        "reviewedCurrentHead": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. A reconnect reuses one successful GitLab host list for its execution generation. Native, WSL distro, and other SSH-host caches remain isolated.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21136.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21138,
+      "title": "fix: release Codex prompt claims after turn completion",
+      "url": "https://github.com/stablyai/orca/pull/21138",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "f36a7cecf2b8f1c43b4fa19052cdc845a6abdb13",
+      "headRefName": "np-oom-scan-codex-prompt-claims",
+      "headRefOid": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 1,
+        "deletions": 1,
+        "changed": 2,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21138,
+        "reviewedCurrentHead": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Completed Codex turns release claimed prompt objects even after lookup eviction. Active other-turn approvals and journal data stay.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21138.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21139,
+      "title": "fix: release completed terminal spawn inputs",
+      "url": "https://github.com/stablyai/orca/pull/21139",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "f36a7cecf2b8f1c43b4fa19052cdc845a6abdb13",
+      "headRefName": "np-oom-scan-completed-spawn-inputs",
+      "headRefOid": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "66d12af6a54cc928f269dae02c399db7d8431f03",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 3,
+        "additions": 33,
+        "deletions": 20,
+        "changed": 53,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21139,
+        "reviewedCurrentHead": "66d12af6a54cc928f269dae02c399db7d8431f03",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Live terminal closures stop retaining the completed creation request, environment, seed chunk array, and cancellation signal; process operations/history stay available.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21139.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21140,
+      "title": "fix: release native PTY spawn environment after setup",
+      "url": "https://github.com/stablyai/orca/pull/21140",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "631b51f508a98cc6d50378d1223fd4565a8c5bea",
+      "headRefName": "np-oom-scan-native-pty-spawn-env",
+      "headRefOid": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 2,
+        "deletions": 1,
+        "changed": 3,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21140,
+        "reviewedCurrentHead": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. The PTY exit closure captures its spawn-time boolean instead of the entire arguments/environment object. PATH and returned process operations stay available.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21140.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21142,
+      "title": "Skip empty chunks in streamed agent text",
+      "url": "https://github.com/stablyai/orca/pull/21142",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "631b51f508a98cc6d50378d1223fd4565a8c5bea",
+      "headRefName": "np-oom-scan-empty-streamed-deltas",
+      "headRefOid": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 3,
+        "deletions": 1,
+        "changed": 4,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21142,
+        "reviewedCurrentHead": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Empty deltas stop appending empty array entries, but still create/dirty streams and preserve scheduled/explicit empty-snapshot flush behavior.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21142.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21144,
+      "title": "fix: release canceled working-directory waiter references",
+      "url": "https://github.com/stablyai/orca/pull/21144",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "c2962a765abd3eba6a8a58d9374eedaea3b6dd49",
+      "headRefName": "np-oom-scan-working-directory-waits",
+      "headRefOid": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 50,
+        "deletions": 12,
+        "changed": 62,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21144,
+        "reviewedCurrentHead": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Canceled cwd callers release signal/error/resolver references; the shared native stat stays owned and later callers can still join it.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21144.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21150,
+      "title": "fix: release completed SSH writer queue entries",
+      "url": "https://github.com/stablyai/orca/pull/21150",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "fbe7b194b8b6e05bf945aaef67ab3b3789f110fd",
+      "headRefName": "np-oom-scan-ssh-writer-prefix",
+      "headRefOid": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 8,
+        "deletions": 4,
+        "changed": 12,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21150,
+        "reviewedCurrentHead": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Completed SSH writes release bytes and receipt closures during rolling backlog. Queued/in-flight data retain their completion and disposal outcomes.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21150.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21160,
+      "title": "fix: fence viewport state after browser guest retirement",
+      "url": "https://github.com/stablyai/orca/pull/21160",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "headRefName": "np-oom-scan-viewport-owner-state",
+      "headRefOid": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 10,
+        "deletions": 1,
+        "changed": 11,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21160,
+        "reviewedCurrentHead": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Retired browser guests cannot commit late viewport/UA state to a successor. Integration preserves current main process-wide UA identity.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21160.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21162,
+      "title": "fix: release retired daemon owner incarnation metadata",
+      "url": "https://github.com/stablyai/orca/pull/21162",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "0699d73fd63e26a1bb024dfab88109a8583dd80d",
+      "headRefName": "np-oom-scan-daemon-owner-incarnations",
+      "headRefOid": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 1,
+        "additions": 6,
+        "deletions": 0,
+        "changed": 6,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21162,
+        "reviewedCurrentHead": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Provider invalidation removes orphan incarnation metadata whose routes already disappeared. Current routes keep their incarnation fences.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21162.json",
+        "dependencies": []
+      }
+    },
+    {
+      "number": 21164,
+      "title": "fix: release completed browser results after host close",
+      "url": "https://github.com/stablyai/orca/pull/21164",
+      "state": "OPEN",
+      "baseRefName": "main",
+      "baseRefOid": "0699d73fd63e26a1bb024dfab88109a8583dd80d",
+      "headRefName": "np-oom-scan-closed-browser-results",
+      "headRefOid": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "reviewDecision": null,
+      "mergedAt": null,
+      "mergeCommit": null,
+      "commits": {
+        "nodes": [
+          {
+            "commit": {
+              "oid": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+              "statusCheckRollup": {
+                "state": "SUCCESS"
+              }
+            }
+          }
+        ]
+      },
+      "production": {
+        "files": 2,
+        "additions": 7,
+        "deletions": 2,
+        "changed": 9,
+        "binaryFiles": []
+      },
+      "behavior": {
+        "number": 21164,
+        "reviewedCurrentHead": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+        "priorCategory": "low-observed-risk",
+        "behaviorEligible": true,
+        "reason": "No identified adverse live-user behavior or new capacity policy in the final reviewed change. Host close promptly releases completed browser results while still tracking running handlers and cancellation. Live deduplication/cache limits remain.",
+        "additionalCallerReferences": [],
+        "sourceReport": "docs/audits/memory-pr-risk-review-2026-09-17/reviews/21164.json",
+        "dependencies": []
+      }
+    }
+  ]
+}

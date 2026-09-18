@@ -1,0 +1,807 @@
+{
+  "observedAt": "2026-09-18T03:36:02.047665+00:00",
+  "main": "28c32f358736b6b01d28f0277203eef7e79f0b69",
+  "method": "Verify each squash is in named main and every production file has exactly the reviewed added/deleted lines. Ignore only context/line offsets; preserve ordered changed text. Reject unexpected changed paths.",
+  "merged": [
+    {
+      "number": 20905,
+      "headMerged": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "mergeCommit": "d3032da299b493abcc1d9eaff5020a90f750d65f",
+      "parent": "9c921360090667e02363fe6e4dee98410665427a",
+      "inNamedMain": true,
+      "production": {
+        "additions": 8,
+        "deletions": 1,
+        "changed": 9
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/renderer/src/components/UnexpectedSignoutCard.tsx",
+          "changedLinesSha256": "e8ba283b986d41b32512ab1435f307c24706a74e7d2253e5c6e2d63b32737fa6",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20906,
+      "headMerged": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "mergeCommit": "d7d3bcfc6653592be78ef5c6ea3298153eea4209",
+      "parent": "d3032da299b493abcc1d9eaff5020a90f750d65f",
+      "inNamedMain": true,
+      "production": {
+        "additions": 19,
+        "deletions": 1,
+        "changed": 20
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/renderer/src/components/settings/EphemeralVmsPane.tsx",
+          "changedLinesSha256": "ced3d9c095d138ad668254ae6856813f498f18d2998f0b4d20915ceeb9f84872",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20924,
+      "headMerged": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "mergeCommit": "bd404185f19d077065f926c06574c039a7986392",
+      "parent": "d7d3bcfc6653592be78ef5c6ea3298153eea4209",
+      "inNamedMain": true,
+      "production": {
+        "additions": 16,
+        "deletions": 1,
+        "changed": 17
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/renderer/src/components/terminal-pane/terminal-parked-watcher-registry.ts",
+          "changedLinesSha256": "1cbd71e799b8cb88dc875ff5c3e0745bd88ed17130ad2dc4559391660e8eb40c",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20946,
+      "headMerged": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "mergeCommit": "df88f83c707487add7715ed00ee0b754d6c76796",
+      "parent": "bd404185f19d077065f926c06574c039a7986392",
+      "inNamedMain": true,
+      "production": {
+        "additions": 6,
+        "deletions": 0,
+        "changed": 6
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/relay/pty-shell-utils.ts",
+          "changedLinesSha256": "31ba02a3f9f69079420ab3286a94ade2fcd23265242a518db63ab77baefa2bba",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20980,
+      "headMerged": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "mergeCommit": "e9c04fb8d95254f0cb29addf669d4a597f8ca9a7",
+      "parent": "df88f83c707487add7715ed00ee0b754d6c76796",
+      "inNamedMain": true,
+      "production": {
+        "additions": 3,
+        "deletions": 0,
+        "changed": 3
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/ai-vault/session-scanner-service-entry.ts",
+          "changedLinesSha256": "e323e3e8633ab44157e87062c2255aaec8ddc7d6ef4c16c99004f63f33a50964",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21010,
+      "headMerged": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "mergeCommit": "bdad0e0f00325e6242fb6240d6aaa3120d2bbaa0",
+      "parent": "e9c04fb8d95254f0cb29addf669d4a597f8ca9a7",
+      "inNamedMain": true,
+      "production": {
+        "additions": 55,
+        "deletions": 6,
+        "changed": 61
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/browser/browser-manager-download-lifecycle.ts",
+          "changedLinesSha256": "9c9246fd7318f6429c5dcc4d4e7b2b727d94792214dbebc576b5483c88b8fd82",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/browser/browser-manager-guest-navigation-policy.ts",
+          "changedLinesSha256": "e29838062649bd5ba77ee8cb413187641218d1b9fbc6afc118263e35ce0e84ef",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/browser/browser-manager-registration.ts",
+          "changedLinesSha256": "b00a001042c4f246a2d2929df4deed5a09919715a3575bf02876d07bab69edad",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/browser/browser-manager-state.ts",
+          "changedLinesSha256": "33c4962078874a0a42bae3f9bf402f5c81f196bbcf8602f3be8e2be75fbc28ae",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21131,
+      "headMerged": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "mergeCommit": "0e3acf577d7285057e039d99d2891799dbdc3fbb",
+      "parent": "bdad0e0f00325e6242fb6240d6aaa3120d2bbaa0",
+      "inNamedMain": true,
+      "production": {
+        "additions": 5,
+        "deletions": 4,
+        "changed": 9
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/shared/runtime-rpc-call-queue.ts",
+          "changedLinesSha256": "db8d933c69191590d6a2457e6c22e77275cc5d54b198a0d2d1c5eedc20121afe",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21135,
+      "headMerged": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "mergeCommit": "f90370fb6b072847f625b4e1291a4927fe3c5ec4",
+      "parent": "0e3acf577d7285057e039d99d2891799dbdc3fbb",
+      "inNamedMain": true,
+      "production": {
+        "additions": 27,
+        "deletions": 21,
+        "changed": 48
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/rate-limits/auth-filesystem-operation.ts",
+          "changedLinesSha256": "a31f00842f55ea97ea233323f3e0b51e84b8eacb73d7f9143396ad36ca13c0e0",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/promise-settlement-waiters.ts",
+          "changedLinesSha256": "8155fd5855efa066ffe8e42ce475c089432bb7cc89a301e94e0dda408f073bd9",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21136,
+      "headMerged": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "mergeCommit": "51f809aa82b58343a38cdba1920190bfd01da3a0",
+      "parent": "f90370fb6b072847f625b4e1291a4927fe3c5ec4",
+      "inNamedMain": true,
+      "production": {
+        "additions": 33,
+        "deletions": 11,
+        "changed": 44
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/gitlab/gitlab-known-host-probe.ts",
+          "changedLinesSha256": "720d22bebd85f73bcc966b4516b4db3a8ef44bcafe17710b5a15d3fe09875fd9",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21138,
+      "headMerged": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "mergeCommit": "fbfe3a2e74043673ccc928554f6fd667493cbb4a",
+      "parent": "51f809aa82b58343a38cdba1920190bfd01da3a0",
+      "inNamedMain": true,
+      "production": {
+        "additions": 1,
+        "deletions": 1,
+        "changed": 2
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/codex/codex-prompt-registry.ts",
+          "changedLinesSha256": "8d0dbe3b7fa12721186555ed1e23d8d96297d1ede3edc0dc76d756ca72cbaf8f",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21139,
+      "headMerged": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "mergeCommit": "79800e60b4ba886da28bd65eaf9edbd264f570c7",
+      "parent": "fbfe3a2e74043673ccc928554f6fd667493cbb4a",
+      "inNamedMain": true,
+      "production": {
+        "additions": 33,
+        "deletions": 20,
+        "changed": 53
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/daemon/session-output-pipeline.ts",
+          "changedLinesSha256": "37e8d5d535f47343bf06c5c6d711b2467c1d0be9ee3c0be49b4fa26078ea21cb",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/daemon/terminal-host-session-create.ts",
+          "changedLinesSha256": "373d494b5fc7d892aa2cb3949e1b5e3d52d0652d3032f6b93ec103baae47e1ac",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/daemon/terminal-host.ts",
+          "changedLinesSha256": "50343935f66fc6520e8dae6558d66831579feb39a63ba96f4cf8a910af493c1b",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21140,
+      "headMerged": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "mergeCommit": "b899b225456f0744fadb02e4129a977b1e0361bc",
+      "parent": "79800e60b4ba886da28bd65eaf9edbd264f570c7",
+      "inNamedMain": true,
+      "production": {
+        "additions": 2,
+        "deletions": 1,
+        "changed": 3
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/daemon/pty-subprocess/subprocess-handle.ts",
+          "changedLinesSha256": "80fe806ce132eb0e01b4f0904559eec147cf591d0a6c70c54d26e8c8e623b209",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21142,
+      "headMerged": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "mergeCommit": "3c138bd8632f0d2fc72af0d0e50bd8cb4bd98a8b",
+      "parent": "b899b225456f0744fadb02e4129a977b1e0361bc",
+      "inNamedMain": true,
+      "production": {
+        "additions": 3,
+        "deletions": 1,
+        "changed": 4
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/agent-session-delta-coalescer.ts",
+          "changedLinesSha256": "cecb032b696d43fb7c93cd4c8e3827f0a5514bb44922d3f207de965803af4ce3",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21144,
+      "headMerged": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "mergeCommit": "ab331253a0a8df91d66a4d2d68955ec74db90ec8",
+      "parent": "3c138bd8632f0d2fc72af0d0e50bd8cb4bd98a8b",
+      "inNamedMain": true,
+      "production": {
+        "additions": 50,
+        "deletions": 12,
+        "changed": 62
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/providers/working-directory-validation.ts",
+          "changedLinesSha256": "63d2e0e8e5db3eabad08b53fd32681976a5c000794d2423429f79cb19b415c50",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21150,
+      "headMerged": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "mergeCommit": "14654d03cb14abbcb6d442b360c403c2cc778bcd",
+      "parent": "ab331253a0a8df91d66a4d2d68955ec74db90ec8",
+      "inNamedMain": true,
+      "production": {
+        "additions": 8,
+        "deletions": 4,
+        "changed": 12
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/ssh/ssh-multiplexer-writer-lane-scheduler.ts",
+          "changedLinesSha256": "b2df1854f9f569afaecf9d343e3668acf324f5563876202470d4c44a8bced679",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21160,
+      "headMerged": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "mergeCommit": "1d09d557878856885b3654e96b8cbb8e570f1572",
+      "parent": "14654d03cb14abbcb6d442b360c403c2cc778bcd",
+      "inNamedMain": true,
+      "production": {
+        "additions": 10,
+        "deletions": 1,
+        "changed": 11
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/browser/browser-manager-viewport.ts",
+          "changedLinesSha256": "13085fae02cc7c121c7d19244fa32ddd938d924f2a017a3f10658996f516b2f4",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21162,
+      "headMerged": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "mergeCommit": "98998b18ad2fe89f1a07dfe76788d73c96ec93f5",
+      "parent": "1d09d557878856885b3654e96b8cbb8e570f1572",
+      "inNamedMain": true,
+      "production": {
+        "additions": 6,
+        "deletions": 0,
+        "changed": 6
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/daemon/daemon-session-owner-resolution.ts",
+          "changedLinesSha256": "eca838acc28b3d4b04a5156612609f730df0625066a2acc242f423ebff211784",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21164,
+      "headMerged": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "mergeCommit": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "parent": "98998b18ad2fe89f1a07dfe76788d73c96ec93f5",
+      "inNamedMain": true,
+      "production": {
+        "additions": 7,
+        "deletions": 2,
+        "changed": 9
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/browser/browser-client-host-command-dispatcher.ts",
+          "changedLinesSha256": "902755f5f53d8cfe8b67d0aed98f665eb930d016a65d03a4e44f6c5abc2b6b2d",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/browser/browser-client-host-command-result-cache.ts",
+          "changedLinesSha256": "6136f40e11e58a1590d574eb8b3be24f850673353e1b02256996e2bd30b16f22",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20996,
+      "headMerged": "17081ebd3cdf78272e0ce0b4824853a4bbb8da82",
+      "mergeCommit": "9ed2f743a4dd7aab1d35906c049c11d143a92aaf",
+      "parent": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "inNamedMain": true,
+      "production": {
+        "additions": 40,
+        "deletions": 8,
+        "changed": 48
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/runtime/orca-runtime-capture-provider-terminal-buffer.ts",
+          "changedLinesSha256": "85c6146f1a59e15da258c1b2647adbdc888827e44b9f5ecd2529ff972d6acb9f",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-create-pty-headless-terminal-state.ts",
+          "changedLinesSha256": "537683b2adc464ac8606ea8efbf44913f803042aa7e4a5861d809f8c8be72b51",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts",
+          "changedLinesSha256": "242ad874dffd91c0204685399f0c0692a87ee37be27165ced05aab646315a3a5",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-serialize-main-terminal-buffer.ts",
+          "changedLinesSha256": "f057dfb244ea363ee7a31ac595b3919506e1bd0009683a06365c5383b1ff409d",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20910,
+      "headMerged": "52bab01a4cdeb6272ce2776b3e82bd6111531504",
+      "mergeCommit": "54500a4281f97e434940dc4a27ce5352b6796641",
+      "parent": "9ed2f743a4dd7aab1d35906c049c11d143a92aaf",
+      "inNamedMain": true,
+      "production": {
+        "additions": 4,
+        "deletions": 0,
+        "changed": 4
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/hang-watchdog/main-thread-hang-watchdog.ts",
+          "changedLinesSha256": "16f948be59e805c91fbf24de0a176c01dcd76c94c4aac77f4d83bc4f9c94a8aa",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20986,
+      "headMerged": "03bb5c6c09a2660ae4728165cf049f112f947a37",
+      "mergeCommit": "a0371806303c78755ede4461510098eabde0490b",
+      "parent": "54500a4281f97e434940dc4a27ce5352b6796641",
+      "inNamedMain": true,
+      "production": {
+        "additions": 54,
+        "deletions": 15,
+        "changed": 69
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/ai-vault-search/session-search-index-consumer.ts",
+          "changedLinesSha256": "7e2644429a1e34df9f77794693e3c0298804682f12385a114fa5b9a3c96a2484",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-index-writer.ts",
+          "changedLinesSha256": "883ac1c5b3c5bc789cdb90a3da81b8ef154e2e80bd88dda9554f567795ac2f43",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-store.ts",
+          "changedLinesSha256": "3b6efb40a9e8b1cad7f77bca94304c353752e2397ba173474dac0175b5a730c5",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21012,
+      "headMerged": "8fe3ce4b5ea1b483eb4a0aab0816f4f9735bac87",
+      "mergeCommit": "54e11473a6d5ca53e7b6e1eabdcf99e28af5c1f9",
+      "parent": "a0371806303c78755ede4461510098eabde0490b",
+      "inNamedMain": true,
+      "production": {
+        "additions": 38,
+        "deletions": 8,
+        "changed": 46
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-guest-recovery.ts",
+          "changedLinesSha256": "4e3f0174b3ce892af04598f41b6ff8de5e57f0fa636226ecab86dcee88ede85b",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-webview-guest-session.ts",
+          "changedLinesSha256": "1e93d651a4c3a58128fca3342d1b063534085b00e68c6ed3b2702336242c2905",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21000,
+      "headMerged": "87c294ec9c9e7b09cfa0dbc12f309d4accb09a1e",
+      "mergeCommit": "41059f65b25d9ea1f67a3ed92ca795d98450a667",
+      "parent": "b4a6e2a80aea16838264837ab2d471577690499f",
+      "inNamedMain": true,
+      "production": {
+        "additions": 47,
+        "deletions": 28,
+        "changed": 75
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/ipc/pty/delivery/exit.ts",
+          "changedLinesSha256": "44f73d1a5566da278cf5310df2c00cba72dd1083473691ef171cc52a7113d43d",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/wire-session.ts",
+          "changedLinesSha256": "a9cc028ec43a96bc9951624fcbcb43ee7743ad691b10e1bb31496aae02b75d84",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/ipc/renderer-kill.ts",
+          "changedLinesSha256": "2ee287254d903aca80bb1cc0c0c72d71363d94a8ba91699875952836c836a890",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/provider/bind-listeners.ts",
+          "changedLinesSha256": "654186cf0b477b1477accc262896eedfbb21496baa5a6290343175aaea09d04c",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/controller-deps.ts",
+          "changedLinesSha256": "b24945ec2728a4e7f46b39eb238e508270d073dd50bd447695c0159969baed8f",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/kill.ts",
+          "changedLinesSha256": "4487875827b955b98addd3068c1e9f19c4de3cc8430a5b2a0527d186cc1d277f",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ipc/pty/session.ts",
+          "changedLinesSha256": "02cefe830747114f361ad26c166ab963093ab57d20a27f7d47761b35d946610f",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21002,
+      "headMerged": "0b238dd71ba6da03ea00d50d53dd6a5430e61dd3",
+      "mergeCommit": "c09e8fe59a19521da861c72fb98698d269c6b2e3",
+      "parent": "41059f65b25d9ea1f67a3ed92ca795d98450a667",
+      "inNamedMain": true,
+      "production": {
+        "additions": 1,
+        "deletions": 0,
+        "changed": 1
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-owner-close.ts",
+          "changedLinesSha256": "a217a2ccfe6a6a4aa35e92ffcf26c3a2a901dc845aa1595c4c26f2eb4e629ff4",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21018,
+      "headMerged": "06cc2b69e6ea3bcedec919d6495404b7d94c0c82",
+      "mergeCommit": "0e935c4b0ac132b77050fa918d0598fd78f51161",
+      "parent": "c09e8fe59a19521da861c72fb98698d269c6b2e3",
+      "inNamedMain": true,
+      "production": {
+        "additions": 2,
+        "deletions": 1,
+        "changed": 3
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/runtime/terminal-wait-tail-window.ts",
+          "changedLinesSha256": "e060cc59a7f6dc1f131e0bfabc480bc47dc268eb3116f4c948da10d511cbf501",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21011,
+      "headMerged": "26b9c6fc857b48af7bbd1f29216e5813a245c8cd",
+      "mergeCommit": "5723c5baa9a4292d2b9ea86ea38ec6ffc91e38a1",
+      "parent": "0e935c4b0ac132b77050fa918d0598fd78f51161",
+      "inNamedMain": true,
+      "production": {
+        "additions": 13,
+        "deletions": 9,
+        "changed": 22
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts",
+          "changedLinesSha256": "4392074b5c60d249bd32dd270e37bf5beb38ea2ced1a7a3ef253d3114aab39e0",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-on-pty-exit.ts",
+          "changedLinesSha256": "802e436ab33c021bd295e08f9473fd8215c2343c3f665e17cd12155ebedc79bc",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-sync-window-graph.ts",
+          "changedLinesSha256": "ad8509fc41f6667b23eb45473801400206813fd3526afb5f0baa2f8867221447",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21022,
+      "headMerged": "6100b902368b961b6fb16556ce5fb26d307bea71",
+      "mergeCommit": "f0dfc5de7b8c00c833c36eb83edfedfe95dbaeea",
+      "parent": "5723c5baa9a4292d2b9ea86ea38ec6ffc91e38a1",
+      "inNamedMain": true,
+      "production": {
+        "additions": 8,
+        "deletions": 2,
+        "changed": 10
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/project-groups/nested-repo-discovery.ts",
+          "changedLinesSha256": "fc3bc2d8ae7d90a5bade578f4c6ed2c678635ce38324247ccfd69626e5318ed0",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20978,
+      "headMerged": "7b0ddd7cc0a1022345eaffabb4d6c30105db1679",
+      "mergeCommit": "c3c051dfa62860e0eec6dfc37b81106eba394125",
+      "parent": "f0dfc5de7b8c00c833c36eb83edfedfe95dbaeea",
+      "inNamedMain": true,
+      "production": {
+        "additions": 37,
+        "deletions": 12,
+        "changed": 49
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+          "changedLinesSha256": "136e6854e3520c59337c67ee84b74848cbf851fab776f5b541d9eebd03021d46",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+          "changedLinesSha256": "c441e64d44975ae2bf3bb5195146b370b66a7a458f729408acd39694a4022905",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+          "changedLinesSha256": "a1fde626e2274a404c1ab5ce91c70619866ad09c6013ae675d9183123bdd56b1",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 21019,
+      "headMerged": "58cf21c110cd3f6bc80e8d3c7114613ca89f0d76",
+      "mergeCommit": "1aadf9115346b28aa9acee93430e1fd47703b303",
+      "parent": "c3c051dfa62860e0eec6dfc37b81106eba394125",
+      "inNamedMain": true,
+      "production": {
+        "additions": 10,
+        "deletions": 0,
+        "changed": 10
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/runtime/orca-runtime-stop-explicitly-closed-tab-ptys.ts",
+          "changedLinesSha256": "573a317765c19842a7972c8aae7aaf839b17ef568b3104f0cfed65953af8ad0f",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20960,
+      "headMerged": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+      "mergeCommit": "d04b05b5c8f0b8074a7e316c8cd6ccdbbddf7e2c",
+      "parent": "57e28ccf7c523b57881be0b857fcc8e171a17b05",
+      "inNamedMain": true,
+      "production": {
+        "additions": 54,
+        "deletions": 18,
+        "changed": 72
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/claude/claude-background-task-frames.ts",
+          "changedLinesSha256": "14a355f8928fd700fa76ad5f81fa0bc64585f28a5e1f3158035bdb4996d2610b",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/daemon/terminal-mouse-mode-mirror.ts",
+          "changedLinesSha256": "985b967ad1696ca9168b0c7711d852847a334bf960f424770de7cc39168d6eb1",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/plugins/plugin-worker-output-buffer.ts",
+          "changedLinesSha256": "b91008503e77e85441f1fb43da5214f8fbc5c3c1bee55c0746dd6d14bd3b0c53",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ports/advertised-url-parsing.ts",
+          "changedLinesSha256": "dbf35f427e9cc36e2ef23fb369175253ae78e2985693bec58dbb48192f2a37fc",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/ports/advertised-url-watcher.ts",
+          "changedLinesSha256": "446be1bf6eb2bc18b6ab71dd5b9e1cd7d5ccaf450b35e97ee11c3aac4268e7ba",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/main/runtime/recent-pty-output-buffer.ts",
+          "changedLinesSha256": "07535797ab30ef5a1cb8b08fa9c04963f9b1cab24629b90185cab3a0f31fa06d",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/deferred-reattach-live-data-queue.ts",
+          "changedLinesSha256": "94d43814c31539e5dafe85bee812d6191f24507ecfc5cdf83b239c9c8e860bd1",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp.ts",
+          "changedLinesSha256": "c72f12b1149cc33c52817534b17a0039685076128c4c4d535948043b6a13d548",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/terminal-error-accumulation.ts",
+          "changedLinesSha256": "116c23e2f9e078aba8a937525b010b57b80d97721774eed4877f0edb97365f33",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/check-job-log-tail-slice.ts",
+          "changedLinesSha256": "83405d366c729579fc2f9128495f55cecce70b13ac47e5ff910d9f4159a7a8b1",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/command-code-output-status.ts",
+          "changedLinesSha256": "ef45baeab3ba4cc997e95763ec7a8123675b66b7c3ef8cb80218f1b6034d6862",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/terminal-kitty-keyboard-mode-tracker.ts",
+          "changedLinesSha256": "f65e31bf1ebacf500da4a94a392ca2b34eb13ebdcaf69529c74b9842197782e4",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/terminal-osc133-command-finished.ts",
+          "changedLinesSha256": "78ee71ed8051afd1b7ceeef66c9bfa42e0ac2f051cfd11a38fa8bf03fa9d6d0f",
+          "identicalReviewedChanges": true
+        },
+        {
+          "path": "src/shared/workspace-session-terminal-buffers.ts",
+          "changedLinesSha256": "ad40a57100aa76e8a812c04df8b4ecd9372ed5bec4a73966d6040d7060c2efd1",
+          "identicalReviewedChanges": true
+        }
+      ]
+    },
+    {
+      "number": 20941,
+      "headMerged": "7c6e8a9ba9cf9794aaaadcf946e6cfc4be457b61",
+      "mergeCommit": "28c32f358736b6b01d28f0277203eef7e79f0b69",
+      "parent": "d04b05b5c8f0b8074a7e316c8cd6ccdbbddf7e2c",
+      "inNamedMain": true,
+      "production": {
+        "additions": 4,
+        "deletions": 0,
+        "changed": 4
+      },
+      "productionMatchesOriginalReviewedChanges": true,
+      "productionSignatures": [
+        {
+          "path": "src/main/stats/collector.ts",
+          "changedLinesSha256": "117ec52a59485f491892e63a8f0c5b392b07b7e2323deb8a74b354d885477fa6",
+          "identicalReviewedChanges": true
+        }
+      ]
+    }
+  ]
+}

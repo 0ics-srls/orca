@@ -1,0 +1,84 @@
+{
+  "observedAt": "2026-09-18T03:31:33.680060+00:00",
+  "number": 21011,
+  "main": "0e935c4b0ac132b77050fa918d0598fd78f51161",
+  "childHead": "26b9c6fc857b48af7bbd1f29216e5813a245c8cd",
+  "parentSquashCommit": "41059f65b25d9ea1f67a3ed92ca795d98450a667",
+  "reviewedParent": "827dabf9582a92820d340c58452b66468f5e2199",
+  "reviewedChild": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+  "boundary": "No refs or source files changed. Merge-tree and temporary index write Git tree objects only. This proves exact tree scope, not full CI on the resulting main tree.",
+  "passed": true,
+  "mergeTreeExitCode": 0,
+  "mergeTreeOutput": ["b64d1fa6e0044f27d3a46ba5122212fa5b143df3"],
+  "actualMergeTree": "b64d1fa6e0044f27d3a46ba5122212fa5b143df3",
+  "originalPatchApplyExitCode": 0,
+  "originalPatchApplyStderr": "",
+  "expectedTreeFromOriginalChildDelta": "b64d1fa6e0044f27d3a46ba5122212fa5b143df3",
+  "exactOriginalChildDeltaOnly": true,
+  "allResultDeltaPaths": [
+    {
+      "path": "docs/audits/queued-terminal-graph-exit/README.md",
+      "added": "58",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/queued-terminal-graph-exit/fixture.ts",
+      "added": "231",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/queued-terminal-graph-exit/preserved-history-fixture.ts",
+      "added": "180",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/queued-terminal-graph-exit/reproduce.mjs",
+      "added": "174",
+      "deleted": "0"
+    },
+    {
+      "path": "docs/audits/queued-terminal-graph-exit/results.json",
+      "added": "1763",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts",
+      "added": "4",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-on-pty-exit.ts",
+      "added": "4",
+      "deleted": "6"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-sync-window-graph.ts",
+      "added": "5",
+      "deleted": "3"
+    },
+    {
+      "path": "src/main/runtime/queued-terminal-graph-exit.test.ts",
+      "added": "251",
+      "deleted": "0"
+    }
+  ],
+  "productionDelta": [
+    {
+      "path": "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts",
+      "added": "4",
+      "deleted": "0"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-on-pty-exit.ts",
+      "added": "4",
+      "deleted": "6"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-sync-window-graph.ts",
+      "added": "5",
+      "deleted": "3"
+    }
+  ],
+  "productionChangedLines": 22,
+  "below100ProductionChangedLines": true
+}

@@ -1,0 +1,33 @@
+{
+  "number": 20960,
+  "candidate": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+  "tree": "4484a46823bf1abf005d5fdd6eae2cf72a6a0890",
+  "main": "9c921360090667e02363fe6e4dee98410665427a",
+  "topicHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+  "testedAt": "2026-09-18T03:14:12.672080+00:00",
+  "tests": {
+    "passedSuites": 21,
+    "passedCases": 204,
+    "selection": "All10 PR retention suites plus11 current-main Claude background-task/fallback suites",
+    "log": "notes/pr-merge-selection/20960-integration/tests.log",
+    "paths": "notes/pr-merge-selection/20960-integration/tests.json",
+    "backgroundLaunch": true
+  },
+  "sourceFence": {
+    "verifiedSourceFiles": 239,
+    "mismatches": [],
+    "graph": "notes/pr-merge-selection/20960-integration/loaded-graph.json"
+  },
+  "productionPreservation": {
+    "unchangedPublishedProductFiles": 13,
+    "onlyChangedProductPath": "src/main/claude/claude-background-task-frames.ts",
+    "resolutionControl": "notes/pr-merge-selection/20960-integration/conflict-control.json",
+    "description": "Merged path equals exact current main plus original ownRetainedString import and original bounded-copy expression; all other PR product files byte-identical to reviewed published head."
+  },
+  "limitations": [
+    "Installed Node dependencies are the shared worktree packages, not reconstructed historical dependencies.",
+    "macOS host; no fresh Linux/Windows native execution.",
+    "Focused candidate tests and merge diff checks; complete candidate-tree typecheck and required CI remain publication gates."
+  ],
+  "publication": "Candidate object only; no branch/ref update or push."
+}

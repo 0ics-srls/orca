@@ -1,0 +1,62 @@
+{
+  "refs": {
+    "baselineMain": "9c921360090667e02363fe6e4dee98410665427a",
+    "refreshedHead": "7c6e8a9ba9cf9794aaaadcf946e6cfc4be457b61",
+    "originalReviewedHead": "b34a5d921a66f9a26388fe32273732d48303dcf7"
+  },
+  "ciTestedMerge": "0d6a0265c9ef25784b4d30faa09ae191b028ed46",
+  "ciTestedMergeSource": "checkout/log lines182-185 in downloaded log",
+  "jobUrl": "https://github.com/stablyai/orca/actions/runs/35302224931/job/105467162920",
+  "logSha256": "3c3d12dfd0150cd226e732efe427f10765d9409016225c6581c33d3b6d207ee0",
+  "paths": [
+    {
+      "path": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx",
+      "baselineMain": "a39b732b28acf4ba725971be0bcb60bdf6a31014",
+      "refreshedHead": "a39b732b28acf4ba725971be0bcb60bdf6a31014",
+      "originalReviewedHead": "a39b732b28acf4ba725971be0bcb60bdf6a31014",
+      "workingHash": "a39b732b28acf4ba725971be0bcb60bdf6a31014"
+    },
+    {
+      "path": "src/renderer/src/components/right-sidebar/use-subagent-sessions.ts",
+      "baselineMain": "b86df1367098347527695cb99ad64e4faa64eedb",
+      "refreshedHead": "b86df1367098347527695cb99ad64e4faa64eedb",
+      "originalReviewedHead": "b86df1367098347527695cb99ad64e4faa64eedb",
+      "workingHash": "b86df1367098347527695cb99ad64e4faa64eedb"
+    },
+    {
+      "path": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.tsx",
+      "baselineMain": "e5e32646de47f350beb8675f889dfca5764da31a",
+      "refreshedHead": "e5e32646de47f350beb8675f889dfca5764da31a",
+      "originalReviewedHead": "e5e32646de47f350beb8675f889dfca5764da31a",
+      "workingHash": "e5e32646de47f350beb8675f889dfca5764da31a"
+    },
+    {
+      "path": "config/vitest.config.ts",
+      "baselineMain": "beaf82f4e12df3cabe6615d3ffbcf2e66cd5206d",
+      "refreshedHead": "beaf82f4e12df3cabe6615d3ffbcf2e66cd5206d",
+      "originalReviewedHead": "beaf82f4e12df3cabe6615d3ffbcf2e66cd5206d",
+      "workingHash": "beaf82f4e12df3cabe6615d3ffbcf2e66cd5206d"
+    },
+    {
+      "path": "config/scripts/vitest-host-ports-setup.ts",
+      "baselineMain": "34df265b7e2bcba1c6ac85e703a29986f1dea3db",
+      "refreshedHead": "34df265b7e2bcba1c6ac85e703a29986f1dea3db",
+      "originalReviewedHead": "34df265b7e2bcba1c6ac85e703a29986f1dea3db",
+      "workingHash": "34df265b7e2bcba1c6ac85e703a29986f1dea3db"
+    },
+    {
+      "path": "src/main/stats/collector.ts",
+      "baselineMain": "ba484d63a57d220bf049fcbccf363944d50b9d94",
+      "refreshedHead": "9fd8d685c52761c5e1c651bef121c833ce09a2a5",
+      "originalReviewedHead": "9fd8d685c52761c5e1c651bef121c833ce09a2a5",
+      "workingHash": "9fd8d685c52761c5e1c651bef121c833ce09a2a5"
+    },
+    {
+      "path": "src/main/stats/collector-async-save.test.ts",
+      "baselineMain": "80d6c8b5497ecba98805f94d01244329a11fb0af",
+      "refreshedHead": "5497c1d0d26e9817d4a777ea20f555e31378636e",
+      "originalReviewedHead": "5497c1d0d26e9817d4a777ea20f555e31378636e",
+      "workingHash": "5497c1d0d26e9817d4a777ea20f555e31378636e"
+    }
+  ]
+}

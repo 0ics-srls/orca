@@ -1,0 +1,32 @@
+{
+  "children": [
+    {
+      "number": 21011,
+      "head": "26b9c6fc857b48af7bbd1f29216e5813a245c8cd",
+      "production": {
+        "files": 10,
+        "additions": 60,
+        "deletions": 37,
+        "changed": 97,
+        "binaryFiles": []
+      },
+      "actualNewProductionLines": 22,
+      "explanation": "Conservative production count includes already merged parent because squash ancestry remains in displayed PR diff; verified actual merge adds only original child delta.",
+      "proof": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/21011-post-parent-merge-check.json"
+    },
+    {
+      "number": 21019,
+      "head": "58cf21c110cd3f6bc80e8d3c7114613ca89f0d76",
+      "production": {
+        "files": 8,
+        "additions": 57,
+        "deletions": 28,
+        "changed": 85,
+        "binaryFiles": []
+      },
+      "actualNewProductionLines": 10,
+      "explanation": "Conservative production count includes already merged parent because squash ancestry remains in displayed PR diff; verified actual merge adds only original child delta.",
+      "proof": "/Users/m4air/orca/workspaces/orca/np-oom-scan/notes/pr-merge-selection/21019-post-parent-merge-check.json"
+    }
+  ]
+}

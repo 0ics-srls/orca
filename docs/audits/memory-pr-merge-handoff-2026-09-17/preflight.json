@@ -1,0 +1,1742 @@
+{
+  "observedAt": "2026-09-18T03:20:16.829673+00:00",
+  "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+  "metadataSource": "notes/pr-merge-selection/checks-latest.json",
+  "metadataObservedAt": "2026-09-18T03:19:50.045557+00:00",
+  "boundary": "Read-only hypothetical merge trees from each exact head into one named current main. Production LoC measures main-to-merged-tree additions plus deletions, including pending stack ancestors until they land. Classified with the reviewed per-path map. No tests rerun, source/index/ref changes or pushes; git fetch updated tracking refs and merge-tree created tree objects only.",
+  "pullRequests": [
+    {
+      "number": 20910,
+      "head": "52bab01a4cdeb6272ce2776b3e82bd6111531504",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "16e82a81f822eeec80340d3bc71c08f8afecab7f",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "src/main/hang-watchdog/main-thread-hang-watchdog.test.ts",
+          "category": "test",
+          "added": 5,
+          "deleted": 1,
+          "changed": 6
+        },
+        {
+          "path": "src/main/hang-watchdog/main-thread-hang-watchdog.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 0,
+          "changed": 4
+        }
+      ],
+      "productionChangedLines": 4,
+      "productionAdded": 4,
+      "productionDeleted": 0,
+      "productionFiles": ["src/main/hang-watchdog/main-thread-hang-watchdog.ts"],
+      "reviewedOwnProductionChangedLines": 4,
+      "reviewedHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "71b61f8b63c868e2941ddd09a71fa8bf55f6aa59f3210c07cf080313c2d00ddd",
+        "effective": "71b61f8b63c868e2941ddd09a71fa8bf55f6aa59f3210c07cf080313c2d00ddd"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 20941,
+      "head": "7c6e8a9ba9cf9794aaaadcf946e6cfc4be457b61",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "7b30713f6b80c71b07cffe9dff136fe8a5d65a94",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "src/main/stats/collector-async-save.test.ts",
+          "category": "test",
+          "added": 40,
+          "deleted": 0,
+          "changed": 40
+        },
+        {
+          "path": "src/main/stats/collector.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 0,
+          "changed": 4
+        }
+      ],
+      "productionChangedLines": 4,
+      "productionAdded": 4,
+      "productionDeleted": 0,
+      "productionFiles": ["src/main/stats/collector.ts"],
+      "reviewedOwnProductionChangedLines": 4,
+      "reviewedHead": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "a590513514d41a3970febc873322fe7696b41d0ee25f2e49c47e8cede77d4218",
+        "effective": "a590513514d41a3970febc873322fe7696b41d0ee25f2e49c47e8cede77d4218"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 20960,
+      "head": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "c1fa0abce5c73371d91577c9849d8c8fe0d68f2a",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/claude-task-retention/README.md",
+          "category": "documentation",
+          "added": 64,
+          "deleted": 0,
+          "changed": 64
+        },
+        {
+          "path": "docs/audits/claude-task-retention/reproduce.cjs",
+          "category": "documentation",
+          "added": 197,
+          "deleted": 0,
+          "changed": 197
+        },
+        {
+          "path": "docs/audits/claude-task-retention/results.json",
+          "category": "documentation",
+          "added": 370,
+          "deleted": 0,
+          "changed": 370
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/README.md",
+          "category": "documentation",
+          "added": 106,
+          "deleted": 0,
+          "changed": 106
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/before.config.mjs",
+          "category": "documentation",
+          "added": 23,
+          "deleted": 0,
+          "changed": 23
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/electron-results.json",
+          "category": "documentation",
+          "added": 1535,
+          "deleted": 0,
+          "changed": 1535
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/fix.patch",
+          "category": "documentation",
+          "added": 7,
+          "deleted": 0,
+          "changed": 7
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/node-results.json",
+          "category": "documentation",
+          "added": 1535,
+          "deleted": 0,
+          "changed": 1535
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/reproduce.cjs",
+          "category": "documentation",
+          "added": 142,
+          "deleted": 0,
+          "changed": 142
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/scenario.cjs",
+          "category": "documentation",
+          "added": 99,
+          "deleted": 0,
+          "changed": 99
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/source-versions.json",
+          "category": "documentation",
+          "added": 646,
+          "deleted": 0,
+          "changed": 646
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/sources.cjs",
+          "category": "documentation",
+          "added": 87,
+          "deleted": 0,
+          "changed": 87
+        },
+        {
+          "path": "docs/audits/osc133-carry-retention/validation.json",
+          "category": "documentation",
+          "added": 83,
+          "deleted": 0,
+          "changed": 83
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/README.md",
+          "category": "documentation",
+          "added": 67,
+          "deleted": 0,
+          "changed": 67
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/before.config.mjs",
+          "category": "documentation",
+          "added": 23,
+          "deleted": 0,
+          "changed": 23
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/electron-results.json",
+          "category": "documentation",
+          "added": 493,
+          "deleted": 0,
+          "changed": 493
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/fix.patch",
+          "category": "documentation",
+          "added": 18,
+          "deleted": 0,
+          "changed": 18
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/node-results.json",
+          "category": "documentation",
+          "added": 492,
+          "deleted": 0,
+          "changed": 492
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/reproduce.cjs",
+          "category": "documentation",
+          "added": 249,
+          "deleted": 0,
+          "changed": 249
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/source-versions.json",
+          "category": "documentation",
+          "added": 89,
+          "deleted": 0,
+          "changed": 89
+        },
+        {
+          "path": "docs/audits/plugin-worker-output-retention/sources.cjs",
+          "category": "documentation",
+          "added": 94,
+          "deleted": 0,
+          "changed": 94
+        },
+        {
+          "path": "docs/audits/pty-detector-retention/README.md",
+          "category": "documentation",
+          "added": 59,
+          "deleted": 0,
+          "changed": 59
+        },
+        {
+          "path": "docs/audits/pty-detector-retention/reproduce.mjs",
+          "category": "documentation",
+          "added": 144,
+          "deleted": 0,
+          "changed": 144
+        },
+        {
+          "path": "docs/audits/pty-detector-retention/results.json",
+          "category": "documentation",
+          "added": 94,
+          "deleted": 0,
+          "changed": 94
+        },
+        {
+          "path": "docs/audits/retained-text-slices/README.md",
+          "category": "documentation",
+          "added": 75,
+          "deleted": 0,
+          "changed": 75
+        },
+        {
+          "path": "docs/audits/retained-text-slices/reproduce.mjs",
+          "category": "documentation",
+          "added": 161,
+          "deleted": 0,
+          "changed": 161
+        },
+        {
+          "path": "docs/audits/retained-text-slices/results.json",
+          "category": "documentation",
+          "added": 140,
+          "deleted": 0,
+          "changed": 140
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/README.md",
+          "category": "documentation",
+          "added": 122,
+          "deleted": 0,
+          "changed": 122
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/electron-results.json",
+          "category": "documentation",
+          "added": 467,
+          "deleted": 0,
+          "changed": 467
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/load-source.cjs",
+          "category": "documentation",
+          "added": 68,
+          "deleted": 0,
+          "changed": 68
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/node-results.json",
+          "category": "documentation",
+          "added": 467,
+          "deleted": 0,
+          "changed": 467
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/reproduce.cjs",
+          "category": "documentation",
+          "added": 205,
+          "deleted": 0,
+          "changed": 205
+        },
+        {
+          "path": "docs/audits/terminal-mode-tail-retention/source-versions.json",
+          "category": "documentation",
+          "added": 44,
+          "deleted": 0,
+          "changed": 44
+        },
+        {
+          "path": "src/main/claude/claude-background-task-frames.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 1,
+          "changed": 3
+        },
+        {
+          "path": "src/main/claude/claude-background-task-retention.test.ts",
+          "category": "test",
+          "added": 96,
+          "deleted": 0,
+          "changed": 96
+        },
+        {
+          "path": "src/main/daemon/terminal-mouse-mode-mirror.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 2,
+          "changed": 5
+        },
+        {
+          "path": "src/main/daemon/terminal-mouse-tail-retention.test.ts",
+          "category": "test",
+          "added": 41,
+          "deleted": 0,
+          "changed": 41
+        },
+        {
+          "path": "src/main/plugins/plugin-worker-output-buffer.ts",
+          "category": "production",
+          "added": 7,
+          "deleted": 4,
+          "changed": 11
+        },
+        {
+          "path": "src/main/plugins/plugin-worker-output-retention.test.ts",
+          "category": "test",
+          "added": 82,
+          "deleted": 0,
+          "changed": 82
+        },
+        {
+          "path": "src/main/ports/advertised-url-parsing.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 1,
+          "changed": 3
+        },
+        {
+          "path": "src/main/ports/advertised-url-retention.test.ts",
+          "category": "test",
+          "added": 44,
+          "deleted": 0,
+          "changed": 44
+        },
+        {
+          "path": "src/main/ports/advertised-url-watcher.ts",
+          "category": "production",
+          "added": 6,
+          "deleted": 1,
+          "changed": 7
+        },
+        {
+          "path": "src/main/runtime/recent-pty-output-buffer.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 1,
+          "changed": 4
+        },
+        {
+          "path": "src/main/runtime/recent-pty-output-retention.test.ts",
+          "category": "test",
+          "added": 35,
+          "deleted": 0,
+          "changed": 35
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/deferred-reattach-live-data-queue.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 1,
+          "changed": 5
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp.ts",
+          "category": "production",
+          "added": 5,
+          "deleted": 1,
+          "changed": 6
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/terminal-capped-buffer-retention.test.ts",
+          "category": "test",
+          "added": 92,
+          "deleted": 0,
+          "changed": 92
+        },
+        {
+          "path": "src/renderer/src/components/terminal-pane/terminal-error-accumulation.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 2,
+          "changed": 6
+        },
+        {
+          "path": "src/shared/check-job-log-retention.test.ts",
+          "category": "test",
+          "added": 45,
+          "deleted": 0,
+          "changed": 45
+        },
+        {
+          "path": "src/shared/check-job-log-tail-slice.ts",
+          "category": "production",
+          "added": 7,
+          "deleted": 1,
+          "changed": 8
+        },
+        {
+          "path": "src/shared/command-code-output-retention.test.ts",
+          "category": "test",
+          "added": 26,
+          "deleted": 0,
+          "changed": 26
+        },
+        {
+          "path": "src/shared/command-code-output-status.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 1,
+          "changed": 3
+        },
+        {
+          "path": "src/shared/terminal-kitty-keyboard-mode-tracker.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 1,
+          "changed": 3
+        },
+        {
+          "path": "src/shared/terminal-kitty-keyboard-tail-retention.test.ts",
+          "category": "test",
+          "added": 41,
+          "deleted": 0,
+          "changed": 41
+        },
+        {
+          "path": "src/shared/terminal-osc133-carry-retention.test.ts",
+          "category": "test",
+          "added": 109,
+          "deleted": 0,
+          "changed": 109
+        },
+        {
+          "path": "src/shared/terminal-osc133-command-finished.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 0,
+          "changed": 3
+        },
+        {
+          "path": "src/shared/workspace-session-terminal-buffers.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 1,
+          "changed": 5
+        }
+      ],
+      "productionChangedLines": 72,
+      "productionAdded": 54,
+      "productionDeleted": 18,
+      "productionFiles": [
+        "src/main/claude/claude-background-task-frames.ts",
+        "src/main/daemon/terminal-mouse-mode-mirror.ts",
+        "src/main/plugins/plugin-worker-output-buffer.ts",
+        "src/main/ports/advertised-url-parsing.ts",
+        "src/main/ports/advertised-url-watcher.ts",
+        "src/main/runtime/recent-pty-output-buffer.ts",
+        "src/renderer/src/components/terminal-pane/deferred-reattach-live-data-queue.ts",
+        "src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp.ts",
+        "src/renderer/src/components/terminal-pane/terminal-error-accumulation.ts",
+        "src/shared/check-job-log-tail-slice.ts",
+        "src/shared/command-code-output-status.ts",
+        "src/shared/terminal-kitty-keyboard-mode-tracker.ts",
+        "src/shared/terminal-osc133-command-finished.ts",
+        "src/shared/workspace-session-terminal-buffers.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 72,
+      "reviewedHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "22827f630b14f0e4be48eb52290b2b38d5afca4e889d09ee2e6f93e4e511b460",
+        "effective": "22827f630b14f0e4be48eb52290b2b38d5afca4e889d09ee2e6f93e4e511b460"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "manualResolutionPreservation": {
+        "path": "src/main/claude/claude-background-task-frames.ts",
+        "candidate": "f0c8bdfb7db68db5ee6e484724b995c875106fb1",
+        "mergedBlobByteIdenticalToTestedCandidate": true,
+        "sha256": "0d1eb32706a63e2d4c800dabcc3d478025311635bfd42c826e7fdf5aa12f0fc3",
+        "review": "Retains both current-main fallback import and PR retained-string import; original ownership-copy expression unchanged. Previously passed204 tests; no tests rerun."
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 20978,
+      "head": "7b0ddd7cc0a1022345eaffabb4d6c30105db1679",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "4867f2f82dd3585f93dfc50eda6839227f5363e5",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/structured-hold-retention/README.md",
+          "category": "documentation",
+          "added": 51,
+          "deleted": 0,
+          "changed": 51
+        },
+        {
+          "path": "docs/audits/structured-hold-retention/reproduce.mjs",
+          "category": "documentation",
+          "added": 129,
+          "deleted": 0,
+          "changed": 129
+        },
+        {
+          "path": "docs/audits/structured-hold-retention/results.json",
+          "category": "documentation",
+          "added": 18,
+          "deleted": 0,
+          "changed": 18
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-hold-resume-race.test.ts",
+          "category": "test",
+          "added": 289,
+          "deleted": 0,
+          "changed": 289
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+          "category": "production",
+          "added": 23,
+          "deleted": 5,
+          "changed": 28
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+          "category": "production",
+          "added": 12,
+          "deleted": 5,
+          "changed": 17
+        },
+        {
+          "path": "src/main/runtime/rpc/methods/structured-agent-session-hold.test.ts",
+          "category": "test",
+          "added": 101,
+          "deleted": 0,
+          "changed": 101
+        },
+        {
+          "path": "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 2,
+          "changed": 4
+        },
+        {
+          "path": "tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts",
+          "category": "test",
+          "added": 6,
+          "deleted": 14,
+          "changed": 20
+        }
+      ],
+      "productionChangedLines": 49,
+      "productionAdded": 37,
+      "productionDeleted": 12,
+      "productionFiles": [
+        "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+        "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+        "src/main/runtime/rpc/methods/structured-agent-session-hold.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 49,
+      "reviewedHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "3c578720f0535c28e17157db6f3f322467ab9f43faf80d63ddb4acdbaf3f1daf",
+        "effective": "3c578720f0535c28e17157db6f3f322467ab9f43faf80d63ddb4acdbaf3f1daf"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "manualResolutionPreservation": {
+        "path": "tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts",
+        "candidate": "7b0ddd7cc0a1022345eaffabb4d6c30105db1679",
+        "mergedBlobByteIdenticalToTestedCandidate": true,
+        "sha256": "58814c8cc3f292271330002e5d238fe91d4659d56ddf55e3eacee06680863c41",
+        "productionOriginalPublishedHashesReverified": [
+          {
+            "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+            "sha256": "4933ee2123b02cd114fc2b3c56cc06e43cc384802bd9e4c5174fa03053beb83a"
+          },
+          {
+            "path": "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+            "sha256": "c95e27518d6cb09f1c97e5ff18bbb9fc5b15c7680d4a99e90cc14353d602230f"
+          },
+          {
+            "path": "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+            "sha256": "26a8c39ee74a3781ef001372e7931abaf7656312abd900ca9c32f24bdaaa3ac8"
+          }
+        ],
+        "review": "Only test import conflict was manually resolved; no production edits. All3 production blobs still match the original reviewed PR; previous targeted validation preserved, no tests rerun."
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 20986,
+      "head": "03bb5c6c09a2660ae4728165cf049f112f947a37",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "cfd2274db18e7609dc90dfda466008b3a7270e29",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/session-search-write-fences/README.md",
+          "category": "documentation",
+          "added": 49,
+          "deleted": 0,
+          "changed": 49
+        },
+        {
+          "path": "docs/audits/session-search-write-fences/reproduce.mjs",
+          "category": "documentation",
+          "added": 108,
+          "deleted": 0,
+          "changed": 108
+        },
+        {
+          "path": "docs/audits/session-search-write-fences/results.json",
+          "category": "documentation",
+          "added": 23,
+          "deleted": 0,
+          "changed": 23
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-index-consumer.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 0,
+          "changed": 3
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-index-writer.test.ts",
+          "category": "test",
+          "added": 17,
+          "deleted": 23,
+          "changed": 40
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-index-writer.ts",
+          "category": "production",
+          "added": 50,
+          "deleted": 15,
+          "changed": 65
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-store.ts",
+          "category": "production",
+          "added": 1,
+          "deleted": 0,
+          "changed": 1
+        },
+        {
+          "path": "src/main/ai-vault-search/session-search-write-lifetime.test.ts",
+          "category": "test",
+          "added": 209,
+          "deleted": 0,
+          "changed": 209
+        }
+      ],
+      "productionChangedLines": 69,
+      "productionAdded": 54,
+      "productionDeleted": 15,
+      "productionFiles": [
+        "src/main/ai-vault-search/session-search-index-consumer.ts",
+        "src/main/ai-vault-search/session-search-index-writer.ts",
+        "src/main/ai-vault-search/session-search-store.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 69,
+      "reviewedHead": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "9bbdacd0461d1a483bc33fb4954554c1b4e8875806aeb874648f36ed4662a749",
+        "effective": "9bbdacd0461d1a483bc33fb4954554c1b4e8875806aeb874648f36ed4662a749"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 20996,
+      "head": "17081ebd3cdf78272e0ce0b4824853a4bbb8da82",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "aab127da5ea2ed1bba68f6bb36200284e9411065",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/headless-hydration-retention/README.md",
+          "category": "documentation",
+          "added": 39,
+          "deleted": 0,
+          "changed": 39
+        },
+        {
+          "path": "docs/audits/headless-hydration-retention/fix.patch",
+          "category": "documentation",
+          "added": 158,
+          "deleted": 0,
+          "changed": 158
+        },
+        {
+          "path": "docs/audits/headless-hydration-retention/reproduce.mjs",
+          "category": "documentation",
+          "added": 130,
+          "deleted": 0,
+          "changed": 130
+        },
+        {
+          "path": "docs/audits/headless-hydration-retention/results.json",
+          "category": "documentation",
+          "added": 51,
+          "deleted": 0,
+          "changed": 51
+        },
+        {
+          "path": "src/main/runtime/headless-hydration-ownership-test-fixture.ts",
+          "category": "test-support",
+          "added": 82,
+          "deleted": 0,
+          "changed": 82
+        },
+        {
+          "path": "src/main/runtime/headless-hydration-ownership.test.ts",
+          "category": "test",
+          "added": 125,
+          "deleted": 0,
+          "changed": 125
+        },
+        {
+          "path": "src/main/runtime/headless-seed-ownership.test.ts",
+          "category": "test",
+          "added": 202,
+          "deleted": 0,
+          "changed": 202
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-capture-provider-terminal-buffer.ts",
+          "category": "production",
+          "added": 7,
+          "deleted": 4,
+          "changed": 11
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-create-pty-headless-terminal-state.ts",
+          "category": "production",
+          "added": 10,
+          "deleted": 2,
+          "changed": 12
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts",
+          "category": "production",
+          "added": 14,
+          "deleted": 2,
+          "changed": 16
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-serialize-main-terminal-buffer.ts",
+          "category": "production",
+          "added": 9,
+          "deleted": 0,
+          "changed": 9
+        }
+      ],
+      "productionChangedLines": 48,
+      "productionAdded": 40,
+      "productionDeleted": 8,
+      "productionFiles": [
+        "src/main/runtime/orca-runtime-capture-provider-terminal-buffer.ts",
+        "src/main/runtime/orca-runtime-create-pty-headless-terminal-state.ts",
+        "src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts",
+        "src/main/runtime/orca-runtime-serialize-main-terminal-buffer.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 48,
+      "reviewedHead": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "3756265f255cdc0b407e29ff434a90c66dfec3d5a7f3015bb9db79d748738e62",
+        "effective": "3756265f255cdc0b407e29ff434a90c66dfec3d5a7f3015bb9db79d748738e62"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 2,
+        "output": "docs/audits/headless-hydration-retention/fix.patch:81: trailing whitespace.\n+ \n"
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21000,
+      "head": "87c294ec9c9e7b09cfa0dbc12f309d4accb09a1e",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "8a4962294f7d2a04079e9069fd044d8e37b86456",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/daemon-late-exit/README.md",
+          "category": "documentation",
+          "added": 70,
+          "deleted": 0,
+          "changed": 70
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/reproduce.mjs",
+          "category": "documentation",
+          "added": 120,
+          "deleted": 0,
+          "changed": 120
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/results.json",
+          "category": "documentation",
+          "added": 236,
+          "deleted": 0,
+          "changed": 236
+        },
+        {
+          "path": "src/main/ipc/pty-runtime-kill-and-exit.test.ts",
+          "category": "test",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit-test-fixture.ts",
+          "category": "test-support",
+          "added": 211,
+          "deleted": 0,
+          "changed": 211
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit.test.ts",
+          "category": "test",
+          "added": 235,
+          "deleted": 0,
+          "changed": 235
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/exit.ts",
+          "category": "production",
+          "added": 16,
+          "deleted": 8,
+          "changed": 24
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/wire-session.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 2,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/ipc/renderer-kill.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 3,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/provider/bind-listeners.ts",
+          "category": "production",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/controller-deps.ts",
+          "category": "production",
+          "added": 1,
+          "deleted": 1,
+          "changed": 2
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/kill.ts",
+          "category": "production",
+          "added": 9,
+          "deleted": 8,
+          "changed": 17
+        },
+        {
+          "path": "src/main/ipc/pty/session.ts",
+          "category": "production",
+          "added": 6,
+          "deleted": 3,
+          "changed": 9
+        }
+      ],
+      "productionChangedLines": 75,
+      "productionAdded": 47,
+      "productionDeleted": 28,
+      "productionFiles": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 75,
+      "reviewedHead": "827dabf9582a92820d340c58452b66468f5e2199",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "1c1a958653e97ed7023fba05507e314257f8b9b31559601e4e24356d17c2159a",
+        "effective": "1c1a958653e97ed7023fba05507e314257f8b9b31559601e4e24356d17c2159a"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21002,
+      "head": "0b238dd71ba6da03ea00d50d53dd6a5430e61dd3",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "3a9f5073ba9d021676bc898f6c4b6e01da586704",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/tui-transcript-close/README.md",
+          "category": "documentation",
+          "added": 30,
+          "deleted": 0,
+          "changed": 30
+        },
+        {
+          "path": "docs/audits/tui-transcript-close/reproduce.mjs",
+          "category": "documentation",
+          "added": 140,
+          "deleted": 0,
+          "changed": 140
+        },
+        {
+          "path": "docs/audits/tui-transcript-close/results.json",
+          "category": "documentation",
+          "added": 30,
+          "deleted": 0,
+          "changed": 30
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-owner-close.ts",
+          "category": "production",
+          "added": 1,
+          "deleted": 0,
+          "changed": 1
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-tui-transcript-close.test.ts",
+          "category": "test",
+          "added": 168,
+          "deleted": 0,
+          "changed": 168
+        }
+      ],
+      "productionChangedLines": 1,
+      "productionAdded": 1,
+      "productionDeleted": 0,
+      "productionFiles": [
+        "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-owner-close.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 1,
+      "reviewedHead": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "9242bf78054e8fe54385cec10cb69cdc31c73e42e1c15a4a914d27af14460f2b",
+        "effective": "9242bf78054e8fe54385cec10cb69cdc31c73e42e1c15a4a914d27af14460f2b"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21011,
+      "head": "26b9c6fc857b48af7bbd1f29216e5813a245c8cd",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "30d133edf27bd2c57aa7344889cc70355461f883",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/daemon-late-exit/README.md",
+          "category": "documentation",
+          "added": 70,
+          "deleted": 0,
+          "changed": 70
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/reproduce.mjs",
+          "category": "documentation",
+          "added": 120,
+          "deleted": 0,
+          "changed": 120
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/results.json",
+          "category": "documentation",
+          "added": 236,
+          "deleted": 0,
+          "changed": 236
+        },
+        {
+          "path": "docs/audits/queued-terminal-graph-exit/README.md",
+          "category": "documentation",
+          "added": 58,
+          "deleted": 0,
+          "changed": 58
+        },
+        {
+          "path": "docs/audits/queued-terminal-graph-exit/fixture.ts",
+          "category": "documentation",
+          "added": 231,
+          "deleted": 0,
+          "changed": 231
+        },
+        {
+          "path": "docs/audits/queued-terminal-graph-exit/preserved-history-fixture.ts",
+          "category": "test-support",
+          "added": 180,
+          "deleted": 0,
+          "changed": 180
+        },
+        {
+          "path": "docs/audits/queued-terminal-graph-exit/reproduce.mjs",
+          "category": "documentation",
+          "added": 174,
+          "deleted": 0,
+          "changed": 174
+        },
+        {
+          "path": "docs/audits/queued-terminal-graph-exit/results.json",
+          "category": "documentation",
+          "added": 1763,
+          "deleted": 0,
+          "changed": 1763
+        },
+        {
+          "path": "src/main/ipc/pty-runtime-kill-and-exit.test.ts",
+          "category": "test",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit-test-fixture.ts",
+          "category": "test-support",
+          "added": 211,
+          "deleted": 0,
+          "changed": 211
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit.test.ts",
+          "category": "test",
+          "added": 235,
+          "deleted": 0,
+          "changed": 235
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/exit.ts",
+          "category": "production",
+          "added": 16,
+          "deleted": 8,
+          "changed": 24
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/wire-session.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 2,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/ipc/renderer-kill.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 3,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/provider/bind-listeners.ts",
+          "category": "production",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/controller-deps.ts",
+          "category": "production",
+          "added": 1,
+          "deleted": 1,
+          "changed": 2
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/kill.ts",
+          "category": "production",
+          "added": 9,
+          "deleted": 8,
+          "changed": 17
+        },
+        {
+          "path": "src/main/ipc/pty/session.ts",
+          "category": "production",
+          "added": 6,
+          "deleted": 3,
+          "changed": 9
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 0,
+          "changed": 4
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-on-pty-exit.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 6,
+          "changed": 10
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-sync-window-graph.ts",
+          "category": "production",
+          "added": 5,
+          "deleted": 3,
+          "changed": 8
+        },
+        {
+          "path": "src/main/runtime/queued-terminal-graph-exit.test.ts",
+          "category": "test",
+          "added": 251,
+          "deleted": 0,
+          "changed": 251
+        }
+      ],
+      "productionChangedLines": 97,
+      "productionAdded": 60,
+      "productionDeleted": 37,
+      "productionFiles": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts",
+        "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts",
+        "src/main/runtime/orca-runtime-on-pty-exit.ts",
+        "src/main/runtime/orca-runtime-sync-window-graph.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 22,
+      "reviewedHead": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "843fed13cb07939e0a0414e6e6b9d967fc890356b981f50fd5d048a998cf0bae",
+        "effective": "843fed13cb07939e0a0414e6e6b9d967fc890356b981f50fd5d048a998cf0bae"
+      },
+      "extraProductionPathsBeyondOwnReview": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "conservativeStackCombinedSize": true,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21012,
+      "head": "8fe3ce4b5ea1b483eb4a0aab0816f4f9735bac87",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "60d714ff127b28e3779cdcfaa1eaada6ae4db7f2",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/browser-registration-reply-retention/README.md",
+          "category": "documentation",
+          "added": 30,
+          "deleted": 0,
+          "changed": 30
+        },
+        {
+          "path": "docs/audits/browser-registration-reply-retention/fix.patch",
+          "category": "documentation",
+          "added": 126,
+          "deleted": 0,
+          "changed": 126
+        },
+        {
+          "path": "docs/audits/browser-registration-reply-retention/reproduce.mjs",
+          "category": "documentation",
+          "added": 153,
+          "deleted": 0,
+          "changed": 153
+        },
+        {
+          "path": "docs/audits/browser-registration-reply-retention/results.json",
+          "category": "documentation",
+          "added": 58,
+          "deleted": 0,
+          "changed": 58
+        },
+        {
+          "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-guest-recovery.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 0,
+          "changed": 2
+        },
+        {
+          "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-registration-ownership.test.ts",
+          "category": "test",
+          "added": 361,
+          "deleted": 0,
+          "changed": 361
+        },
+        {
+          "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-webview-guest-session.ts",
+          "category": "production",
+          "added": 36,
+          "deleted": 8,
+          "changed": 44
+        }
+      ],
+      "productionChangedLines": 46,
+      "productionAdded": 38,
+      "productionDeleted": 8,
+      "productionFiles": [
+        "src/renderer/src/components/browser-pane/host-guest/browser-page-guest-recovery.ts",
+        "src/renderer/src/components/browser-pane/host-guest/browser-page-webview-guest-session.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 46,
+      "reviewedHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "4c57eb4288ba12797244eb6dde8cb280b409b84c4e89b0f422fe635b403e80d4",
+        "effective": "4c57eb4288ba12797244eb6dde8cb280b409b84c4e89b0f422fe635b403e80d4"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 2,
+        "output": "docs/audits/browser-registration-reply-retention/fix.patch:103: trailing whitespace.\n+ \n"
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21018,
+      "head": "06cc2b69e6ea3bcedec919d6495404b7d94c0c82",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "88652674df7256074d46732714558182b6f50a95",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/terminal-wait-leading-blank/README.md",
+          "category": "documentation",
+          "added": 23,
+          "deleted": 0,
+          "changed": 23
+        },
+        {
+          "path": "docs/audits/terminal-wait-leading-blank/reproduce.mjs",
+          "category": "documentation",
+          "added": 249,
+          "deleted": 0,
+          "changed": 249
+        },
+        {
+          "path": "docs/audits/terminal-wait-leading-blank/results.json",
+          "category": "documentation",
+          "added": 172,
+          "deleted": 0,
+          "changed": 172
+        },
+        {
+          "path": "src/main/runtime/terminal-wait-tail-window.test.ts",
+          "category": "test",
+          "added": 77,
+          "deleted": 0,
+          "changed": 77
+        },
+        {
+          "path": "src/main/runtime/terminal-wait-tail-window.ts",
+          "category": "production",
+          "added": 2,
+          "deleted": 1,
+          "changed": 3
+        }
+      ],
+      "productionChangedLines": 3,
+      "productionAdded": 2,
+      "productionDeleted": 1,
+      "productionFiles": ["src/main/runtime/terminal-wait-tail-window.ts"],
+      "reviewedOwnProductionChangedLines": 3,
+      "reviewedHead": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "2736a767f395a86e79ffc7e34d8d316b5b63a67535dcf39cbac3f82b3aa0d550",
+        "effective": "2736a767f395a86e79ffc7e34d8d316b5b63a67535dcf39cbac3f82b3aa0d550"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21019,
+      "head": "58cf21c110cd3f6bc80e8d3c7114613ca89f0d76",
+      "baseRefName": "np-oom-scan-daemon-late-exit",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "a7ffdb9fefbdff9dbe22ff26985453c781c4f7b6",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/daemon-late-exit/README.md",
+          "category": "documentation",
+          "added": 70,
+          "deleted": 0,
+          "changed": 70
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/reproduce.mjs",
+          "category": "documentation",
+          "added": 120,
+          "deleted": 0,
+          "changed": 120
+        },
+        {
+          "path": "docs/audits/daemon-late-exit/results.json",
+          "category": "documentation",
+          "added": 236,
+          "deleted": 0,
+          "changed": 236
+        },
+        {
+          "path": "docs/audits/terminal-close-observed-exit/README.md",
+          "category": "documentation",
+          "added": 37,
+          "deleted": 0,
+          "changed": 37
+        },
+        {
+          "path": "docs/audits/terminal-close-observed-exit/reproduce.mjs",
+          "category": "documentation",
+          "added": 132,
+          "deleted": 0,
+          "changed": 132
+        },
+        {
+          "path": "docs/audits/terminal-close-observed-exit/results.json",
+          "category": "documentation",
+          "added": 359,
+          "deleted": 0,
+          "changed": 359
+        },
+        {
+          "path": "src/main/ipc/pty-runtime-kill-and-exit.test.ts",
+          "category": "test",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit-test-fixture.ts",
+          "category": "test-support",
+          "added": 211,
+          "deleted": 0,
+          "changed": 211
+        },
+        {
+          "path": "src/main/ipc/pty/daemon-late-exit.test.ts",
+          "category": "test",
+          "added": 235,
+          "deleted": 0,
+          "changed": 235
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/exit.ts",
+          "category": "production",
+          "added": 16,
+          "deleted": 8,
+          "changed": 24
+        },
+        {
+          "path": "src/main/ipc/pty/delivery/wire-session.ts",
+          "category": "production",
+          "added": 4,
+          "deleted": 2,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/ipc/renderer-kill.ts",
+          "category": "production",
+          "added": 3,
+          "deleted": 3,
+          "changed": 6
+        },
+        {
+          "path": "src/main/ipc/pty/provider/bind-listeners.ts",
+          "category": "production",
+          "added": 8,
+          "deleted": 3,
+          "changed": 11
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/controller-deps.ts",
+          "category": "production",
+          "added": 1,
+          "deleted": 1,
+          "changed": 2
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/kill.ts",
+          "category": "production",
+          "added": 9,
+          "deleted": 8,
+          "changed": 17
+        },
+        {
+          "path": "src/main/ipc/pty/session.ts",
+          "category": "production",
+          "added": 6,
+          "deleted": 3,
+          "changed": 9
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-stop-explicitly-closed-tab-ptys.ts",
+          "category": "production",
+          "added": 10,
+          "deleted": 0,
+          "changed": 10
+        },
+        {
+          "path": "src/main/runtime/terminal-close-observed-exit-test-fixture.ts",
+          "category": "test-support",
+          "added": 158,
+          "deleted": 0,
+          "changed": 158
+        },
+        {
+          "path": "src/main/runtime/terminal-close-observed-exit.test.ts",
+          "category": "test",
+          "added": 61,
+          "deleted": 0,
+          "changed": 61
+        }
+      ],
+      "productionChangedLines": 85,
+      "productionAdded": 57,
+      "productionDeleted": 28,
+      "productionFiles": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts",
+        "src/main/runtime/orca-runtime-stop-explicitly-closed-tab-ptys.ts"
+      ],
+      "reviewedOwnProductionChangedLines": 10,
+      "reviewedHead": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "df006e70452b027babc078409ea72d8a96ca3c1d4ee5bda7756b44d6b064ef40",
+        "effective": "df006e70452b027babc078409ea72d8a96ca3c1d4ee5bda7756b44d6b064ef40"
+      },
+      "extraProductionPathsBeyondOwnReview": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "conservativeStackCombinedSize": true,
+      "diffCheck": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    },
+    {
+      "number": 21022,
+      "head": "6100b902368b961b6fb16556ce5fb26d307bea71",
+      "baseRefName": "main",
+      "main": "78289d8ebe5584508750617caed011f0eacd16c6",
+      "mergedTree": "c979c1ae6bcf99e4b4f7776c28e433f8b20bdee5",
+      "mergeExitCode": 0,
+      "conflicts": [],
+      "paths": [
+        {
+          "path": "docs/audits/nested-repo-processed-queue/README.md",
+          "category": "documentation",
+          "added": 34,
+          "deleted": 0,
+          "changed": 34
+        },
+        {
+          "path": "docs/audits/nested-repo-processed-queue/fix.patch",
+          "category": "documentation",
+          "added": 28,
+          "deleted": 0,
+          "changed": 28
+        },
+        {
+          "path": "docs/audits/nested-repo-processed-queue/reproduce.cjs",
+          "category": "documentation",
+          "added": 286,
+          "deleted": 0,
+          "changed": 286
+        },
+        {
+          "path": "docs/audits/nested-repo-processed-queue/results.json",
+          "category": "documentation",
+          "added": 74,
+          "deleted": 0,
+          "changed": 74
+        },
+        {
+          "path": "src/main/project-groups/nested-repo-discovery-queue.test.ts",
+          "category": "test",
+          "added": 122,
+          "deleted": 0,
+          "changed": 122
+        },
+        {
+          "path": "src/main/project-groups/nested-repo-discovery.ts",
+          "category": "production",
+          "added": 8,
+          "deleted": 2,
+          "changed": 10
+        }
+      ],
+      "productionChangedLines": 10,
+      "productionAdded": 8,
+      "productionDeleted": 2,
+      "productionFiles": ["src/main/project-groups/nested-repo-discovery.ts"],
+      "reviewedOwnProductionChangedLines": 10,
+      "reviewedHead": "97338c35d95151b744cc653f328a1180f17dd182",
+      "ownProductionDeltaMatchesReviewedAddedDeletedLines": true,
+      "ownProductionDeltaSignature": {
+        "reviewed": "139963b2fc15ada22f8f9c2c839716f9dc1f4ae787f2ae40fd81c8a7280b8e5c",
+        "effective": "139963b2fc15ada22f8f9c2c839716f9dc1f4ae787f2ae40fd81c8a7280b8e5c"
+      },
+      "extraProductionPathsBeyondOwnReview": [],
+      "conservativeStackCombinedSize": false,
+      "diffCheck": {
+        "exitCode": 2,
+        "output": "docs/audits/nested-repo-processed-queue/fix.patch:8: trailing whitespace.\n+ \n"
+      },
+      "productionDiffCheck": {
+        "exitCode": 0,
+        "output": ""
+      }
+    }
+  ],
+  "overlaps": [
+    {
+      "pullRequests": [21000, 21011],
+      "paths": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "interpretation": "Shared hypothetical landed paths; stacked parent inheritance may explain overlap. Individual clean merge results do not independently test combined behavior."
+    },
+    {
+      "pullRequests": [21000, 21019],
+      "paths": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "interpretation": "Shared hypothetical landed paths; stacked parent inheritance may explain overlap. Individual clean merge results do not independently test combined behavior."
+    },
+    {
+      "pullRequests": [21011, 21019],
+      "paths": [
+        "src/main/ipc/pty/delivery/exit.ts",
+        "src/main/ipc/pty/delivery/wire-session.ts",
+        "src/main/ipc/pty/ipc/renderer-kill.ts",
+        "src/main/ipc/pty/provider/bind-listeners.ts",
+        "src/main/ipc/pty/runtime/controller-deps.ts",
+        "src/main/ipc/pty/runtime/kill.ts",
+        "src/main/ipc/pty/session.ts"
+      ],
+      "interpretation": "Shared hypothetical landed paths; stacked parent inheritance may explain overlap. Individual clean merge results do not independently test combined behavior."
+    }
+  ],
+  "summary": {
+    "pullRequests": 13,
+    "clean": 13,
+    "under100ActualLandedProductionLines": 13,
+    "reviewedOwnDeltasMatch": 13,
+    "allProductionDiffChecksPassed": true,
+    "auditPatchWhitespaceWarnings": [20996, 21012, 21022]
+  },
+  "auditPatchWhitespaceExplanation": "The whole-diff checks warn on existing single-space context lines inside audit fix.patch artifacts for20996,21012and21022. All production diff checks pass. Artifacts are preserved, not rewritten."
+}
