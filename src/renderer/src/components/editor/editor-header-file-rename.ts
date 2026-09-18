@@ -10,11 +10,12 @@ type EditorHeaderFileRenameState = {
   canRename: boolean
   currentFileName: string
   currentBaseName: string
-  currentExtension: string
+  pinnedExtension: string
   breadcrumbSegments: string[]
   isRenaming: boolean
   renameInputRef: RefCallback<HTMLInputElement>
   openRenameInput: () => void
+  setRenameDraft: (value: string) => void
   commitRename: () => void
   cancelRename: () => void
 }
@@ -36,9 +37,17 @@ function getBreadcrumbSegments(relativePath: string, worktreePath: string | null
   return segments
 }
 
+// A leading dot is part of a dotfile's name, not an extension — same split the
+// hook uses on the current file name.
+export function getTypedExtension(rawValue: string): string {
+  const dotIndex = rawValue.lastIndexOf('.')
+  return dotIndex > 0 ? rawValue.slice(dotIndex) : ''
+}
+
 // The morph input edits the basename while the extension stays pinned as a
-// suffix, so a bare name gets the extension re-attached. An explicitly typed
-// extension (same or different) is respected verbatim; null means no-op.
+// suffix, so a bare name gets the extension re-attached. A typed extension
+// (same or different) is respected verbatim and the pinned suffix is hidden so
+// the strip shows the name that will be committed; null means no-op.
 export function resolveRenameTarget(
   rawValue: string,
   currentFileName: string,
@@ -47,7 +56,7 @@ export function resolveRenameTarget(
   if (!rawValue || rawValue === currentFileName) {
     return null
   }
-  if (!currentExtension || rawValue.endsWith(currentExtension) || rawValue.includes('.')) {
+  if (!currentExtension || getTypedExtension(rawValue)) {
     return rawValue
   }
   return `${rawValue}${currentExtension}`
@@ -56,14 +65,23 @@ export function resolveRenameTarget(
 export function useEditorHeaderFileRename(activeFile: OpenFile): EditorHeaderFileRenameState {
   const worktree = useWorktreeById(activeFile.worktreeId)
   const [isRenaming, setIsRenaming] = useState(false)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [renameFilePath, setRenameFilePath] = useState(activeFile.filePath)
   const renameInputElementRef = useRef<HTMLInputElement | null>(null)
-  const renameCancelledRef = useRef(false)
   const renameFocusFrameRef = useRef<number | null>(null)
+  // Why: the header renders one unkeyed path strip for every file, so a file
+  // switch mid-rename would otherwise commit the typed name against the new path.
+  if (renameFilePath !== activeFile.filePath) {
+    setRenameFilePath(activeFile.filePath)
+    setIsRenaming(false)
+    setRenameDraft('')
+  }
   const currentFileName = basename(activeFile.filePath)
   const lastDotIndex = currentFileName.lastIndexOf('.')
   const hasExtension = lastDotIndex > 0
   const currentBaseName = hasExtension ? currentFileName.slice(0, lastDotIndex) : currentFileName
   const currentExtension = hasExtension ? currentFileName.slice(lastDotIndex) : ''
+  const pinnedExtension = getTypedExtension(renameDraft.trim()) ? '' : currentExtension
   const breadcrumbSegments = getBreadcrumbSegments(activeFile.relativePath, worktree?.path ?? null)
   // Why: read-only tabs (AI Vault View Log) are never renameable — rename would
   // rewrite the agent-owned artifact's backing path.
@@ -78,24 +96,17 @@ export function useEditorHeaderFileRename(activeFile: OpenFile): EditorHeaderFil
     if (!canRename) {
       return
     }
-    renameCancelledRef.current = false
+    setRenameDraft(currentBaseName)
     setIsRenaming(true)
   }
 
   const commitRename = (): void => {
-    if (renameCancelledRef.current) {
-      setIsRenaming(false)
-      return
-    }
     const input = renameInputElementRef.current
     if (!input) {
       setIsRenaming(false)
       return
     }
     const rawVal = input.value.trim()
-    // onBlur follows Enter when the input unmounts; consume that trailing event
-    // so one user action cannot start a second rename against the old path.
-    renameCancelledRef.current = true
     setIsRenaming(false)
     const newName = resolveRenameTarget(rawVal, currentFileName, currentExtension)
     if (!newName) {
@@ -111,7 +122,6 @@ export function useEditorHeaderFileRename(activeFile: OpenFile): EditorHeaderFil
   }
 
   const cancelRename = (): void => {
-    renameCancelledRef.current = true
     setIsRenaming(false)
   }
 
@@ -151,11 +161,12 @@ export function useEditorHeaderFileRename(activeFile: OpenFile): EditorHeaderFil
     canRename,
     currentFileName,
     currentBaseName,
-    currentExtension,
+    pinnedExtension,
     breadcrumbSegments,
     isRenaming,
     renameInputRef,
     openRenameInput,
+    setRenameDraft,
     commitRename,
     cancelRename
   }

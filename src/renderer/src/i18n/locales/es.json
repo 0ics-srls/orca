@@ -12906,7 +12906,12 @@
           "f0fd4174b5": "Abre la pestaña de archivo para usar la edición enriquecida de Markdown",
           "a10d9b8337": "Abrir archivo",
           "2076ecfc9c": "Cambio anterior",
-          "631dab0df3": "Cambio siguiente"
+          "631dab0df3": "Cambio siguiente",
+          "revealInFinder": "Mostrar en Finder",
+          "openContainingFolder": "Abrir carpeta contenedora",
+          "revealInFileExplorer": "Mostrar en el Explorador",
+          "confirmRename": "Confirmar cambio de nombre",
+          "cancelRename": "Cancelar cambio de nombre"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "Exportar como PDF",

@@ -14124,7 +14124,12 @@
           "f0fd4174b5": "Ouvrez un onglet de fichier pour utiliser l'édition Markdown enrichie",
           "a10d9b8337": "Ouvrir le fichier",
           "2076ecfc9c": "Modification précédente",
-          "631dab0df3": "Modification suivante"
+          "631dab0df3": "Modification suivante",
+          "revealInFinder": "Afficher dans le Finder",
+          "openContainingFolder": "Ouvrir le dossier contenant",
+          "revealInFileExplorer": "Afficher dans l'Explorateur",
+          "confirmRename": "Confirmer le renommage",
+          "cancelRename": "Annuler le renommage"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "Exporter en PDF",

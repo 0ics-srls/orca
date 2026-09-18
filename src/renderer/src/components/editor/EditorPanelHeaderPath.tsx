@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import { translate } from '@/i18n/i18n'
 import type { OpenFile } from '@/store/slices/editor'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '../tab-bar/SortableTab'
@@ -63,11 +64,12 @@ export function EditorPanelHeaderPath({
     canRename,
     currentFileName,
     currentBaseName,
-    currentExtension,
+    pinnedExtension,
     breadcrumbSegments,
     isRenaming,
     renameInputRef,
     openRenameInput,
+    setRenameDraft,
     commitRename,
     cancelRename
   } = useEditorHeaderFileRename(activeFile)
@@ -111,7 +113,13 @@ export function EditorPanelHeaderPath({
               onMouseDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
               onDoubleClick={(event) => event.stopPropagation()}
+              onChange={(event) => setRenameDraft(event.target.value)}
               onKeyDown={(event) => {
+                // Why: an Enter that only confirms a CJK IME candidate must not
+                // commit the rename; wait for a non-composition Enter.
+                if (isImeCompositionKeyDown(event)) {
+                  return
+                }
                 if (event.key === 'Enter') {
                   event.preventDefault()
                   event.stopPropagation()
@@ -122,11 +130,10 @@ export function EditorPanelHeaderPath({
                   cancelRename()
                 }
               }}
-              onBlur={commitRename}
             />
-            {currentExtension ? (
+            {pinnedExtension ? (
               <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                {currentExtension}
+                {pinnedExtension}
               </span>
             ) : null}
             <div className="flex shrink-0 items-center">
@@ -142,8 +149,8 @@ export function EditorPanelHeaderPath({
                 )}
                 className="flex size-5 items-center justify-center rounded text-status-success hover:bg-status-success-background"
                 onMouseDown={(event) => {
-                  // Why: preventDefault keeps focus in the input so clicking
-                  // confirm does not blur-commit first and double-rename.
+                  // Why: preventDefault keeps the caret in the input so the
+                  // field is still usable if the click misses the button.
                   event.preventDefault()
                   event.stopPropagation()
                 }}
@@ -166,8 +173,8 @@ export function EditorPanelHeaderPath({
                 )}
                 className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
                 onMouseDown={(event) => {
-                  // Why: same as confirm — cancel must win over the input's
-                  // blur-commit when the pointer leaves the field.
+                  // Why: same as confirm — the pointer leaving the field must
+                  // not disturb the input it is about to dismiss.
                   event.preventDefault()
                   event.stopPropagation()
                 }}

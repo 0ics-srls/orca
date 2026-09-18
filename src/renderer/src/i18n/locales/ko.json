@@ -12972,7 +12972,12 @@
           "f0fd4174b5": "풍부한 markdown 편집을 사용하려면 파일 탭을 엽니다.",
           "a10d9b8337": "파일 열기",
           "2076ecfc9c": "이전 변경",
-          "631dab0df3": "다음 변경"
+          "631dab0df3": "다음 변경",
+          "revealInFinder": "Finder에서 보기",
+          "openContainingFolder": "포함된 폴더 열기",
+          "revealInFileExplorer": "탐색기에서 보기",
+          "confirmRename": "이름 바꾸기 확인",
+          "cancelRename": "이름 바꾸기 취소"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "PDF로 내보내기",

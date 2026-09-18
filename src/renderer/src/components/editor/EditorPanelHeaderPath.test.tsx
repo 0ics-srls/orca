@@ -43,8 +43,8 @@ function baseFile(overrides: Partial<OpenFile> = {}): OpenFile {
   }
 }
 
-function renderPath(file: OpenFile): void {
-  render(
+function renderPath(file: OpenFile): (next: OpenFile) => void {
+  const view = render(
     <EditorPanelHeaderPath
       activeFile={file}
       copiedPathVisible={false}
@@ -54,6 +54,17 @@ function renderPath(file: OpenFile): void {
       onOpenContainingFolder={vi.fn()}
     />
   )
+  return (next) =>
+    view.rerender(
+      <EditorPanelHeaderPath
+        activeFile={next}
+        copiedPathVisible={false}
+        canShowMarkdownPreview={false}
+        onCopyPath={vi.fn()}
+        onOpenMarkdownPreview={vi.fn()}
+        onOpenContainingFolder={vi.fn()}
+      />
+    )
 }
 
 function getRenameInput(label: string): HTMLInputElement {
@@ -116,8 +127,8 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     if (!strip) {
       throw new Error('Missing rename strip')
     }
+    expect(strip.className).toContain('w-full')
     expect(strip.className).toContain('max-w-full')
-    expect(strip.className).not.toContain('520px')
   })
 
   it('selects the basename so typing replaces just the name', () => {
@@ -146,17 +157,89 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     })
   })
 
-  it('respects an explicitly typed extension without duplicating it', () => {
+  it('respects an explicitly typed extension and drops the pinned suffix', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
     fireEvent.change(input, { target: { value: 'renamed.mdx' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.queryByText('.md')).toBeNull()
 
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(renameFileOnDiskMock).toHaveBeenCalledWith(
       expect.objectContaining({ newName: 'renamed.mdx' })
     )
+  })
+
+  it('shows the same name it commits for a dotted basename', () => {
+    renderPath(baseFile())
+    openRenameInput()
+
+    const input = getRenameInput('Rename file notes.md')
+    fireEvent.change(input, { target: { value: 'v1.2' } })
+    expect(screen.queryByText('.md')).toBeNull()
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(renameFileOnDiskMock).toHaveBeenCalledWith(expect.objectContaining({ newName: 'v1.2' }))
+  })
+
+  it('keeps the pinned suffix for a leading-dot name', () => {
+    renderPath(baseFile())
+    openRenameInput()
+
+    const input = getRenameInput('Rename file notes.md')
+    fireEvent.change(input, { target: { value: '.notes' } })
+    expect(screen.getByText('.md')).toBeDefined()
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ newName: '.notes.md' })
+    )
+  })
+
+  it('ignores an Enter that only confirms an IME candidate', () => {
+    renderPath(baseFile())
+    openRenameInput()
+
+    const input = getRenameInput('Rename file notes.md')
+    fireEvent.change(input, { target: { value: 'renamed' } })
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 })
+    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 13 })
+    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ newName: 'renamed.md' })
+    )
+  })
+
+  it('does not commit when the field merely loses focus', () => {
+    renderPath(baseFile())
+    openRenameInput()
+
+    const input = getRenameInput('Rename file notes.md')
+    fireEvent.change(input, { target: { value: 'renamed' } })
+    fireEvent.blur(input)
+
+    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Rename file notes.md')).toBeDefined()
+  })
+
+  it('drops rename mode when the active file changes', () => {
+    const rerenderPath = renderPath(baseFile())
+    openRenameInput()
+
+    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: 'renamed' } })
+    rerenderPath(
+      baseFile({
+        id: '/repo/other.md',
+        filePath: '/repo/other.md',
+        relativePath: 'other.md'
+      })
+    )
+
+    expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
+    expect(screen.queryByLabelText('Rename file other.md')).toBeNull()
+    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 
   it('commits via the confirm button', () => {
