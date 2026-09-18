@@ -9,7 +9,13 @@ const AUTH_URL_MARKER = 'navigate to this url to authenticate:'
 export function parseCodexLoginAuthUrl(output: string): string | null {
   const plain = stripAnsiEscapeSequences(output)
   const markerIndex = plain.toLowerCase().indexOf(AUTH_URL_MARKER)
-  const searchable = markerIndex === -1 ? plain : plain.slice(markerIndex + AUTH_URL_MARKER.length)
+  // Why the marker is required: without it the first https link codex happens to
+  // print — an update notice, a docs link — would be offered as the sign-in link.
+  // If codex rewords the line, no link beats the wrong one.
+  if (markerIndex === -1) {
+    return null
+  }
+  const searchable = plain.slice(markerIndex + AUTH_URL_MARKER.length)
   // Why: the trailing whitespace is required, not incidental. Output arrives in
   // chunks, and a flush that ends mid-token would otherwise publish a truncated
   // link that authenticates nothing.

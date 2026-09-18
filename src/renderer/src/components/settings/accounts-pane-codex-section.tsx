@@ -195,7 +195,9 @@ export function renderCodexAccountsSection(model: AccountsPaneSectionModel): Rea
           </div>
         </div>
         {remoteAccountScopeNotice}
-        <CodexLoginLinkNotice />
+        {/* Why not in a remote scope: the link belongs to a login running on
+        this desktop, which has nothing to do with the server named above. */}
+        {isRemoteAccountScope ? null : <CodexLoginLinkNotice />}
 
         <div className="space-y-2">
           <button

@@ -1,3 +1,5 @@
+import { CODEX_LOGIN_CANCELLED_MESSAGE } from '../../../../shared/codex-auth-errors'
+
 export function getCodexAccountErrorDescription(error: unknown): string {
   const message = String((error as Error)?.message ?? error)
     .replace(/^Error occurred in handler for 'codexAccounts:[^']+':\s*/i, '')
@@ -43,7 +45,10 @@ export function getClaudeAccountErrorDescription(error: unknown): string {
 }
 
 export function isCodexAccountCancellation(error: unknown): boolean {
-  return getCodexAccountErrorDescription(error).toLowerCase() === 'codex sign-in was cancelled.'
+  return (
+    getCodexAccountErrorDescription(error).toLowerCase() ===
+    CODEX_LOGIN_CANCELLED_MESSAGE.toLowerCase()
+  )
 }
 
 export function isClaudeAccountCancellation(error: unknown): boolean {

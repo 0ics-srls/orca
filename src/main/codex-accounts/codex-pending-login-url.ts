@@ -20,11 +20,7 @@ export class CodexPendingLoginUrl {
     }
     this.url = url
     for (const listener of this.listeners) {
-      try {
-        listener(url)
-      } catch (error) {
-        console.warn('[codex-accounts] Pending login URL listener failed:', error)
-      }
+      listener(url)
     }
   }
 
