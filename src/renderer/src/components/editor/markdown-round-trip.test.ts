@@ -841,3 +841,17 @@ it('preserves code spacing inside a table across repeated saves', () => {
   expect(once).toContain('`a  b`')
   expect(roundTripMarkdown(once)).toBe(once)
 })
+
+it('retains an unchanged raw destination while repairing nearby attributes', () => {
+  const source = '[a](b\\)c) and ![x](image.png "say \\"hi\\"")'
+  expect(roundTripMarkdown(source)).toBe(source)
+})
+
+it('encodes spaces in edited destinations', () => {
+  expect(markdownAfterDestinationEdit('[a](old)', 'link', 'docs/My File.md')).toBe(
+    '[a](docs/My%20File.md)'
+  )
+  expect(markdownAfterDestinationEdit('![a](old.png)', 'image', 'My Image.png')).toBe(
+    '![a](My%20Image.png)'
+  )
+})
