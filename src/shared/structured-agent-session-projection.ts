@@ -21,7 +21,8 @@ import { sha256 } from './sha256'
 // Re-exported so the live-turn readers' existing consumers keep one import site.
 export {
   activeStructuredAgentSessionToolCall,
-  activeStructuredAgentSessionTurnId
+  activeStructuredAgentSessionTurnId,
+  newestStructuredAgentSessionTurn
 } from './structured-agent-session-live-turn'
 
 function boundedText(payload: { head: string; truncated: boolean; byteLength: number }): string {
@@ -248,14 +249,20 @@ function messageProse(blocks: readonly NativeChatBlock[]): string {
 export function latestStructuredAgentSessionPrompt(
   items: readonly AgentJournalRenderItem[]
 ): string {
+  const body = latestStructuredAgentSessionUserItem(items)?.body
+  return body?.kind === 'message' ? messageProse(body.blocks) : ''
+}
+
+export function latestStructuredAgentSessionUserItem(
+  items: readonly AgentJournalRenderItem[]
+): AgentJournalRenderItem | null {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index]
-    const body = item?.body
-    if (body?.kind === 'message' && body.role === 'user' && isRootAgentJournalItem(item)) {
-      return messageProse(body.blocks)
+    if (item?.body.kind === 'message' && item.body.role === 'user' && isRootAgentJournalItem(item)) {
+      return item
     }
   }
-  return ''
+  return null
 }
 
 /** The newest prose THE SESSION'S OWN AGENT wrote in the latest user turn — not a
