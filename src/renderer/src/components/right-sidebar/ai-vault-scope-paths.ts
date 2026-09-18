@@ -1,3 +1,4 @@
+import { AI_VAULT_SCOPE_PATHS_MAX_COUNT } from '../../../../shared/ai-vault-types'
 import {
   isRuntimePathAbsolute,
   normalizeRuntimePathForComparison
@@ -84,7 +85,62 @@ export function deriveAiVaultScopeSessionPaths(
       addAiVaultWorkspaceScopePath(accumulator, setup.path)
     }
   }
-  return accumulator.paths
+  return foldSiblingScopePathsUnderCap(accumulator.paths)
+}
+
+/**
+ * A project with more worktrees than a request may carry would otherwise lose
+ * every worktree past the cap: the list scans the first few and the search
+ * request is refused outright. Sibling paths fold into their parent directory
+ * instead. Both the scanner and the index match a scope by prefix, and Orca
+ * keeps a repo's worktrees under one directory of their own, so the parent
+ * covers what the siblings did. Below the cap nothing changes; a path with no
+ * sibling, or whose parent is a filesystem root, stays as it is.
+ */
+export function foldSiblingScopePathsUnderCap(paths: readonly string[]): string[] {
+  if (paths.length <= AI_VAULT_SCOPE_PATHS_MAX_COUNT) {
+    return [...paths]
+  }
+  const siblingsByParentKey = new Map<string, { parent: string; members: string[] }>()
+  const ordered: { parentKey: string | null; path: string }[] = []
+  for (const pathValue of paths) {
+    const parent = runtimeParentDirectory(pathValue)
+    const parentKey = parent === null ? null : normalizeRuntimePathForComparison(parent)
+    ordered.push({ parentKey, path: pathValue })
+    if (parent === null || parentKey === null) {
+      continue
+    }
+    const group = siblingsByParentKey.get(parentKey)
+    if (group) {
+      group.members.push(pathValue)
+    } else {
+      siblingsByParentKey.set(parentKey, { parent, members: [pathValue] })
+    }
+  }
+  const folded = createScopePathAccumulator()
+  for (const entry of ordered) {
+    const group = entry.parentKey === null ? undefined : siblingsByParentKey.get(entry.parentKey)
+    addAiVaultWorkspaceScopePath(
+      folded,
+      group && group.members.length > 1 ? group.parent : entry.path
+    )
+  }
+  return folded.paths
+}
+
+/** The directory holding `pathValue`, or null when that would be a filesystem root. */
+function runtimeParentDirectory(pathValue: string): string | null {
+  const trimmed = pathValue.replace(/[\\/]+$/g, '')
+  const separator = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  if (separator <= 0) {
+    return null
+  }
+  const parent = trimmed.slice(0, separator)
+  // `//server/share/x` and `C:\x` both sit directly under a root; `/x` was caught above.
+  if (/^[a-zA-Z]:$/.test(parent) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+$/.test(parent)) {
+    return null
+  }
+  return parent
 }
 
 function buildProjectSetupsByRepoId(

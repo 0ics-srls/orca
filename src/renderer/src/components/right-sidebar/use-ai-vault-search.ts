@@ -11,7 +11,11 @@ import {
   type ExecutionHostId,
   type ExecutionHostScope
 } from '../../../../shared/execution-host'
-import type { AiVaultAgent, AiVaultSession } from '../../../../shared/ai-vault-types'
+import {
+  AI_VAULT_SCOPE_PATHS_MAX_COUNT,
+  type AiVaultAgent,
+  type AiVaultSession
+} from '../../../../shared/ai-vault-types'
 import { resolveAiVaultSearchSettings } from '../../../../shared/ai-vault-search-settings'
 import { isWebClientLocation } from '@/lib/web-client-location'
 import { useAppStore } from '@/store'
@@ -151,7 +155,11 @@ export function useAiVaultPanelSearch(
       searching && scope && !localConsent && agents.length > 0
         ? {
             query: query.trim(),
-            filters: { agents: [...agents], ...(paths ? { scopePaths: [...paths] } : {}) }
+            filters: {
+              agents: [...agents],
+              // Folded siblings normally fit; past the cap the request would be refused, not trimmed.
+              ...(paths ? { scopePaths: paths.slice(0, AI_VAULT_SCOPE_PATHS_MAX_COUNT) } : {})
+            }
           }
         : null,
     [searching, scope, localConsent, agents, query, paths]

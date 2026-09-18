@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Worktree } from '../../../../shared/worktree/types'
+import { AI_VAULT_SCOPE_PATHS_MAX_COUNT } from '../../../../shared/ai-vault-types'
 import {
   deriveAiVaultScopeSessionPaths,
-  deriveAiVaultWorkspaceScopePaths
+  deriveAiVaultWorkspaceScopePaths,
+  foldSiblingScopePathsUnderCap
 } from './ai-vault-scope-paths'
 
 function makeWorktree(overrides: Partial<Worktree> = {}): Worktree {
@@ -185,8 +187,65 @@ describe('deriveAiVaultScopeSessionPaths', () => {
     const paths = deriveAiVaultScopeSessionPaths(worktrees[0], worktrees)
     const elapsedMs = performance.now() - startedAt
 
-    expect(paths).toHaveLength(worktrees.length)
+    // Past the cap the siblings fold into their workspace directory.
+    expect(paths).toEqual(['/Users/dev/orca/workspaces/orca-monorepo'])
     // ~190ms before, ~1ms after; loose enough for a slow CI box.
     expect(elapsedMs).toBeLessThan(100)
+  })
+})
+
+describe('foldSiblingScopePathsUnderCap', () => {
+  const overCap = AI_VAULT_SCOPE_PATHS_MAX_COUNT + 1
+  const managed = Array.from({ length: overCap }, (_, i) => `/home/u/orca/workspaces/orca/wt-${i}`)
+
+  it('leaves a project under the cap alone', () => {
+    const paths = managed.slice(0, AI_VAULT_SCOPE_PATHS_MAX_COUNT)
+    expect(foldSiblingScopePathsUnderCap(paths)).toEqual(paths)
+  })
+
+  it('folds siblings into their parent and keeps lone paths as they are', () => {
+    expect(
+      foldSiblingScopePathsUnderCap(['/home/u/src/orca', ...managed, '/srv/elsewhere/orca-ci'])
+    ).toEqual(['/home/u/src/orca', '/home/u/orca/workspaces/orca', '/srv/elsewhere/orca-ci'])
+  })
+
+  it('folds Windows siblings and never folds into a drive or share root', () => {
+    const windows = Array.from({ length: overCap }, (_, i) => `C:\\orca\\workspaces\\orca\\wt-${i}`)
+    expect(
+      foldSiblingScopePathsUnderCap([
+        ...windows,
+        'C:\\lone',
+        'D:\\other',
+        '\\\\srv\\share\\a',
+        '\\\\srv\\share\\b'
+      ])
+    ).toEqual([
+      'C:\\orca\\workspaces\\orca',
+      'C:\\lone',
+      'D:\\other',
+      '\\\\srv\\share\\a',
+      '\\\\srv\\share\\b'
+    ])
+  })
+
+  it('never folds top-level directories into the filesystem root', () => {
+    const topLevel = Array.from({ length: overCap }, (_, i) => `/wt-${i}`)
+    expect(foldSiblingScopePathsUnderCap(topLevel)).toEqual(topLevel)
+  })
+})
+
+describe('deriveAiVaultScopeSessionPaths past the request cap', () => {
+  it('sends the workspace directory instead of dropping worktrees past the cap', () => {
+    const active = makeWorktree({ id: 'repo-1::/home/u/src/orca', path: '/home/u/src/orca' })
+    const worktrees = Array.from({ length: AI_VAULT_SCOPE_PATHS_MAX_COUNT + 10 }, (_, i) =>
+      makeWorktree({
+        id: `repo-1::/home/u/orca/workspaces/orca/wt-${i}`,
+        path: `/home/u/orca/workspaces/orca/wt-${i}`
+      })
+    )
+    expect(deriveAiVaultScopeSessionPaths(active, [active, ...worktrees])).toEqual([
+      '/home/u/src/orca',
+      '/home/u/orca/workspaces/orca'
+    ])
   })
 })
