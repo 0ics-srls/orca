@@ -54,6 +54,7 @@ function hasBare(markdown: string, chars: string): boolean {
 }
 
 function destNeedsEscape(dest: string): boolean {
+  let depth = 0
   let oddBackslash = false
   for (let i = 0; i < dest.length; i += 1) {
     const character = dest[i]
@@ -62,11 +63,16 @@ function destNeedsEscape(dest: string): boolean {
     if (!bare) {
       continue
     }
-    if (character === '(' || character === ')') {
-      return true
+    if (character === '(') {
+      depth += 1
+    } else if (character === ')') {
+      if (depth === 0) {
+        return true
+      }
+      depth -= 1
     }
   }
-  return false
+  return depth > 0
 }
 
 function escapeLineLeading(markdown: string): string {
