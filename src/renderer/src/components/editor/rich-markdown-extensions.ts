@@ -71,10 +71,14 @@ const RichMarkdownLink = Link.extend({
 })
 
 function extractRawDestination(raw: string | undefined): string | null {
-  if (!raw) return null
+  if (!raw) {
+    return null
+  }
   const open = raw.indexOf('](')
   const close = raw.lastIndexOf(')')
-  if (open < 0 || close <= open + 2) return null
+  if (open === -1 || close <= open + 2) {
+    return null
+  }
   const destination = raw.slice(open + 2, close).trim()
   const titleStart = destination.search(/\s+["']|\s+\(/)
   return titleStart >= 0 ? destination.slice(0, titleStart) : destination
