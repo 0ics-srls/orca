@@ -18,10 +18,10 @@ function longestFenceRun(text: string, character: '`' | '~'): number {
   return longest
 }
 
-function chooseFence(text: string): { character: '`' | '~'; length: number } {
+function chooseFence(text: string, language: string): { character: '`' | '~'; length: number } {
   const backtickLength = Math.max(3, longestFenceRun(text, '`') + 1)
   const tildeLength = Math.max(3, longestFenceRun(text, '~') + 1)
-  return tildeLength < backtickLength
+  return language.includes('`') || tildeLength < backtickLength
     ? { character: '~', length: tildeLength }
     : { character: '`', length: backtickLength }
 }
@@ -32,7 +32,11 @@ export function renderRichMarkdownCodeBlock(
 ): string {
   const language = typeof node.attrs?.language === 'string' ? node.attrs.language : ''
   const body = helpers.renderChildren(node.content ?? [])
-  const fence = chooseFence(body)
+  const fence = chooseFence(body, language)
   const marker = fence.character.repeat(fence.length)
-  return [`${marker}${language}`, body, marker].join('\n')
+  return [
+    `${marker}${language.startsWith(fence.character) ? ' ' : ''}${language}`,
+    body,
+    marker
+  ].join('\n')
 }

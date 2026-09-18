@@ -112,7 +112,8 @@ export function findDetailsBlockStart(content: string): number {
     if (isInsideRange(index, fenceRanges) || isInsideRange(index, codeSpanRanges)) {
       continue
     }
-    const lineStart = content.lastIndexOf('\n', index - 1) + 1
+    const lineStart =
+      Math.max(content.lastIndexOf('\n', index - 1), content.lastIndexOf('\r', index - 1)) + 1
     const indent = content.slice(lineStart, index)
     if (indent.length <= 3 && /^ *$/.test(indent)) {
       return index

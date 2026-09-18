@@ -2,11 +2,10 @@ import type { Editor, JSONContent } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { encodeRawMarkdownHtmlForRichEditor } from './raw-markdown-html'
 import type { RichMarkdownEditorCodec } from './rich-markdown-source-transport'
-import { RICH_MARKDOWN_ESCAPED_CHARACTER_MARK } from './rich-markdown-escaped-character'
 
 const DOLLAR_SKIP_TYPES = new Set(['inlineMath', 'rawMarkdownHtmlInline'])
 
-const CHEAP_NEEDS_WORK = /\$|\||\\[&<]|\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
+const CHEAP_NEEDS_WORK = /\$|\||\\[[\]]|^( {0,3})(#|[+-]|\d+\.)( |$)/m
 const REF_DEF = /^ {0,3}\[[^\n]*\]:/m
 
 type BlockInfo = { block: ProseMirrorNode; inTableCell: boolean }
@@ -54,6 +53,9 @@ function hasBare(markdown: string, chars: string): boolean {
 }
 
 function destNeedsEscape(dest: string): boolean {
+  if (/\s/.test(dest)) {
+    return true
+  }
   let depth = 0
   let oddBackslash = false
   for (let i = 0; i < dest.length; i += 1) {
@@ -80,7 +82,7 @@ function escapeLineLeading(markdown: string): string {
   // writes paragraph text "1." and tests assert getMarkdown() === '1.\n\n'.
   return markdown
     .replace(/^( {0,3})#(?= |$)/gm, '$1\\#')
-    .replace(/^( {0,3})-(?= )/gm, '$1\\-')
+    .replace(/^( {0,3})([+-])(?= )/gm, '$1\\$2')
     .replace(/^( {0,3})(\d+)\.(?= )/gm, '$1$2\\.')
 }
 
@@ -170,13 +172,19 @@ function escapeLinkAndImageAttributes(node: JSONContent): void {
   forEachLinkOrImage(node, (attrs, kind) => {
     const destKey = kind === 'image' ? 'src' : 'href'
     const dest = attrs[destKey]
-    const rawDest = kind === 'link' ? attrs.rawHref : attrs.rawSrc
-    const originalDest = kind === 'link' ? attrs.originalHref : attrs.originalSrc
-    if (typeof rawDest === 'string' && dest === originalDest) {
-      attrs[destKey] = rawDest
+    const rawKey = kind === 'image' ? 'rawSrc' : 'rawHref'
+    const originalKey = kind === 'image' ? 'originalSrc' : 'originalHref'
+    const raw = attrs[rawKey]
+    const keepRaw = typeof raw === 'string' && dest === attrs[originalKey]
+    if (keepRaw) {
+      attrs[destKey] = raw
+      attrs[originalKey] = raw
     }
-    if (typeof dest === 'string' && destNeedsEscape(dest)) {
-      attrs[destKey] = escapeBare(dest, '()')
+    if (!keepRaw && typeof dest === 'string' && destNeedsEscape(dest)) {
+      attrs[destKey] = escapeBare(
+        dest.replace(/\s/g, (character) => encodeURIComponent(character)),
+        '()'
+      )
     }
     if (typeof attrs.title === 'string' && hasBare(attrs.title, '"')) {
       attrs.title = escapeBare(attrs.title, '"')
@@ -256,23 +264,10 @@ export function preserveLiteralMarkdownSource(
       return cached.result
     }
     let result = markdown
-    const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
-    const isPlainEscapedBlock = preservesEscapedCharacters && blockHasOnlyEscapeMarks(info.block)
-    if (isPlainEscapedBlock && !info.inTableCell) {
-      result = result.replace(/\\\$(?=\d)/g, '$')
-    }
-    if (preservesEscapedCharacters) {
-      result = info.inTableCell
-        ? result.replace(/(?<!\\)\$(?=\d)/g, '\\$&')
-        : result.replace(/(?<!\\)\$(?=\d,)/g, '\\$&')
-    }
-    if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
-      result = result.replace(/\$(?!\d)/g, '\\$&')
-    }
     if (node.type === 'paragraph' && !info.inTableCell) {
       result = escapeLineLeading(result)
     }
-    if (!hasRefDefs && !preservesEscapedCharacters) {
+    if (!hasRefDefs) {
       const droppedBrackets = dropOptionalEscapes(result, false)
       if (droppedBrackets !== result && proves(droppedBrackets, info.block)) {
         result = droppedBrackets
@@ -286,12 +281,7 @@ export function preserveLiteralMarkdownSource(
         }
       }
     }
-    if (
-      shouldTryDollar(info.block) &&
-      !isPlainEscapedBlock &&
-      /\$/.test(result) &&
-      !proves(result, info.block)
-    ) {
+    if (shouldTryDollar(info.block) && /\$/.test(result) && !proves(result, info.block)) {
       const dollared = escapeBareDollarsSkippingCode(result)
       if (dollared !== result && proves(dollared, info.block)) {
         result = dollared
@@ -310,65 +300,16 @@ export function preserveLiteralMarkdownSource(
     const idle = serialize()
     hasRefDefs = REF_DEF.test(withoutOptionalEscapes(idle))
     const json = editor.getJSON()
-    if (
-      !hasRefDefs &&
-      !CHEAP_NEEDS_WORK.test(idle) &&
-      !needsAttrRepair(json) &&
-      !hasEscapedEntityMark(json)
-    ) {
+    if (!hasRefDefs && !CHEAP_NEEDS_WORK.test(idle) && !needsAttrRepair(json)) {
       return idle
     }
     escapeLinkAndImageAttributes(json)
     blocks = new Map()
     pairBlocks(json, editor.state.doc, false, blocks)
     try {
-      const output = manager.serialize(json)
-      const withEntities = hasEscapedEntityMark(json)
-        ? output.replace(/&(?!amp;|lt;|gt;|#\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
-        : output
-      return withEntities
+      return manager.serialize(json)
     } finally {
       blocks = undefined
     }
   }
-}
-
-function hasEscapedEntityMark(node: JSONContent): boolean {
-  return Boolean(
-    node.marks?.some((mark) => mark.type === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK) ||
-    node.content?.some((child) => hasEscapedEntityMark(child))
-  )
-}
-
-function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
-  let found = false
-  block.descendants((node) => {
-    if (node.marks.some((mark) => mark.type.name === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)) {
-      found = true
-    }
-  })
-  return found
-}
-
-function blockHasInlineMath(block: ProseMirrorNode): boolean {
-  let found = false
-  block.descendants((node) => {
-    if (node.type.name === 'inlineMath') {
-      found = true
-    }
-  })
-  return found
-}
-
-function blockHasOnlyEscapeMarks(block: ProseMirrorNode): boolean {
-  let onlyEscapeMarks = true
-  block.descendants((node) => {
-    if (
-      node.isText &&
-      node.marks.some((mark) => mark.type.name !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
-    ) {
-      onlyEscapeMarks = false
-    }
-  })
-  return onlyEscapeMarks
 }

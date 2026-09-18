@@ -1,15 +1,14 @@
 import type { AnyExtension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
 import { Code } from '@tiptap/extension-code'
-import Image from '@tiptap/extension-image'
+import { RichMarkdownLink, RichMarkdownImage } from './rich-markdown-destinations'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import { createRichMarkdownTable } from './rich-markdown-table'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableRow } from '@tiptap/extension-table-row'
-import { BlockMath, InlineMath } from '@tiptap/extension-mathematics'
+import { BlockMath } from '@tiptap/extension-mathematics'
 import { createRichMarkdownExtension } from './rich-markdown-extension'
 import { createLowlight, common } from 'lowlight'
 import {
@@ -42,6 +41,7 @@ import { RichMarkdownListItem } from './rich-markdown-list-item'
 import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
+import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
@@ -49,63 +49,6 @@ import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown
 
 const lowlight = createCachedLowlight(createLowlight(common))
 
-const RichMarkdownLink = Link.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      rawHref: { default: null, rendered: false },
-      originalHref: { default: null, rendered: false }
-    }
-  },
-  parseMarkdown: (token, helpers) =>
-    helpers.applyMark('link', helpers.parseInline(token.tokens || []), {
-      href: token.href,
-      title: token.title || null,
-      rawHref: extractRawDestination(token.raw),
-      originalHref: token.href
-    }),
-  renderMarkdown: (node, helpers) => {
-    const href =
-      node.attrs?.rawHref && node.attrs?.href === node.attrs?.originalHref
-        ? node.attrs.rawHref
-        : (node.attrs?.href ?? '')
-    const title = node.attrs?.title ?? ''
-    const text = helpers.renderChildren(node)
-    return title ? `[${text}](${href} "${title}")` : `[${text}](${href})`
-  }
-})
-
-function extractRawDestination(raw: string | undefined): string | null {
-  if (!raw) {
-    return null
-  }
-  const open = raw.indexOf('](')
-  const close = raw.lastIndexOf(')')
-  if (open === -1 || close <= open + 2) {
-    return null
-  }
-  const destination = raw.slice(open + 2, close).trim()
-  const titleStart = destination.search(/\s+["']|\s+\(/)
-  return titleStart >= 0 ? destination.slice(0, titleStart) : destination
-}
-
-// Why: Pandoc's rule keeps money as text — both `$` must touch the formula, the closing one
-// must not be followed by a digit, and an escaped `\$` never closes.
-const INLINE_MATH_PATTERN = /^\$(?![\s$])((?:\\[\s\S]|[^$\\])*?)(?<!\s)\$(?!\d)/
-const RichMarkdownInlineMath = InlineMath.extend({
-  markdownTokenizer: {
-    name: 'inlineMath',
-    level: 'inline',
-    start: (src: string) => src.indexOf('$'),
-    tokenize: (src: string) => {
-      const match = src.match(INLINE_MATH_PATTERN)
-      if (!match) {
-        return undefined
-      }
-      return { type: 'inlineMath', raw: match[0], latex: match[1] }
-    }
-  }
-})
 const BLOCK_MATH_START_PATTERN = /\n[ \t]*\$\$/
 const BLOCK_MATH_PATTERN = /^[ \t]*\$\$((?:(?!\$\$)[\s\S])+?)\$\$/
 const RichMarkdownBlockMath = BlockMath.extend({
@@ -180,31 +123,7 @@ export function createRichMarkdownExtensions({
     // file:// URLs in <img> tags are blocked by cross-origin restrictions.
     // A nodeView loads local images via IPC → blob URL, which bypasses this
     // and works identically in dev and production modes.
-    Image.extend({
-      addAttributes() {
-        return {
-          ...this.parent?.(),
-          rawSrc: { default: null, rendered: false },
-          originalSrc: { default: null, rendered: false }
-        }
-      },
-      parseMarkdown: (token, helpers) =>
-        helpers.createNode('image', {
-          src: token.href,
-          alt: token.text || '',
-          title: token.title,
-          rawSrc: extractRawDestination(token.raw),
-          originalSrc: token.href
-        }),
-      renderMarkdown: (node) => {
-        const src =
-          node.attrs?.rawSrc && node.attrs?.src === node.attrs?.originalSrc
-            ? node.attrs.rawSrc
-            : (node.attrs?.src ?? '')
-        const alt = node.attrs?.alt ?? ''
-        const title = node.attrs?.title ?? ''
-        return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`
-      },
+    RichMarkdownImage.extend({
       addStorage() {
         return {
           contextVersion: 0,

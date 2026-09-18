@@ -1,9 +1,14 @@
-import { Extension } from '@tiptap/core'
+import { Extension, type JSONContent } from '@tiptap/core'
+
+import {
+  escapedCharacterSourceText,
+  RICH_MARKDOWN_ESCAPED_CHARACTER_MARK
+} from './rich-markdown-escaped-character'
 
 const TAG_OPENING = /^<(?:[a-zA-Z][a-zA-Z0-9-]*|\/[a-zA-Z][a-zA-Z0-9-]*|!|\?)/
 
 type MarkdownTextEncoder = {
-  encodeTextForMarkdown?: (text: string, node: unknown, parentNode?: unknown) => string
+  encodeTextForMarkdown?: (text: string, node: JSONContent, parentNode?: JSONContent) => string
 }
 
 function isMarkdownTextEncoder(value: unknown): value is MarkdownTextEncoder {
@@ -53,6 +58,11 @@ export const RichMarkdownProseEntities = Extension.create({
       return
     }
     managerValue.encodeTextForMarkdown = (text, node, parentNode) => {
+      if (node.marks?.some((mark) => mark.type === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)) {
+        const insideCode =
+          parentNode?.type === 'codeBlock' || node.marks.some((mark) => mark.type === 'code')
+        return escapedCharacterSourceText(text, insideCode)
+      }
       const encoded = base.call(managerValue, text, node, parentNode)
       return encoded === text ? text : encodeProseTextForMarkdown(text)
     }
