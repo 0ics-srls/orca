@@ -13,6 +13,7 @@ import {
 } from './editor-lazy-views'
 import type { EditorConflictNavigation } from './useEditorConflictNavigation'
 import { EditorFileLoadErrorView } from './EditorFileLoadErrorView'
+import { requestEditorFileClose } from './editor-autosave'
 import type { FileContent } from './editor-panel-content-types'
 import { ExternalFileChangeBanner } from './ExternalFileChangeBanner'
 import type { useMarkdownDocuments } from './useMarkdownDocuments'
@@ -102,6 +103,7 @@ export function EditorEditFileSurface({
       <EditorFileLoadErrorView
         message={fileContent.loadError}
         onRetry={() => reloadContent(activeFile)}
+        onClose={() => requestEditorFileClose(activeFile.id)}
       />
     )
   }

@@ -7,6 +7,7 @@ import type { GitStatusEntry } from '../../../../shared/git-status-types'
 import { ConflictBanner, ConflictPlaceholderView, ConflictReviewPanel } from './ConflictComponents'
 import { ImageViewer, MonacoEditor } from './editor-lazy-views'
 import { EditorFileLoadErrorView } from './EditorFileLoadErrorView'
+import { requestEditorFileClose } from './editor-autosave'
 import type { FileContent } from './editor-panel-content-types'
 import { translate } from '@/i18n/i18n'
 import type { EditorConflictNavigation } from './useEditorConflictNavigation'
@@ -132,6 +133,7 @@ export function EditorConflictReviewSurface({
           <EditorFileLoadErrorView
             message={fileContent.loadError}
             onRetry={() => reloadContent(contentFile)}
+            onClose={() => requestEditorFileClose(contentFile.id)}
           />
         </div>
       )

@@ -8,6 +8,7 @@ import { EditorConflictReviewSurface } from './EditorConflictReviewSurface'
 import { EditorDiffFileSurface } from './EditorDiffFileSurface'
 import { EditorEditFileSurface } from './EditorEditFileSurface'
 import { EditorFileLoadErrorView } from './EditorFileLoadErrorView'
+import { requestEditorFileClose } from './editor-autosave'
 import type { FileContent } from './editor-panel-content-types'
 import { translate } from '@/i18n/i18n'
 import { useEditorConflictNavigation } from './useEditorConflictNavigation'
@@ -189,6 +190,7 @@ export function EditorContent({
         <EditorFileLoadErrorView
           message={fileContent.loadError}
           onRetry={() => reloadContent(activeFile)}
+          onClose={() => requestEditorFileClose(activeFile.id)}
         />
       )
     }
