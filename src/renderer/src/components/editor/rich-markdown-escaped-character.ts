@@ -34,6 +34,7 @@ export const RichMarkdownEscapedCharacter = Mark.create({
     }
   },
   parseMarkdown: (token, helpers) => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the custom tokenizer above supplies this validated field.
     const character = (token as { character?: string }).character
     if (token.type !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK || !character) {
       return []

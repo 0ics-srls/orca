@@ -58,7 +58,9 @@ const RichMarkdownInlineMath = InlineMath.extend({
     start: (src: string) => src.indexOf('$'),
     tokenize: (src: string) => {
       const match = src.match(INLINE_MATH_PATTERN)
-      if (!match) return undefined
+      if (!match) {
+        return undefined
+      }
       return { type: 'inlineMath', raw: match[0], latex: match[1] }
     }
   }
