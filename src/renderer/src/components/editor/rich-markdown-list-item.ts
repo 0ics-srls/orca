@@ -43,6 +43,22 @@ function indentParagraphContinuations(markdown: string, column: number): string 
   return markdown.replace(/\n(?!\n)[ \t]*/g, `\n${' '.repeat(column)}`)
 }
 
+function renderOrderedBlocks(lines: string[], width: number): string[] {
+  let insideFence = false
+  return lines.map((line) => {
+    const trimmed = line.trimStart()
+    const isFence = /^(`{3,}|~{3,})/.test(trimmed)
+    if (isFence) {
+      insideFence = !insideFence
+      return line
+    }
+    if (insideFence) {
+      return line.startsWith(' ') ? line.slice(1) : line
+    }
+    return line === '' ? line : `${' '.repeat(Math.max(0, width - BASE_INDENT))}${line}`
+  })
+}
+
 export const RichMarkdownListItem = ListItem.extend({
   renderMarkdown: (node, helpers, context) => {
     if (typeof baseRenderMarkdown !== 'function') {
@@ -57,11 +73,7 @@ export const RichMarkdownListItem = ListItem.extend({
     )
     const paragraphLines = paragraphLineCount(node)
     const paragraph = indentParagraphContinuations(lines.slice(0, paragraphLines).join('\n'), width)
-    const blocks = lines
-      .slice(paragraphLines)
-      .map((line) =>
-        line === '' ? line : `${' '.repeat(Math.max(0, width - BASE_INDENT))}${line}`
-      )
+    const blocks = renderOrderedBlocks(lines.slice(paragraphLines), width)
     return [paragraph, ...blocks].join('\n')
   }
 })
