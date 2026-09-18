@@ -43,7 +43,6 @@ import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
 import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
-import { RichMarkdownSerializerFidelity } from './rich-markdown-serializer-fidelity'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown'
@@ -297,7 +296,6 @@ export function createRichMarkdownExtensions({
       }
     }),
     RichMarkdownEscapedCharacter,
-    RichMarkdownSerializerFidelity,
     RichMarkdownCodeSpanPadding,
     RichMarkdownProseEntities,
     createRichMarkdownAnnotationHighlightExtension()
