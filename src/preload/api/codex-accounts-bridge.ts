@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { CODEX_PENDING_LOGIN_URL_CHANGED_CHANNEL } from '../../shared/codex-auth-errors'
 import type { PreloadApi } from '../api-types'
 
 export const codexAccountsApi = {
@@ -11,8 +12,8 @@ export const codexAccountsApi = {
     ipcRenderer.invoke('codexAccounts:pendingLoginUrl'),
   onPendingLoginUrlChanged: (callback: (url: string | null) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, url: string | null): void => callback(url)
-    ipcRenderer.on('codexAccounts:pendingLoginUrlChanged', listener)
-    return () => ipcRenderer.removeListener('codexAccounts:pendingLoginUrlChanged', listener)
+    ipcRenderer.on(CODEX_PENDING_LOGIN_URL_CHANGED_CHANNEL, listener)
+    return () => ipcRenderer.removeListener(CODEX_PENDING_LOGIN_URL_CHANGED_CHANNEL, listener)
   },
   reauthenticate: (args: { accountId: string; activateIfSelectionWasEmpty?: boolean }) =>
     ipcRenderer.invoke('codexAccounts:reauthenticate', args),

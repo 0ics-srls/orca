@@ -15,9 +15,6 @@ export function useCodexPendingLoginUrl(): string | null {
     let mounted = true
     publishedRef.current = false
     const unsubscribe = window.api.codexAccounts.onPendingLoginUrlChanged((next) => {
-      if (!mounted) {
-        return
-      }
       publishedRef.current = true
       setUrl(next)
     })

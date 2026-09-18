@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -59,6 +59,8 @@ async function createServiceWithHangingLogin(): Promise<{
   service: {
     addAccount: () => Promise<{ accounts: { email: string }[] }>
     cancelPendingLogin: () => boolean
+    getPendingLoginUrl: () => string | null
+    subscribePendingLoginUrl: (listener: (url: string | null) => void) => void
   }
   children: StubLoginChild[]
   /** The `CODEX_HOME` each login was spawned against. */
@@ -91,119 +93,86 @@ async function createServiceWithHangingLogin(): Promise<{
 describe('CodexAccountService abandoned login', () => {
   registerCodexAccountsTestHomes()
 
+  afterEach(() => {
+    vi.doUnmock('node:child_process')
+    vi.doUnmock('../codex-cli/command')
+  })
+
   it('supersedes the login a closed Settings pane abandoned instead of queueing behind it', async () => {
     const { service, children } = await createServiceWithHangingLogin()
-    try {
-      const abandoned = service.addAccount()
-      const abandonedRejection = expect(abandoned).rejects.toThrow('Codex sign-in was cancelled.')
-      await vi.waitUntil(() => children.length === 1)
+    const abandoned = service.addAccount()
+    const abandonedRejection = expect(abandoned).rejects.toThrow('Codex sign-in was cancelled.')
+    await vi.waitUntil(() => children.length === 1)
 
-      // The user reopens Settings and clicks Add Account again.
-      const retry = service.addAccount()
-      const retryRejection = expect(retry).rejects.toThrow()
+    // The user reopens Settings and clicks Add Account again.
+    const retry = service.addAccount()
+    const retryRejection = expect(retry).rejects.toThrow()
 
-      await abandonedRejection
-      expect(children[0].kill).toHaveBeenCalledTimes(1)
-      // Why: the point of the fix — the second login starts now, not after the
-      // abandoned one's whole sign-in deadline elapses.
-      await vi.waitUntil(() => children.length === 2)
-      expect(children[1].kill).not.toHaveBeenCalled()
+    await abandonedRejection
+    expect(children[0].kill).toHaveBeenCalledTimes(1)
+    // Why: the point of the fix — the second login starts now, not after the
+    // abandoned one's whole sign-in deadline elapses.
+    await vi.waitUntil(() => children.length === 2)
+    expect(children[1].kill).not.toHaveBeenCalled()
 
-      service.cancelPendingLogin()
-      await retryRejection
-    } finally {
-      vi.doUnmock('node:child_process')
-      vi.doUnmock('../codex-cli/command')
-    }
+    service.cancelPendingLogin()
+    await retryRejection
   })
 
   it('refuses to cancel a sign-in that already wrote credentials, and keeps the account', async () => {
     const { service, children, loginHomes } = await createServiceWithHangingLogin()
-    try {
-      const pending = service.addAccount()
-      await vi.waitUntil(() => children.length === 1)
+    const pending = service.addAccount()
+    await vi.waitUntil(() => children.length === 1)
 
-      // The browser half of the OAuth flow finishes while the CLI lingers.
-      writeFileSync(
-        join(loginHomes[0], 'auth.json'),
-        createCodexAuthJson('user@example.com', 'provider-account-1', 'refresh-token'),
-        'utf-8'
-      )
+    // The browser half of the OAuth flow finishes while the CLI lingers.
+    writeFileSync(
+      join(loginHomes[0], 'auth.json'),
+      createCodexAuthJson('user@example.com', 'provider-account-1', 'refresh-token'),
+      'utf-8'
+    )
 
-      // Why: cancelling here would send the rollback at a home that just
-      // authenticated. There is nothing left to cancel.
-      expect(service.cancelPendingLogin()).toBe(false)
-      expect(children[0].kill).not.toHaveBeenCalled()
+    // Why: cancelling here would send the rollback at a home that just
+    // authenticated. There is nothing left to cancel.
+    expect(service.cancelPendingLogin()).toBe(false)
+    expect(children[0].kill).not.toHaveBeenCalled()
 
-      children[0].emit('close', 0)
-      const accounts = await pending
-      expect(accounts.accounts.map((account) => account.email)).toEqual(['user@example.com'])
-      expect(existsSync(join(loginHomes[0], 'auth.json'))).toBe(true)
-    } finally {
-      vi.doUnmock('node:child_process')
-      vi.doUnmock('../codex-cli/command')
-    }
+    children[0].emit('close', 0)
+    const accounts = await pending
+    expect(accounts.accounts.map((account) => account.email)).toEqual(['user@example.com'])
+    expect(existsSync(join(loginHomes[0], 'auth.json'))).toBe(true)
   })
 
   it('reports whether a pending login was there to cancel', async () => {
     const { service, children } = await createServiceWithHangingLogin()
-    try {
-      const pending = service.addAccount()
-      const rejection = expect(pending).rejects.toThrow('Codex sign-in was cancelled.')
-      await vi.waitUntil(() => children.length === 1)
+    const pending = service.addAccount()
+    const rejection = expect(pending).rejects.toThrow('Codex sign-in was cancelled.')
+    await vi.waitUntil(() => children.length === 1)
 
-      expect(service.cancelPendingLogin()).toBe(true)
-      await rejection
-      expect(service.cancelPendingLogin()).toBe(false)
-    } finally {
-      vi.doUnmock('node:child_process')
-      vi.doUnmock('../codex-cli/command')
-    }
+    expect(service.cancelPendingLogin()).toBe(true)
+    await rejection
+    expect(service.cancelPendingLogin()).toBe(false)
   })
 
   it('publishes the sign-in link codex prints and drops it when the login ends', async () => {
-    vi.resetModules()
-    const children: StubLoginChild[] = []
-    vi.doMock('node:child_process', () => ({
-      execFileSync: vi.fn(),
-      spawn: vi.fn(() => {
-        const child = createStubLoginChild()
-        children.push(child)
-        return child
-      })
-    }))
-    vi.doMock('../codex-cli/command', () => ({
-      resolveCodexCommand: () => 'codex'
-    }))
-    try {
-      const { CodexAccountService } = await import('./service')
-      const service = new CodexAccountService(
-        asServiceDouble(createStore(createSettings())),
-        asServiceDouble(createRateLimits()),
-        asServiceDouble(createRuntimeHome())
-      )
-      const published: (string | null)[] = []
-      service.subscribePendingLoginUrl((url) => published.push(url))
+    const { service, children } = await createServiceWithHangingLogin()
+    const published: (string | null)[] = []
+    service.subscribePendingLoginUrl((url) => published.push(url))
 
-      const pending = service.addAccount()
-      const rejection = expect(pending).rejects.toThrow('Codex sign-in was cancelled.')
-      await vi.waitUntil(() => children.length === 1)
+    const pending = service.addAccount()
+    const rejection = expect(pending).rejects.toThrow('Codex sign-in was cancelled.')
+    await vi.waitUntil(() => children.length === 1)
 
-      const authUrl = 'https://auth.openai.com/oauth/authorize?client_id=orca&state=abc'
-      children[0].stdout.write(
-        `Starting local login server on http://localhost:1455.\nIf your browser did not open, navigate to this URL to authenticate:\n\n${authUrl}\n`
-      )
-      await vi.waitUntil(() => service.getPendingLoginUrl() === authUrl)
-      expect(published).toEqual([authUrl])
+    const authUrl = 'https://auth.openai.com/oauth/authorize?client_id=orca&state=abc'
+    children[0].stdout.write(
+      `Starting local login server on http://localhost:1455.\nIf your browser did not open, navigate to this URL to authenticate:\n\n${authUrl}\n`
+    )
+    await vi.waitUntil(() => service.getPendingLoginUrl() === authUrl)
+    expect(published).toEqual([authUrl])
 
-      service.cancelPendingLogin()
-      await rejection
-      // Why: the link dies with the login server it points back at.
-      expect(service.getPendingLoginUrl()).toBeNull()
-      expect(published).toEqual([authUrl, null])
-    } finally {
-      vi.doUnmock('node:child_process')
-      vi.doUnmock('../codex-cli/command')
-    }
+    service.cancelPendingLogin()
+    await rejection
+    // Why: the link dies with the login server it points back at.
+    expect(service.getPendingLoginUrl()).toBeNull()
+    expect(published).toEqual([authUrl, null])
   })
 })

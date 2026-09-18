@@ -24,8 +24,8 @@ export function parseCodexLoginAuthUrl(output: string): string | null {
     return null
   }
   try {
-    const url = new URL(match[1])
-    return url.protocol === 'https:' ? url.toString() : null
+    // Only the shape is trusted here; the pattern already fixed the scheme.
+    return new URL(match[1]).toString()
   } catch {
     return null
   }

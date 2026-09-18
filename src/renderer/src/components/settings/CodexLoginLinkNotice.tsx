@@ -2,7 +2,7 @@ import { Check, Copy, ExternalLink } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { useClipboardTextCopyFeedback } from '@/hooks/use-clipboard-text-copy-feedback'
 import { Button } from '../ui/button'
-import { useCodexPendingLoginUrl } from './codex-pending-login-url'
+import { useCodexPendingLoginUrl } from './use-codex-pending-login-url'
 
 /**
  * The sign-in link of an in-flight `codex login`, so the user can finish the

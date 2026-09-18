@@ -55,10 +55,10 @@ type CodexLoginSessionDependencies = {
     child: CodexLoginChild,
     interactiveLogin?: WindowsHostInteractiveLoginSpawn | null
   ) => void
-  /** Registers the handle that abandons this login; called with null once it settles. */
-  setCancel?: (cancel: (() => boolean) | null) => void
+  /** Registers the handle that abandons this login; the caller clears it. */
+  setCancel: (cancel: () => boolean) => void
   /** The browser link codex printed, published as soon as it is complete. */
-  onAuthUrl?: (url: string) => void
+  onAuthUrl: (url: string) => void
 }
 
 type LoginCancellation = {
@@ -72,7 +72,7 @@ export async function runCodexLoginSession(
 ): Promise<void> {
   let cancelSpawnedLogin: (() => boolean) | null = null
   let cancelled = false
-  dependencies.setCancel?.(() => {
+  dependencies.setCancel(() => {
     // Why: only an accepted cancel latches. A spawned login that refuses —
     // because it already authenticated — must stay cancellable, or the Cancel
     // button and the next add both go dead for the rest of the deadline.
@@ -84,16 +84,12 @@ export async function runCodexLoginSession(
     cancelled = true
     return true
   })
-  try {
-    await runCodexLoginProcess(managedHomePath, dependencies, {
-      isCancelled: () => cancelled,
-      setSpawnedCancel: (cancel) => {
-        cancelSpawnedLogin = cancel
-      }
-    })
-  } finally {
-    dependencies.setCancel?.(null)
-  }
+  await runCodexLoginProcess(managedHomePath, dependencies, {
+    isCancelled: () => cancelled,
+    setSpawnedCancel: (cancel) => {
+      cancelSpawnedLogin = cancel
+    }
+  })
 }
 
 async function runCodexLoginProcess(
@@ -158,7 +154,7 @@ async function runCodexLoginProcess(
       const authUrl = parseCodexLoginAuthUrl(stdoutText)
       if (authUrl) {
         publishedAuthUrl = true
-        dependencies.onAuthUrl?.(authUrl)
+        dependencies.onAuthUrl(authUrl)
       }
     }
 
@@ -309,10 +305,7 @@ function createHostLoginSpawn(managedHomePath: string): {
   return {
     command: spawnCmd,
     args: spawnArgs,
-    env: withCliRuntimeOnPath(codexCommand, {
-      ...process.env,
-      CODEX_HOME: managedHomePath
-    }),
+    env: withCliRuntimeOnPath(codexCommand, { ...process.env, CODEX_HOME: managedHomePath }),
     codexCommand,
     interactiveLogin
   }
@@ -340,9 +333,7 @@ async function assertWslCodexCliAvailable(wslInfo: {
   if (result.code !== 0 || result.timedOut) {
     throw new Error(
       `Codex CLI is not available in WSL ${wslInfo.distro}. Install Codex in that distro or switch Account location to Windows.`,
-      {
-        cause: new Error(result.stderr.trim() || `codex lookup exited with ${result.code}`)
-      }
+      { cause: new Error(result.stderr.trim() || `codex lookup exited with ${result.code}`) }
     )
   }
 }

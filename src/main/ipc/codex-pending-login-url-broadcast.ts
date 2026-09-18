@@ -1,6 +1,5 @@
 import { BrowserWindow } from 'electron'
-
-export const CODEX_PENDING_LOGIN_URL_CHANGED_CHANNEL = 'codexAccounts:pendingLoginUrlChanged'
+import { CODEX_PENDING_LOGIN_URL_CHANGED_CHANNEL } from '../../shared/codex-auth-errors'
 
 export function broadcastCodexPendingLoginUrl(url: string | null): void {
   for (const window of BrowserWindow.getAllWindows()) {

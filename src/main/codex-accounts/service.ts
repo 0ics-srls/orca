@@ -17,7 +17,6 @@ import type { CodexAccountSelectionTarget } from './runtime-selection'
 import { CodexAccountIdentity, type ResolvedCodexIdentity } from './codex-account-identity'
 import { CodexConfigMirror } from './codex-config-mirror'
 import { runCodexLoginSession, type CodexLoginChild } from './codex-login-session'
-import { CodexPendingLoginUrl } from './codex-pending-login-url'
 import { CodexManagedHomePath } from './codex-managed-home-path'
 import { CodexManagedHomeLifecycle } from './codex-managed-home-lifecycle'
 import { CodexResetCreditCoordinator } from './codex-reset-credit-coordinator'
@@ -82,7 +81,8 @@ export class CodexAccountService {
   // Why: serialize the read-modify-write of settings; overlapping calls (e.g. double-click Add) would lose updates.
   private mutationQueue: Promise<unknown> = Promise.resolve()
   private cancelPendingCodexLogin: (() => boolean) | null = null
-  private readonly pendingLoginUrl = new CodexPendingLoginUrl()
+  private pendingLoginUrl: string | null = null
+  private readonly pendingLoginUrlListeners = new Set<(url: string | null) => void>()
   private readonly identity: CodexAccountIdentity
   private readonly configMirror: CodexConfigMirror
   private readonly managedHomePaths: CodexManagedHomePath
@@ -175,19 +175,28 @@ export class CodexAccountService {
 
   /** The sign-in link of the login waiting on a browser, for a late-joining renderer. */
   getPendingLoginUrl(): string | null {
-    return this.pendingLoginUrl.get()
+    return this.pendingLoginUrl
   }
 
-  subscribePendingLoginUrl(listener: (url: string | null) => void): () => void {
-    return this.pendingLoginUrl.subscribe(listener)
+  subscribePendingLoginUrl(listener: (url: string | null) => void): void {
+    this.pendingLoginUrlListeners.add(listener)
   }
 
-  /**
-   * Why: an abandoned login holds the mutation queue for its whole deadline, so
-   * the next add would sit behind it with a spinner and no browser, then inherit
-   * the abandoned login's timeout failure. Cancelling before enqueueing — never
-   * inside the queue, which the abandoned login owns — frees it immediately.
-   */
+  private setPendingLoginUrl(url: string | null): void {
+    // Why the guard: every login that ends before printing a link clears an
+    // already-empty value, and each change reaches every window.
+    if (this.pendingLoginUrl === url) {
+      return
+    }
+    this.pendingLoginUrl = url
+    for (const listener of this.pendingLoginUrlListeners) {
+      listener(url)
+    }
+  }
+
+  // Why before the queue, not inside it: the abandoned login owns the queue slot
+  // the next add is waiting for. Only add/reauthenticate open a browser, so only
+  // they supersede — never serializeMutation, which background work also uses.
   private supersedePendingLogin(): void {
     if (this.cancelPendingLogin()) {
       console.info('[codex-accounts] Cancelled a pending Codex login superseded by a new request.')
@@ -279,11 +288,13 @@ export class CodexAccountService {
         setCancel: (cancel) => {
           this.cancelPendingCodexLogin = cancel
         },
-        onAuthUrl: (url) => this.pendingLoginUrl.set(url)
+        onAuthUrl: (url) => this.setPendingLoginUrl(url)
       })
     } finally {
-      // Why: the link dies with the login server, so no surface may keep offering it.
-      this.pendingLoginUrl.set(null)
+      // Why: both die with the login server — no surface may keep offering a
+      // link nothing is listening on, or a cancel with nothing to cancel.
+      this.cancelPendingCodexLogin = null
+      this.setPendingLoginUrl(null)
     }
   }
 }

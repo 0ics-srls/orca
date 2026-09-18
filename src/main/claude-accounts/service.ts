@@ -111,12 +111,9 @@ export class ClaudeAccountService {
     return this.cancelPendingClaudeLogin?.() ?? false
   }
 
-  /**
-   * Why: an abandoned login holds the mutation queue for its whole deadline, so
-   * the next add would sit behind it with a spinner and no browser, then inherit
-   * the abandoned login's timeout failure. Cancelling before enqueueing — never
-   * inside the queue, which the abandoned login owns — frees it immediately.
-   */
+  // Why before the queue, not inside it: the abandoned login owns the queue slot
+  // the next add is waiting for. Only add/reauthenticate open a browser, so only
+  // they supersede — never serializeMutation, which background work also uses.
   private supersedePendingLogin(): void {
     if (this.cancelPendingLogin()) {
       console.info(
