@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -50,6 +50,10 @@ describe('Codex approval ownership', () => {
     return path
   }
 
+  function appendRollout(path: string, value: unknown): void {
+    appendFileSync(path, `${JSON.stringify(value)}\n`)
+  }
+
   function post(payload: Record<string, unknown>): ReturnType<typeof normalizeHookPayload> {
     return normalizeHookPayload(state, 'codex', { paneKey: PANE_KEY, payload }, 'production')
   }
@@ -74,6 +78,27 @@ describe('Codex approval ownership', () => {
     expect(permissionRequest(transcriptPath)?.payload.state).toBe('waiting')
   })
 
+  it('follows a thread settings update that switches the reviewer back to the user', () => {
+    const transcriptPath = writeRollout({ reviewer: 'auto_review' })
+    expect(permissionRequest(transcriptPath)?.payload.state).toBe('working')
+
+    appendRollout(transcriptPath, {
+      type: 'event_msg',
+      payload: {
+        type: 'thread_settings_applied',
+        thread_settings: { approvals_reviewer: 'user' }
+      }
+    })
+
+    expect(permissionRequest(transcriptPath)?.payload.state).toBe('waiting')
+  })
+
+  it('accepts Codex’s legacy guardian_subagent reviewer spelling as auto review', () => {
+    const transcriptPath = writeRollout({ reviewer: 'guardian_subagent' })
+
+    expect(permissionRequest(transcriptPath)?.payload.state).toBe('working')
+  })
+
   it('keeps waiting when the rollout names no reviewer, as older Codex builds do not', () => {
     const transcriptPath = writeRollout({})
 
@@ -85,6 +110,15 @@ describe('Codex approval ownership', () => {
     dirs.push(root)
 
     expect(permissionRequest(join(root, 'absent.jsonl'))?.payload.state).toBe('waiting')
+  })
+
+  it('does not retain auto review when a later rollout read is unreadable', () => {
+    const transcriptPath = writeRollout({ reviewer: 'auto_review' })
+    expect(permissionRequest(transcriptPath)?.payload.state).toBe('working')
+
+    rmSync(transcriptPath)
+
+    expect(permissionRequest(transcriptPath)?.payload.state).toBe('waiting')
   })
 
   it('keeps waiting when no transcript path is supplied', () => {
