@@ -317,6 +317,13 @@ export async function readFileViaStream(
           }
         }
       )
+      // Why: beforeResolve is an optional hook; if a mux ever resolves without running
+      // it, metadata never installs and no deadline is armed. Fail instead of hanging.
+      .then(() => {
+        if (!settled && !metadataReady) {
+          fail(new StreamProtocolError('Metadata response resolved without stream identity'))
+        }
+      })
       .catch((err) => {
         fail(err as Error)
       })

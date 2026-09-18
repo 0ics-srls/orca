@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { SshChannelMultiplexer } from './ssh-channel-multiplexer'
 import {
   FileReadCapExceededError,
@@ -202,4 +202,20 @@ it('preserves the provider fallback when an older relay has no streaming method'
   } finally {
     provider.dispose()
   }
+})
+
+// Why: the metadata install moved from the mandatory resolve path to the optional
+// beforeResolve hook, and the request timer is cleared before that hook runs. A mux
+// that ignores the hook must fail the read, not leave it pending with no deadline.
+it('fails the read when a multiplexer resolves without running beforeResolve', async () => {
+  const connection = createConnection()
+  vi.spyOn(connection.mux, 'request').mockResolvedValue({
+    totalSize: 10,
+    isBinary: false,
+    streamId: 7
+  })
+
+  await expect(readFileViaStream(connection.mux, '/no-hook.txt')).rejects.toBeInstanceOf(
+    StreamProtocolError
+  )
 })
