@@ -33,7 +33,11 @@ import {
   type DockerSshRelayTarget
 } from './helpers/docker-ssh-relay-target'
 import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
-import { waitForActivePaneHookDescriptor, waitForActiveTerminalManager } from './helpers/terminal'
+import {
+  waitForActivePaneHookDescriptor,
+  waitForActivePanePtyId,
+  waitForActiveTerminalManager
+} from './helpers/terminal'
 
 const RUN_DOCKER_SSH = process.env.ORCA_E2E_SSH_DOCKER === '1'
 
@@ -44,6 +48,9 @@ const ARGV_LEDGER = '/tmp/orca-e2e-claude-argv.log'
 const FOREIGN_CONNECTION_ID = 'orca-e2e-some-other-host'
 /** Resolve the stamp to the connected target's own id, which is only minted during connect. */
 const STAMP_OWNING_HOST = Symbol('stamp-owning-host')
+/** How long a `--resume` gets to reach the host once the relaunched pane holds its PTY. The resume
+ *  is typed into that very shell, so anything the gate let through lands well inside this. */
+const RESUME_GRACE_MS = 20_000
 
 test.use({ seedTestRepo: false })
 
@@ -68,17 +75,27 @@ function readRemoteArgvLedger(target: DockerSshRelayTarget): string {
   return execDockerSshRelayTargetCommand(target, `cat ${ARGV_LEDGER} 2>/dev/null || true`).trim()
 }
 
-/** Wait until the agent has been invoked on the remote, or the budget runs out. Returns the ledger
- *  either way: an empty one is the verdict the negative test asserts, so this must not throw. */
+/** The lines appended since `baseline`. The ledger is append-only and the first launch already wrote
+ *  its own `--version` probe to it, so "non-empty" says nothing about the relaunch — only the tail
+ *  beyond what was there at quit does. Reading the whole ledger here is exactly the race that let the
+ *  control case read two `--version` lines and give up before the resume was typed. */
+function ledgerLinesSince(ledger: string, baseline: string): string {
+  return ledger.startsWith(baseline) ? ledger.slice(baseline.length).trim() : ledger
+}
+
+/** Poll the relaunch's ledger lines until `until` holds or the budget runs out. Returns them either
+ *  way: the negative case asserts on what did NOT arrive, so this must not throw. */
 async function settleRemoteArgvLedger(
   target: DockerSshRelayTarget,
-  budgetMs: number
+  baseline: string,
+  budgetMs: number,
+  until: (fresh: string) => boolean
 ): Promise<string> {
   const deadline = Date.now() + budgetMs
   for (;;) {
-    const ledger = readRemoteArgvLedger(target)
-    if (ledger !== '' || Date.now() >= deadline) {
-      return ledger
+    const fresh = ledgerLinesSince(readRemoteArgvLedger(target), baseline)
+    if (until(fresh) || Date.now() >= deadline) {
+      return fresh
     }
     await new Promise((resolve) => setTimeout(resolve, 2_000))
   }
@@ -92,7 +109,8 @@ async function settleRemoteArgvLedger(
 async function resumeAcrossRestart(
   testInfo: TestInfo,
   target: DockerSshRelayTarget,
-  stamp: string | typeof STAMP_OWNING_HOST
+  stamp: string | typeof STAMP_OWNING_HOST,
+  resumeBudgetMs: number
 ): Promise<{
   ledger: string
   recordSurvived: boolean
@@ -180,8 +198,18 @@ async function resumeAcrossRestart(
       .poll(() => waitForActiveWorktree(secondLaunch.page), { timeout: 90_000 })
       .toBe(remote.worktreeId)
     await waitForActiveTerminalManager(secondLaunch.page, 90_000)
-
-    const ledger = await settleRemoteArgvLedger(target, 90_000)
+    // The cold-restore decision is made before the replacement PTY is spawned, so a bound PTY
+    // means the gate has already ruled on this record — after this, waiting is only for the
+    // typed command to travel.
+    await waitForActivePanePtyId(secondLaunch.page, 90_000)
+    // Orca's per-launch `claude --version` probe proves the relaunch reached the host at all; the
+    // negative case is vacuous without it.
+    await settleRemoteArgvLedger(target, ledgerAfterQuit, 90_000, (fresh) =>
+      fresh.includes('--version')
+    )
+    const ledger = await settleRemoteArgvLedger(target, ledgerAfterQuit, resumeBudgetMs, (fresh) =>
+      fresh.includes('--resume')
+    )
     // Why this is reported rather than merely asserted: the two host stamps are what the gate reads,
     // so a failure that does not name them cannot be told apart from the gate simply not running.
     const diagnostics = await secondLaunch.page.evaluate((sessionId) => {
@@ -226,20 +254,27 @@ test.describe('SSH sleeping-agent resume execution-host scope', () => {
       target = startDockerSshRelayTarget(testInfo)
       installRemoteClaudeArgvLedger(target)
 
-      const result = await resumeAcrossRestart(testInfo, target, FOREIGN_CONNECTION_ID)
+      const result = await resumeAcrossRestart(
+        testInfo,
+        target,
+        FOREIGN_CONNECTION_ID,
+        RESUME_GRACE_MS
+      )
 
       // Why not an empty ledger: Orca legitimately probes `claude --version` on the remote to
       // detect installed agents, once per launch. That is not a resume. The defect is `--resume`
-      // carrying an id this machine never wrote, so that is what must be absent.
+      // carrying an id this machine never wrote, so that is what must be absent. `result.ledger`
+      // is only what the relaunch appended, so the first launch's probe cannot satisfy this.
       expect(
         result.ledger,
         `Orca ran the agent on the SSH host with a session id captured on another machine.\nrecord stamp: ${result.diagnostics.recordStamp}\nlive entry stamp: ${result.diagnostics.entryStamp}\nledger before quit: ${JSON.stringify(result.diagnostics.ledgerBeforeQuit)}\nledger after quit+relay kill: ${JSON.stringify(result.diagnostics.ledgerAfterQuit)}`
       ).not.toContain('--resume')
       expect(result.ledger).not.toContain(SESSION_ID)
-      // The ledger must not be empty either, or this proves only that the agent never ran at all.
+      // The relaunch's lines must not be empty either, or this proves only that the agent never
+      // ran at all.
       expect(
         result.ledger,
-        'the stub agent was never invoked, so the lane proves nothing'
+        'the stub agent was never invoked by the relaunch, so the lane proves nothing'
       ).toContain('--version')
       // Declining is only recoverable if the record survives; deleting it on a host disagreement
       // would destroy the user's only handle on that transcript.
@@ -259,7 +294,7 @@ test.describe('SSH sleeping-agent resume execution-host scope', () => {
 
       // The control for the test above: the same machinery, one field different, and the resume
       // must still land on the remote.
-      const result = await resumeAcrossRestart(testInfo, target, STAMP_OWNING_HOST)
+      const result = await resumeAcrossRestart(testInfo, target, STAMP_OWNING_HOST, 90_000)
 
       expect(result.ledger, 'the legitimate resume never reached the SSH host').toContain(
         `--resume ${SESSION_ID}`

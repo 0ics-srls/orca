@@ -5,7 +5,7 @@ import {
   type ExecutionHostId
 } from '../../../shared/execution-host'
 import {
-  getExecutionHostIdForWorktree,
+  getKnownExecutionHostIdForWorktree,
   type WorktreeRuntimeOwnerState
 } from './worktree-runtime-owner'
 
@@ -33,7 +33,7 @@ import {
  * loses the only scrollback copy, so an unknown repo is treated as remote. Same window, opposite
  * default, both correct. A reader pattern-matching one onto the other will get this backwards.
  *
- * The three unknowns this fails open on:
+ * The four unknowns this fails open on:
  *
  *  - `undefined` is "never stamped", not "local" (#9030 leaves SSH orphans unstamped).
  *  - `null` is "local **or** paired runtime": a `remote:<env>@@<handle>` PTY is stamped null too
@@ -41,6 +41,9 @@ import {
  *    `ssh:` one, which is unambiguously another machine.
  *  - A current host of `runtime:*` is no evidence either way, because a paired client relabels its
  *    host's workspaces — including that host's own SSH ones — into its runtime namespace.
+ *  - A current host of `null` is a catalog with no row for the worktree. The routing resolver
+ *    answers `'local'` there, which is the right default for issuing an operation and would read
+ *    here as a positive host — so the worktree form below asks the resolver that keeps the silence.
  */
 export function agentResumeOriginNamesAnotherExecutionHost(
   originConnectionId: string | null | undefined,
@@ -70,6 +73,6 @@ export function sleepingRecordNamesAnotherExecutionHost(
 ): boolean {
   return agentResumeOriginNamesAnotherExecutionHost(
     record.connectionId,
-    getExecutionHostIdForWorktree(state, record.worktreeId)
+    getKnownExecutionHostIdForWorktree(state, record.worktreeId)
   )
 }

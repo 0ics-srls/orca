@@ -107,6 +107,32 @@ describe('sleepingRecordNamesAnotherExecutionHost', () => {
       sleepingRecordNamesAnotherExecutionHost(record, catalogOwnedBy(`ssh:${TARGET_ID}`))
     ).toBe(false)
   })
+
+  it.each([
+    ['an SSH record', TARGET_ID],
+    ['a local-or-runtime record', null]
+  ] as const)(
+    'fails open for %s when the catalog has no row for the worktree',
+    (_label, connectionId) => {
+      // The routing resolver answers `'local'` for a worktree it has no row for. Read as a host, that
+      // would make every SSH record look foreign until its repo row lands — a gate that never resumes
+      // yours is the inverse of the defect and worse.
+      const record = makeRecord({ connectionId })
+      expect(
+        sleepingRecordNamesAnotherExecutionHost(record, { repos: [], worktreesByRepo: {} })
+      ).toBe(false)
+    }
+  )
+
+  it('still refuses an SSH record once a repo row positively names the worktree local', () => {
+    const record = makeRecord({ connectionId: TARGET_ID })
+    expect(
+      sleepingRecordNamesAnotherExecutionHost(record, {
+        repos: [{ id: 'repo-1' }],
+        worktreesByRepo: {}
+      })
+    ).toBe(true)
+  })
 })
 
 describe('agentResumeOriginNamesAnotherExecutionHost', () => {
