@@ -252,6 +252,10 @@ export function preserveLiteralMarkdownSource(
     }
     let result = markdown
     const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
+    const isPlainEscapedBlock = preservesEscapedCharacters && blockHasOnlyEscapeMarks(info.block)
+    if (isPlainEscapedBlock) {
+      result = result.replace(/\\\$(?=\d)/g, '$')
+    }
     if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
       result = result.replace(/\$(?!\d)/g, '\\$&')
     }
@@ -338,4 +342,17 @@ function blockHasInlineMath(block: ProseMirrorNode): boolean {
     }
   })
   return found
+}
+
+function blockHasOnlyEscapeMarks(block: ProseMirrorNode): boolean {
+  let onlyEscapeMarks = true
+  block.descendants((node) => {
+    if (
+      node.isText &&
+      node.marks.some((mark) => mark.type.name !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
+    ) {
+      onlyEscapeMarks = false
+    }
+  })
+  return onlyEscapeMarks
 }
