@@ -17,6 +17,7 @@ function panelSearch(overrides: Partial<PanelSearch> = {}): PanelSearch {
   return {
     hits: [],
     response: null,
+    needsUpdate: false,
     error: false,
     loading: false,
     removeHit: vi.fn(),

@@ -2,6 +2,7 @@ import {
   applySessionSearchSettingsChange,
   installChildSessionSearchService
 } from '../ai-vault-search/session-search-enablement'
+import { sessionSearchScopeCatalogFromStore } from '../ai-vault-search/session-search-store-scope-catalog'
 import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { app } from 'electron'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -143,7 +144,10 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
   // Both desktop and headless serve own a host-local search service.
   const sessionSearch = installChildSessionSearchService({
     dataRoot: getCanonicalUserDataPath(),
-    getSettings: () => store.getSettings()
+    getSettings: () => store.getSettings(),
+    // Why read per request rather than snapshot: a repo added or a workspace
+    // renamed between two searches has to be in scope for the second one.
+    getScopeCatalog: (executionHostId) => sessionSearchScopeCatalogFromStore(store, executionHostId)
   })
   app.once('will-quit', () => sessionSearch?.dispose())
   state.runtime = runtime

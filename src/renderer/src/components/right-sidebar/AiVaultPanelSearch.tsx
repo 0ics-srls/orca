@@ -22,6 +22,10 @@ function hostSkipReason(outcome: AiVaultSearchHostOutcome['outcome']): string | 
       return 'unavailable'
     case 'unreachable':
       return 'unreachable'
+    case 'scope-unknown':
+      return 'scope not found there'
+    case 'needs-update':
+      return 'needs an update'
   }
 }
 
@@ -94,6 +98,16 @@ export function AiVaultPanelSearch({
       'sessionSearch.panel.noService',
       'Search is unavailable on this computer. It may need an Orca update or a runtime with search support.'
     )
+  } else if (unavailable === 'scope-unknown') {
+    message = translate(
+      'sessionSearch.panel.scopeUnknown',
+      'This computer does not have this workspace or project. Switch the scope to All to search everything on it.'
+    )
+  } else if (search.needsUpdate) {
+    message = translate(
+      'sessionSearch.panel.needsUpdate',
+      'This computer needs an Orca update: it cannot limit a search to one workspace or project yet. Switch the scope to All to search everything on it.'
+    )
   } else if (error) {
     message = translate(
       'sessionSearch.panel.failed',
@@ -119,7 +133,7 @@ export function AiVaultPanelSearch({
   if (!search.searching) {
     return children
   }
-  if (response?.kind === 'results' && search.hits.length === 0) {
+  if (!search.needsUpdate && response?.kind === 'results' && search.hits.length === 0) {
     message = translate(
       'sessionSearch.panel.noMatches',
       'No matching sessions in the indexed history. Try another query or scope.'
@@ -158,6 +172,7 @@ export function AiVaultPanelSearch({
           ) : !noAgents &&
             (error ||
               unavailable ||
+              search.needsUpdate ||
               response?.kind === 'stale-cursor' ||
               response?.kind === 'malformed-cursor') ? (
             <Button size="xs" variant="outline" disabled={loading} onClick={onRetry}>
@@ -167,7 +182,7 @@ export function AiVaultPanelSearch({
         </div>
       )}
       {children}
-      {response?.kind === 'results' && response.page.hasMore && (
+      {response?.kind === 'results' && response.page.hasMore && !search.needsUpdate && (
         <div className="border-t border-sidebar-border p-2">
           <Button
             className="w-full"

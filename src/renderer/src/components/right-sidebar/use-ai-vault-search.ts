@@ -12,6 +12,8 @@ import {
   type ExecutionHostScope
 } from '../../../../shared/execution-host'
 import type { AiVaultAgent, AiVaultSession } from '../../../../shared/ai-vault-types'
+import type { AiVaultSearchScopeIdentity } from '../../../../shared/ai-vault-search-scope'
+import { isUnacknowledgedScopedSearch } from '../../../../shared/ai-vault-search-scope-acknowledgement'
 import { resolveAiVaultSearchSettings } from '../../../../shared/ai-vault-search-settings'
 import { isWebClientLocation } from '@/lib/web-client-location'
 import { useAppStore } from '@/store'
@@ -77,10 +79,13 @@ export function useAiVaultSearch(
         if (cancelled) {
           return
         }
+        // An old host answered a scoped search with every session it has. Those
+        // hits are not this scope's, so none of them are shown.
+        const unscoped = isUnacknowledgedScopedSearch(request, response)
         setPage((previous) => ({
           identity,
           hits:
-            response.kind === 'results'
+            response.kind === 'results' && !unscoped
               ? [
                   ...(append && previous?.identity === identity ? previous.hits : []),
                   ...response.hits
@@ -111,6 +116,7 @@ export function useAiVaultSearch(
   return {
     hits: current?.hits ?? [],
     response: current?.response ?? null,
+    needsUpdate: isUnacknowledgedScopedSearch(identity.request, current?.response),
     error: current?.error ?? false,
     loading: Boolean(request && scope && (!current || current.loading)),
     removeHit: (hit: AiVaultSearchHit) =>
@@ -136,7 +142,8 @@ function hitExecutionHostId(hit: AiVaultSearchHit, host: ExecutionHostId | null)
 export function useAiVaultPanelSearch(
   query: string,
   agents: readonly AiVaultAgent[],
-  paths: readonly string[] | undefined,
+  /** Which scope the host resolves; undefined searches everything it has. */
+  within: AiVaultSearchScopeIdentity | undefined,
   executionHostScope: ExecutionHostScope
 ) {
   const settings = useAppStore((state) => state.settings?.aiVaultSearch)
@@ -146,15 +153,18 @@ export function useAiVaultPanelSearch(
     executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ? ALL_EXECUTION_HOSTS_SCOPE : host
   const searching = query.trim().length > 0
   const localConsent = executionHostScope === 'local' && !isWebClientLocation() && !policy.enabled
+  // `within` must be a stable reference from the caller; a fresh object per
+  // render would restart the search on every one.
   const request = useMemo(
     () =>
       searching && scope && !localConsent && agents.length > 0
         ? {
             query: query.trim(),
-            filters: { agents: [...agents], ...(paths ? { scopePaths: [...paths] } : {}) }
+            filters: { agents: [...agents] },
+            ...(within ? { within } : {})
           }
         : null,
-    [searching, scope, localConsent, agents, query, paths]
+    [searching, scope, localConsent, agents, query, within]
   )
   const search = useAiVaultSearch(request, scope, JSON.stringify(policy))
   const sessions = useMemo(
