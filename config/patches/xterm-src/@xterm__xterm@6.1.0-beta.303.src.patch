@@ -1280,7 +1280,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
     * @deprecated
     */
    public set(index: number, value: CharData): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      this._data[index * Constants.CELL_INDICIES + Cell.FG] = value[CHAR_DATA_ATTR_INDEX];
      if (value[CHAR_DATA_CHAR_INDEX].length > 1) {
@@ -1297,7 +1299,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
     * Set data at `index` to `cell`.
     */
    public setCell(index: number, cell: ICellData): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      if (cell.content & Content.IS_COMBINED_MASK) {
        this._combined[index] = cell.combinedData;
@@ -1319,7 +1323,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
     * it gets an optimized access method.
     */
    public setCellFromCodepoint(index: number, codePoint: number, width: number, attrs: IAttributeData): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
 +    if ((this._data[index * Constants.CELL_INDICIES + Cell.CONTENT] & Content.IS_COMBINED_MASK)) {
 +      delete this._combined[index];
@@ -1337,7 +1343,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
     * by the previous `setDataFromCodePoint` call, we can omit it here.
     */
    public addCodepointToCell(index: number, codePoint: number, width: number): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      let content = this._data[index * Constants.CELL_INDICIES + Cell.CONTENT];
      if (content & Content.IS_COMBINED_MASK) {
@@ -1345,7 +1353,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
    }
  
    public insertCells(pos: number, n: number, fillCellData: ICellData): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      pos %= this.length;
  
@@ -1362,7 +1372,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
    }
  
    public deleteCells(pos: number, n: number, fillCellData: ICellData): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      pos %= this.length;
      if (n < this.length - pos) {
@@ -1379,7 +1391,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
    }
  
    public replaceCells(start: number, end: number, fillCellData: ICellData, respectProtect: boolean = false): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      // full branching on respectProtect==true, hopefully getting fast JIT for standard case
      if (respectProtect) {
@@ -1387,7 +1401,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
     * excess memory (true after shrinking > Constants.CLEANUP_THRESHOLD).
     */
    public resize(cols: number, fillCellData: ICellData): boolean {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      if (cols === this.length) {
        return this._data.length * 4 * Constants.CLEANUP_THRESHOLD < this._data.buffer.byteLength;
@@ -1395,7 +1411,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
  
    /** fill a line with fillCharData */
    public fill(fillCellData: ICellData, respectProtect: boolean = false): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      // full branching on respectProtect==true, hopefully getting fast JIT for standard case
      if (respectProtect) {
@@ -1403,7 +1421,9 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
    }
  
    public copyCellsFrom(src: BufferLine, srcCol: number, destCol: number, length: number, applyInReverse: boolean): void {
-+    this._cache = '';
++    if (this._cacheValid) {
++      this._cache = '';
++    }
      this._cacheValid = false;
      const srcData = src._data;
      if (applyInReverse) {
