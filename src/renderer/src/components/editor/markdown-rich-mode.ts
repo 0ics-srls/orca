@@ -193,15 +193,23 @@ const linkReferenceDefinitionProcessor = unified().use(remarkParse).use(remarkGf
 // HTML round-trip check, parsing is skipped and the pre-filter match is
 // trusted as a definition, since blocking rich mode is the safe default.
 function hasLinkReferenceDefinition(content: string): boolean {
-  if (content.length > 50_000) {
+  // Definitions inside transported HTML comments are comment text, not
+  // Markdown definitions. Remove complete comments before the bounded probe.
+  const commentStripped = content.replace(/<!--[\s\S]*?-->/g, '')
+  if (!/^[ \t>*+\-\d.)]*\[[^\]]+\]:/m.test(commentStripped)) {
+    return false
+  }
+  if (commentStripped.length > 50_000) {
     return true
   }
-  const tree = linkReferenceDefinitionProcessor.parse(content)
+  const tree = linkReferenceDefinitionProcessor.parse(commentStripped)
   return containsDefinitionNode(tree)
 }
 
 function containsDefinitionNode(node: { type: string; children?: unknown[] }): boolean {
-  if (node.type === 'definition') {
+  // The rich editor treats footnote definitions as the same unsupported
+  // reference-style syntax, matching its existing fallback classification.
+  if (node.type === 'definition' || node.type === 'footnoteDefinition') {
     return true
   }
   if (!Array.isArray(node.children)) {
