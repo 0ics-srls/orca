@@ -253,7 +253,7 @@ export function preserveLiteralMarkdownSource(
     let result = markdown
     const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
     const isPlainEscapedBlock = preservesEscapedCharacters && blockHasOnlyEscapeMarks(info.block)
-    if (isPlainEscapedBlock) {
+    if (isPlainEscapedBlock && !info.inTableCell) {
       result = result.replace(/\\\$(?=\d)/g, '$')
     }
     if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
@@ -311,7 +311,7 @@ export function preserveLiteralMarkdownSource(
       const withEntities = hasEscapedEntityMark(json)
         ? output.replace(/&(?!amp;|lt;|gt;|#\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
         : output
-      return hasOnlyEscapedMarks(json) ? withEntities.replace(/\\\$(?=\d)/g, '$') : withEntities
+      return withEntities
     } finally {
       blocks = undefined
     }
