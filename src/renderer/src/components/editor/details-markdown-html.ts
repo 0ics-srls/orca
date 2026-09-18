@@ -94,7 +94,7 @@ export function renderDetailsAttributes(attrs: Record<string, unknown> | undefin
 }
 
 export function findDetailsBlockStart(content: string): number {
-  if (!content.includes('<details')) {
+  if (!/<details\b/i.test(content)) {
     return -1
   }
   const fenceRanges = markdownFenceRanges(content)
