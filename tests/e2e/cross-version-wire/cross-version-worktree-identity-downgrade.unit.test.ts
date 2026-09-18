@@ -142,11 +142,17 @@ describe('cross-version worktree identity downgrade', () => {
     })
   })
 
-  it('neither build drops a row shape it does not recognise', () => {
+  // Both builds, because the load-bearing forward-compat guarantee is the CURRENT build's: the
+  // stack repoints rows by walking a fixed field list, and a field a later build adds must pass
+  // through untouched rather than be swept in by anything name-shaped.
+  it.each([
+    ['the pre-stack build', (): Migrate => preStackMigrate],
+    ['the stack', (): Migrate => stackMigrate]
+  ])('%s drops no row shape it does not recognise', (_label, migrateOf) => {
     const state = persistedStateAfterRename()
     const session = state.workspaceSession as Record<string, unknown>
     session.someFutureFieldByKey = { k: { worktreeId: OLD_ID, fromANewerBuild: true } }
-    preStackMigrate(state, OLD_ID, NEW_ID)
+    expect(() => migrateOf()(state, OLD_ID, NEW_ID)).not.toThrow()
     expect((state.workspaceSession as Record<string, unknown>).someFutureFieldByKey).toEqual({
       k: { worktreeId: OLD_ID, fromANewerBuild: true }
     })
