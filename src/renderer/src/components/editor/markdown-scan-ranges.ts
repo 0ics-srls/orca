@@ -94,7 +94,7 @@ export function markdownCodeSpanRanges(
       backslashes += 1
     }
     if (backslashes % 2 === 1) {
-      index += tickCount
+      index += 1
       continue
     }
 

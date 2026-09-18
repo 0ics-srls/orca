@@ -1,4 +1,5 @@
 import type { JSONContent, MarkdownRendererHelpers } from '@tiptap/core'
+import { markdownCodeSpanRanges } from './markdown-scan-ranges'
 
 type TableCellAlign = 'left' | 'right' | 'center' | null
 type TableCell = { text: string; isHeader: boolean; align: TableCellAlign }
@@ -9,7 +10,13 @@ const MAX_COLUMN_WIDTH = 60
 const MAX_ALIGNED_TABLE_WIDTH = 160
 
 function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
+  let offset = 0
+  let result = ''
+  for (const [start, end] of markdownCodeSpanRanges(value, [])) {
+    result += value.slice(offset, start).replace(/\s+/g, ' ') + value.slice(start, end)
+    offset = end
+  }
+  return (result + value.slice(offset).replace(/\s+/g, ' ')).trim()
 }
 
 function normalizeAlign(attrs: Record<string, unknown> | undefined): TableCellAlign {

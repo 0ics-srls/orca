@@ -9,9 +9,9 @@ import { slashCommands } from './rich-markdown-slash-commands'
 const REPORT_DOCUMENT_FIXTURE = [
   '# Markdown details',
   '',
-  'A paragraph with `class=\"orca-details\"` and a nested toggle.',
+  'A paragraph with `class="orca-details"` and a nested toggle.',
   '',
-  '<details class=\"orca-details\">',
+  '<details class="orca-details">',
   '<summary>Outer</summary>',
   '',
   'Body with **bold** text, a [link](https://example.com), and a list:',
@@ -618,4 +618,11 @@ describe('rich markdown round trip', () => {
     const input = '```\n[[not-a-link]]\n```\n'
     expect(roundTripMarkdown(input)).toBe('```\n[[not-a-link]]\n```')
   })
+})
+
+it('preserves code spacing inside a table across repeated saves', () => {
+  const source = '| code |\n| --- |\n| `a  b` |'
+  const once = roundTripMarkdown(source)
+  expect(once).toContain('`a  b`')
+  expect(roundTripMarkdown(once)).toBe(once)
 })

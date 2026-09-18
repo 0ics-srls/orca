@@ -1,9 +1,5 @@
 import { Extension } from '@tiptap/core'
 
-// Why: a private-use code point cannot appear in a markdown document, so it can stand
-// in for padding while the mark-boundary walk runs and be restored afterwards.
-const PADDING_PLACEHOLDERS = ['\uE000', '\uE001', '\uE002', '\uE003']
-
 type MarkdownNodeLike = {
   type?: string
   text?: string
@@ -32,17 +28,26 @@ function hasCodeMark(node: MarkdownNodeLike): boolean {
  * which is right for emphasis (`** text **` is not emphasis) and wrong for a code
  * span, where CommonMark strips one pad on render and the source keeps its bytes.
  */
-export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): MarkdownNodeLike[] {
-  const source = nodes.map((node) => node.text ?? '').join('')
-  const placeholder =
-    PADDING_PLACEHOLDERS.find((candidate) => !source.includes(candidate)) ?? '\uE000\uE001'
+function paddingPlaceholder(nodes: MarkdownNodeLike[]): string {
+  const source = JSON.stringify(nodes)
+  let placeholder = '\uE000'
+  while (source.includes(placeholder)) {
+    placeholder += '\uE000'
+  }
+  return placeholder
+}
+
+export function maskCodeSpanPadding(
+  nodes: MarkdownNodeLike[],
+  placeholder = paddingPlaceholder(nodes)
+): MarkdownNodeLike[] {
   return nodes.map((node) => {
     if (node?.type !== 'text' || !hasCodeMark(node)) {
       return node
     }
     const text = node.text ?? ''
     const leading = text.match(/^(\s+)/)?.[1] ?? ''
-    const trailing = text.match(/(\s+)$/)?.[1] ?? ''
+    const trailing = text.slice(leading.length).match(/(\s+)$/)?.[1] ?? ''
     if (!leading && !trailing) {
       return node
     }
@@ -54,7 +59,7 @@ export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): MarkdownNodeLike
   })
 }
 
-export function restoreCodeSpanPadding(markdown: string, placeholder: string): string {
+export function restoreCodeSpanPadding(markdown: string, placeholder = '\uE000'): string {
   return markdown.split(placeholder).join(' ')
 }
 
@@ -82,15 +87,8 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
       nodes: MarkdownNodeLike[],
       ...rest: unknown[]
     ) {
-      const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? []), ...rest)
-      const placeholder =
-        PADDING_PLACEHOLDERS.find(
-          (candidate) =>
-            !nodes
-              .map((node) => node.text ?? '')
-              .join('')
-              .includes(candidate)
-        ) ?? '\uE000\uE001'
+      const placeholder = paddingPlaceholder(nodes ?? [])
+      const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? [], placeholder), ...rest)
       return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered, placeholder) : rendered
     }
   }
