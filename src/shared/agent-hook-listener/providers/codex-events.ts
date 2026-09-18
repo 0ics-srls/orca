@@ -165,7 +165,7 @@ export function normalizeCodexEvent(
     state.codexSubagentRosterByPaneKey.delete(paneKey)
     state.codexSubagentTranscriptByPaneKey.delete(paneKey)
   }
-  if (agentId && transcriptPath) {
+  if (agentId && transcriptPath && eventName === 'PermissionRequest') {
     const transcriptState = getOrCreateCodexSubagentTranscriptState(state, paneKey)
     if (transcriptState.parent.filePath === transcriptPath) {
       reconcileCodexSubagentTranscript(
