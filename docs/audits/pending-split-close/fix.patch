@@ -1,5 +1,5 @@
 diff --git a/src/renderer/src/components/terminal-pane/ipc-pty-connect.ts b/src/renderer/src/components/terminal-pane/ipc-pty-connect.ts
-index 3023236de0..52b983c51f 100644
+index 3023236de0e..52b983c51fd 100644
 --- a/src/renderer/src/components/terminal-pane/ipc-pty-connect.ts
 +++ b/src/renderer/src/components/terminal-pane/ipc-pty-connect.ts
 @@ -27,6 +27,7 @@ type IpcPtyConnectContext = {
@@ -21,7 +21,7 @@ index 3023236de0..52b983c51f 100644
        if (
          !spawnResult.isReattach &&
 diff --git a/src/renderer/src/components/terminal-pane/pty-transport-types.ts b/src/renderer/src/components/terminal-pane/pty-transport-types.ts
-index 4d7eaf7358..2f6ed734bb 100644
+index 4d7eaf7358b..2f6ed734bbf 100644
 --- a/src/renderer/src/components/terminal-pane/pty-transport-types.ts
 +++ b/src/renderer/src/components/terminal-pane/pty-transport-types.ts
 @@ -232,7 +232,10 @@ export type PtyTransport = {
@@ -37,7 +37,7 @@ index 4d7eaf7358..2f6ed734bb 100644
  
  export type IpcPtyTransportOptions = {
 diff --git a/src/renderer/src/components/terminal-pane/pty-transport.ts b/src/renderer/src/components/terminal-pane/pty-transport.ts
-index f794b9a1e4..7731e75eac 100644
+index f794b9a1e4d..7731e75eac5 100644
 --- a/src/renderer/src/components/terminal-pane/pty-transport.ts
 +++ b/src/renderer/src/components/terminal-pane/pty-transport.ts
 @@ -44,6 +44,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
@@ -67,18 +67,28 @@ index f794b9a1e4..7731e75eac 100644
        try {
          this.disconnect()
 diff --git a/src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts b/src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts
-index 330b42166c..f3966b1f75 100644
+index 330b42166cd..ea85e929e81 100644
 --- a/src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts
 +++ b/src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts
-@@ -13,6 +13,7 @@ import {
+@@ -1,4 +1,4 @@
+-import { useCallback, useImperativeHandle } from 'react'
++import { useCallback, useImperativeHandle, useRef } from 'react'
+ import { useAppStore } from '../../store'
+ import type { PaneExternalDropTarget } from '@/lib/pane-manager/pane-manager'
+ import { makePaneKey } from '../../../../shared/stable-pane-id'
+@@ -13,8 +13,11 @@ import {
  } from './terminal-pane-tab-detach'
  import { clearPaneTerminalError } from './terminal-error-accumulation'
  import type { TerminalPaneBindingController } from './use-terminal-pane-layout-bindings'
 +import { retireUnboundIpcTerminalPane } from './retire-unbound-ipc-terminal-pane'
++import { capturePendingTerminalPaneClose } from './terminal-pane-close-admission'
  
  export function useTerminalPaneCloseActions(controller: TerminalPaneBindingController) {
++  const confirmedCloseRef = useRef<(() => void) | null>(null)
    const {
-@@ -46,6 +47,13 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+     clearSessionRestoredBannerForPane,
+     managerRef,
+@@ -46,6 +49,13 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
          clearSessionRestoredBannerForPane(paneId)
          const leafId = manager.getLeafId(paneId)
          if (leafId) {
@@ -92,8 +102,106 @@ index 330b42166c..f3966b1f75 100644
            useAppStore.getState().setCacheTimerStartedAt(makePaneKey(tabId, leafId), null)
            useAppStore.getState().dropAgentStatus(makePaneKey(tabId, leafId), { paneRemoved: true })
          }
+@@ -79,12 +89,18 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+         return
+       }
+       const transport = paneTransportsRef.current.get(paneId)
+-      const ptyId = transport?.getPtyId()
++      const pending = capturePendingTerminalPaneClose(controller, paneId, useAppStore.getState)
++      const ptyId = transport?.getPtyId() ?? pending?.ptyId
+       if (!ptyId) {
+         executeClosePane(paneId)
+         return
+       }
+       const settings = useAppStore.getState().settings
++      const close = (): void => {
++        if (!pending || pending.isCurrent()) {
++          executeClosePane(paneId)
++        }
++      }
+       let decided = false
+       const decide = (act: () => void): void => {
+         if (decided) {
+@@ -93,12 +109,23 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+         decided = true
+         act()
+       }
+-      const confirmClose = (): void =>
++      const confirmClose = (): void => {
++        if (pending && !pending.isCurrent()) {
++          return
++        }
++        confirmedCloseRef.current = close
+         setPendingCloseConfirmation({
+           paneId,
+           copyKind: getCloseDialogCopyKind(paneId)
+         })
+-      const probeTimeout = setTimeout(() => decide(confirmClose), RUNNING_CLOSE_PROBE_TIMEOUT_MS)
++      }
++      const probeTimeout = setTimeout(
++        () =>
++          decide(
++            pending && settings?.skipCloseTerminalWithRunningProcessConfirm ? close : confirmClose
++          ),
++        RUNNING_CLOSE_PROBE_TIMEOUT_MS
++      )
+       // Why the shared probe rather than a direct inspect: this is the same question the tab-close
+       // guard asks, and the two must not drift on what an unanswered host means.
+       void probePtyRunningWork(settings, [ptyId], { timeoutMs: RUNNING_CLOSE_PROBE_TIMEOUT_MS })
+@@ -106,10 +133,10 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+           clearTimeout(probeTimeout)
+           decide(() => {
+             if (
+-              probes[0]?.verdict !== 'live' ||
++              (pending ? probes[0]?.verdict === 'exited' : probes[0]?.verdict !== 'live') ||
+               settings?.skipCloseTerminalWithRunningProcessConfirm
+             ) {
+-              executeClosePane(paneId)
++              close()
+             } else {
+               confirmClose()
+             }
+@@ -117,7 +144,9 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+         })
+         .catch(() => {
+           clearTimeout(probeTimeout)
+-          decide(() => executeClosePane(paneId))
++          decide(
++            pending && !settings?.skipCloseTerminalWithRunningProcessConfirm ? confirmClose : close
++          )
+         })
+     },
+     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
+@@ -143,22 +172,24 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
+   }, [])
+   const handleConfirmClose = useCallback(
+     (dontAskAgain: boolean) => {
+-      if (pendingCloseConfirmation === null) {
++      if (pendingCloseConfirmation === null || confirmedCloseRef.current === null) {
+         return
+       }
+-      const paneId = pendingCloseConfirmation.paneId
++      const confirmedClose = confirmedCloseRef.current
++      confirmedCloseRef.current = null
+       setPendingCloseConfirmation(null)
+       if (dontAskAgain) {
+         void updateSettings({
+           skipCloseTerminalWithRunningProcessConfirm: true
+         })
+       }
+-      executeClosePane(paneId)
++      confirmedClose()
+     },
+     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
+     [executeClosePane, pendingCloseConfirmation, updateSettings]
+   )
+   const handleCancelClose = useCallback(() => {
++    confirmedCloseRef.current = null
+     setPendingCloseConfirmation(null)
+     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
+   }, [])
 diff --git a/src/renderer/src/store/slices/terminal-tab-retirement.ts b/src/renderer/src/store/slices/terminal-tab-retirement.ts
-index 80e6782469..e2e034fa6a 100644
+index 80e67824699..e2e034fa6af 100644
 --- a/src/renderer/src/store/slices/terminal-tab-retirement.ts
 +++ b/src/renderer/src/store/slices/terminal-tab-retirement.ts
 @@ -135,6 +135,30 @@ export function isTerminalTabPresent(

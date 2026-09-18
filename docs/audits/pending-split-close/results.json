@@ -15,7 +15,7 @@
     },
     "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts": {
       "before": "978003ccd82d0af5dce5501edaa7c20c87170e590a5f3f06e55b28f9e4f0323f",
-      "after": "22b379ff8b5277841ec4f701ed45206567266029aed8d8e0876ee4cc77d12c1b"
+      "after": "bbfeb2385fd120a7a1407d043011fb689b5c2b652c31150de44061f1edb76a7b"
     },
     "src/renderer/src/store/slices/terminal-tab-retirement.ts": {
       "before": "e622afc63524826732f1779a6180d17b51ac5a2c705654062cc0907ea735db4f",
@@ -25,7 +25,7 @@
       "current": "3194229bdd3c992e8459cdad727a3931653953b204854486b8aaf4d129152d24"
     },
     "src/renderer/src/components/terminal-pane/pending-split-close-test-fixture.ts": {
-      "current": "38c2d14c9074f0d0d6af5eaca935fd660c5ff1121448730c5da07d749909ecf7"
+      "current": "5fddc75178546161448f8a84b43f0e7da41c7dbb986682a09f8f7ec4e44617bf"
     },
     "src/renderer/src/components/terminal-pane/pending-split-close.test.ts": {
       "current": "106abb33917dd403606af413558bfe95730a064199d4f7085c4970d38cfde0cc"
