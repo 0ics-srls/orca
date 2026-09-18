@@ -21,7 +21,9 @@ export const AGENT_SESSION_RECOVERY_CAPSULE_FILE = 'agent-session-recovery.json'
 const MAX_CAPSULE_BYTES = 4 * 1024 * 1024
 const capsuleSchema = z.object({ version: z.literal(1), markers: z.array(z.unknown()) })
 
-/** Advisory authorization has no backup: successful take spends it before acquisition.
+/** Advisory authorization has no backup: a successful take spends it before acquisition, and only
+ * what the taker still owes is written back at teardown — an offer the user acted on, dismissed or
+ * recovered by reopening the chat never returns here.
  * A failed take exposes nothing; an unclaimed witness may survive until a later take or expiry. */
 export class AgentSessionRecoveryCapsule {
   private readonly filePath: string

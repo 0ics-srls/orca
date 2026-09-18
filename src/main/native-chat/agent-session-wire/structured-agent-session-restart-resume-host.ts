@@ -1,5 +1,5 @@
-// Recovery offers live in memory after an atomic take of the advisory capsule. Unconsumed offers
-// are written back during orderly teardown; a crash after take can still lose the offer.
+// Recovery offers live in memory after an atomic take of the advisory capsule. Whatever the offer
+// still owes is written back during orderly teardown; a crash after take can still lose it.
 
 import { randomUUID } from 'node:crypto'
 import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
@@ -27,6 +27,7 @@ import type {
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { adapterSupportsRecord } from './structured-agent-session-provider-support'
+import { createStructuredAgentSessionRestartClaim } from './structured-agent-session-restart-claim'
 import {
   structuredAgentSessionResumableSet,
   type StructuredAgentSessionResumeCandidate
@@ -90,6 +91,9 @@ export type StructuredAgentSessionRestartResume = {
     resumed: StructuredAgentSessionResumeOutcome[]
     continued: StructuredAgentSessionContinuationOutcome[]
   }>
+  /** A resume-capable hold handed this session its provider child back, which is the recovery the
+   *  offer existed to perform. Stops advertising it; the marker stays valid evidence. */
+  recoveredByHold: (sessionId: string) => void
   dismiss: () => Promise<number>
 }
 
@@ -107,40 +111,11 @@ export function createStructuredAgentSessionRestartResume(
   const teardownId = randomUUID()
   let teardownMarkers = new Map<string, AgentSessionResumeMarker>()
   const confirmedMarkers = new Map<string, AgentSessionResumeMarker>()
-  let claimed: AgentSessionResumeMarker[] | null = null
-  let claiming: Promise<void> | undefined
-
-  const claimMarkers = async (): Promise<AgentSessionResumeMarker[]> => {
-    claiming ??= (async () => {
-      try {
-        claimed = (await deps.recoveryCapsule?.take(surfaces.now())) ?? []
-      } catch {
-        console.warn('[structured-agent-session] taking recovery capsule failed')
-        claimed = []
-      }
-    })()
-    await claiming
-    return claimed ?? []
-  }
-
-  /** Spends one claimed marker. In memory, because the durable copy is already gone. */
-  const spendClaimed = (sessionId: string): boolean => {
-    const before = claimed?.length ?? 0
-    claimed = (claimed ?? []).filter((marker) => marker.sessionId !== sessionId)
-    return claimed.length < before
-  }
-
-  /** Opens any claimed session this launch has not, so its journal can answer for itself. An
-   *  unreadable journal leaves the predicate with one record instead of two, which refuses. */
-  const revealClaimed = async (): Promise<AgentSessionResumeMarker[]> => {
-    const markers = await claimMarkers()
-    for (const marker of markers) {
-      if (!sessions.has(marker.sessionId)) {
-        await surfaces.revealSession(marker.sessionId).catch(() => null)
-      }
-    }
-    return markers
-  }
+  const claim = createStructuredAgentSessionRestartClaim({
+    take: () => deps.recoveryCapsule?.take(surfaces.now()),
+    isOpen: (sessionId) => sessions.has(sessionId),
+    open: (sessionId) => surfaces.revealSession(sessionId)
+  })
 
   const derive = (
     markers: readonly AgentSessionResumeMarker[],
@@ -182,15 +157,17 @@ export function createStructuredAgentSessionRestartResume(
     })
   }
 
-  const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> =>
-    derive(await revealClaimed(), 'must-be-released')
+  const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> => {
+    await claim.evidence()
+    return derive(claim.offered(), 'must-be-released')
+  }
 
   const run = async (
     sessionIds: readonly string[] | undefined,
     owner: string,
     afterAcquire?: (marker: AgentSessionResumeMarker) => Promise<void>
   ): Promise<StructuredAgentSessionResumeOutcome[]> => {
-    const markers = await revealClaimed()
+    const markers = await claim.evidence()
     const requested = new Set(sessionIds ?? markers.map((entry) => entry.sessionId))
     // Re-derived at CLICK time, never taken from the caller: a client may name any session id,
     // and only the predicate decides which of them is allowed a provider child.
@@ -209,7 +186,7 @@ export function createStructuredAgentSessionRestartResume(
           const marker = markersBySession.get(sessionId)
           const leaseState =
             sessions.get(sessionId)?.hasProviderChild === true ? 'may-be-held' : 'must-be-released'
-          return !!marker && derive([marker], leaseState).length === 1 && spendClaimed(sessionId)
+          return !!marker && derive([marker], leaseState).length === 1 && claim.spend(sessionId)
         },
         resume: async (sessionId) => {
           const holder = `restart-resume:${sessionId}`
@@ -322,28 +299,43 @@ export function createStructuredAgentSessionRestartResume(
       }
     },
     recordMarkers: async () => {
-      // Preserve a snoozed launch offer if Orca exits before the user acts on it.
-      const markers = new Map([
-        ...confirmedMarkers,
-        ...(claimed ?? []).map((marker) => [marker.sessionId, marker] as const)
-      ])
+      // A snoozed offer survives quit, but only as something this host would still offer: it is
+      // RE-DERIVED here rather than round-tripped, so a marker the predicate has come to refuse is
+      // not handed to the next launch to refuse again.
+      let carried: AgentSessionResumeMarker[] = []
+      try {
+        const outstanding = claim.offered()
+        const stillResumable = new Set(
+          derive(outstanding, 'must-be-released').map((candidate) => candidate.sessionId)
+        )
+        carried = outstanding.filter((marker) => stillResumable.has(marker.sessionId))
+      } catch {
+        console.warn('[structured-agent-session] re-deriving the snoozed offer failed')
+      }
+      const markers = new Map<string, AgentSessionResumeMarker>()
+      for (const marker of carried) {
+        markers.set(marker.sessionId, marker)
+      }
+      // Last write wins, and THIS teardown's witness is the fresh one: it describes the work that
+      // was actually interrupted, where a carried marker describes a turn that ended launches ago.
+      for (const [sessionId, marker] of confirmedMarkers) {
+        markers.set(sessionId, marker)
+      }
       await deps.recoveryCapsule?.record([...markers.values()], surfaces.now())
     },
     list,
+    recoveredByHold: claim.recover,
     /**
-     * Explicitly abandoning the offer, which spends the claim.
+     * Turning the offer down for good, which spends the claim.
      *
-     * A prompt that returns at every launch is worse than the problem it solves. Nothing is lost:
-     * the first resume-capable hold on a childless session re-acquires the provider at the same
-     * proved cursor, so opening the chat still reconnects it. The durable markers are already gone
-     * — the claim deleted them — so this only has to empty the launch-scoped set.
+     * Closing the dialog is a snooze — those markers stay claimed and are written back at quit — so
+     * this is the only path that abandons them outright. Nothing is lost either way: the first
+     * resume-capable hold on a childless session re-acquires the provider at the same proved
+     * cursor, so opening the chat still reconnects it, and that acquisition retires the claim. The
+     * durable markers are already gone — the claim deleted them — so this only has to empty the
+     * launch-scoped set.
      */
-    dismiss: async () => {
-      const markers = await claimMarkers()
-      const spent = markers.length
-      claimed = []
-      return spent
-    },
+    dismiss: claim.abandon,
     resume: (sessionIds, owner) => run(sessionIds, owner),
     continueAfterRestart
   }

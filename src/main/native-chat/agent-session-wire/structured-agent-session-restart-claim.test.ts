@@ -364,6 +364,62 @@ describe('the restart-resume surface', () => {
     ])
   })
 
+  // Both markers pass the predicate here, so nothing but PRECEDENCE decides which one is kept — and
+  // a stale claim that outranks this teardown's own witness makes the next launch refuse the chat
+  // that was actually mid-turn.
+  it('keeps this teardown witness over the stale claim for the same chat', async () => {
+    const { restartResume, recorded } = surface({
+      sessions: new Map([
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'interrupted')], false, [
+              submission('msg-2', 'pending')
+            ]),
+            hasProviderChild: true
+          }
+        ]
+      ])
+    })
+
+    expect(await restartResume.list()).toHaveLength(1)
+    restartResume.captureMarkers('update')
+    restartResume.confirmStoppedMarker(SESSION)
+    await restartResume.recordMarkers()
+
+    expect(recorded[0]).toMatchObject([
+      { sessionId: SESSION, work: { kind: 'submission', id: 'msg-2' }, trigger: 'update' }
+    ])
+  })
+
+  // Re-derived, not round-tripped: a marker this host would no longer offer is not handed to the
+  // next launch to refuse all over again.
+  it('does not carry a snoozed marker its own predicate now refuses', async () => {
+    const { restartResume, recorded } = surface({
+      sessions: new Map([
+        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), hasProviderChild: false }]
+      ])
+    })
+
+    expect(await restartResume.list()).toEqual([])
+    await restartResume.recordMarkers()
+
+    expect(recorded).toEqual([[]])
+  })
+
+  // Recovery ends the ADVERTISING, not the evidence: the chat is back, so it must not be offered or
+  // written back, while a user looking at it can still ask the agent to carry on.
+  it('stops offering and stops persisting a chat a hold recovered', async () => {
+    const { restartResume, recorded } = surface({})
+
+    expect(await restartResume.list()).toHaveLength(1)
+    restartResume.recoveredByHold(SESSION)
+
+    expect(await restartResume.list()).toEqual([])
+    await restartResume.recordMarkers()
+    expect(recorded).toEqual([[]])
+  })
+
   it('re-marks a session whose resume is already running when the next quit lands', async () => {
     const { restartResume, recorded } = surface({
       sessions: new Map([
