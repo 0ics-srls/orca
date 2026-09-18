@@ -17,20 +17,18 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { AppState } from '../../../types'
+import { createTestStore } from '../../worktrees-slice-test-harness'
 import { buildWorktreeRenameState } from './worktree-identity-rename-state'
 
 const OLD = 'repo1::/ws/old'
 const NEW = 'repo1::/ws/new'
 const OTHER = 'repo1::/ws/other'
 
+/** The real slice's state, so a fixture cannot drift from the shape the rename actually reads. */
 function appState(overrides: Partial<AppState>): AppState {
-  return {
-    lastVisitedAtByWorktreeId: {},
-    everActivatedWorktreeIds: new Set<string>(),
-    closedTerminalTabTombstonesByTabId: {},
-    clientHostedBrowserCloseIntentsByEnvironment: {},
-    ...overrides
-  } as unknown as AppState
+  const store = createTestStore()
+  store.setState(overrides)
+  return store.getState()
 }
 
 describe('buildWorktreeRenameState value-owned worktree rows', () => {

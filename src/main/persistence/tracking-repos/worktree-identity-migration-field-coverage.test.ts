@@ -14,7 +14,7 @@
  * already reads it as one.
  */
 import { describe, expect, it } from 'vitest'
-import { getDefaultWorkspaceSession } from '../../../shared/constants'
+import { getDefaultPersistedState, getDefaultWorkspaceSession } from '../../../shared/constants'
 import type { PersistedState } from '../../../shared/persisted-state-types'
 import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
 import { worktreeWorkspaceKey } from '../../../shared/workspace-scope'
@@ -68,7 +68,21 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
   activeFileIdByWorktree: { activeFileIdByWorktree: { [OLD]: '/old/path/a.ts' } },
   browserTabsByWorktree: {
     browserTabsByWorktree: {
-      [OLD]: [{ id: 'bw', worktreeId: OLD, title: 'b', createdAt: 1, activePageId: 'p' }] as never
+      [OLD]: [
+        {
+          id: 'bw',
+          worktreeId: OLD,
+          activePageId: 'p',
+          url: 'https://e.com',
+          title: 'b',
+          loading: false,
+          faviconUrl: null,
+          canGoBack: false,
+          canGoForward: false,
+          loadError: null,
+          createdAt: 1
+        }
+      ]
     }
   },
   browserPagesByWorkspace: {
@@ -87,7 +101,7 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
           loadError: null,
           createdAt: 1
         }
-      ] as never
+      ]
     }
   },
   activeBrowserTabIdByWorktree: { activeBrowserTabIdByWorktree: { [OLD]: 'bw' } },
@@ -104,7 +118,7 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
           pairedDeviceId: 'device',
           savedAt: 1
         }
-      ] as never
+      ]
     }
   },
   clientHostedBrowserCloseIntentsByEnvironment: {
@@ -129,15 +143,15 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
           sortOrder: 0,
           createdAt: 1
         }
-      ] as never
+      ]
     }
   },
   tabGroups: {
     tabGroups: {
-      [OLD]: [{ id: 'g', worktreeId: OLD, kind: 'terminal', sortOrder: 0, createdAt: 1 }] as never
+      [OLD]: [{ id: 'g', worktreeId: OLD, activeTabId: 'tab-1', tabOrder: ['tab-1'] }]
     }
   },
-  tabGroupLayouts: { tabGroupLayouts: { [OLD]: { type: 'leaf', groupId: 'g' } as never } },
+  tabGroupLayouts: { tabGroupLayouts: { [OLD]: { type: 'leaf', groupId: 'g' } } },
   activeGroupIdByWorktree: { activeGroupIdByWorktree: { [OLD]: 'g' } },
   lastVisitedAtByWorktreeId: {
     lastVisitedAtByWorktreeId: { [OLD]: 10, [`ssh:target|${OLD}`]: 20 }
@@ -151,12 +165,12 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
         paneKey: 'tab-1:leaf',
         worktreeId: OLD,
         agent: 'claude',
-        providerSession: {},
+        providerSession: { key: 'session_id', id: 'session-1' },
         prompt: 'p',
-        state: 'idle',
+        state: 'done',
         capturedAt: 1,
         updatedAt: 1
-      } as never
+      }
     }
   },
   terminalSurfaceTombstonesByPaneKey: {
@@ -177,16 +191,17 @@ const REFERENCE_FIXTURES: Partial<Record<SessionField, Partial<WorkspaceSessionS
 }
 
 function persistedState(session: WorkspaceSessionState): PersistedState {
-  return {
-    worktreeMeta: {},
-    worktreeLineageById: {},
-    workspaceLineageByChildKey: {},
-    workspaceSession: session,
-    workspaceSessionsByHostId: {}
-  } as unknown as PersistedState
+  return { ...getDefaultPersistedState('/home/test'), workspaceSession: session }
 }
 
-const referencingFields = (Object.keys(WORKSPACE_SESSION_WORKTREE_REFERENCE_KIND) as SessionField[])
+// The census is `satisfies Record<keyof WorkspaceSessionState, ...>`, so every key passes; the
+// guard exists to keep `Object.keys`'s `string[]` from indexing the fixture table as `any`.
+function isSessionField(field: string): field is SessionField {
+  return field in WORKSPACE_SESSION_WORKTREE_REFERENCE_KIND
+}
+
+const referencingFields = Object.keys(WORKSPACE_SESSION_WORKTREE_REFERENCE_KIND)
+  .filter(isSessionField)
   .filter((field) => WORKSPACE_SESSION_WORKTREE_REFERENCE_KIND[field] !== 'none')
   .sort()
 

@@ -21,10 +21,47 @@ const NEW_ID = 'repo::/worktrees/after'
 const THIRD_ID = 'repo::/worktrees/third'
 const PANE_KEY = 'pane-1'
 
-type Migrate = (state: Record<string, unknown>, oldId: string, newId: string) => boolean
-type Row = { worktreeId?: string }
+/**
+ * Declared locally, NOT as today's `WorkspaceSessionState`: the blob crosses two builds, so typing
+ * it against either one would let the current contract rewrite what the other build sees.
+ */
+type Row = {
+  worktreeId: string
+}
+type CrossVersionSession = {
+  tabsByWorktree: Record<string, unknown[]>
+  sleepingAgentSessionsByPaneKey: Record<string, Row & { agent: string }>
+  terminalSurfaceTombstonesByPaneKey: Record<string, Row & { retiredAt: number }>
+  closedTerminalTabTombstonesByTabId: Record<string, Row & { closedAt: number }>
+  clientHostedBrowserCloseIntentsByEnvironment: Record<string, (Row & { url: string })[]>
+  /** A field neither build under test knows; the forward-compat cells plant it. */
+  someFutureFieldByKey?: Record<string, Row & { fromANewerBuild: boolean }>
+}
+type CrossVersionPersistedState = {
+  worktreeMeta: Record<string, { createdAt: number }>
+  worktreeLineageById: Record<string, never>
+  workspaceLineageByChildKey: Record<string, never>
+  workspaceSession: CrossVersionSession
+  workspaceSessionsByHostId: Record<string, never>
+  mobileClientTabSelectionsByDeviceId: Record<string, never>
+  ui: { showDotfilesByWorktree: Record<string, never> }
+}
+type Migrate = (state: CrossVersionPersistedState, oldId: string, newId: string) => boolean
 
-function sessionWithRows(): Record<string, unknown> {
+function isMigrate(value: unknown): value is Migrate {
+  return typeof value === 'function'
+}
+
+/** Both builds' exports resolve the same way, so neither is typed against its own build's state. */
+function migrateExportOf(module: object): Migrate {
+  const candidate = 'migrateWorktreeIdentity' in module ? module.migrateWorktreeIdentity : undefined
+  if (!isMigrate(candidate)) {
+    throw new Error('module does not export migrateWorktreeIdentity')
+  }
+  return candidate
+}
+
+function sessionWithRows(): CrossVersionSession {
   return {
     tabsByWorktree: { [OLD_ID]: [] },
     sleepingAgentSessionsByPaneKey: { [PANE_KEY]: { worktreeId: OLD_ID, agent: 'claude' } },
@@ -36,7 +73,7 @@ function sessionWithRows(): Record<string, unknown> {
   }
 }
 
-function persistedStateAfterRename(): Record<string, unknown> {
+function persistedStateAfterRename(): CrossVersionPersistedState {
   return {
     worktreeMeta: { [OLD_ID]: { createdAt: 1 } },
     worktreeLineageById: {},
@@ -49,17 +86,15 @@ function persistedStateAfterRename(): Record<string, unknown> {
 }
 
 /** The `worktreeId` each row kind names after a migration, which is what downgrade turns on. */
-function rowsById(state: Record<string, unknown>): Record<string, string | undefined> {
-  const session = state.workspaceSession as Record<string, unknown>
-  const record = (field: string, key: string): string | undefined =>
-    (session[field] as Record<string, Row> | undefined)?.[key]?.worktreeId
+function rowsById(state: CrossVersionPersistedState): Record<string, string | undefined> {
+  const session = state.workspaceSession
   return {
-    sleepingAgentSessionsByPaneKey: record('sleepingAgentSessionsByPaneKey', PANE_KEY),
-    terminalSurfaceTombstonesByPaneKey: record('terminalSurfaceTombstonesByPaneKey', PANE_KEY),
-    closedTerminalTabTombstonesByTabId: record('closedTerminalTabTombstonesByTabId', 'tab'),
-    clientHostedBrowserCloseIntentsByEnvironment: (
-      session.clientHostedBrowserCloseIntentsByEnvironment as Record<string, Row[]> | undefined
-    )?.env?.[0]?.worktreeId
+    sleepingAgentSessionsByPaneKey: session.sleepingAgentSessionsByPaneKey[PANE_KEY]?.worktreeId,
+    terminalSurfaceTombstonesByPaneKey:
+      session.terminalSurfaceTombstonesByPaneKey[PANE_KEY]?.worktreeId,
+    closedTerminalTabTombstonesByTabId: session.closedTerminalTabTombstonesByTabId.tab?.worktreeId,
+    clientHostedBrowserCloseIntentsByEnvironment:
+      session.clientHostedBrowserCloseIntentsByEnvironment.env?.[0]?.worktreeId
   }
 }
 
@@ -75,8 +110,8 @@ beforeAll(async () => {
     ),
     import('../../../src/main/persistence/tracking-repos/worktree-identity-migration')
   ])
-  preStackMigrate = oldModule.migrateWorktreeIdentity as Migrate
-  stackMigrate = newModule.migrateWorktreeIdentity as Migrate
+  preStackMigrate = migrateExportOf(oldModule)
+  stackMigrate = migrateExportOf(newModule)
 }, SUITE_TIMEOUT_MS)
 
 describe('cross-version worktree identity downgrade', () => {
@@ -150,10 +185,11 @@ describe('cross-version worktree identity downgrade', () => {
     ['the stack', (): Migrate => stackMigrate]
   ])('%s drops no row shape it does not recognise', (_label, migrateOf) => {
     const state = persistedStateAfterRename()
-    const session = state.workspaceSession as Record<string, unknown>
-    session.someFutureFieldByKey = { k: { worktreeId: OLD_ID, fromANewerBuild: true } }
+    state.workspaceSession.someFutureFieldByKey = {
+      k: { worktreeId: OLD_ID, fromANewerBuild: true }
+    }
     expect(() => migrateOf()(state, OLD_ID, NEW_ID)).not.toThrow()
-    expect((state.workspaceSession as Record<string, unknown>).someFutureFieldByKey).toEqual({
+    expect(state.workspaceSession.someFutureFieldByKey).toEqual({
       k: { worktreeId: OLD_ID, fromANewerBuild: true }
     })
   })
