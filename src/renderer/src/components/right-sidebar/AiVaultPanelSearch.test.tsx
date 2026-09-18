@@ -67,6 +67,41 @@ describe('AiVaultPanelSearch', () => {
     )
   })
 
+  it('tells the user a computer needs an update instead of showing its unscoped hits', () => {
+    renderPanel(panelSearch({ needsUpdate: true, response: { ...searchResults(), hits: [] } }))
+
+    expect(screen.getByRole('status').textContent).toContain('needs an Orca update')
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+  })
+
+  it('says a computer does not have this workspace or project rather than blaming the search', () => {
+    renderPanel(panelSearch({ response: { kind: 'unavailable', reason: 'scope-unknown' } }))
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'does not have this workspace or project'
+    )
+  })
+
+  it('names a computer skipped for the scope or for its version in a merge', () => {
+    const response = searchResults()
+    renderPanel(
+      panelSearch({
+        hits: response.hits,
+        response: {
+          ...response,
+          hosts: [
+            { executionHostId: 'ssh:box', outcome: 'scope-unknown' },
+            { executionHostId: 'runtime:old', outcome: 'needs-update' }
+          ]
+        }
+      })
+    )
+
+    expect(screen.getByRole('status').textContent).toBe(
+      'Not searched: box (scope not found there) · old (needs an update)'
+    )
+  })
+
   it('stays silent when every computer answered', () => {
     const response = searchResults()
     renderPanel(

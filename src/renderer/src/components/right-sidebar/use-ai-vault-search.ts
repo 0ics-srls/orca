@@ -153,8 +153,10 @@ export function useAiVaultPanelSearch(
     executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ? ALL_EXECUTION_HOSTS_SCOPE : host
   const searching = query.trim().length > 0
   const localConsent = executionHostScope === 'local' && !isWebClientLocation() && !policy.enabled
-  // `within` must be a stable reference from the caller; a fresh object per
-  // render would restart the search on every one.
+  // Keyed on the identity's value, not its reference: a caller that rebuilds the
+  // object each render would otherwise restart the search on every render and
+  // never let one settle.
+  const withinKey = within === undefined ? null : JSON.stringify(within)
   const request = useMemo(
     () =>
       searching && scope && !localConsent && agents.length > 0
@@ -164,7 +166,8 @@ export function useAiVaultPanelSearch(
             ...(within ? { within } : {})
           }
         : null,
-    [searching, scope, localConsent, agents, query, within]
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- equal `withinKey` means an equal `within`, so the captured one is the current value.
+    [searching, scope, localConsent, agents, query, withinKey]
   )
   const search = useAiVaultSearch(request, scope, JSON.stringify(policy))
   const sessions = useMemo(
