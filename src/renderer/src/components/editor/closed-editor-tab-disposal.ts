@@ -18,13 +18,7 @@ import {
 
 export type ClosedEditorTab = Pick<OpenFile, 'id' | 'mode' | 'filePath'>
 
-/**
- * Releases the Monaco models and view-state cache entries owned by a batch of closed tabs.
- *
- * Why the batch shape: every prefix sweep here is a full scan of a shared registry or cache, so
- * doing one per closed tab makes "close all"/worktree-switch quadratic in retained models. Takes
- * the monaco namespace as an argument so it stays testable without importing `monaco-editor`.
- */
+// One registry sweep avoids quadratic close-all work.
 export function disposeClosedEditorModels(
   monacoRegistry: MonacoModelRegistry,
   closedFiles: readonly ClosedEditorTab[],
