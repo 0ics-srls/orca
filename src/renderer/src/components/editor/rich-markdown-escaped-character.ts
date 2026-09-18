@@ -47,8 +47,12 @@ export const RichMarkdownEscapedCharacter = Mark.create({
   // this is only the fallback for a serializer that bypasses getMarkdown.
   renderMarkdown: (node, helpers) => {
     const rendered = helpers.renderChildren(node)
-    if (rendered === '&') return '&amp;'
-    if (rendered === '<') return '&lt;'
+    if (rendered === '&') {
+      return '&amp;'
+    }
+    if (rendered === '<') {
+      return '&lt;'
+    }
     return rendered
   },
 
