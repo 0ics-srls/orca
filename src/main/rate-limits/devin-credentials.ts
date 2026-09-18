@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { homedir } from 'node:os'
 import { resolveDevinCliDataDir } from '../devin/devin-cli-data-dir'
 
 // Why: the Devin CLI stores credentials.toml next to its cli data dir
@@ -12,7 +13,11 @@ export function getDevinCredentialsPath(): string {
 /** Return the current location first, followed by the pre-CLI override layout. */
 export function getDevinCredentialsPaths(): string[] {
   const cliDir = resolveDevinCliDataDir()
-  return [join(dirname(cliDir), 'credentials.toml'), join(cliDir, 'credentials.toml')]
+  const paths = [join(dirname(cliDir), 'credentials.toml'), join(cliDir, 'credentials.toml')]
+  if (process.platform === 'darwin' && !process.env.DEVIN_HOME && !process.env.XDG_DATA_HOME) {
+    paths.push(join(homedir(), '.local', 'share', 'devin', 'credentials.toml'))
+  }
+  return paths
 }
 
 export type DevinCredentials = {
