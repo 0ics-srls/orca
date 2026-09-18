@@ -620,7 +620,11 @@ describe('serializeRichMarkdownForReconcile (real editor pipeline)', () => {
 
   it('patches an EOF edit before the serializer-omitted final newline', () => {
     const originalSource =
-      'Cost was \\$1,200 for Nell & Mary.\n\n| Item         | Amount |\n|--------------|-------:|\n| Fee          | \\$500  |\n\nTrailing paragraph.\n'
+      '(deficit −$509,542 by end-2020), so stock basis entered 2021 at $0.\n\n' +
+      'Escaped: cost was \\$1,200 and the fee was \\$35 per filing. **Total: \\$1,235** due.\n\n' +
+      'R&D credits for Nell & Mary, 2018 & 2020.\n\n' +
+      '| Item         | Amount |\n|--------------|-------:|\n| Fee          | \\$500  |\n\n' +
+      'Trailing paragraph.\n'
     const baseCanonical = serialize(originalSource)!
     expect(baseCanonical.endsWith('\n')).toBe(false)
     const edited = `${baseCanonical} Added word.`
@@ -633,7 +637,11 @@ describe('serializeRichMarkdownForReconcile (real editor pipeline)', () => {
     })
 
     expect(reconciled).toBe(
-      'Cost was \\$1,200 for Nell & Mary.\n\n| Item         | Amount |\n|--------------|-------:|\n| Fee          | \\$500  |\n\nTrailing paragraph. Added word.\n'
+      '(deficit −$509,542 by end-2020), so stock basis entered 2021 at $0.\n\n' +
+        'Escaped: cost was \\$1,200 and the fee was \\$35 per filing. **Total: \\$1,235** due.\n\n' +
+        'R&D credits for Nell & Mary, 2018 & 2020.\n\n' +
+        '| Item         | Amount |\n|--------------|-------:|\n| Fee          | \\$500  |\n\n' +
+        'Trailing paragraph. Added word.\n'
     )
     expect(serialize(reconciled)).toBe(edited)
   })
