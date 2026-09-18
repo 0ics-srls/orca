@@ -20,8 +20,17 @@ export type StructuredAgentSessionRestartClaim = {
    *  journal can answer for it. An unreadable journal leaves the predicate with one record instead
    *  of two, which refuses. */
   evidence: () => Promise<AgentSessionResumeMarker[]>
-  /** What the host still advertises, and what teardown writes back: evidence minus recovery. */
+  /** What the host still advertises: evidence minus recovery. */
   offered: () => AgentSessionResumeMarker[]
+  /**
+   * What teardown must write back, and whether this launch ever claimed it.
+   *
+   * `claimed: false` is not "nothing is owed" — the durable copy is still intact and nothing here
+   * revealed it, so it is taken now and must be carried forward VERBATIM. Re-deriving it would
+   * refuse every marker for want of a journal nobody opened, which is indistinguishable from
+   * deleting an offer the user was never shown.
+   */
+  owed: () => Promise<{ markers: AgentSessionResumeMarker[]; claimed: boolean }>
   /** Acted on. In memory, because the durable copy is already gone. */
   spend: (sessionId: string) => boolean
   /** This launch handed the provider back; see the header. */
@@ -66,6 +75,11 @@ export function createStructuredAgentSessionRestartClaim(deps: {
       return claimed ?? []
     },
     offered,
+    owed: async () => {
+      const claimed = claiming !== undefined
+      await claim()
+      return { markers: offered(), claimed }
+    },
     spend: (sessionId) => {
       const before = claimed?.length ?? 0
       claimed = (claimed ?? []).filter((marker) => marker.sessionId !== sessionId)

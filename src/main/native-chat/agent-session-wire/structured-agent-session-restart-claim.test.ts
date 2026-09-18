@@ -334,17 +334,18 @@ describe('the restart-resume surface', () => {
     expect(held).toEqual([])
   })
 
-  // Quitting while the prompt is open: the offered session has no provider child in THIS
-  // generation, so teardown mints no marker for it and the replace-the-whole-set write clears the
-  // old one. The offer is discarded rather than resurrected, and nothing can double-fire.
-  it('leaves no marker behind when the user quits with the offer still open', async () => {
+  // A launch that never read the offer must not answer for it — the flag was off, the first read
+  // failed, the window never mounted. Nothing revealed those sessions, so nothing here can judge
+  // them, and replacing the capsule with this launch's empty list deletes a recovery the user was
+  // never shown.
+  it('leaves a durable offer this launch never claimed intact at teardown', async () => {
     const { restartResume, live, recorded } = surface({})
 
     restartResume.captureMarkers('quit')
     await restartResume.recordMarkers()
 
-    expect(recorded).toEqual([[]])
-    expect(live.size).toBe(0)
+    expect(recorded).toEqual([[expect.objectContaining({ sessionId: SESSION })]])
+    expect([...live.keys()]).toEqual([SESSION])
   })
 
   it('persists a snoozed claimed offer across the next teardown', async () => {

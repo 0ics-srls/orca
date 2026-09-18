@@ -204,6 +204,24 @@ it('never re-offers a reconnected chat when the status entry reopens the dialog'
   expect(document.querySelectorAll('[role="checkbox"]')).toHaveLength(2)
 })
 
+// Continuing spends the same claims reconnecting does, so the offer has to shrink with it. A count
+// left standing over chats the host already handed back sends the user to a status entry that
+// re-reads, finds nothing, and does nothing.
+it('settles the offer for the chats a continuation reconnected', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : {
+          resumed: [{ sessionId: 'a', outcome: 'resumed' }],
+          continued: [{ sessionId: 'a', outcome: 'continued' }]
+        }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => checkbox(1).click())
+  await act(async () => button('Reconnect and continue').click())
+  expect(offerIds()).toEqual(['b'])
+})
+
 it('automatically reconnects once when the launch begins opted in', async () => {
   useAppStore.setState({
     settings: {

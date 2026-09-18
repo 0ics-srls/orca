@@ -194,9 +194,16 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
       try {
         void persistPreference()
         const result = await callStructuredAgentSession<{
+          /** Which chats the host actually reconnected, and so which claims it spent. Optional
+           *  because the payload is unvalidated: a shape this side did not expect must not turn a
+           *  delivered continuation into a failure report. */
+          resumed?: RestartActionOutcome[]
           continued: RestartActionOutcome[]
         }>(LOCAL, 'agentSession.restartContinue', { sessionIds })
         announceRestartResults(sessionIds, result.continued, 'continue')
+        // Continuing spends the same claims reconnecting does, so the offer has to shrink the same
+        // way — otherwise the status bar keeps counting chats the host has already handed back.
+        settleNativeChatRestartOffer((result.resumed ?? []).map((entry) => entry.sessionId))
       } catch {
         announceRestartUnconfirmed(sessionIds.length, 'continue')
       } finally {

@@ -561,6 +561,24 @@ it('stops offering a chat the user recovered by reopening it', async () => {
   expect(await new AgentSessionRecoveryCapsule(root).take(NOW)).toEqual([])
 })
 
+// The snooze, through the real quit path rather than a session map that cannot move: eviction
+// forgets sessions BEFORE the write-back runs, so a marker whose journal is only reachable while
+// the host still indexes it is exactly what a mock harness cannot catch.
+it('carries a snoozed offer through a real teardown', async () => {
+  const { host, root } = await interruptedRestart()
+  expect(await host.restartResume.list()).toHaveLength(1)
+  await host.flushAllStreamedEvents({ trigger: 'quit' })
+  expect(await new AgentSessionRecoveryCapsule(root).take(NOW)).toHaveLength(1)
+})
+
+// Nothing claimed the capsule this launch, so it is still exactly as the last teardown left it and
+// no journal here was opened to judge it. Answering for it anyway deletes an offer nobody was shown.
+it('keeps a durable offer intact through a teardown that never claimed it', async () => {
+  const { host, root } = await interruptedRestart()
+  await host.flushAllStreamedEvents({ trigger: 'quit' })
+  expect(await new AgentSessionRecoveryCapsule(root).take(NOW)).toHaveLength(1)
+})
+
 it('shares one real-file take across concurrent first recovery requests', async () => {
   const { host, root } = await interruptedRestart()
   const take = vi.spyOn(AgentSessionRecoveryCapsule.prototype, 'take')

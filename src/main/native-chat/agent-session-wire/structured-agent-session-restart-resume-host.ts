@@ -302,13 +302,22 @@ export function createStructuredAgentSessionRestartResume(
       // A snoozed offer survives quit, but only as something this host would still offer: it is
       // RE-DERIVED here rather than round-tripped, so a marker the predicate has come to refuse is
       // not handed to the next launch to refuse again.
+      //
+      // A launch that never claimed the offer is the exception, and the reason this reads the
+      // capsule instead of just replacing it: those sessions were never revealed, so the predicate
+      // has no journal to judge them by and would refuse every one. Answering for an offer nobody
+      // read is how it gets deleted unseen, so it carries forward untouched.
       let carried: AgentSessionResumeMarker[] = []
       try {
-        const outstanding = claim.offered()
-        const stillResumable = new Set(
-          derive(outstanding, 'must-be-released').map((candidate) => candidate.sessionId)
-        )
-        carried = outstanding.filter((marker) => stillResumable.has(marker.sessionId))
+        const owed = await claim.owed()
+        if (!owed.claimed) {
+          carried = owed.markers
+        } else {
+          const stillResumable = new Set(
+            derive(owed.markers, 'must-be-released').map((candidate) => candidate.sessionId)
+          )
+          carried = owed.markers.filter((marker) => stillResumable.has(marker.sessionId))
+        }
       } catch {
         console.warn('[structured-agent-session] re-deriving the snoozed offer failed')
       }
