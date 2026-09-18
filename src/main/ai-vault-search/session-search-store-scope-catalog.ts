@@ -3,17 +3,23 @@ import {
   normalizeExecutionHostId,
   type ExecutionHostId
 } from '../../shared/execution-host'
-import type { Project, ProjectHostSetup } from '../../shared/project-types'
-import type { Repo } from '../../shared/repo-types'
+import type { ProjectHostSetup } from '../../shared/project-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { readAllWorktreeMetaForHost } from '../persistence/host-qualified-worktree-meta'
 import type { SessionSearchScopeCatalog } from './session-search-scope-catalog'
 
+// Only what the catalog reads, so a partial store satisfies this without
+// standing up rows nothing here looks at.
 export type SessionSearchScopeStore = {
-  getRepos(): Repo[]
-  getProjects(): Project[]
-  getProjectHostSetups(): ProjectHostSetup[]
+  getRepos(): readonly (SessionSearchScopeCatalog['repos'][number] & {
+    connectionId?: string | null
+    executionHostId?: ProjectHostSetup['hostId'] | null
+  })[]
+  getProjects(): readonly SessionSearchScopeCatalog['projects'][number][]
+  getProjectHostSetups(): readonly (SessionSearchScopeCatalog['projectHostSetups'][number] & {
+    hostId: ProjectHostSetup['hostId']
+  })[]
   getAllWorktreeMeta(): Record<string, WorktreeMeta>
   getAllWorktreeMetaForHost?: (executionHostId: ExecutionHostId) => Record<string, WorktreeMeta>
   getSettings(): Pick<GlobalSettings, 'workspaceDir' | 'nestWorkspaces'>

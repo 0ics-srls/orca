@@ -1,30 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import type { Repo } from '../../shared/repo-types'
+import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import { sessionSearchScopeCatalogFromStore } from './session-search-store-scope-catalog'
 
-const REPOS = [
-  { id: 'local-repo', path: '/work/app', addedAt: 0, displayName: 'app', badgeColor: '#000' },
-  {
-    id: 'ssh-repo',
-    path: '/srv/app',
-    connectionId: 'box',
-    addedAt: 0,
-    displayName: 'app',
-    badgeColor: '#000'
+function meta(hostId: WorktreeMeta['hostId']): WorktreeMeta {
+  return {
+    hostId,
+    displayName: '',
+    comment: '',
+    linkedIssue: null,
+    linkedPR: null,
+    linkedLinearIssue: null,
+    isArchived: false,
+    isUnread: false,
+    isPinned: false,
+    sortOrder: 0,
+    lastActivityAt: 0
   }
-] satisfies Repo[]
+}
 
 function store() {
   return {
-    getRepos: () => [...REPOS],
+    getRepos: () => [
+      { id: 'local-repo', path: '/work/app' },
+      { id: 'ssh-repo', path: '/srv/app', connectionId: 'box' }
+    ],
     getProjects: () => [{ id: 'proj-1', sourceRepoIds: ['local-repo'] }],
     getProjectHostSetups: () => [
-      { id: 's1', projectId: 'proj-1', hostId: 'local', repoId: 'local-repo', path: '/work/app' },
-      { id: 's2', projectId: 'proj-1', hostId: 'ssh:box', repoId: 'ssh-repo', path: '/srv/app' }
+      { projectId: 'proj-1', hostId: 'local' as const, repoId: 'local-repo', path: '/work/app' },
+      { projectId: 'proj-1', hostId: 'ssh:box' as const, repoId: 'ssh-repo', path: '/srv/app' }
     ],
     getAllWorktreeMeta: () => ({
-      'local-repo::/work/one': { hostId: 'local' },
-      'ssh-repo::/srv/one': { hostId: 'ssh:box' }
+      'local-repo::/work/one': meta('local'),
+      'ssh-repo::/srv/one': meta('ssh:box')
     }),
     getSettings: () => ({ workspaceDir: '/home/me/orca/workspaces', nestWorkspaces: true })
   }

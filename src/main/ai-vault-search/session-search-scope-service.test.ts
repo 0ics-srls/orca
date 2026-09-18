@@ -45,7 +45,12 @@ describe('scope identity at the search choke point', () => {
       { query: 'needle', within: { kind: 'project', projectKey: 'repo:repo-1' } },
       'ipc'
     )
-    expect(service.search.mock.calls[0]?.[0]).not.toHaveProperty('within')
+    // An exact match, so a leaked `within` would fail here as an extra key.
+    expect(service.search).toHaveBeenCalledWith({
+      query: 'needle',
+      limit: 20,
+      filters: { scopePaths: ['/work/app', '/home/me/orca/workspaces/app'] }
+    })
   })
 
   it('answers scope-unknown rather than searching everything it has', async () => {
