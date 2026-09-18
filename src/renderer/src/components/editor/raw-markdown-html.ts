@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
-import { isEditableDetailsHtmlBlock, matchDetailsHtmlBlock } from './details-markdown-html'
+import { matchDetailsHtmlBlock } from './details-markdown-html'
+import { isEditableDetailsHtmlBlock } from './details-markdown-editability'
 import { formatMarkdownDocLinkBody, parseMarkdownDocLink } from './markdown-doc-links'
 import { normalizeMarkdownReferenceLinks } from './markdown-reference-link-normalization'
 import { createMarkdownCodeSpanScanner } from './markdown-code-span-scanner'

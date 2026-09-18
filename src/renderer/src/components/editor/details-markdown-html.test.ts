@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   extractDetailsSummaryHtml,
-  isEditableDetailsHtmlBlock,
   matchDetailsHtmlBlock,
   normalizeDetailsOpeningTag,
   parseDetailsAttributes,
   parseToggleHeadingVariant,
   type DetailsHtmlBlock
 } from './details-markdown-html'
+import { isEditableDetailsHtmlBlock } from './details-markdown-editability'
 
 function nestedToggles(depth: number): string {
   let html = '<details class="orca-details" open>\n<summary>leaf</summary>\n\nBody\n\n</details>'
@@ -28,8 +28,8 @@ afterEach(() => {
 
 describe('details markdown html', () => {
   it.each([
-    ['<details>', '<details class="orca-details">'],
-    ['<details open="open">', '<details class="orca-details" open>'],
+    ['<details>', '<details>'],
+    ['<details open="open">', '<details open>'],
     ['<details CLASS="orca-details">', '<details class="orca-details">'],
     ["<details Class='orca-details'>", '<details class="orca-details">'],
     ['<details cLaSs=orca-details>', '<details class="orca-details">'],

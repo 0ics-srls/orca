@@ -8,7 +8,6 @@ import {
   escapeDetailsHtml,
   extractDetailsSummaryHtml,
   findDetailsBlockStart,
-  isEditableDetailsHtmlBlock,
   matchDetailsHtmlBlock,
   parseDetailsAttributes,
   parseToggleHeadingVariant,
@@ -16,6 +15,7 @@ import {
   type DetailsHtmlToken,
   type ToggleHeadingVariant
 } from './details-markdown-html'
+import { isEditableDetailsHtmlBlock } from './details-markdown-editability'
 
 const RICH_MARKDOWN_PLACEHOLDER = 'Write markdown… Type / for blocks.'
 const TOGGLE_TEXT_PLACEHOLDER = 'text'
