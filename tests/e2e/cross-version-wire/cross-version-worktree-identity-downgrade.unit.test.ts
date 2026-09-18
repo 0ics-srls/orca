@@ -52,9 +52,12 @@ function isMigrate(value: unknown): value is Migrate {
   return typeof value === 'function'
 }
 
+/** What both sides of the skew hand back: a frozen build's namespace and the current one's. */
+type MigrationModuleNamespace = Record<string, unknown>
+
 /** Both builds' exports resolve the same way, so neither is typed against its own build's state. */
-function migrateExportOf(module: object): Migrate {
-  const candidate = 'migrateWorktreeIdentity' in module ? module.migrateWorktreeIdentity : undefined
+function migrateExportOf(module: MigrationModuleNamespace): Migrate {
+  const candidate = module.migrateWorktreeIdentity
   if (!isMigrate(candidate)) {
     throw new Error('module does not export migrateWorktreeIdentity')
   }
