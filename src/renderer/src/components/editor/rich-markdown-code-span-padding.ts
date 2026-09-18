@@ -2,7 +2,7 @@ import { Extension } from '@tiptap/core'
 
 // Why: a private-use code point cannot appear in a markdown document, so it can stand
 // in for padding while the mark-boundary walk runs and be restored afterwards.
-const PADDING_PLACEHOLDER = String.fromCharCode(0xe000)
+const PADDING_PLACEHOLDERS = ['\uE000', '\uE001', '\uE002', '\uE003']
 
 type MarkdownNodeLike = {
   type?: string
@@ -33,6 +33,9 @@ function hasCodeMark(node: MarkdownNodeLike): boolean {
  * span, where CommonMark strips one pad on render and the source keeps its bytes.
  */
 export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): MarkdownNodeLike[] {
+  const source = nodes.map((node) => node.text ?? '').join('')
+  const placeholder =
+    PADDING_PLACEHOLDERS.find((candidate) => !source.includes(candidate)) ?? '\uE000\uE001'
   return nodes.map((node) => {
     if (node?.type !== 'text' || !hasCodeMark(node)) {
       return node
@@ -46,16 +49,13 @@ export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): MarkdownNodeLike
     const body = text.slice(leading.length, trailing ? text.length - trailing.length : text.length)
     return {
       ...node,
-      text:
-        PADDING_PLACEHOLDER.repeat(leading.length) +
-        body +
-        PADDING_PLACEHOLDER.repeat(trailing.length)
+      text: placeholder.repeat(leading.length) + body + placeholder.repeat(trailing.length)
     }
   })
 }
 
-export function restoreCodeSpanPadding(markdown: string): string {
-  return markdown.split(PADDING_PLACEHOLDER).join(' ')
+export function restoreCodeSpanPadding(markdown: string, placeholder: string): string {
+  return markdown.split(placeholder).join(' ')
 }
 
 /**
@@ -83,7 +83,15 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
       ...rest: unknown[]
     ) {
       const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? []), ...rest)
-      return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered) : rendered
+      const placeholder =
+        PADDING_PLACEHOLDERS.find(
+          (candidate) =>
+            !nodes
+              .map((node) => node.text ?? '')
+              .join('')
+              .includes(candidate)
+        ) ?? '\uE000\uE001'
+      return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered, placeholder) : rendered
     }
   }
 })

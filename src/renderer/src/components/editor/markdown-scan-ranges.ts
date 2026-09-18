@@ -23,6 +23,13 @@ export function markdownFenceRanges(content: string): MarkdownFenceRanges {
     } else {
       const openingFenceMatch = lineText.match(/^ {0,3}(`{3,}|~{3,})/u)
       if (openingFenceMatch?.[1]) {
+        if (
+          openingFenceMatch[1][0] === '`' &&
+          lineText.slice(openingFenceMatch[0].length).includes('`')
+        ) {
+          offset += line.length
+          continue
+        }
         openFence = {
           closingPattern: new RegExp(
             // CommonMark 4.5: a closing fence may be followed only by spaces or
@@ -79,6 +86,15 @@ export function markdownCodeSpanRanges(
 
     if (content[index] !== '`') {
       index += 1
+      continue
+    }
+
+    let backslashes = 0
+    for (let cursor = index - 1; cursor >= 0 && content[cursor] === '\\'; cursor -= 1) {
+      backslashes += 1
+    }
+    if (backslashes % 2 === 1) {
+      index += tickCount
       continue
     }
 
