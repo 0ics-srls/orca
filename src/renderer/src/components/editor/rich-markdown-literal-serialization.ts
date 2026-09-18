@@ -2,6 +2,7 @@ import type { Editor, JSONContent } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { encodeRawMarkdownHtmlForRichEditor } from './raw-markdown-html'
 import type { RichMarkdownEditorCodec } from './rich-markdown-source-transport'
+import { RICH_MARKDOWN_ESCAPED_CHARACTER_MARK } from './rich-markdown-escaped-character'
 
 const DOLLAR_SKIP_TYPES = new Set(['inlineMath', 'rawMarkdownHtmlInline'])
 
@@ -250,10 +251,11 @@ export function preserveLiteralMarkdownSource(
       return cached.result
     }
     let result = markdown
+    const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
     if (node.type === 'paragraph' && !info.inTableCell) {
       result = escapeLineLeading(result)
     }
-    if (!hasRefDefs) {
+    if (!hasRefDefs && !preservesEscapedCharacters) {
       const droppedBrackets = dropOptionalEscapes(result, false)
       if (droppedBrackets !== result && proves(droppedBrackets, info.block)) {
         result = droppedBrackets
@@ -298,4 +300,14 @@ export function preserveLiteralMarkdownSource(
       blocks = undefined
     }
   }
+}
+
+function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
+  let found = false
+  block.descendants((node) => {
+    if (node.marks.some((mark) => mark.type.name === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)) {
+      found = true
+    }
+  })
+  return found
 }
