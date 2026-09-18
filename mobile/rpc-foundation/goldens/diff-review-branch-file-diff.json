@@ -3,9 +3,9 @@
   "family": "session.diff-review",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
-  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
+  "baseline": "4a86b2dc565dea05491573afdbff17d6217806d5",
+  "lockfileSha256": "4568633356187895ccda8e2ff83245c37d5621832c69e268733733b6947971e3",
+  "recorderSha256": "1d8cf6624653d15b5b32bd2871d4d93739d4092a06f10dab24a795702422bb31",
   "adapterSha256": "a8016eb61915cf80a3bdeb622ee67d35be8b4b9862a75e4ef2e8f4ff8e93e7f2",
   "scenarioSha256": "6c71b0f217a464dffbc6f5736605b840edac74ebaf0664edc0ab85984bb64328",
   "platform": "darwin",
@@ -40,13 +40,14 @@
       },
       "snapshot": "unloaded"
     },
-    "67cae2e16a3b": {
+    "551c785629a1": {
       "name": "git.branchDiff#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.branchDiff\",\"params\":{\"worktree\":\"id:repo-9::/w\",\"filePath\":\"src/app.ts\",\"compare\":{\"baseRef\":\"origin/main\",\"baseOid\":\"base-oid\",\"headOid\":\"head-oid\",\"mergeBase\":\"merge-base\"}}}",
-      "sent": 1
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.branchDiff\",\"params\":{\"worktree\":\"id:repo-9::/w\",\"filePath\":\"src/app.ts\",\"compare\":{\"baseRef\":\"origin/main\",\"baseOid\":\"base-oid\",\"headOid\":\"head-oid\",\"mergeBase\":\"merge-base\"}}}"
     },
-    "ce89618d90b4": {
+    "714ef7b515d2": {
       "name": "git.branchDiff#1",
+      "ordinal": 1,
       "args": [
         {
           "name": "method",
@@ -92,8 +93,8 @@
       {
         "id": "branch",
         "observation": {
-          "sender": ["ce89618d90b4"],
-          "payloads": ["67cae2e16a3b"],
+          "sender": ["714ef7b515d2"],
+          "payloads": ["551c785629a1"],
           "settlements": {
             "branch": "365c17523d76"
           },
@@ -104,8 +105,8 @@
       {
         "id": "no-compare",
         "observation": {
-          "sender": ["ce89618d90b4"],
-          "payloads": ["67cae2e16a3b"],
+          "sender": ["714ef7b515d2"],
+          "payloads": ["551c785629a1"],
           "settlements": {
             "branch": "365c17523d76",
             "no-compare": "38fb361f406c"
