@@ -12,6 +12,14 @@ type MarkdownNodeLike = {
 
 type BoundaryWalk = (nodes: MarkdownNodeLike[], ...rest: unknown[]) => unknown
 
+type MarkdownManager = {
+  renderNodesWithMarkBoundaries?: BoundaryWalk
+}
+
+function isMarkdownManager(value: unknown): value is MarkdownManager {
+  return typeof value === 'object' && value !== null
+}
+
 function hasCodeMark(node: MarkdownNodeLike): boolean {
   return (node.marks ?? []).some(
     (mark) => (typeof mark === 'string' ? mark : mark?.type) === 'code'
@@ -59,22 +67,23 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
   priority: 1,
 
   onBeforeCreate() {
-    const manager = this.editor.markdown as unknown as Record<string, unknown> | undefined
-    if (!manager) {
+    const managerValue: unknown = this.editor.markdown
+    if (!isMarkdownManager(managerValue)) {
       return
     }
-    const prototype = Object.getPrototypeOf(manager) as Record<string, unknown>
-    const walk = prototype.renderNodesWithMarkBoundaries as BoundaryWalk | undefined
+    const prototypeValue: unknown = Object.getPrototypeOf(managerValue)
+    const prototype = isMarkdownManager(prototypeValue) ? prototypeValue : undefined
+    const walk = prototype?.renderNodesWithMarkBoundaries
     if (typeof walk !== 'function') {
       return
     }
-    manager.renderNodesWithMarkBoundaries = function (
+    managerValue.renderNodesWithMarkBoundaries = function (
       this: unknown,
       nodes: MarkdownNodeLike[],
       ...rest: unknown[]
     ) {
       const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? []), ...rest)
       return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered) : rendered
-    } as BoundaryWalk
+    }
   }
 })
