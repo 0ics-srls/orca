@@ -38,6 +38,7 @@ import os from 'node:os'
 import path from 'node:path'
 import type { Page, TestInfo } from '@stablyai/playwright-test'
 import { expect, test } from './helpers/orca-app'
+import { resolveLeafScrollbackBuffers } from '../../src/renderer/src/components/terminal-pane/leaf-scrollback-resolution'
 import {
   createRuntimeDesktopPairingOffer,
   launchPairedElectronClient,
@@ -114,11 +115,26 @@ function readSessionPartition(
   const layouts = isRecord(session.terminalLayoutsByTabId) ? session.terminalLayoutsByTabId : {}
   const layout = layouts[webTabId]
   const hasLayout = isRecord(layout)
-  const buffers = hasLayout && isRecord(layout.buffersByLeafId) ? layout.buffersByLeafId : {}
-  const bufferLength = Object.values(buffers)
-    .filter((value): value is string => typeof value === 'string')
-    .join('').length
+  const localOnlyHomes = isRecord(session.localOnlyScrollbackByTabId)
+    ? session.localOnlyScrollbackByTabId
+    : {}
+  // Why the resolver: an ordinary park writes localOnlyScrollbackByTabId, not buffersByLeafId, so
+  // a reader of one home reports a false zero. Same read production restores through.
+  const buffers = resolveLeafScrollbackBuffers({
+    shared: hasLayout ? { buffersByLeafId: stringRecord(layout.buffersByLeafId) } : undefined,
+    localOnly: stringRecord(localOnlyHomes[webTabId])
+  })
+  const bufferLength = Object.values(buffers ?? {}).join('').length
   return { partition, hasTabRow, hasLayout, bufferLength }
+}
+
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined
+  }
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  )
 }
 
 /** Walks the local `workspaceSession` and every `workspaceSessionsByHostId` partition. An empty
@@ -178,9 +194,11 @@ async function waitForRuntimePartitionCapture(
 }
 
 async function readStoreBufferLength(page: Page, webTabId: string): Promise<number> {
+  // Why the debug handle: this body runs in the renderer, so it reaches the resolver through the
+  // e2e handle rather than reading either store home directly.
   return page.evaluate((id) => {
-    const layout = window.__store?.getState().terminalLayoutsByTabId?.[id]
-    return Object.values(layout?.buffersByLeafId ?? {}).join('').length
+    const buffers = window.__terminalParkingDebug?.resolveLeafScrollback(id)
+    return Object.values(buffers ?? {}).join('').length
   }, webTabId)
 }
 
@@ -402,19 +420,24 @@ test.describe('host retains nothing', () => {
           tokenAfterReveal: reveal.tokenAfterReveal
         })}`
       )
+      // Why tokenAfterReveal is logged and not asserted here: this control proves the harness
+      // (park, quit, profile, partition routing), not the reveal. On identical product code the
+      // clean-quit reveal measured true, true, false across three runs — the live host may serve
+      // it from its own tail — so it cannot carry an assertion. The hard-kill test keeps it,
+      // because there the host is forced unavailable and the reveal must come from the client copy.
       expect({
         tokenBeforePark: parked.tokenBeforePark,
         capturedAtPark: parked.storeAtPark > 0,
         // Distinguishes a deleted profile (no partitions) from an empty buffer.
         profileSurvived: onDiskAfterQuit.length > 0,
         runtimePartitionHoldsCapture: runtimePartitionBufferLength(onDiskAfterQuit) > 0,
-        tokenAfterReveal: reveal.tokenAfterReveal
+        localPartitionDidNotKeepCapture: localPartitionBufferLength(onDiskAfterQuit) <= 0
       }).toEqual({
         tokenBeforePark: true,
         capturedAtPark: true,
         profileSurvived: true,
         runtimePartitionHoldsCapture: true,
-        tokenAfterReveal: true
+        localPartitionDidNotKeepCapture: true
       })
     } finally {
       const live = relaunched ?? first
