@@ -44,6 +44,7 @@ import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
 import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
+import { RichMarkdownSerializerFidelity } from './rich-markdown-serializer-fidelity'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown'
@@ -55,6 +56,25 @@ const RichMarkdownLink = Link.extend({
   priority: 90
 })
 
+// Why: marked ends a paragraph wherever a block tokenizer's `start` points, so
+// display math only opens at a line start.
+const RichMarkdownBlockMath = BlockMath.extend({
+  markdownTokenizer: {
+    name: 'blockMath',
+    level: 'block',
+    start: (src: string) => {
+      const index = src.indexOf('\n$$')
+      return index === -1 ? -1 : index + 1
+    },
+    tokenize: (src: string) => {
+      const match = src.match(/^\$\$([^$]+)\$\$/)
+      if (!match) {
+        return undefined
+      }
+      return { type: 'blockMath', raw: match[0], latex: match[1].trim() }
+    }
+  }
+})
 const RichMarkdownCode = Code.extend({
   // Why: Markdown supports linked code labels, so code cannot exclude the link
   // mark even though it should still stay exclusive with emphasis marks.
@@ -243,12 +263,13 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
-    BlockMath.configure({
+    RichMarkdownBlockMath.configure({
       katexOptions: {
         displayMode: true,
         throwOnError: false
       }
     }),
+    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
@@ -264,6 +285,7 @@ export function createRichMarkdownExtensions({
       }
     }),
     RichMarkdownEscapedCharacter,
+    RichMarkdownSerializerFidelity,
     RichMarkdownCodeSpanPadding,
     RichMarkdownProseEntities,
     createRichMarkdownAnnotationHighlightExtension()

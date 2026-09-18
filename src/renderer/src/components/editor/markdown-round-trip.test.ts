@@ -712,6 +712,29 @@ describe('rich markdown round trip', () => {
     expect(countInlineMathNodes('break $x\\\\$ end')).toBe(1)
   })
 
+  it('escapes pipes inside table cells so the row keeps its columns', () => {
+    // Why: marked unescapes `\\|` per cell before inline lexing, so the source form must add it back.
+    const once = roundTripMarkdown('| a \\| b | c |\n|---|---|\n| x \\| y | `p \\| q` |\n')
+    expect(once).toContain('a \\| b')
+    expect(once).toContain('x \\| y')
+    expect(once).toContain('`p \\| q`')
+    expect(roundTripMarkdown(`${once}\n`)).toBe(once)
+  })
+
+  it('keeps parentheses in link and image destinations escaped', () => {
+    expect(roundTripMarkdown('[a](b\\)c) and ![g](h\\(1\\).png)\n')).toBe(
+      '[a](b\\)c) and ![g](h\\(1\\).png)'
+    )
+    expect(roundTripMarkdown('[a](x "say \\"hi\\"")\n')).toBe('[a](x "say \\"hi\\"")')
+    expect(roundTripMarkdown('![a \\] b](x.png)\n')).toBe('![a \\] b](x.png)')
+  })
+
+  it('does not split a paragraph at a mid-line $$', () => {
+    const content = 'costs $$ big money $$ here, honestly'
+    expect(roundTripMarkdown(`${content}\n`)).toBe(content)
+    expect(roundTripMarkdown('text\n\n$$\nx^2\n$$\n')).toBe('text\n\n$$\nx^2\n$$')
+  })
+
   it('preserves markdown tables', () => {
     expect(roundTripMarkdown('| a | b |\n| - | - |\n| 1 | 2 |\n')).toContain('| a')
   })
