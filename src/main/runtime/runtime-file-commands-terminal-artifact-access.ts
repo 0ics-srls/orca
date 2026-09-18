@@ -85,6 +85,8 @@ export function assertTerminalArtifactContentUnchanged(
 
 // Wire contract: the relay recomputes this exact string from its own stat to honour
 // expectedStatIdentity, so the format cannot change without a negotiated capability.
+// What this identity cannot distinguish, and which windows stay open after the digest:
+// docs/reference/terminal-artifact-grant-integrity.md
 export function terminalFileStatIdentity(stats: RuntimeFileStatLike): string | null {
   const dev = typeof stats.dev === 'number' ? stats.dev : null
   const ino = typeof stats.ino === 'number' ? stats.ino : null
