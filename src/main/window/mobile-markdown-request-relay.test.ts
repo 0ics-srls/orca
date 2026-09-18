@@ -68,14 +68,22 @@ describe('requestMobileMarkdownFromRenderer', () => {
     await expect(pending).resolves.toMatchObject({ content: '# ok' })
   })
 
-  it('rejects and removes the pending listener when the renderer is destroyed', async () => {
+  it('rejects and cleans up when the BrowserWindow closes and webContents becomes unavailable', async () => {
     const { requestMobileMarkdownFromRenderer } = await import('./mobile-markdown-request-relay')
-    const mainWebContents = Object.assign(new EventEmitter(), {
+    const webContents = Object.assign(new EventEmitter(), {
       send: vi.fn()
     })
+    let windowClosed = false
     const mainWindow = Object.assign(new EventEmitter(), {
-      isDestroyed: () => false,
-      webContents: mainWebContents
+      isDestroyed: () => false
+    })
+    Object.defineProperty(mainWindow, 'webContents', {
+      get: () => {
+        if (windowClosed) {
+          throw new Error('webContents unavailable after close')
+        }
+        return webContents
+      }
     })
 
     const pending = requestMobileMarkdownFromRenderer(mainWindow as never, {
@@ -85,9 +93,12 @@ describe('requestMobileMarkdownFromRenderer', () => {
     })
     expect(ipcEmitter.listenerCount('ui:mobileMarkdownResponse')).toBe(1)
 
-    mainWebContents.emit('destroyed')
+    windowClosed = true
+    mainWindow.emit('closed')
 
     await expect(pending).rejects.toThrow('renderer_unavailable')
     expect(ipcEmitter.listenerCount('ui:mobileMarkdownResponse')).toBe(0)
+    expect(webContents.listenerCount('destroyed')).toBe(0)
+    expect(webContents.listenerCount('render-process-gone')).toBe(0)
   })
 })

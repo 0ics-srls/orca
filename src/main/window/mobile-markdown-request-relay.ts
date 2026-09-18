@@ -24,6 +24,7 @@ export async function requestMobileMarkdownFromRenderer(
   if (mainWindow.isDestroyed()) {
     throw new Error('renderer_unavailable')
   }
+  const webContents = mainWindow.webContents
   const id = randomUUID()
   return await new Promise((resolve, reject) => {
     let settled = false
@@ -41,9 +42,9 @@ export async function requestMobileMarkdownFromRenderer(
       if (typeof mainWindow.removeListener === 'function') {
         mainWindow.removeListener('closed', onRendererUnavailable)
       }
-      if (typeof mainWindow.webContents.removeListener === 'function') {
-        mainWindow.webContents.removeListener('destroyed', onRendererUnavailable)
-        mainWindow.webContents.removeListener('render-process-gone', onRendererUnavailable)
+      if (typeof webContents.removeListener === 'function') {
+        webContents.removeListener('destroyed', onRendererUnavailable)
+        webContents.removeListener('render-process-gone', onRendererUnavailable)
       }
       if (error) {
         reject(error)
@@ -61,7 +62,7 @@ export async function requestMobileMarkdownFromRenderer(
       event: Electron.IpcMainEvent,
       response: RuntimeMobileMarkdownResponse
     ): void => {
-      if (event.sender !== mainWindow.webContents) {
+      if (event.sender !== webContents) {
         return
       }
       if (response.id !== id) {
@@ -77,12 +78,12 @@ export async function requestMobileMarkdownFromRenderer(
     if (typeof mainWindow.once === 'function') {
       mainWindow.once('closed', onRendererUnavailable)
     }
-    if (typeof mainWindow.webContents.once === 'function') {
-      mainWindow.webContents.once('destroyed', onRendererUnavailable)
-      mainWindow.webContents.once('render-process-gone', onRendererUnavailable)
+    if (typeof webContents.once === 'function') {
+      webContents.once('destroyed', onRendererUnavailable)
+      webContents.once('render-process-gone', onRendererUnavailable)
     }
     try {
-      mainWindow.webContents.send('ui:mobileMarkdownRequest', { id, ...request })
+      webContents.send('ui:mobileMarkdownRequest', { id, ...request })
     } catch {
       finish(new Error('renderer_unavailable'))
     }
