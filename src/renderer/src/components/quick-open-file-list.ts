@@ -26,6 +26,8 @@ export type RuntimeFileListState = {
   loading: boolean
   loadError: string | null
   truncated?: boolean
+  /** Query that produced `files`; null means a request is still settling. */
+  resolvedQuery?: string | null
   operationOwner?: FileExplorerOperationOwner
 }
 
@@ -145,6 +147,7 @@ export function useRuntimeFileListForWorktree({
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
+  const [resolvedQuery, setResolvedQuery] = useState<string | null | undefined>(undefined)
   const [listedOperationOwner, setListedOperationOwner] = useState<FileExplorerOperationOwner>({
     kind: 'unresolved'
   })
@@ -185,8 +188,7 @@ export function useRuntimeFileListForWorktree({
     activeTargetStatus === 'connecting' ||
     activeTargetStatus === 'deploying-relay' ||
     activeTargetStatus === 'reconnecting'
-  const usesRuntimePathSearch =
-    (runtimeEnvironmentId !== null || connectionId !== undefined) && query !== undefined
+  const usesRuntimePathSearch = query !== undefined && operationRouteAvailable
   const remoteQuery = usesRuntimePathSearch ? query.trim() : ''
   const remoteQueryTooLarge = usesRuntimePathSearch && isQuickOpenRemoteQueryTooLarge(remoteQuery)
   const requestKey = useMemo(
@@ -206,6 +208,7 @@ export function useRuntimeFileListForWorktree({
     if (!enabled) {
       setLoading(false)
       setTruncated(false)
+      setResolvedQuery(null)
       setListedOperationOwner({ kind: 'unresolved' })
       return
     }
@@ -216,6 +219,7 @@ export function useRuntimeFileListForWorktree({
       setLoadError(operationRouteAvailable ? null : getFileExplorerOwnerUnresolvedMessage())
       setLoading(false)
       setTruncated(false)
+      setResolvedQuery(null)
       return
     }
 
@@ -223,6 +227,7 @@ export function useRuntimeFileListForWorktree({
     const requestKeyChanged = lastRequestKeyRef.current !== requestKey
     if (requestKeyChanged) {
       setFiles([])
+      setResolvedQuery(null)
     }
     lastRequestKeyRef.current = requestKey
     setLoadError(null)
@@ -231,6 +236,7 @@ export function useRuntimeFileListForWorktree({
     if (usesRuntimePathSearch && (remoteQuery.length === 0 || remoteQueryTooLarge)) {
       setFiles([])
       setLoading(false)
+      setResolvedQuery(remoteQuery)
       setListedOperationOwner(operationOwnerRef.current)
       return
     }
@@ -252,7 +258,7 @@ export function useRuntimeFileListForWorktree({
       ? debounceRuntimeFilePathSearch(120, requestAbortController.signal, () =>
           searchRuntimeFilePaths(requestContext, {
             query: remoteQuery,
-            limit: 32,
+            limit: QUICK_OPEN_LISTING_MAX_RESULTS,
             excludePaths,
             ...(connectionId ? { requestToken } : {}),
             signal: requestAbortController.signal
@@ -277,6 +283,7 @@ export function useRuntimeFileListForWorktree({
         if (!cancelled) {
           setFiles(result.files)
           setTruncated(result.truncated)
+          setResolvedQuery(usesRuntimePathSearch ? remoteQuery : undefined)
           setListedOperationOwner(requestOperationOwner)
         }
       })
@@ -284,6 +291,7 @@ export function useRuntimeFileListForWorktree({
         if (!cancelled) {
           setFiles([])
           setTruncated(false)
+          setResolvedQuery(usesRuntimePathSearch ? remoteQuery : null)
           setLoadError(cleanRuntimeFileListError(error))
         }
       })
@@ -323,6 +331,7 @@ export function useRuntimeFileListForWorktree({
     loading: loading || connectionPending,
     loadError,
     truncated,
+    resolvedQuery,
     operationOwner: listedOperationOwner
   }
 }

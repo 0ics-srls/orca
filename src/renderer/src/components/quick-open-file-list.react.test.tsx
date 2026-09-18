@@ -270,7 +270,7 @@ describe('useRuntimeFileListForWorktree', () => {
           worktreeId: workspaceKey,
           worktreePath: '/srv/platform'
         }),
-        expect.objectContaining({ query: 'remote-folder', limit: 32 })
+        expect.objectContaining({ query: 'remote-folder', limit: QUICK_OPEN_LISTING_MAX_RESULTS })
       )
       expect(listRuntimeFilesMock).not.toHaveBeenCalled()
     } finally {
@@ -402,7 +402,7 @@ describe('useRuntimeFileListForWorktree', () => {
         }),
         {
           query: 'sta-4354-target',
-          limit: 32,
+          limit: QUICK_OPEN_LISTING_MAX_RESULTS,
           excludePaths: undefined,
           signal: expect.any(AbortSignal)
         }
@@ -566,7 +566,8 @@ describe('useRuntimeFileListForWorktree', () => {
     }
   })
 
-  it('does not restart local listings when only the query changes', async () => {
+  it('searches local workspaces by query instead of reusing the capped inventory', async () => {
+    vi.useFakeTimers()
     const workspaceKey = folderWorkspaceKey('folder-workspace-1')
     useAppStore.setState({
       folderWorkspaces: [makeFolderWorkspace()],
@@ -575,26 +576,25 @@ describe('useRuntimeFileListForWorktree', () => {
       worktreesByRepo: {}
     } as Partial<AppState>)
 
-    const root = await renderProbe({
-      enabled: true,
-      onState: () => {},
-      query: 'one',
-      worktreeId: workspaceKey
-    })
-    await waitForListRuntimeFilesCall()
+    try {
+      await renderProbe({
+        enabled: true,
+        onState: () => {},
+        query: 'AppDelegate.swift',
+        worktreeId: workspaceKey
+      })
+      await act(async () => vi.advanceTimersByTimeAsync(120))
 
-    await act(async () => {
-      root.render(
-        createElement(HookProbe, {
-          enabled: true,
-          onState: () => {},
-          query: 'two',
-          worktreeId: workspaceKey
+      expect(searchRuntimeFilePathsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreePath: '/srv/platform' }),
+        expect.objectContaining({
+          query: 'AppDelegate.swift',
+          limit: QUICK_OPEN_LISTING_MAX_RESULTS
         })
       )
-    })
-    await flushEffects()
-
-    expect(listRuntimeFilesMock).toHaveBeenCalledTimes(1)
+      expect(listRuntimeFilesMock).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

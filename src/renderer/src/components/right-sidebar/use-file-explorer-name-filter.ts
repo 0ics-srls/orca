@@ -56,9 +56,13 @@ export function useFileExplorerNameFilter({
             operationOwner: nameFilterFiles.operationOwner,
             relativePaths: nameFilterQueryTooLarge
               ? []
-              : nameFilterFiles.loading && nameFilterFiles.files.length === 0
-                ? null
-                : nameFilterFiles.files
+              : nameFilterFiles.resolvedQuery === nameFilterQuery.trim()
+                ? nameFilterFiles.loading
+                  ? null
+                  : nameFilterFiles.files
+                : nameFilterFiles.loading
+                  ? null
+                  : []
           }
         : null,
     [
@@ -66,6 +70,7 @@ export function useFileExplorerNameFilter({
       nameFilterFiles.files,
       nameFilterFiles.loading,
       nameFilterFiles.operationOwner,
+      nameFilterFiles.resolvedQuery,
       nameFilterQuery,
       nameFilterQueryTooLarge
     ]
