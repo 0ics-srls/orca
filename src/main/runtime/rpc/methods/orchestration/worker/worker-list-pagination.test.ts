@@ -13,6 +13,7 @@ type WorkerListResult = {
   }[]
   counts: Record<string, number>
   page: { total: number; hasMore: boolean; nextCursor: string | null }
+  warnings?: string[]
 }
 
 describe('orchestration worker-list pagination', () => {
@@ -60,6 +61,44 @@ describe('orchestration worker-list pagination', () => {
     expect(second.page).toEqual({ total: 125, limit: 100, hasMore: false, nextCursor: null })
   })
 
+  it('opens on the newest Dispatches, warns that the page truncated, and pages down', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = new OrcaRuntimeService()
+    runtime.setOrchestrationDb(db)
+    const run = db.createRun({
+      objective: 'Newest-first worker inventory',
+      coordinatorHandle: 'term-coordinator',
+      coordinatorPaneKey: 'tab-coordinator:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    })
+    const id = (index: number): string => `dispatch-${String(index).padStart(3, '0')}`
+    for (let index = 1; index <= 105; index += 1) {
+      insertDispatch(db, run.id, id(index))
+    }
+
+    const first = await callWorkerList(runtime, { run: run.id, paginate: true })
+
+    expect(first.workers.map((worker) => worker.dispatchId)).toEqual(
+      Array.from({ length: 100 }, (_, offset) => id(105 - offset))
+    )
+    expect(first.page).toMatchObject({ total: 105, hasMore: true })
+    expect(first.warnings).toEqual([
+      'Showing the 100 newest of 105 Dispatches; the older ones are on later pages. Follow page.nextCursor with --cursor.'
+    ])
+    expect(first.counts).toEqual({ retained: 105 })
+
+    insertDispatch(db, run.id, 'dispatch-after-first-call')
+    const second = await callWorkerList(runtime, {
+      run: run.id,
+      paginate: true,
+      cursor: first.page.nextCursor
+    })
+
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual([5, 4, 3, 2, 1].map(id))
+    expect(second.page).toEqual({ total: 105, limit: 100, hasMore: false, nextCursor: null })
+    expect(second.warnings).toBeUndefined()
+    expect(second.counts).toEqual({ retained: 105 })
+  })
+
   it('fails an omitted-pagination legacy result above the explicit safety ceiling', async () => {
     db = new OrchestrationDb(':memory:')
     const runtime = new OrcaRuntimeService()
@@ -87,7 +126,7 @@ describe('orchestration worker-list pagination', () => {
     insertDispatch(db, run.id, 'dispatch-z')
 
     const first = await callWorkerList(runtime, { run: run.id, limit: 1 })
-    expect(first.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
+    expect(first.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
     expect(first.page).toMatchObject({ total: 2, hasMore: true })
     expect(first.page.nextCursor).toEqual(expect.any(String))
 
@@ -98,7 +137,7 @@ describe('orchestration worker-list pagination', () => {
       limit: 1,
       cursor: first.page.nextCursor
     })
-    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
     expect(second.page).toEqual({ total: 2, limit: 1, hasMore: false, nextCursor: null })
   })
 
@@ -116,12 +155,12 @@ describe('orchestration worker-list pagination', () => {
     const cursor = encodeWorkerListCursor({
       version: 1,
       snapshot: { createdAt: '2026-08-27 00:00:00', dispatchId: 'dispatch-z' },
-      after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'dispatch-a' }
+      after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'dispatch-z' }
     })
 
     const page = await callWorkerList(runtime, { run: run.id, limit: 1, cursor })
 
-    expect(page.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(page.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
     expect(page.page).toEqual({ total: 2, limit: 1, hasMore: false, nextCursor: null })
   })
 
@@ -141,14 +180,14 @@ describe('orchestration worker-list pagination', () => {
     const cursor = encodeWorkerListCursor({
       version: 2,
       snapshot: { databaseId: 3 },
-      after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'dispatch-a' }
+      after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'dispatch-z' }
     })
     const ok = await callWorkerList(runtime, { run: run.id, limit: 10, cursor })
-    expect(ok.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-m', 'dispatch-z'])
+    expect(ok.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-m', 'dispatch-a'])
 
-    sqliteFor(db).prepare('DELETE FROM dispatch_contexts WHERE id = ?').run('dispatch-a')
+    sqliteFor(db).prepare('DELETE FROM dispatch_contexts WHERE id = ?').run('dispatch-z')
 
-    // `rowid > NULL` used to exclude every row: zero workers against a non-zero total.
+    // `rowid < NULL` used to exclude every row: zero workers against a non-zero total.
     await expect(callWorkerList(runtime, { run: run.id, limit: 10, cursor })).rejects.toMatchObject(
       {
         code: 'worker_list_cursor_expired'
@@ -173,12 +212,12 @@ describe('orchestration worker-list pagination', () => {
       terminalState: 'retained',
       limit: 1
     })
-    expect(first.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
+    expect(first.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
     expect(first.page).toMatchObject({ total: 2, hasMore: true })
 
     sqliteFor(db)
       .prepare('UPDATE dispatch_contexts SET assignee_handle = NULL WHERE id = ?')
-      .run('dispatch-z')
+      .run('dispatch-a')
     const second = await callWorkerList(runtime, {
       run: run.id,
       terminalState: 'retained',
@@ -186,7 +225,7 @@ describe('orchestration worker-list pagination', () => {
       cursor: first.page.nextCursor
     })
 
-    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
     expect(second.page).toEqual({ total: 2, limit: 1, hasMore: false, nextCursor: null })
     // The pinned total and the counts have to describe the same rows.
     expect(second.counts).toEqual({ retained: second.page.total })
@@ -204,7 +243,7 @@ describe('orchestration worker-list pagination', () => {
     insertDispatch(db, run.id, 'dispatch-a')
     insertDispatch(db, run.id, 'dispatch-z')
     vi.spyOn(db, 'listFederatedDispatchesByIds').mockImplementation((dispatchIds) =>
-      dispatchIds.includes('dispatch-a') ? [federatedDispatch('dispatch-a')] : []
+      dispatchIds.includes('dispatch-z') ? [federatedDispatch('dispatch-z')] : []
     )
     vi.spyOn(runtime, 'resolveOrchestrationWorkerServer').mockReturnValue({
       environmentId: 'environment-remote',
@@ -224,7 +263,7 @@ describe('orchestration worker-list pagination', () => {
           runtimeEpoch: 'epoch-remote',
           items: [
             {
-              dispatchId: 'dispatch-a',
+              dispatchId: 'dispatch-z',
               observation: { status: 'live', exactWorker: true }
             }
           ]
@@ -241,7 +280,7 @@ describe('orchestration worker-list pagination', () => {
       expect(remoteCall).toHaveBeenCalledWith(
         'environment-remote',
         'orchestration.federationFleetSnapshot',
-        { dispatchIds: ['dispatch-a'] },
+        { dispatchIds: ['dispatch-z'] },
         expect.any(Number),
         undefined,
         { expectedEnvironmentPairingRevision: 1 }
@@ -254,7 +293,7 @@ describe('orchestration worker-list pagination', () => {
 
     const first = await pending
     expect(first).toMatchObject({
-      workers: [{ dispatchId: 'dispatch-a' }],
+      workers: [{ dispatchId: 'dispatch-z' }],
       page: { total: 2, hasMore: true, nextCursor: expect.any(String) }
     })
     const second = await callWorkerList(runtime, {
@@ -263,7 +302,7 @@ describe('orchestration worker-list pagination', () => {
       limit: 1,
       cursor: first.page.nextCursor
     })
-    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
   })
 
   it('does not allocate filtered snapshots when the first page has no more rows', async () => {
@@ -298,7 +337,7 @@ describe('orchestration worker-list pagination', () => {
       cursor: first.page.nextCursor
     })
 
-    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
   })
 
   it('projects a 100-row page within six synchronous read statements', async () => {
@@ -329,9 +368,9 @@ describe('orchestration worker-list pagination', () => {
     const page = await callWorkerList(runtime, { run: run.id, limit: 100 })
 
     expect(page.workers.map((worker) => worker.dispatchId)).toEqual(
-      Array.from({ length: 100 }, (_, index) => `dispatch-${String(index).padStart(3, '0')}`)
+      Array.from({ length: 100 }, (_, index) => `dispatch-${String(99 - index).padStart(3, '0')}`)
     )
-    expect(page.workers[50]?.projection.attention.categories).toContain('failure')
+    expect(page.workers[49]?.projection.attention.categories).toContain('failure')
     expect(page.page).toEqual({ total: 100, limit: 100, hasMore: false, nextCursor: null })
     expect(prepare).toHaveBeenCalledTimes(6)
   })
@@ -369,8 +408,8 @@ describe('orchestration worker-list pagination', () => {
     })
     expect(page.page.total).toBe(7)
     expect(filtered.workers.map((worker) => worker.dispatchId)).toEqual([
-      'reclaimable-a',
-      'reclaimable-b'
+      'reclaimable-b',
+      'reclaimable-a'
     ])
     expect(filtered.page.total).toBe(2)
     expect(filtered.counts).toEqual(page.counts)
@@ -412,7 +451,7 @@ describe('orchestration worker-list pagination', () => {
       }
     }
 
-    expect(seen).toEqual(['dispatch-a', 'dispatch-z'])
+    expect(seen).toEqual(['dispatch-z', 'dispatch-a'])
   })
 
   it('counts only the rows a pinned filtered cursor can still reach', async () => {
@@ -443,7 +482,7 @@ describe('orchestration worker-list pagination', () => {
       cursor: first.page.nextCursor
     })
 
-    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-z'])
+    expect(second.workers.map((worker) => worker.dispatchId)).toEqual(['dispatch-a'])
     expect(second.page.total).toBe(2)
     expect(second.counts).toEqual({ retained: 2 })
   })
@@ -558,12 +597,12 @@ describe('orchestration worker-list pagination', () => {
       const own = encodeWorkerListCursor({
         version: 2,
         snapshot: { databaseId: 4 },
-        after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'a-1', databaseId: 1 }
+        after: { createdAt: '2026-08-27 00:00:00', dispatchId: 'a-2', databaseId: 2 }
       })
 
       const page = await callWorkerList(runtime, { run: runA, limit: 10, cursor: own })
 
-      expect(page.workers.map((worker) => worker.dispatchId)).toEqual(['a-2'])
+      expect(page.workers.map((worker) => worker.dispatchId)).toEqual(['a-1'])
     })
   })
 })

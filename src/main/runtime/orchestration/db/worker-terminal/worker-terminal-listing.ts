@@ -130,9 +130,10 @@ export function listWorkerTerminalResources(
   }
   if (params.after) {
     // Order and fence must share one key, or a row created between pages moves across the cut.
+    // Pages walk down from the newest row, so the continuation takes what sorts after the anchor.
     // A pre-v3 cursor is resolved from its anchor row; when a reset deleted that row
-    // `rowid > NULL` matched nothing and the page read as a finished, empty inventory.
-    where.push('d.rowid > ?')
+    // `rowid < NULL` matched nothing and the page read as a finished, empty inventory.
+    where.push('d.rowid < ?')
     values.push(resolveAnchorRowId.call(this, params.after, params.runId))
   }
   let detailWhere = where
@@ -155,6 +156,7 @@ export function listWorkerTerminalResources(
   if (detailLimit !== undefined) {
     detailValues.push(detailLimit)
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field below is a column this SELECT names, and node:sqlite hands back rows untyped.
   const rows = this.db
     .prepare(
       `SELECT d.id AS dispatch_id,
@@ -181,7 +183,7 @@ export function listWorkerTerminalResources(
          LEFT JOIN tasks t ON t.id = d.task_id AND t.run_id = d.run_id
          LEFT JOIN worker_terminal_resources r ON r.owner_dispatch_id = d.id
         ${detailWhere.length > 0 ? `WHERE ${detailWhere.join(' AND ')}` : ''}
-        ORDER BY d.rowid ASC${limitClause}`
+        ORDER BY d.rowid DESC${limitClause}`
     )
     .all(...detailValues) as {
     dispatch_id: string
