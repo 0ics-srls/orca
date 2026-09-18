@@ -26,3 +26,8 @@ export type AiVaultSearchStatus = z.infer<typeof AiVaultSearchStatusSchema>
 export type AiVaultSearchHostOutcome = z.infer<typeof AiVaultSearchHostOutcomeSchema>
 /** Turning indexing on or off for one host; the response is that host's `AiVaultSearchStatus`. */
 export type AiVaultSetSearchEnabledParams = z.infer<typeof AiVaultSetSearchEnabledParamsSchema>
+
+export type {
+  AiVaultSearchResolvedScope,
+  AiVaultSearchScopeIdentity
+} from './ai-vault-search-scope'
