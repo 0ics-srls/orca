@@ -19,13 +19,13 @@ export const WORKTREE_OWNER_UNREACHABLE_ERROR =
   "Couldn't reach the remote host. Check the connection, then retry."
 
 /**
- * Raw code the runtime host returns when its worktree resolver cannot place the
- * file's workspace. It is UNKNOWN, not absence: the same code covers a deleted
+ * Machine code the runtime host returns when its worktree resolver cannot place
+ * the file's workspace. It is UNKNOWN, not absence: the same code covers a deleted
  * worktree and a cold or failing scan (see remote-browser-stream-errors.ts), and
  * the file-read path has no definitive "gone" answer. The retry gate bounds it,
  * then swaps in the terminal message below — never an automatic close (#21041).
  */
-export const WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR = 'selector_not_found'
+export const WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE = 'selector_not_found'
 
 /**
  * Terminal message once the selector-not-found retry budget is spent. Truthful
@@ -43,6 +43,8 @@ export type FileContent = {
   mimeType?: string
   fileIdentity?: string
   loadError?: string
+  /** Machine code from a runtime RPC failure; `loadError` alone may be prose (#21041). */
+  loadErrorCode?: string
   /** Superseded by an external change; still rendered until the lazy reload lands. */
   isStale?: boolean
 }

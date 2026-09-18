@@ -39,6 +39,7 @@ vi.mock('@/lib/runtime-workspace-file-route', () => ({
 
 vi.mock('@/store', () => ({ useAppStore: { getState: mocks.getState } }))
 
+import { RuntimeRpcCallError } from '@/runtime/runtime-rpc-result'
 import { WORKTREE_HOST_UNRESOLVED_ERROR } from './editor-panel-content-types'
 import { useEditorPanelContentState } from './useEditorPanelContentState'
 import { FILE_LOAD_RETRY_DELAYS_MS } from './useEditorPanelFileLoadRetry'
@@ -127,10 +128,17 @@ describe('useEditorPanelContentState — host cannot resolve a mirrored file (#2
     // Why the latency: a real host read rejects after I/O, in a later task than the retry
     // that issued it. An immediate rejection would batch with the retry's own state
     // update into one render and the effect would never re-arm — a test artifact.
+    // The documented host shape: machine code on `.code`, prose on `.message`
+    // (runtime-rpc-result.test.ts). Matching the message text alone would miss it.
+    const hostError = new RuntimeRpcCallError({
+      id: 'rpc-1',
+      ok: false,
+      error: { code: 'selector_not_found', message: 'Selector not found' }
+    })
     mocks.readRuntimeFileContent.mockImplementation(
       () =>
         new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('selector_not_found')), HOST_READ_LATENCY_MS)
+          setTimeout(() => reject(hostError), HOST_READ_LATENCY_MS)
         })
     )
 
@@ -141,7 +149,8 @@ describe('useEditorPanelContentState — host cannot resolve a mirrored file (#2
       root?.render(<Probe activeFile={activeFile} openFiles={openFiles} />)
     })
     await advanceTimers(HOST_READ_LATENCY_MS)
-    expect(latestFileContents[activeFile.id]?.loadError).toBe('selector_not_found')
+    expect(latestFileContents[activeFile.id]?.loadError).toBe('Selector not found')
+    expect(latestFileContents[activeFile.id]?.loadErrorCode).toBe('selector_not_found')
 
     // Exhaust the bounded backoff; every retry gets the same answer.
     for (const delayMs of FILE_LOAD_RETRY_DELAYS_MS) {

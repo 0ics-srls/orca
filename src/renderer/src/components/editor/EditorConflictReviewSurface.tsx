@@ -128,12 +128,15 @@ export function EditorConflictReviewSurface({
       )
     }
     if (fileContent.loadError) {
+      // Why: inline overview rows are synthesized per entry and are not tabs, so the
+      // close queue would drop the request; only a real open tab gets a Close action.
+      const isOpenTab = openFiles.some((file) => file.id === contentFile.id)
       return (
         <div className={className}>
           <EditorFileLoadErrorView
             message={fileContent.loadError}
             onRetry={() => reloadContent(contentFile)}
-            onClose={() => requestEditorFileClose(contentFile.id)}
+            onClose={isOpenTab ? () => requestEditorFileClose(contentFile.id) : undefined}
           />
         </div>
       )

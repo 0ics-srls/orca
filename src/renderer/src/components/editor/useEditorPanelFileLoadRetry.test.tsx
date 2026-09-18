@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import type { OpenFile } from '@/store/slices/editor'
 import {
-  WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR,
+  WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE,
   WORKTREE_HOST_UNRESOLVED_ERROR,
   WORKTREE_OWNER_NOT_READY_ERROR,
   WORKTREE_OWNER_UNREACHABLE_ERROR,
@@ -294,47 +294,72 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
   })
 
   it('retries the raw resolver code but never the terminal message', () => {
-    expect(shouldRetryFileLoadError(WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR)).toBe(true)
+    expect(shouldRetryFileLoadError(WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE)).toBe(true)
+    expect(shouldRetryFileLoadError('Selector not found')).toBe(true)
     expect(shouldRetryFileLoadError(WORKTREE_HOST_UNRESOLVED_ERROR)).toBe(false)
   })
 
-  it('keeps a dirty mirrored tab: bounded retries end in a truthful terminal message, not a close', () => {
-    const file = makeFile({
-      id: 'mirror-1',
-      filePath: '/home/user/project/NOTES.md',
-      relativePath: 'NOTES.md',
-      language: 'markdown',
-      mode: 'markdown-preview',
-      isDirty: true,
-      mirroredFromRuntimeSession: true
-    })
-    const attemptsRef = { current: {} as Record<string, number> }
-    const fileContents: Record<string, FileContent> = {
-      [file.id]: {
-        content: '',
-        isBinary: false,
-        loadError: WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR
+  // Why both shapes: a host may put the bare code on the message, or the code on `.code`
+  // with prose on `.message` (runtime-rpc-result.test.ts). Either must reach the same
+  // terminal state — matching only the rendered text would strand the second forever.
+  it.each([
+    ['bare code as message', { loadError: WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE }],
+    [
+      'code with human-readable message',
+      { loadError: 'Selector not found', loadErrorCode: WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE }
+    ]
+  ])(
+    'keeps a dirty mirrored tab (%s): bounded retries end in a truthful terminal message, not a close',
+    (_shape, failure) => {
+      const file = makeFile({
+        id: 'mirror-1',
+        filePath: '/home/user/project/NOTES.md',
+        relativePath: 'NOTES.md',
+        language: 'markdown',
+        mode: 'markdown-preview',
+        isDirty: true,
+        mirroredFromRuntimeSession: true
+      })
+      const attemptsRef = { current: {} as Record<string, number> }
+      const failedRead = (): FileContent => ({ content: '', isBinary: false, ...failure })
+      const fileContents: Record<string, FileContent> = { [file.id]: failedRead() }
+      const setFileContents = (
+        updater: (prev: Record<string, FileContent>) => Record<string, FileContent>
+      ): void => {
+        replaceFileContents(fileContents, updater(fileContents))
       }
-    }
-    const setFileContents = (
-      updater: (prev: Record<string, FileContent>) => Record<string, FileContent>
-    ): void => {
-      replaceFileContents(fileContents, updater(fileContents))
-    }
-    // The host's resolver never places the workspace: every retry re-fails the same way.
-    const loadFileContent = vi.fn(async (_filePath: string, id: string) => {
-      fileContents[id] = {
-        content: '',
-        isBinary: false,
-        loadError: WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR
+      // The host's resolver never places the workspace: every retry re-fails the same way.
+      const loadFileContent = vi.fn(async (_filePath: string, id: string) => {
+        fileContents[id] = failedRead()
+      })
+
+      container = document.createElement('div')
+      document.body.appendChild(container)
+      root = createRoot(container)
+
+      for (let i = 0; i < FILE_LOAD_RETRY_DELAYS_MS.length + 2; i++) {
+        act(() => {
+          root?.render(
+            <Harness
+              file={file}
+              fileContents={{ ...fileContents }}
+              attemptsRef={attemptsRef}
+              loadFileContent={loadFileContent}
+              setFileContents={setFileContents}
+            />
+          )
+        })
+        if (fileContents[file.id]?.loadError === WORKTREE_HOST_UNRESOLVED_ERROR) {
+          break
+        }
       }
-    })
 
-    container = document.createElement('div')
-    document.body.appendChild(container)
-    root = createRoot(container)
+      // Budget honored, then a truthful terminal state: the raw code is gone and the
+      // tab is still there for the user to retry or close.
+      expect(loadFileContent).toHaveBeenCalledTimes(FILE_LOAD_RETRY_DELAYS_MS.length)
+      expect(fileContents[file.id]?.loadError).toBe(WORKTREE_HOST_UNRESOLVED_ERROR)
 
-    for (let i = 0; i < FILE_LOAD_RETRY_DELAYS_MS.length + 2; i++) {
+      // Terminal: the message is not auto-retried.
       act(() => {
         root?.render(
           <Harness
@@ -346,28 +371,7 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
           />
         )
       })
-      if (fileContents[file.id]?.loadError === WORKTREE_HOST_UNRESOLVED_ERROR) {
-        break
-      }
+      expect(loadFileContent).toHaveBeenCalledTimes(FILE_LOAD_RETRY_DELAYS_MS.length)
     }
-
-    // Budget honored, then a truthful terminal state: the raw code is gone and the
-    // tab is still there for the user to retry or close.
-    expect(loadFileContent).toHaveBeenCalledTimes(FILE_LOAD_RETRY_DELAYS_MS.length)
-    expect(fileContents[file.id]?.loadError).toBe(WORKTREE_HOST_UNRESOLVED_ERROR)
-
-    // Terminal: the message is not auto-retried.
-    act(() => {
-      root?.render(
-        <Harness
-          file={file}
-          fileContents={{ ...fileContents }}
-          attemptsRef={attemptsRef}
-          loadFileContent={loadFileContent}
-          setFileContents={setFileContents}
-        />
-      )
-    })
-    expect(loadFileContent).toHaveBeenCalledTimes(FILE_LOAD_RETRY_DELAYS_MS.length)
-  })
+  )
 })

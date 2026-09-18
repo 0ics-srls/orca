@@ -1,7 +1,8 @@
 import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
 import type { OpenFile } from '@/store/slices/editor'
+import { hasRuntimeRpcErrorCode } from '../../../../shared/runtime-rpc-error-code'
 import {
-  WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR,
+  WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE,
   WORKTREE_HOST_UNRESOLVED_ERROR,
   WORKTREE_OWNER_NOT_READY_ERROR,
   WORKTREE_OWNER_UNREACHABLE_ERROR,
@@ -21,8 +22,16 @@ function isOwnerNotReadyError(message: string): boolean {
   return message === WORKTREE_OWNER_NOT_READY_ERROR
 }
 
-function isHostSelectorNotFoundError(message: string): boolean {
-  return message.trim().toLowerCase() === WORKTREE_HOST_SELECTOR_NOT_FOUND_ERROR
+// Why the shared matcher: the token may arrive on `.code` with prose on the message, as
+// the bare message, or transport-wrapped ("…: selector_not_found"); a message compare
+// alone would strand the first shape on raw text with no way out (#21041).
+function isHostSelectorNotFoundError(
+  failure: Pick<FileContent, 'loadError' | 'loadErrorCode'>
+): boolean {
+  return hasRuntimeRpcErrorCode(
+    { code: failure.loadErrorCode, message: failure.loadError },
+    WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE
+  )
 }
 
 type UseEditorPanelFileLoadRetryParams = {
@@ -66,6 +75,9 @@ export function useEditorPanelFileLoadRetry({
   const activeFileLoadError = activeFileLoadRetryId
     ? fileContents[activeFileLoadRetryId]?.loadError
     : undefined
+  const activeFileLoadErrorCode = activeFileLoadRetryId
+    ? fileContents[activeFileLoadRetryId]?.loadErrorCode
+    : undefined
 
   useEffect(() => {
     if (
@@ -89,7 +101,10 @@ export function useEditorPanelFileLoadRetry({
       // what keeps an unsaved draft from being discarded on a resolver blip.
       const terminalError = ownerNotReady
         ? WORKTREE_OWNER_UNREACHABLE_ERROR
-        : isHostSelectorNotFoundError(activeFileLoadError)
+        : isHostSelectorNotFoundError({
+              loadError: activeFileLoadError,
+              loadErrorCode: activeFileLoadErrorCode
+            })
           ? WORKTREE_HOST_UNRESOLVED_ERROR
           : null
       if (terminalError) {
@@ -136,6 +151,7 @@ export function useEditorPanelFileLoadRetry({
   }, [
     activeFileLoadRetryId,
     activeFileLoadError,
+    activeFileLoadErrorCode,
     fileLoadRetryAttemptsRef,
     loadFileContent,
     openFilesRef,
