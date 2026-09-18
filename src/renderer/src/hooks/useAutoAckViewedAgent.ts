@@ -32,14 +32,16 @@ export function useAutoAckViewedAgent(floatingPanelVisible: boolean): void {
     // Init to undefined so the first maybeAck() (on mount) always passes the ref guard and scans.
     let lastActiveView: unknown = undefined
     let lastActiveTabId: unknown = undefined
+    let lastActiveWorktreeId: unknown = undefined
+    let lastActiveWorkspaceGroupId: unknown = undefined
+    let lastActiveWorkspaceGroups: unknown = undefined
     let lastFloatingWorkspaceActiveTabId: unknown = undefined
+    let lastFloatingWorkspaceGroupId: unknown = undefined
+    let lastFloatingWorkspaceGroups: unknown = undefined
     let lastAgentStatus: unknown = undefined
     let lastRetained: unknown = undefined
     let lastAcknowledged: unknown = undefined
     let lastLayouts: unknown = undefined
-    // Why: activating a structured chat only moves its layout group's activeTabId — no terminal
-    // slice changes, so without this the scan that clears its attention would be skipped.
-    let lastGroups: unknown = undefined
     let lastUnreadAgentCompletionPanes: unknown = undefined
 
     // `force` re-scans after a signal the store never sees: panel open/closed is React-local state.
@@ -49,18 +51,32 @@ export function useAutoAckViewedAgent(floatingPanelVisible: boolean): void {
     )
     const maybeAck = (options?: { force?: boolean; presenceConfirmed?: boolean }): void => {
       const s = useAppStore.getState()
+      const activeWorktreeId = s.activeWorktreeId
+      const activeWorkspaceGroupId = activeWorktreeId
+        ? (s.activeGroupIdByWorktree[activeWorktreeId] ?? null)
+        : null
+      const activeWorkspaceGroups = activeWorktreeId
+        ? s.groupsByWorktree[activeWorktreeId]
+        : undefined
       const floatingWorkspaceActiveTabId =
         s.activeTabIdByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? null
+      const floatingWorkspaceGroupId =
+        s.activeGroupIdByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? null
+      const floatingWorkspaceGroups = s.groupsByWorktree[FLOATING_TERMINAL_WORKTREE_ID]
       if (
         !options?.force &&
         s.activeView === lastActiveView &&
         s.activeTabId === lastActiveTabId &&
+        activeWorktreeId === lastActiveWorktreeId &&
+        activeWorkspaceGroupId === lastActiveWorkspaceGroupId &&
+        activeWorkspaceGroups === lastActiveWorkspaceGroups &&
         floatingWorkspaceActiveTabId === lastFloatingWorkspaceActiveTabId &&
+        floatingWorkspaceGroupId === lastFloatingWorkspaceGroupId &&
+        floatingWorkspaceGroups === lastFloatingWorkspaceGroups &&
         s.agentStatusByPaneKey === lastAgentStatus &&
         s.retainedAgentsByPaneKey === lastRetained &&
         s.acknowledgedAgentsByPaneKey === lastAcknowledged &&
         s.terminalLayoutsByTabId === lastLayouts &&
-        s.groupsByWorktree === lastGroups &&
         s.unreadAgentCompletionPanes === lastUnreadAgentCompletionPanes
       ) {
         return
@@ -69,12 +85,16 @@ export function useAutoAckViewedAgent(floatingPanelVisible: boolean): void {
       // Presence signals force a rescan; unrelated writes must not retry an away result.
       lastActiveView = s.activeView
       lastActiveTabId = s.activeTabId
+      lastActiveWorktreeId = activeWorktreeId
+      lastActiveWorkspaceGroupId = activeWorkspaceGroupId
+      lastActiveWorkspaceGroups = activeWorkspaceGroups
       lastFloatingWorkspaceActiveTabId = floatingWorkspaceActiveTabId
+      lastFloatingWorkspaceGroupId = floatingWorkspaceGroupId
+      lastFloatingWorkspaceGroups = floatingWorkspaceGroups
       lastAgentStatus = s.agentStatusByPaneKey
       lastRetained = s.retainedAgentsByPaneKey
       lastAcknowledged = s.acknowledgedAgentsByPaneKey
       lastLayouts = s.terminalLayoutsByTabId
-      lastGroups = s.groupsByWorktree
       lastUnreadAgentCompletionPanes = s.unreadAgentCompletionPanes
 
       // Why: tab-active only proxies "seen"; gate on window visible+focused so away-time transitions don't silently clear the bold signal.
