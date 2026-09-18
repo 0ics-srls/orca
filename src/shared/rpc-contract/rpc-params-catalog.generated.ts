@@ -22,6 +22,7 @@ import {
   PairingGetEndpointsParamsSchema,
   PairingProvisionRelayParamsSchema
 } from '../mobile-relay-credential-contract'
+import { MobileWebBundleChunkParamsSchema } from '../mobile-web-bundle/bundle-rpc-contract'
 import { pluginConsentRequestSchema } from '../plugins/plugin-consent-request'
 import {
   AccountsUnsubscribeParams,
@@ -34,7 +35,7 @@ import {
   SelectCodexAccountForTargetParams
 } from './accounts-params'
 import { PrepareCodexForWslPaneParams } from './agent-hooks-params'
-import { AgentLaunch } from './agent-launch-params'
+import { AgentLaunch, AgentLaunchReplay } from './agent-launch-params'
 import { CreateAgentSessionParams, EnsureAgentSessionParams } from './agent-session-params'
 import {
   AiVaultListSessionsParams,
@@ -472,6 +473,8 @@ import {
   HoldParams,
   OptionsParams,
   RespondParams,
+  RestartResumableParams,
+  RestartResumeParams,
   RewindParams,
   SendParams,
   SetOptionParams,
@@ -557,6 +560,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'accounts.subscribe': null,
   'accounts.unsubscribe': AccountsUnsubscribeParams,
   'agent.launch': AgentLaunch,
+  'agent.launchReplay': AgentLaunchReplay,
   'agentHooks.prepareCodexForWslPane': PrepareCodexForWslPaneParams,
   'agentSession.cancel': CancelParams,
   'agentSession.close': OptionsParams,
@@ -573,6 +577,10 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentSession.requestHandoff': HandoffParams,
   'agentSession.respondToApproval': RespondParams,
   'agentSession.respondToQuestion': RespondParams,
+  'agentSession.restartContinue': RestartResumeParams,
+  'agentSession.restartResumable': RestartResumableParams,
+  'agentSession.restartResumableDismiss': RestartResumableParams,
+  'agentSession.restartResume': RestartResumeParams,
   'agentSession.reveal': OptionsParams,
   'agentSession.rewind': RewindParams,
   'agentSession.send': SendParams,
@@ -950,6 +958,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'linear.updateIssue': IssueUpdateOfLinearParams,
   'markdown.readTab': ActivateTab,
   'markdown.saveTab': SaveMarkdownTab,
+  'mobileWeb.bundle.chunk': MobileWebBundleChunkParamsSchema,
+  'mobileWeb.bundle.manifest': null,
   'nativeChat.readSession': NativeChatSession,
   'nativeChat.subscribe': NativeChatSession,
   'nativeChat.unsubscribe': NativeChatUnsubscribe,
