@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { AiVaultSearchRequestSchema, AiVaultSearchResponseSchema } from './ai-vault-search-contract'
-import { isUnacknowledgedScopedSearch } from './ai-vault-search-scope-acknowledgement'
 import { searchResults } from './ai-vault-search-test-fixture'
 
 describe('scope identity on the search request', () => {
@@ -54,44 +53,13 @@ describe('scope identity on the search request', () => {
     ).toThrow()
   })
 
-  it('carries the acknowledgement and the scope-unknown answer on the response', () => {
-    for (const response of [
-      { ...searchResults(), resolvedWithin: true },
-      { kind: 'unavailable', reason: 'scope-unknown' }
-    ]) {
-      expect(AiVaultSearchResponseSchema.parse(response)).toEqual(response)
-    }
-  })
-
-  it('names the two new per-host outcomes', () => {
-    const hosts = [
-      { executionHostId: 'local', outcome: 'scope-unknown' },
-      { executionHostId: 'ssh:box', outcome: 'needs-update' }
-    ]
+  it('carries the scope-unknown answer and per-host outcome on the response', () => {
+    expect(
+      AiVaultSearchResponseSchema.parse({ kind: 'unavailable', reason: 'scope-unknown' })
+    ).toEqual({ kind: 'unavailable', reason: 'scope-unknown' })
+    const hosts = [{ executionHostId: 'local', outcome: 'scope-unknown' }]
     expect(AiVaultSearchResponseSchema.parse({ ...searchResults(), hosts })).toMatchObject({
       hosts
     })
-  })
-})
-
-describe('acknowledgement of a scoped search', () => {
-  const within = { kind: 'workspace', worktreeId: 'repo-1::/work/app' } as const
-
-  it('reads a missing acknowledgement on a scoped request as an old host', () => {
-    expect(isUnacknowledgedScopedSearch({ within }, searchResults())).toBe(true)
-  })
-
-  it('reads a present acknowledgement as scoped', () => {
-    expect(
-      isUnacknowledgedScopedSearch({ within }, { ...searchResults(), resolvedWithin: true })
-    ).toBe(false)
-  })
-
-  it('never reads an unscoped request as needing an update', () => {
-    expect(isUnacknowledgedScopedSearch({}, searchResults())).toBe(false)
-  })
-
-  it('says nothing about an answer that carried no results', () => {
-    expect(isUnacknowledgedScopedSearch({ within }, { kind: 'malformed-cursor' })).toBe(false)
   })
 })

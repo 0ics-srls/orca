@@ -30,13 +30,8 @@ export class ScopePathSet {
     this.entries.push(trimmed)
   }
 
-  /**
-   * The paths with every entry that sits inside another removed.
-   *
-   * Why fold at all: the index matches by prefix, so a managed worktree
-   * directory already covers the hundreds of worktrees under it. Keeping them
-   * would put one SQL range per worktree into a single query for no extra rows.
-   */
+  // The index matches by prefix, so a contained path is one more SQL range for
+  // no extra rows.
   folded(): string[] {
     return this.entries.filter(
       (candidate) =>
@@ -49,19 +44,9 @@ export class ScopePathSet {
  * The directories Orca creates this repo's worktrees in, past and present, where
  * such a directory belongs to this repo alone.
  *
- * `buildKnownOrcaWorkspaceLayouts` is the same enumeration worktree ownership
- * uses, so a workspace root the user has since moved away from — its history is
- * persisted for exactly this reason — is covered here too, and a desktop-local
- * absolute root is already excluded for a remote repo.
- *
- * Which of those layouts can be claimed: a repo-level base path is an explicit
- * statement that the directory holds this project's workspaces, so it always
- * counts. A global root counts only where nesting puts this repo's worktrees in
- * their own subdirectory; flat placement makes that root every project's, and
- * claiming it would widen a project search to the whole machine.
- *
- * Nothing is lost when this is empty. Every worktree Orca registered is still
- * listed individually; only the folding is.
+ * A global root counts only under nesting: flat placement makes it every
+ * project's, and claiming it would widen a project search to the whole machine.
+ * An empty result costs only the folding — every registered worktree is still listed.
  */
 export function managedWorktreeDirectories(
   repo: ScopeRepo,

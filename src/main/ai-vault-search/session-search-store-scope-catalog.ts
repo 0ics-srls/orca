@@ -9,8 +9,7 @@ import type { GlobalSettings } from '../../shared/global-settings-types'
 import { readAllWorktreeMetaForHost } from '../persistence/host-qualified-worktree-meta'
 import type { SessionSearchScopeCatalog } from './session-search-scope-catalog'
 
-// Only what the catalog reads, so a partial store satisfies this without
-// standing up rows nothing here looks at.
+// Only what the catalog reads, so a partial store satisfies it.
 export type SessionSearchScopeStore = {
   getRepos(): readonly (SessionSearchScopeCatalog['repos'][number] & {
     connectionId?: string | null
@@ -25,14 +24,8 @@ export type SessionSearchScopeStore = {
   getSettings(): Pick<GlobalSettings, 'workspaceDir' | 'nestWorkspaces'>
 }
 
-/**
- * One host's slice of the profile store.
- *
- * The rows are filtered by execution host rather than read whole because a
- * desktop's store also holds the catalogs of the SSH and runtime hosts it talks
- * to. Answering a local search from those would scope it to directories that do
- * not exist on this machine.
- */
+// Filtered by host: a desktop's store also holds its SSH and runtime hosts'
+// catalogs, whose directories do not exist on this machine.
 export function sessionSearchScopeCatalogFromStore(
   store: SessionSearchScopeStore,
   executionHostId: ExecutionHostId

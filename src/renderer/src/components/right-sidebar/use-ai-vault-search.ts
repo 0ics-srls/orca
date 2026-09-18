@@ -13,7 +13,6 @@ import {
 } from '../../../../shared/execution-host'
 import type { AiVaultAgent, AiVaultSession } from '../../../../shared/ai-vault-types'
 import type { AiVaultSearchScopeIdentity } from '../../../../shared/ai-vault-search-scope'
-import { isUnacknowledgedScopedSearch } from '../../../../shared/ai-vault-search-scope-acknowledgement'
 import { resolveAiVaultSearchSettings } from '../../../../shared/ai-vault-search-settings'
 import { isWebClientLocation } from '@/lib/web-client-location'
 import { useAppStore } from '@/store'
@@ -30,8 +29,6 @@ type SearchPage = {
   identity: SearchIdentity
   hits: AiVaultSearchHit[]
   response: AiVaultSearchResponse | null
-  /** Decided once, where the request and its answer are both in hand. */
-  needsUpdate: boolean
   error: boolean
   loading: boolean
 }
@@ -65,7 +62,6 @@ export function useAiVaultSearch(
         identity,
         hits: cursor && previous?.identity === identity ? previous.hits : [],
         response: null,
-        needsUpdate: false,
         error: false,
         loading: true
       }))
@@ -82,33 +78,22 @@ export function useAiVaultSearch(
         if (cancelled) {
           return
         }
-        // An old host answered a scoped search with every session it has. Those
-        // hits are not this scope's, so none of them are shown.
-        const needsUpdate = isUnacknowledgedScopedSearch(request, response)
         setPage((previous) => ({
           identity,
           hits:
-            response.kind === 'results' && !needsUpdate
+            response.kind === 'results'
               ? [
                   ...(append && previous?.identity === identity ? previous.hits : []),
                   ...response.hits
                 ]
               : [],
           response,
-          needsUpdate,
           error: false,
           loading: false
         }))
       } catch {
         if (!cancelled) {
-          setPage({
-            identity,
-            hits: [],
-            response: null,
-            needsUpdate: false,
-            error: true,
-            loading: false
-          })
+          setPage({ identity, hits: [], response: null, error: true, loading: false })
         }
       } finally {
         pending = false
@@ -127,7 +112,6 @@ export function useAiVaultSearch(
   return {
     hits: current?.hits ?? [],
     response: current?.response ?? null,
-    needsUpdate: current?.needsUpdate ?? false,
     error: current?.error ?? false,
     loading: Boolean(request && scope && (!current || current.loading)),
     removeHit: (hit: AiVaultSearchHit) =>

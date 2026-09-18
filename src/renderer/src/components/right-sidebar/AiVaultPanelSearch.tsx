@@ -24,28 +24,17 @@ function hostSkipReason(outcome: AiVaultSearchHostOutcome['outcome']): string | 
       return 'unreachable'
     case 'scope-unknown':
       return 'scope not found there'
-    case 'needs-update':
-      return 'needs an update'
   }
 }
 
-// Outcomes that leave the scope the open question for that computer: it could
-// not place the scope, ignored it, or never answered at all. Any other outcome
-// means some computer got far enough to apply the scope, or is already named
-// here with a reason of its own.
+// Neither reached the scope, so neither is evidence that some computer did.
 const UNSETTLED_SCOPE_OUTCOMES = new Set<AiVaultSearchHostOutcome['outcome']>([
   'scope-unknown',
-  'needs-update',
   'unreachable'
 ])
 
-/**
- * Why `scope-unknown` is usually dropped: a computer that simply does not have
- * this project is the ordinary case, and under Workspace at most one ever has
- * it, so naming the rest would put a line under every search that says nothing.
- * It is worth saying only when it explains an empty result. `needs-update`
- * always shows: it is actionable.
- */
+// A computer that simply lacks this project is the ordinary case, worth naming
+// only when it is what explains an empty result.
 function describeSkippedHosts(hosts: readonly AiVaultSearchHostOutcome[]): string | null {
   const anyResolved = hosts.some((entry) => !UNSETTLED_SCOPE_OUTCOMES.has(entry.outcome))
   const skipped = hosts.flatMap((entry) => {
@@ -124,11 +113,6 @@ export function AiVaultPanelSearch({
       'sessionSearch.panel.scopeUnknown',
       'This computer does not have this workspace or project. Switch the scope to All to search everything on it.'
     )
-  } else if (search.needsUpdate) {
-    message = translate(
-      'sessionSearch.panel.needsUpdate',
-      'This computer needs an Orca update: it cannot limit a search to one workspace or project yet. Switch the scope to All to search everything on it.'
-    )
   } else if (error) {
     message = translate(
       'sessionSearch.panel.failed',
@@ -154,7 +138,7 @@ export function AiVaultPanelSearch({
   if (!search.searching) {
     return children
   }
-  if (!search.needsUpdate && response?.kind === 'results' && search.hits.length === 0) {
+  if (response?.kind === 'results' && search.hits.length === 0) {
     message = translate(
       'sessionSearch.panel.noMatches',
       'No matching sessions in the indexed history. Try another query or scope.'
@@ -193,7 +177,6 @@ export function AiVaultPanelSearch({
           ) : !noAgents &&
             (error ||
               unavailable ||
-              search.needsUpdate ||
               response?.kind === 'stale-cursor' ||
               response?.kind === 'malformed-cursor') ? (
             <Button size="xs" variant="outline" disabled={loading} onClick={onRetry}>
@@ -203,7 +186,7 @@ export function AiVaultPanelSearch({
         </div>
       )}
       {children}
-      {response?.kind === 'results' && response.page.hasMore && !search.needsUpdate && (
+      {response?.kind === 'results' && response.page.hasMore && (
         <div className="border-t border-sidebar-border p-2">
           <Button
             className="w-full"

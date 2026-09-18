@@ -6,7 +6,7 @@ import type {
   AiVaultSearchResponse
 } from '../../../../shared/ai-vault-search-types'
 import type { ExecutionHostScope } from '../../../../shared/execution-host'
-import { searchHit, searchResults } from '../../../../shared/ai-vault-search-test-fixture'
+import { searchResults } from '../../../../shared/ai-vault-search-test-fixture'
 import { aiVaultSearchScopeIdentity } from './ai-vault-search-scope-identity'
 import { useAiVaultPanelSearch } from './use-ai-vault-search'
 
@@ -95,32 +95,6 @@ describe('the panel hook under a scope identity', () => {
     unmount()
   })
 
-  it('reports a host that answered without acknowledging the scope, and shows none of its hits', async () => {
-    searchSessions.mockResolvedValue({ ...searchResults(), hits: [searchHit()] })
-    const { result, unmount } = renderHook(() =>
-      useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
-    )
-    await debounce()
-    expect(result.current.needsUpdate).toBe(true)
-    expect(result.current.sessions).toEqual([])
-    unmount()
-  })
-
-  it('keeps the hits of a host that acknowledged the scope', async () => {
-    searchSessions.mockResolvedValue({
-      ...searchResults(),
-      hits: [searchHit()],
-      resolvedWithin: true
-    })
-    const { result, unmount } = renderHook(() =>
-      useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
-    )
-    await debounce()
-    expect(result.current.needsUpdate).toBe(false)
-    expect(result.current.sessions).toHaveLength(1)
-    unmount()
-  })
-
   it('does not restart the search while the identity holds', async () => {
     const { rerender, unmount } = renderHook(() =>
       useAiVaultPanelSearch('needle', AGENTS, WORKSPACE, 'ssh:build-box')
@@ -130,17 +104,6 @@ describe('the panel hook under a scope identity', () => {
     rerender()
     await debounce()
     expect(searchSessions).toHaveBeenCalledTimes(1)
-    unmount()
-  })
-
-  it('never calls an unscoped answer an old host', async () => {
-    searchSessions.mockResolvedValue({ ...searchResults(), hits: [searchHit()] })
-    const { result, unmount } = renderHook(() =>
-      useAiVaultPanelSearch('needle', AGENTS, undefined, 'ssh:build-box')
-    )
-    await debounce()
-    expect(result.current.needsUpdate).toBe(false)
-    expect(result.current.sessions).toHaveLength(1)
     unmount()
   })
 })

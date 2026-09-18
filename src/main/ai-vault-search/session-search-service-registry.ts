@@ -31,11 +31,9 @@ export async function searchSessionService(
   if (!current) {
     return { kind: 'unavailable', reason: 'no-service' }
   }
-  // The one place every entry point funnels through, so native, WSL, SSH and
-  // relay hosts all turn an identity into paths the same way, exactly once. The
-  // verdict is handed to the service rather than answered here: a host that is
-  // off or still starting owes the reader that answer first, and it is the
-  // service that makes it.
+  // The choke point every entry point funnels through, so every host kind
+  // resolves alike; the verdict goes to the service, which answers off and
+  // not-ready first.
   const { within, ...request } = parsed
   const hostScope = within
     ? resolveSessionSearchScope(within, sessionSearchScopeCatalog())
@@ -53,7 +51,6 @@ export async function searchSessionService(
     ...fields,
     hits: result.hits.map((hit) => redactForTransport(hit, transport)),
     truncated: { ...result.truncated, freshness: result.truncated.freshness || freshness },
-    ...(hostScope?.kind === 'resolved' ? { resolvedWithin: true as const } : {}),
     ...(request.debug && debug ? { debug } : {})
   }
 }

@@ -3,15 +3,8 @@ import type { Project, ProjectHostSetup } from '../../shared/project-types'
 import type { Repo } from '../../shared/repo-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 
-/**
- * What one execution host knows about its own repos, projects and workspaces —
- * the only inputs a scope identity is resolved against.
- *
- * Deliberately a snapshot of persisted state and never a git scan: the prefixes
- * a project resolves to are its checkout, the directory Orca creates its
- * worktrees in and the registered worktrees outside it, none of which requires
- * enumerating hundreds of working trees to answer one search.
- */
+// Persisted state, never a git scan: a handful of prefixes answers a search that
+// enumerating hundreds of working trees would not.
 export type SessionSearchScopeCatalog = {
   repos: readonly Pick<
     Repo,
@@ -30,9 +23,8 @@ export type SessionSearchScopeCatalog = {
 /** Bound to one execution host by whoever installs it: the host that answers. */
 export type SessionSearchScopeCatalogSource = () => SessionSearchScopeCatalog | null
 
-// Why a source and not a value: the desktop composition root owns the store, and
-// this module is imported by the relay too — where no such store exists and every
-// read must stay null so a scope is refused rather than silently widened.
+// A source, not a value: the relay imports this and owns no store, so its reads
+// stay null and a scope is refused rather than silently widened.
 let readCatalog: SessionSearchScopeCatalogSource | null = null
 
 export function installSessionSearchScopeCatalogSource(

@@ -1,10 +1,7 @@
 import { resolveSessionSearchLimit, SESSION_SEARCH_LIMIT_MAX } from './ai-vault-search-limit'
 import { z } from 'zod'
 import { AI_VAULT_AGENTS, AI_VAULT_SCOPE_PATHS_MAX_COUNT } from './ai-vault-types'
-import {
-  AiVaultSearchResolvedWithinSchema,
-  AiVaultSearchScopeIdentitySchema
-} from './ai-vault-search-scope'
+import { AiVaultSearchScopeIdentitySchema } from './ai-vault-search-scope'
 
 export const AiVaultSearchFiltersSchema = z.object({
   agents: z.array(z.enum(AI_VAULT_AGENTS)).optional(),
@@ -89,9 +86,7 @@ export const AiVaultSearchHostOutcomeSchema = z.object({
     'no-service',
     'unreachable',
     // This host does not know the workspace or project the scope named.
-    'scope-unknown',
-    // This host answered a scoped search without acknowledging the scope.
-    'needs-update'
+    'scope-unknown'
   ])
 })
 const routeSchema = z.enum(['phrase', 'and', 'or', 'typo+phrase', 'typo+and', 'typo+or'])
@@ -114,8 +109,6 @@ export const AiVaultSearchResponseSchema = z.discriminatedUnion('kind', [
     truncated: AiVaultSearchTruncationSchema,
     durationMs: z.number().nonnegative(),
     debug: AiVaultSearchDebugSchema.optional(),
-    /** Present only when the request carried `within`; absent means an older host. */
-    resolvedWithin: AiVaultSearchResolvedWithinSchema.optional(),
     hosts: z.array(AiVaultSearchHostOutcomeSchema).optional()
   }),
   z.object({

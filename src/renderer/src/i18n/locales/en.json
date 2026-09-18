@@ -17959,8 +17959,7 @@
       "enable": "Enable",
       "notNow": "Not now",
       "retry": "Try again",
-      "scopeUnknown": "This computer does not have this workspace or project. Switch the scope to All to search everything on it.",
-      "needsUpdate": "This computer needs an Orca update: it cannot limit a search to one workspace or project yet. Switch the scope to All to search everything on it."
+      "scopeUnknown": "This computer does not have this workspace or project. Switch the scope to All to search everything on it."
     }
   },
   "sessionHistory": {

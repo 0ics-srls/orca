@@ -17,7 +17,6 @@ function panelSearch(overrides: Partial<PanelSearch> = {}): PanelSearch {
   return {
     hits: [],
     response: null,
-    needsUpdate: false,
     error: false,
     loading: false,
     removeHit: vi.fn(),
@@ -67,13 +66,6 @@ describe('AiVaultPanelSearch', () => {
     )
   })
 
-  it('tells the user a computer needs an update instead of showing its unscoped hits', () => {
-    renderPanel(panelSearch({ needsUpdate: true, response: { ...searchResults(), hits: [] } }))
-
-    expect(screen.getByRole('status').textContent).toContain('needs an Orca update')
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
-  })
-
   it('says a computer does not have this workspace or project rather than blaming the search', () => {
     renderPanel(panelSearch({ response: { kind: 'unavailable', reason: 'scope-unknown' } }))
 
@@ -82,7 +74,7 @@ describe('AiVaultPanelSearch', () => {
     )
   })
 
-  it('names a computer needing an update, and stays quiet about computers that simply lack the scope', () => {
+  it('stays quiet about computers that simply lack the scope while another searched it', () => {
     const response = searchResults()
     renderPanel(
       panelSearch({
@@ -92,15 +84,14 @@ describe('AiVaultPanelSearch', () => {
           hosts: [
             // Stale: it resolved the scope and searched, then the index moved.
             { executionHostId: 'local', outcome: 'stale' },
-            { executionHostId: 'ssh:box', outcome: 'scope-unknown' },
-            { executionHostId: 'runtime:old', outcome: 'needs-update' }
+            { executionHostId: 'ssh:box', outcome: 'scope-unknown' }
           ]
         }
       })
     )
 
     expect(screen.getByRole('status').textContent).toBe(
-      `Not searched: ${getExecutionHostLabel('local')} (index changed) · old (needs an update)`
+      `Not searched: ${getExecutionHostLabel('local')} (index changed)`
     )
   })
 

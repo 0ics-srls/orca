@@ -8,21 +8,12 @@ import type { SessionSearchIndexer } from './session-search-indexer'
 import { SessionSearchCursorError } from './session-search-page-cursor'
 
 /**
- * What the answering host made of a scope identity. Absent means the request
- * carried none and still searches everything.
+ * What the answering host made of a scope identity; absent searches everything.
  *
- * Why the paths ride here and not in `filters.scopePaths`: that is a wire field,
- * capped at 64 entries for the clients that fill it in by hand. A project whose
- * worktrees do not share one managed directory resolves to one path per
- * worktree, and 100 of them would be refused by the very schema the request is
- * re-parsed with inside the scanner child. These paths never cross a wire — the
- * host that resolved them is the host that searches — so no cap applies.
- *
- * Why `unknown` travels here rather than being answered by the caller: a host
- * that is switched off or still starting owes the reader that answer, for a
- * scoped request exactly as for an unscoped one. Those answers are made below,
- * after consent and readiness are checked, so the verdict has to arrive where
- * they are made and not before.
+ * Beside the request, not in `filters.scopePaths`: that field is capped at 64 for
+ * the clients that write it, and the scanner child re-parses the request with the
+ * same schema. `unknown` travels here too, because consent and readiness are
+ * answered below and owe the reader a verdict first.
  */
 export type SessionSearchHostScope =
   | { kind: 'resolved'; paths: readonly string[] }
@@ -48,8 +39,7 @@ export function createSessionSearchService({
     reconcile: () => indexer.reconcile({ full: true }),
     status: async () => ({ enabled: true, ...indexer.status(), generation: engine.generation() }),
     search: async (request, hostScope) => {
-      // Reached only through a live index, so consent and readiness are already
-      // answered: an unresolvable scope is this host's last word, not a fallback.
+      // Reached only through a live index, so consent and readiness already answered.
       if (hostScope?.kind === 'unknown') {
         return { kind: 'unavailable', reason: 'scope-unknown' }
       }

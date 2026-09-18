@@ -25,7 +25,7 @@ describe('scope identity at the search choke point', () => {
     const service = fakeSearchService()
     setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
-    const response = await searchSessionService(
+    await searchSessionService(
       { query: 'needle', within: { kind: 'workspace', worktreeId: 'repo-1::/work/app' } },
       'ipc'
     )
@@ -34,7 +34,6 @@ describe('scope identity at the search choke point', () => {
       { query: 'needle', limit: 20 },
       { kind: 'resolved', paths: ['/work/app'] }
     )
-    expect(response).toMatchObject({ resolvedWithin: true })
   })
 
   it('never forwards the identity to the engine, which only knows paths', async () => {
@@ -69,20 +68,6 @@ describe('scope identity at the search choke point', () => {
       }
     )
     expect(service.status).not.toHaveBeenCalled()
-  })
-
-  it('never acknowledges a scope it could not resolve', async () => {
-    const service = fakeSearchService()
-    setSessionSearchService(service)
-    installSessionSearchScopeCatalogSource(() => CATALOG)
-    // A live index answering `results` under an unknown verdict would otherwise
-    // be acknowledged as scoped, which is the one claim it cannot make.
-    expect(
-      await searchSessionService(
-        { query: 'needle', within: { kind: 'project', projectKey: 'repo:elsewhere' } },
-        'ipc'
-      )
-    ).not.toHaveProperty('resolvedWithin')
   })
 
   it('says unknown on a host with no catalog at all, such as the relay', async () => {
@@ -124,13 +109,12 @@ describe('scope identity at the search choke point', () => {
     expect(() => AiVaultSearchRequestSchema.parse(call?.[0])).not.toThrow()
   })
 
-  it('leaves an unscoped search unnarrowed and unacknowledged', async () => {
+  it('leaves an unscoped search unnarrowed', async () => {
     const service = fakeSearchService()
     setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
-    const response = await searchSessionService({ query: 'needle' }, 'ipc')
+    await searchSessionService({ query: 'needle' }, 'ipc')
     expect(service.search).toHaveBeenCalledWith({ query: 'needle', limit: 20 }, undefined)
-    expect(response).not.toHaveProperty('resolvedWithin')
   })
 
   it('still honours an explicit path filter, which is what the CLI’s --path sends', async () => {

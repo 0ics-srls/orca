@@ -28,11 +28,8 @@ export function resolveSessionSearchScope(
   return paths.length > 0 ? { kind: 'resolved', paths } : { kind: 'unknown' }
 }
 
-/**
- * One workspace: its directory today, plus the directories it occupied before it
- * was renamed on disk. Transcripts are keyed by working directory only, so a
- * renamed workspace's own history lives under its old paths.
- */
+// Transcripts are keyed by working directory, so a renamed workspace's own
+// history lives under the paths it used to occupy.
 function resolveWorkspaceScope(worktreeId: string, catalog: SessionSearchScopeCatalog): string[] {
   const repo = repoById(catalog, getRepoIdFromWorktreeId(worktreeId))
   if (!repo) {
@@ -48,15 +45,9 @@ function resolveWorkspaceScope(worktreeId: string, catalog: SessionSearchScopeCa
   return paths.folded()
 }
 
-/**
- * Which worktree id this host has on file for the one the client named, or null.
- *
- * Why go through the registry rather than reading the path out of the id: the id
- * is client-supplied and embeds a directory, and a scope identity must not be a
- * way to hand the host a path to search. Matching a key the host itself wrote —
- * or the repo's own checkout, which needs no row — keeps the directory the
- * host's. The spelling returned is the host's, not the caller's.
- */
+// Through the registry rather than reading the path out of the id: the id is
+// client-supplied, and a scope identity must not be a way to hand the host a
+// path to search.
 function registeredWorktreeId(
   worktreeId: string,
   repo: ScopeRepo,
@@ -71,19 +62,14 @@ function registeredWorktreeId(
   if (registered) {
     return registered
   }
-  // The repo's own checkout, and a folder project's workspaces, all sit at the
-  // repo path — which this host recorded when it registered the repo, so no
-  // worktree row has to vouch for it.
+  // The checkout and a folder project's workspaces sit at the repo path, which
+  // this host recorded when it registered the repo.
   const named = splitWorktreeIdForFilesystem(worktreeId)?.worktreePath
   return named && areRuntimePathsEqual(named, repo.path) ? getRepoMainWorktreeId(repo) : null
 }
 
-/**
- * One project on this host: every repo the key names, each contributing its
- * checkout, the directories Orca creates its worktrees in, and every registered
- * worktree that lives outside them. A project set up on several hosts resolves on
- * each of them, because the key is the project's id and not a path.
- */
+// A project set up on several hosts resolves on each, the key being the
+// project's id and not a path.
 function resolveProjectScope(projectKey: string, catalog: SessionSearchScopeCatalog): string[] {
   const paths = new ScopePathSet()
   const repoIds = new Set<string>()
@@ -139,12 +125,8 @@ function addRepoScopePaths(
   }
 }
 
-/**
- * A prior path that another registered workspace now occupies belongs to that
- * workspace, not to this one: the worktree id embeds the path, so the claimant's
- * id *is* the prior id. Skipping it keeps a renamed workspace from pulling a
- * sibling's transcripts into a Workspace-scoped search.
- */
+// A prior path another workspace now occupies is that workspace's: the id
+// embeds the path, so the claimant's id *is* the prior id.
 function addPriorWorktreePaths(
   paths: ScopePathSet,
   worktreeId: string,

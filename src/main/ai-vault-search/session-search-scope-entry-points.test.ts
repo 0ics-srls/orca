@@ -2,9 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AiVaultHandler } from '../../relay/ai-vault-handler'
 import type { RelayDispatcher } from '../../relay/dispatcher'
 import { createSessionSearchClient } from '../../shared/ai-vault-search-client'
-import { isUnacknowledgedScopedSearch } from '../../shared/ai-vault-search-scope-acknowledgement'
 import { fakeSearchService } from '../../shared/ai-vault-search-test-fixture'
-import { searchAllExecutionHosts } from '../ipc/ai-vault-search-all-hosts'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { AI_VAULT_METHODS } from '../runtime/rpc/methods/ai-vault'
@@ -45,36 +43,45 @@ function relayHandler(): (params: Record<string, unknown>) => Promise<unknown> {
 }
 
 describe('every search entry point carries the scope identity through', () => {
-  it('resolves and acknowledges over the in-process IPC entry point', async () => {
-    setSessionSearchService(fakeSearchService())
+  it('resolves over the in-process IPC entry point', async () => {
+    const service = fakeSearchService()
+    setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
-    expect(await searchSessionService({ query: 'needle', within: WITHIN }, 'ipc')).toMatchObject({
-      resolvedWithin: true
+    await searchSessionService({ query: 'needle', within: WITHIN }, 'ipc')
+    expect(service.search).toHaveBeenCalledWith(expect.anything(), {
+      kind: 'resolved',
+      paths: ['/work/app']
     })
   })
 
-  it('resolves and acknowledges over the runtime RPC method', async () => {
-    setSessionSearchService(fakeSearchService())
+  it('resolves over the runtime RPC method', async () => {
+    const service = fakeSearchService()
+    setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
     const rpc = new RpcDispatcher({
       runtime: new OrcaRuntimeService(),
       methods: AI_VAULT_METHODS
     })
-    expect(
-      await rpc.dispatch({
-        id: 'search-1',
-        authToken: 'test',
-        method: 'aiVault.searchSessions',
-        params: { query: 'needle', within: WITHIN }
-      })
-    ).toMatchObject({ ok: true, result: { resolvedWithin: true } })
+    await rpc.dispatch({
+      id: 'search-1',
+      authToken: 'test',
+      method: 'aiVault.searchSessions',
+      params: { query: 'needle', within: WITHIN }
+    })
+    expect(service.search).toHaveBeenCalledWith(expect.anything(), {
+      kind: 'resolved',
+      paths: ['/work/app']
+    })
   })
 
-  it('resolves and acknowledges over the relay entry point', async () => {
-    setSessionSearchService(fakeSearchService())
+  it('resolves over the relay entry point', async () => {
+    const service = fakeSearchService()
+    setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
-    expect(await relayHandler()({ query: 'needle', within: WITHIN })).toMatchObject({
-      resolvedWithin: true
+    await relayHandler()({ query: 'needle', within: WITHIN })
+    expect(service.search).toHaveBeenCalledWith(expect.anything(), {
+      kind: 'resolved',
+      paths: ['/work/app']
     })
   })
 
@@ -92,108 +99,18 @@ describe('every search entry point carries the scope identity through', () => {
 })
 
 describe('the shared remote client', () => {
-  it('carries the identity out and the acknowledgement back across a transport', async () => {
-    setSessionSearchService(fakeSearchService())
+  it('carries the identity out across a transport', async () => {
+    const service = fakeSearchService()
+    setSessionSearchService(service)
     installSessionSearchScopeCatalogSource(() => CATALOG)
     const client = createSessionSearchClient(
       (_method, params) => searchSessionService(params, 'relay'),
       'relay'
     )
-    expect(await client.searchSessions({ query: 'needle', within: WITHIN })).toMatchObject({
-      resolvedWithin: true
+    await client.searchSessions({ query: 'needle', within: WITHIN })
+    expect(service.search).toHaveBeenCalledWith(expect.anything(), {
+      kind: 'resolved',
+      paths: ['/work/app']
     })
-  })
-})
-
-describe('an all-computers merge across mixed host versions', () => {
-  it('acknowledges the scope it merged, so the reader does not read the merge as an old host', async () => {
-    const response = await searchAllExecutionHosts({ query: 'needle', within: WITHIN }, [
-      {
-        executionHostId: 'local',
-        search: async () => ({
-          kind: 'results',
-          hits: [],
-          page: { cursor: null, hasMore: false },
-          generation: 1,
-          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
-          durationMs: 1,
-          resolvedWithin: true as const
-        })
-      }
-    ])
-    expect(response).toMatchObject({ resolvedWithin: true })
-    expect(isUnacknowledgedScopedSearch({ within: WITHIN }, response)).toBe(false)
-  })
-
-  it('does not acknowledge a scope that was never asked for', async () => {
-    const response = await searchAllExecutionHosts({ query: 'needle' }, [
-      {
-        executionHostId: 'local',
-        search: async () => ({
-          kind: 'results',
-          hits: [],
-          page: { cursor: null, hasMore: false },
-          generation: 1,
-          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
-          durationMs: 1
-        })
-      }
-    ])
-    expect(response).not.toHaveProperty('resolvedWithin')
-  })
-
-  it('drops an old host’s unscoped hits and names it as needing an update', async () => {
-    const response = await searchAllExecutionHosts({ query: 'needle', within: WITHIN }, [
-      {
-        executionHostId: 'local',
-        search: async () => ({
-          kind: 'results',
-          hits: [],
-          page: { cursor: null, hasMore: false },
-          generation: 1,
-          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
-          durationMs: 1,
-          resolvedWithin: true
-        })
-      },
-      {
-        executionHostId: 'runtime:old',
-        // An old host ignores `within` and answers with everything it has.
-        search: async () => ({
-          kind: 'results',
-          hits: [
-            {
-              agent: 'claude',
-              sessionId: 'elsewhere',
-              title: 'another project',
-              cwd: '/other',
-              branch: null,
-              updatedAt: '2026-01-01T00:00:00.000Z',
-              messageCount: 1,
-              score: 1,
-              source: { presence: 'present' },
-              evidence: null
-            }
-          ],
-          page: { cursor: null, hasMore: false },
-          generation: 1,
-          truncated: { candidates: false, snippets: 0, query: false, freshness: false },
-          durationMs: 1
-        })
-      },
-      {
-        executionHostId: 'ssh:box',
-        search: async () => ({ kind: 'unavailable', reason: 'scope-unknown' })
-      }
-    ])
-    if (response.kind !== 'results') {
-      throw new Error('Expected merged results')
-    }
-    expect(response.hits).toEqual([])
-    expect(response.hosts).toEqual([
-      { executionHostId: 'local', outcome: 'searched' },
-      { executionHostId: 'runtime:old', outcome: 'needs-update' },
-      { executionHostId: 'ssh:box', outcome: 'scope-unknown' }
-    ])
   })
 })

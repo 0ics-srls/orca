@@ -1,5 +1,4 @@
 import { resolveSessionSearchLimit } from '../../shared/ai-vault-search-limit'
-import { isUnacknowledgedScopedSearch } from '../../shared/ai-vault-search-scope-acknowledgement'
 import type {
   AiVaultSearchHit,
   AiVaultSearchHostOutcome,
@@ -87,13 +86,7 @@ export async function searchAllExecutionHosts(
     walks.map((walk) => fetchHostPage(walk, resumed?.hosts[walk.executionHostId] ?? null))
   )
   const hits = await drainMergedPage(walks, limit, sort)
-  return mergedSearchResponse(
-    walks,
-    { limit, sort },
-    hits,
-    Date.now() - startedAt,
-    request.within !== undefined
-  )
+  return mergedSearchResponse(walks, { limit, sort }, hits, Date.now() - startedAt)
 }
 
 /** Every leg answers in the merged order; the cursor and debug are this merge's own. */
@@ -156,12 +149,6 @@ async function fetchHostPage(walk: HostWalk, entry: MergedSearchCursorEntry | nu
   // meaningful while that generation stands. Nothing emitted, nothing to fence.
   if (walk.emitted > 0 && walk.generation !== response.generation) {
     endHostWalk(walk, 'stale', false)
-    return
-  }
-  // This host ignored the scope and answered with everything it has. Merging
-  // those hits would put another project's sessions under this project's scope.
-  if (isUnacknowledgedScopedSearch(walk.request, response)) {
-    endHostWalk(walk, 'needs-update', false)
     return
   }
   walk.outcome = 'searched'
@@ -243,8 +230,7 @@ function mergedSearchResponse(
   walks: readonly HostWalk[],
   query: { limit: number; sort: MergedSort },
   hits: AiVaultSearchHit[],
-  durationMs: number,
-  scoped: boolean
+  durationMs: number
 ): AiVaultSearchResponse {
   const hosts: AiVaultSearchHostOutcome[] = []
   const nextHosts: Record<string, MergedSearchCursorEntry> = {}
@@ -277,10 +263,6 @@ function mergedSearchResponse(
     generation: 0,
     truncated,
     durationMs,
-    // The merge is a host in its own right to the reader: it understood `within`
-    // and every hit here came from a leg that resolved it. Legs that did not are
-    // reported one by one through `hosts`, not by withholding this.
-    ...(scoped ? { resolvedWithin: true as const } : {}),
     hosts
   }
 }
