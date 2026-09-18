@@ -6,7 +6,7 @@ import { RICH_MARKDOWN_ESCAPED_CHARACTER_MARK } from './rich-markdown-escaped-ch
 
 const DOLLAR_SKIP_TYPES = new Set(['inlineMath', 'rawMarkdownHtmlInline'])
 
-const CHEAP_NEEDS_WORK = /\$|\||&|<|\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
+const CHEAP_NEEDS_WORK = /\$|\||\\[&<]|\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
 const REF_DEF = /^ {0,3}\[[^\n]*\]:/m
 
 type BlockInfo = { block: ProseMirrorNode; inTableCell: boolean }
@@ -64,7 +64,7 @@ function destNeedsEscape(dest: string): boolean {
       continue
     }
     if (character === '(') {
-      return true
+      depth += 1
     } else if (character === ')') {
       if (depth === 0) {
         return true
@@ -251,11 +251,11 @@ export function preserveLiteralMarkdownSource(
       return cached.result
     }
     let result = markdown
-    result = result.replace(/&(?!#?\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
+    result = result.replace(/\\\$(?=\d)/g, '$')
     const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
     if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
       result = result.replace(/\$(?!\d)/g, '\\$&')
-      result = result.replace(/&(?!#?\w+;)/g, '&amp;').replace(/<(?!\/|\w)/g, '&lt;')
+      result = result.replace(/\\\$(?=\d)/g, '$')
     }
     if (node.type === 'paragraph' && !info.inTableCell) {
       result = escapeLineLeading(result)
@@ -300,7 +300,7 @@ export function preserveLiteralMarkdownSource(
     blocks = new Map()
     pairBlocks(json, editor.state.doc, false, blocks)
     try {
-      return manager.serialize(json)
+      return manager.serialize(json).replace(/\\\$(?=\d)/g, '$')
     } finally {
       blocks = undefined
     }
