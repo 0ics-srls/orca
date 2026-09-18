@@ -1,5 +1,30 @@
-export function getStatusPluginFactorySource(options: { emitSessionStart: boolean }): string[] {
+export function getStatusPluginFactorySource(options: {
+  emitSessionStart: boolean
+  emitNextEvents?: boolean
+}): string[] {
   return [
+    ...(options.emitNextEvents
+      ? [
+          '',
+          'function normalizeNextLifecycleEvent(event) {',
+          '  if (!event || typeof event.type !== "string") return event;',
+          '  const properties = event.properties || {};',
+          '  if (event.type === "permission.v2.asked") return { ...event, type: "permission.asked", properties: { ...properties, id: properties.id, permission: properties.action, patterns: properties.resources } };',
+          '  if (event.type === "permission.v2.replied") return { ...event, type: "permission.replied", properties: { ...properties } };',
+          '  if (event.type === "question.v2.asked") return { ...event, type: "question.asked", properties: { ...properties } };',
+          '  if (event.type === "question.v2.replied") return { ...event, type: "question.replied", properties: { ...properties } };',
+          '  if (event.type === "question.v2.rejected") return { ...event, type: "question.rejected", properties: { ...properties } };',
+          '  if (event.type === "session.next.step.started" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried") {',
+          '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "busy" } } };',
+          '  }',
+          '  if (event.type === "session.next.step.ended" || event.type === "session.next.step.failed") {',
+          '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "idle" } } };',
+          '  }',
+          '  return event;',
+          '}',
+          ''
+        ]
+      : []),
     '// Why: accept the factory argument as an optional opaque parameter instead',
     '// of destructuring (`async ({ client }) => …`). OpenCode can invoke the',
     '// plugin factory with undefined during startup, which makes the',
@@ -10,6 +35,7 @@ export function getStatusPluginFactorySource(options: { emitSessionStart: boolea
     '  const factoryID = ++nextFactoryID;',
     '  activeFactoryIDs.add(factoryID);',
     '  let disposed = false;',
+    ...(options.emitNextEvents ? ['  const nextTextByMessageID = new Map();'] : []),
     '  return {',
     '  event: async ({ event }) => {',
     '    if (disposed || !event?.type) return;',
@@ -30,6 +56,54 @@ export function getStatusPluginFactorySource(options: { emitSessionStart: boolea
     '',
     '    const sessionID = event.properties?.sessionID;',
     '    const updatedPart = event.properties?.part;',
+    ...(options.emitNextEvents
+      ? [
+          '',
+          '    // OpenCode 2 publishes the next-generation event family through the',
+          '    // same plugin event hook. Convert those events into the existing',
+          '    // bounded Orca lifecycle and preview posts.',
+          '    if (event.type === "session.next.prompt.admitted") {',
+          '      if (!sessionID) return;',
+          '      if ((await isChildSession(client, sessionID)) !== false) return;',
+          '      const prompt = event.properties?.prompt?.text;',
+          '      if (typeof prompt !== "string" || !prompt) return;',
+          '      await postMessagePart({',
+          '        role: "user",',
+          '        text: capMessagePartText(prompt),',
+          '        messageID: event.properties?.messageID,',
+          '        sessionID,',
+          '      }, factoryID);',
+          '      return;',
+          '    }',
+          '    if (event.type === "session.next.text.started") {',
+          '      if (event.properties?.assistantMessageID) {',
+          '        if (nextTextByMessageID.size >= 128) nextTextByMessageID.delete(nextTextByMessageID.keys().next().value);',
+          '        nextTextByMessageID.set(event.properties.assistantMessageID, "");',
+          '      }',
+          '      return;',
+          '    }',
+          '    if (event.type === "session.next.text.delta") {',
+          '      const messageID = event.properties?.assistantMessageID;',
+          '      const delta = event.properties?.delta;',
+          '      if (typeof messageID !== "string" || typeof delta !== "string") return;',
+          '      nextTextByMessageID.set(messageID, capMessagePartText((nextTextByMessageID.get(messageID) || "") + delta));',
+          '      if (nextTextByMessageID.size > 128) nextTextByMessageID.delete(nextTextByMessageID.keys().next().value);',
+          '      return;',
+          '    }',
+          '    if (event.type === "session.next.text.ended") {',
+          '      if (!sessionID) return;',
+          '      if ((await isChildSession(client, sessionID)) !== false) return;',
+          '      const messageID = event.properties?.assistantMessageID;',
+          '      const text = typeof event.properties?.text === "string"',
+          '        ? event.properties.text',
+          '        : (typeof messageID === "string" ? nextTextByMessageID.get(messageID) : "");',
+          '      if (typeof messageID !== "string" || !text) return;',
+          '      nextTextByMessageID.delete(messageID);',
+          '      queueAssistantPart({ role: "assistant", text, messageID, sessionID, authorityRevision, factoryID });',
+          '      return;',
+          '    }'
+        ]
+      : []),
     ...(options.emitSessionStart
       ? [
           '    if (event.type === "session.created") {',
@@ -69,10 +143,14 @@ export function getStatusPluginFactorySource(options: { emitSessionStart: boolea
     '      event.type === "question.asked" ||',
     '      event.type === "permission.replied" ||',
     '      event.type === "question.replied" ||',
-    '      event.type === "question.rejected"',
+    `      event.type === "question.rejected"${
+      options.emitNextEvents
+        ? ' || event.type === "permission.v2.asked" || event.type === "permission.v2.replied" || event.type === "question.v2.asked" || event.type === "question.v2.replied" || event.type === "question.v2.rejected" || event.type === "session.next.step.started" || event.type === "session.next.step.ended" || event.type === "session.next.step.failed" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried"'
+        : ''
+    }`,
     '    ) {',
     '      await enqueueLifecycle(() =>',
-    '        disposed ? undefined : handleLifecycleEvent(client, event, factoryID)',
+    `        disposed ? undefined : handleLifecycleEvent(client, ${options.emitNextEvents ? 'normalizeNextLifecycleEvent(event)' : 'event'}, factoryID)`,
     '      );',
     '      return;',
     '    }',
@@ -148,6 +226,7 @@ export function getStatusPluginFactorySource(options: { emitSessionStart: boolea
     '  dispose: async () => {',
     '    if (disposed) return;',
     '    disposed = true;',
+    ...(options.emitNextEvents ? ['    nextTextByMessageID.clear();'] : []),
     '    disposingFactoryIDs.add(factoryID);',
     '    await enqueueLifecycle(async () => {',
     '      // An older MessagePart must settle before disposal publishes the',
@@ -211,15 +290,10 @@ export function getStatusPluginFactorySource(options: { emitSessionStart: boolea
     '  },',
     '  };',
     '};',
-    '',
-    '// Why: OpenCode also resolves plugins through the module default export, and that',
-    '// loader rejects the module unless the default exposes `server()` ("must default',
-    '// export an object with server()"). `setup()` does not satisfy it. Keep the named',
-    '// export so the factory-based loader still finds the same instance.',
+    '// Why: OpenCode also resolves plugins through the module default export, which must expose server(); keep the named factory too.',
     'export default {',
     '  id: "orca-opencode-status",',
     '  server: OrcaOpenCodeStatusPlugin,',
-    '};',
-    ''
+    '};'
   ]
 }
