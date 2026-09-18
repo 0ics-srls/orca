@@ -14,15 +14,18 @@ import type * as RepositoryGitHubAccountModule from './repository-github-account
 import { isGhAccountBindingEnforced } from './repository-github-account'
 import { RepositoryGitHubAccountSection } from './RepositoryGitHubAccountSection'
 
-const { listAccountsMock, validateBindingMock, storeState } = vi.hoisted(() => ({
-  listAccountsMock: vi.fn(),
-  validateBindingMock: vi.fn(),
-  storeState: {
-    settings: null,
-    repos: [] as Repo[],
-    settingsSearchQuery: ''
+const { listAccountsMock, validateBindingMock, storeState } = vi.hoisted(() => {
+  const repos: Repo[] = []
+  return {
+    listAccountsMock: vi.fn(),
+    validateBindingMock: vi.fn(),
+    storeState: {
+      settings: null,
+      repos,
+      settingsSearchQuery: ''
+    }
   }
-}))
+})
 
 vi.mock('../../store', () => {
   const useAppStore = (selector: (state: typeof storeState) => unknown) => selector(storeState)

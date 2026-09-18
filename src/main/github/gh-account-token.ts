@@ -52,7 +52,7 @@ function isTransientTokenResolveFailure(error: unknown): boolean {
     return true
   }
   const message = error instanceof Error ? error.message : String(error)
-  const stderr = 'stderr' in error ? String((error as { stderr?: unknown }).stderr ?? '') : ''
+  const stderr = 'stderr' in error ? String(error.stderr ?? '') : ''
   const text = `${message}\n${stderr}`.toLowerCase()
   return (
     text.includes('etimedout') ||
@@ -67,7 +67,7 @@ function isTransientTokenResolveFailure(error: unknown): boolean {
 
 function stderrFromUnknown(error: unknown): string {
   if (error && typeof error === 'object' && 'stderr' in error) {
-    return String((error as { stderr?: unknown }).stderr ?? '')
+    return String(error.stderr ?? '')
   }
   return error instanceof Error ? error.message : String(error ?? '')
 }

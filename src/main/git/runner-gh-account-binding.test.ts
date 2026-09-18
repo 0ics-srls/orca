@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events'
-import type { ChildProcess } from 'node:child_process'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -44,14 +43,14 @@ vi.mock('../github/gh-account-token', async (importOriginal) => {
 import { ghExecFileAsync } from './runner'
 import { _resetGhRateLimitBreaker, recordGhPrimaryRateLimit } from './gh-rate-limit-breaker'
 
-function mockChild(pid = 4321): ChildProcess {
-  const child = new EventEmitter() as EventEmitter & Record<string, unknown>
-  child.pid = pid
-  child.kill = vi.fn(() => true)
-  child.stdin = Object.assign(new EventEmitter(), { end: vi.fn() })
-  child.stdout = new EventEmitter()
-  child.stderr = new EventEmitter()
-  return child as unknown as ChildProcess
+function mockChild(pid = 4321) {
+  return Object.assign(new EventEmitter(), {
+    pid,
+    kill: vi.fn(() => true),
+    stdin: Object.assign(new EventEmitter(), { end: vi.fn() }),
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter()
+  })
 }
 
 /** Spawns a child that settles with `stdout`, capturing the env the runner handed it. */

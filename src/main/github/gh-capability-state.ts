@@ -46,9 +46,7 @@ export function getGhExecutionHostKey(target: GhCapabilityTarget = {}): string {
 function isNarrowMultiAccountUnsupported(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? '')
   const stderr =
-    error && typeof error === 'object' && 'stderr' in error
-      ? String((error as { stderr?: unknown }).stderr ?? '')
-      : ''
+    error && typeof error === 'object' && 'stderr' in error ? String(error.stderr ?? '') : ''
   const text = `${message}\n${stderr}`.toLowerCase()
   // Why: only treat option-echo / unknown-flag shapes as unsupported — missing
   // gh, auth failures, and timeouts stay unknown so Settings can Retry.
