@@ -18,16 +18,10 @@ import {
 const WORKTREE_SCAN_FIX_COMMANDS = {
   'xcode-license': 'sudo xcodebuild -license',
   'developer-tools': 'xcode-select --install'
-} as const
+} as const satisfies Partial<Record<WorktreeScanFailureKind, string>>
 
 function fixCommandForFailureKind(kind: WorktreeScanFailureKind): string | undefined {
-  if (kind === 'xcode-license') {
-    return WORKTREE_SCAN_FIX_COMMANDS['xcode-license']
-  }
-  if (kind === 'developer-tools') {
-    return WORKTREE_SCAN_FIX_COMMANDS['developer-tools']
-  }
-  return undefined
+  return WORKTREE_SCAN_FIX_COMMANDS[kind]
 }
 
 /**
@@ -50,11 +44,12 @@ export function RepoScanUnavailableIndicator({ repo }: { repo: Repo }): React.JS
     'auto.components.sidebar.RepoScanUnavailableIndicator.retry',
     'Retry scan'
   )
-  const isLocalHost = getRepoExecutionHostId(repo) === 'local' && !repo.connectionId
+  const executionHostId = getRepoExecutionHostId(repo)
+  const isLocalHost = executionHostId === 'local' && !repo.connectionId
   const isLocalMac = isLocalHost && navigator.userAgent.includes('Mac')
-  const failureKind: WorktreeScanFailureKind = isLocalMac
-    ? (detected.failureKind ?? classifyWorktreeScanFailure(detected.unavailableReason))
-    : 'unknown'
+  const failureKind: WorktreeScanFailureKind =
+    detected.failureKind ??
+    (isLocalMac ? classifyWorktreeScanFailure(detected.unavailableReason) : 'unknown')
   const failureMessageByKind: Partial<Record<WorktreeScanFailureKind, string>> = {
     'xcode-license': translate(
       'auto.components.sidebar.RepoScanUnavailableIndicator.xcodeLicense',
@@ -70,12 +65,12 @@ export function RepoScanUnavailableIndicator({ repo }: { repo: Repo }): React.JS
     )
   }
   const failureMessage = failureMessageByKind[failureKind] ?? detected.unavailableReason
-  const fixCommand = fixCommandForFailureKind(failureKind)
+  const fixCommand = isLocalMac ? fixCommandForFailureKind(failureKind) : undefined
   const diagnosticText = [
     `Repository: ${repo.displayName}`,
     ...(isLocalMac
       ? [`Path: ${repo.path}`, 'Client platform: macOS']
-      : [`Execution host: ${getRepoExecutionHostId(repo)}`]),
+      : [`Execution host: ${executionHostId}`]),
     `Failure: ${detected.unavailableReason}`
   ].join('\n')
   const copyText = async (value: string): Promise<void> => {
@@ -83,7 +78,7 @@ export function RepoScanUnavailableIndicator({ repo }: { repo: Repo }): React.JS
   }
   return (
     <TooltipProvider disableHoverableContent={false}>
-      <Tooltip>
+      <Tooltip delayDuration={400}>
         <TooltipTrigger asChild>
           <button
             type="button"
@@ -102,7 +97,7 @@ export function RepoScanUnavailableIndicator({ repo }: { repo: Repo }): React.JS
               event.stopPropagation()
               setPending(true)
               void fetchWorktrees(repo.id, {
-                executionHostId: getRepoExecutionHostId(repo)
+                executionHostId
               }).finally(() => setPending(false))
             }}
           >

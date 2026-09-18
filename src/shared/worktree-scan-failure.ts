@@ -1,8 +1,15 @@
-export type WorktreeScanFailureKind =
-  | 'xcode-license'
-  | 'developer-tools'
-  | 'architecture-mismatch'
-  | 'unknown'
+export const WORKTREE_SCAN_FAILURE_KINDS = [
+  'xcode-license',
+  'developer-tools',
+  'architecture-mismatch',
+  'unknown'
+] as const
+
+export type WorktreeScanFailureKind = (typeof WORKTREE_SCAN_FAILURE_KINDS)[number]
+
+export function isWorktreeScanFailureKind(value: unknown): value is WorktreeScanFailureKind {
+  return WORKTREE_SCAN_FAILURE_KINDS.some((kind) => kind === value)
+}
 
 export function classifyWorktreeScanFailure(reason: string): WorktreeScanFailureKind {
   if (/Agreeing to the Xcode\/iOS license requires admin privileges/i.test(reason)) {
