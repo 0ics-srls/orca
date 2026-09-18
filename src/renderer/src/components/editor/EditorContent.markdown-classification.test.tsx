@@ -331,6 +331,7 @@ describe('inline Markdown render classification', () => {
     const content = '[reference]: https://example.com'
     const result = renderEditPath({
       content,
+      savedContent: content,
       viewMode: 'source',
       markdownRichModeFaultedContent: { [openFile().id]: content }
     })
