@@ -45,7 +45,19 @@ export const RichMarkdownEscapedCharacter = Mark.create({
   },
   // Why: a mark's markdown is one prefix for the whole run, so `\*\*` would come out as `\**`;
   // this is only the fallback for a serializer that bypasses getMarkdown.
-  renderMarkdown: (node, helpers) => `\\${helpers.renderChildren(node)}`,
+  renderMarkdown: (node, helpers) => {
+    const rendered = helpers.renderChildren(node)
+    if (rendered === '$') {
+      return '\\$'
+    }
+    if (rendered === '&') {
+      return '&amp;'
+    }
+    if (rendered === '<') {
+      return '&lt;'
+    }
+    return rendered
+  },
 
   parseHTML() {
     return [{ tag: `span[${MARKER_ATTRIBUTE}]` }]
