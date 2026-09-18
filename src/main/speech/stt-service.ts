@@ -11,7 +11,7 @@ export type SttEvent =
   | { type: 'partial'; text?: string }
   | { type: 'final'; text?: string }
   | { type: 'stopped' }
-  | { type: 'error'; error?: string }
+  | { type: 'error'; error?: string; recoverable?: boolean }
 
 export type SttEventSink = (event: SttEvent) => void
 
@@ -50,7 +50,8 @@ export class SttService {
     if (worker && !this.state.audioPending.tryPost(worker, samples, sampleRate)) {
       const sink = this.state.eventSink
       void stopSttDictation(this.state, owner).catch(() => undefined)
-      sink?.({ type: 'error', error: STT_AUDIO_OVERLOAD_ERROR })
+      // Queue overload stops capture while preserving already accepted audio for final delivery.
+      sink?.({ type: 'error', error: STT_AUDIO_OVERLOAD_ERROR, recoverable: true })
     }
   }
 
