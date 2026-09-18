@@ -6,7 +6,7 @@ import { RICH_MARKDOWN_ESCAPED_CHARACTER_MARK } from './rich-markdown-escaped-ch
 
 const DOLLAR_SKIP_TYPES = new Set(['inlineMath', 'rawMarkdownHtmlInline'])
 
-const CHEAP_NEEDS_WORK = /\$|\||\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
+const CHEAP_NEEDS_WORK = /\$|\||&|<|\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
 const REF_DEF = /^ {0,3}\[[^\n]*\]:/m
 
 type BlockInfo = { block: ProseMirrorNode; inTableCell: boolean }
@@ -251,7 +251,12 @@ export function preserveLiteralMarkdownSource(
       return cached.result
     }
     let result = markdown
+    result = result.replace(/&(?!#?\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
     const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
+    if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
+      result = result.replace(/\$(?!\d)/g, '\\$&')
+      result = result.replace(/&(?!#?\w+;)/g, '&amp;').replace(/<(?!\/|\w)/g, '&lt;')
+    }
     if (node.type === 'paragraph' && !info.inTableCell) {
       result = escapeLineLeading(result)
     }
@@ -308,6 +313,14 @@ function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
     if (node.marks.some((mark) => mark.type.name === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)) {
       found = true
     }
+  })
+  return found
+}
+
+function blockHasInlineMath(block: ProseMirrorNode): boolean {
+  let found = false
+  block.descendants((node) => {
+    if (node.type.name === 'inlineMath') found = true
   })
   return found
 }

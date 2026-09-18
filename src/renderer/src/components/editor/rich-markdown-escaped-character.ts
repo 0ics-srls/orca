@@ -4,7 +4,6 @@ import { Mark } from '@tiptap/core'
 const ESCAPABLE_CHARACTER_PATTERN = /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~]/
 const ESCAPED_CHARACTER_PATTERN = /^\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/
 // Why: the serializer entity-encodes these itself; a backslash in front would survive as literal text.
-const ENTITY_ENCODED_CHARACTERS = new Set(['&', '<', '>'])
 const MARKER_ATTRIBUTE = 'data-rich-markdown-escaped-character'
 
 export const RICH_MARKDOWN_ESCAPED_CHARACTER_MARK = 'richMarkdownEscapedCharacter'
@@ -47,13 +46,11 @@ export const RichMarkdownEscapedCharacter = Mark.create({
   // this is only the fallback for a serializer that bypasses getMarkdown.
   renderMarkdown: (node, helpers) => {
     const rendered = helpers.renderChildren(node)
-    if (rendered === '&') {
-      return '&amp;'
+    const plain = rendered.replace(/^\\+/, '')
+    if (node.marks?.some((mark) => mark.type === 'code')) {
+      return plain
     }
-    if (rendered === '<') {
-      return '&lt;'
-    }
-    return rendered
+    return escapedCharacterSourceText(plain, false)
   },
 
   parseHTML() {
@@ -71,9 +68,15 @@ export function escapedCharacterSourceText(text: string, insideCode: boolean): s
   }
   return Array.from(text)
     .map((character) =>
-      ESCAPABLE_CHARACTER_PATTERN.test(character) && !ENTITY_ENCODED_CHARACTERS.has(character)
-        ? `\\${character}`
-        : character
+      character === '&'
+        ? '&amp;'
+        : character === '<'
+          ? '&lt;'
+          : character === '>'
+            ? '&gt;'
+            : ESCAPABLE_CHARACTER_PATTERN.test(character)
+              ? `\\${character}`
+              : character
     )
     .join('')
 }
