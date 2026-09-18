@@ -36,6 +36,9 @@ vi.mock('./keychain', () => ({
   writeManagedClaudeKeychainCredentials: vi.fn(async () => {})
 }))
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the doubles below implement every member the add-account login path reaches; this test drives the service only through addAccount.
+const asServiceDouble = <T>(double: unknown): T => double as T
+
 type StubLoginChild = EventEmitter & {
   stdin: PassThrough
   stdout: PassThrough
@@ -91,9 +94,9 @@ async function createServiceWithHangingLogin(): Promise<{
   }
   const { ClaudeAccountService } = await import('./service')
   const service = new ClaudeAccountService(
-    store as never,
-    rateLimits as never,
-    runtimeAuth as never
+    asServiceDouble(store),
+    asServiceDouble(rateLimits),
+    asServiceDouble(runtimeAuth)
   )
   return { service, children }
 }

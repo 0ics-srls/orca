@@ -24,6 +24,9 @@ vi.mock('node:os', async () => {
   }
 })
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the harness doubles implement every member the add-account login path reaches; this test drives the service only through addAccount, cancelPendingLogin and the login URL subscription.
+const asServiceDouble = <T>(double: unknown): T => double as T
+
 type StubLoginChild = EventEmitter & {
   stdout: PassThrough
   stderr: PassThrough
@@ -71,9 +74,9 @@ async function createServiceWithHangingLogin(): Promise<{
   }))
   const { CodexAccountService } = await import('./service')
   const service = new CodexAccountService(
-    createStore(createSettings()) as never,
-    createRateLimits() as never,
-    createRuntimeHome() as never
+    asServiceDouble(createStore(createSettings())),
+    asServiceDouble(createRateLimits()),
+    asServiceDouble(createRuntimeHome())
   )
   return { service, children }
 }
@@ -140,9 +143,9 @@ describe('CodexAccountService abandoned login', () => {
     try {
       const { CodexAccountService } = await import('./service')
       const service = new CodexAccountService(
-        createStore(createSettings()) as never,
-        createRateLimits() as never,
-        createRuntimeHome() as never
+        asServiceDouble(createStore(createSettings())),
+        asServiceDouble(createRateLimits()),
+        asServiceDouble(createRuntimeHome())
       )
       const published: (string | null)[] = []
       service.subscribePendingLoginUrl((url) => published.push(url))
