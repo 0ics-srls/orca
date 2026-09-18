@@ -31,10 +31,7 @@ import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/na
 import { launchAgentInStructuredNewTab } from '@/lib/launch-agent-in-new-tab-structured'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { workspaceKindForWorktreeId } from '@/lib/agent-launch-route-input'
-import {
-  planAgentSessionLaunch,
-  type AgentSessionLaunchPlan
-} from '@/lib/agent-session-launch-plan'
+import { planAgentSessionLaunch, type AgentSessionLaunchPlan } from './agent-session-launch-plan'
 
 export type LaunchAgentInNewTabArgs = {
   agent: TuiAgent
@@ -155,6 +152,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
   const trimmedPrompt = prompt?.trim() ?? ''
   const hasPrompt = trimmedPrompt.length > 0
   const isFollowupPath = TUI_AGENT_CONFIG[agent].promptInjectionMode === 'stdin-after-start'
+  const workspaceKind = workspaceKindForWorktreeId(worktreeId)
   // Why: the remote host can't infer this client's draft/default view choice, so decide it here for paired tabs too.
   const viewModePromptDelivery =
     hasPrompt && isFollowupPath && promptDelivery === 'auto-submit' ? 'draft' : promptDelivery
@@ -163,7 +161,8 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     promptDelivery: viewModePromptDelivery,
     launchDraftText: trimmedPrompt,
     nativeChatTranscriptIsLocalReadable:
-      isNativeChatTranscriptLocalReadable(worktreeSshConnectionId)
+      isNativeChatTranscriptLocalReadable(worktreeSshConnectionId),
+    workspaceKind
   }
   const initialViewModeProps = initialAgentTabViewModeProps(store.settings, initialViewModeOptions)
   const startupPlanBase = {
@@ -224,7 +223,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     agentSessionLaunchPlan ??
     planAgentSessionLaunch(store, {
       agent,
-      workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
+      workspace: { kind: workspaceKind, worktreeId },
       prompt: trimmedPrompt,
       promptDelivery: viewModePromptDelivery,
       tuiCustomization: { cwd: initialCwd },
@@ -338,8 +337,10 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     onPromptDelivered?.()
   }
 
-  // Why: without setActiveTabType('terminal') a worktree showing an editor keeps rendering it and the new tab stays hidden.
-  store.setActiveTabType('terminal')
+  // Why: without setActiveTabType('terminal') an activated launch can stay hidden behind an editor.
+  if (activate !== false) {
+    store.setActiveTabType('terminal')
+  }
 
   // Why: persist tab-bar order so reconcileTabOrder doesn't fall back to terminals-first and jump the new tab to index 0.
   persistAgentLaunchTabOrder(worktreeId, tab.id)

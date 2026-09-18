@@ -2,16 +2,39 @@
 // launch-agent-in-new-tab.test.ts to keep both files within the lines budget.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 
 const mockCreateTab = vi.fn()
+const mockQueueTabStartupCommand = vi.fn()
+const mockSetActiveTabType = vi.fn()
+const mockSeedNativeChatAppliedSessionOptions = vi.fn()
 
-const store = {
-  settings: {
+type PlacementSettings = {
+  agentCmdOverrides: Record<string, string>
+  agentDefaultArgs: Record<string, string>
+  agentDefaultEnv: Record<string, Record<string, string>>
+  activeRuntimeEnvironmentId: string | null
+  experimentalNativeChat?: boolean
+  experimentalStructuredNativeChat?: boolean
+  openAgentTabsInChatByDefault?: boolean
+  nativeChatSessionOptions?: Record<
+    string,
+    { model?: string; valuesByModel?: Record<string, Record<string, string>> }
+  >
+}
+
+function placementSettings(overrides: Partial<PlacementSettings> = {}): PlacementSettings {
+  return {
     agentCmdOverrides: {},
     agentDefaultArgs: {},
     agentDefaultEnv: {},
-    activeRuntimeEnvironmentId: null
-  },
+    activeRuntimeEnvironmentId: null,
+    ...overrides
+  }
+}
+
+const store = {
+  settings: placementSettings(),
   repos: [],
   allWorktrees: vi.fn(() => []),
   tabsByWorktree: { 'wt-1': [{ id: 'tab-1' }] },
@@ -20,8 +43,8 @@ const store = {
   tabBarOrderByWorktree: {},
   createTab: mockCreateTab,
   queueTabInitialCwd: vi.fn(),
-  queueTabStartupCommand: vi.fn(),
-  setActiveTabType: vi.fn(),
+  queueTabStartupCommand: mockQueueTabStartupCommand,
+  setActiveTabType: mockSetActiveTabType,
   setTabBarOrder: vi.fn()
 }
 
@@ -58,12 +81,13 @@ vi.mock('@/lib/telemetry', () => ({
 }))
 
 vi.mock('@/components/native-chat/native-chat-session-option-cache', () => ({
-  seedNativeChatAppliedSessionOptions: vi.fn()
+  seedNativeChatAppliedSessionOptions: mockSeedNativeChatAppliedSessionOptions
 }))
 
 describe('launchAgentInNewTab terminal tab activation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    store.settings = placementSettings()
     mockCreateTab.mockReturnValue({ id: 'tab-1' })
   })
 
@@ -73,15 +97,46 @@ describe('launchAgentInNewTab terminal tab activation', () => {
     launchAgentInNewTab({ agent: 'codex', worktreeId: 'wt-1' })
 
     expect(mockCreateTab.mock.calls[0]?.[3]).not.toHaveProperty('activate')
+    expect(mockSetActiveTabType).toHaveBeenCalledExactlyOnceWith('terminal')
   })
 
-  it('leaves the global selection alone when the caller places the tab itself', async () => {
+  it('keeps a caller-placed floating launch terminal-only and out of the global selection', async () => {
+    store.settings = placementSettings({
+      experimentalNativeChat: true,
+      experimentalStructuredNativeChat: true,
+      openAgentTabsInChatByDefault: true,
+      nativeChatSessionOptions: {
+        codex: {
+          model: 'gpt-5.2-codex',
+          valuesByModel: { 'gpt-5.2-codex': { effort: 'medium' } }
+        }
+      }
+    })
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
-    launchAgentInNewTab({ agent: 'codex', worktreeId: 'wt-1', activate: false })
+    launchAgentInNewTab({
+      agent: 'codex',
+      worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
+      activate: false
+    })
 
     // Why: the floating workspace selects within its own group; activating here would move the
     // main window's active tab to a tab it does not show.
-    expect(mockCreateTab.mock.calls[0]?.[3]).toHaveProperty('activate', false)
+    expect(mockCreateTab).toHaveBeenCalledWith(
+      FLOATING_TERMINAL_WORKTREE_ID,
+      undefined,
+      undefined,
+      {
+        launchAgent: 'codex',
+        activate: false
+      }
+    )
+    expect(mockSetActiveTabType).not.toHaveBeenCalled()
+    expect(mockQueueTabStartupCommand.mock.calls[0]?.[1]).not.toHaveProperty('sessionOptions')
+    expect(mockSeedNativeChatAppliedSessionOptions).toHaveBeenCalledWith(
+      'tab-1',
+      'codex',
+      undefined
+    )
   })
 })
