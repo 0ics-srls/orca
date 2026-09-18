@@ -66,6 +66,16 @@ describe('Codex approval ownership', () => {
     })
   }
 
+  function childPermissionRequest(transcriptPath: string): ReturnType<typeof normalizeHookPayload> {
+    return post({
+      hook_event_name: 'PermissionRequest',
+      tool_name: 'Bash',
+      transcript_path: transcriptPath,
+      agent_id: 'child-after-relay-restart',
+      agent_type: 'worker'
+    })
+  }
+
   it('reads an auto-reviewed approval as ongoing work, not as needing the user', () => {
     const transcriptPath = writeRollout({ reviewer: 'auto_review' })
 
@@ -76,6 +86,18 @@ describe('Codex approval ownership', () => {
     const transcriptPath = writeRollout({ reviewer: 'user' })
 
     expect(permissionRequest(transcriptPath)?.payload.state).toBe('waiting')
+  })
+
+  it('reconciles reviewer ownership before a child-first auto-reviewed approval', () => {
+    const transcriptPath = writeRollout({ reviewer: 'auto_review' })
+
+    expect(childPermissionRequest(transcriptPath)?.payload.state).toBe('working')
+  })
+
+  it('keeps a child-first manual approval waiting after reviewer reconciliation', () => {
+    const transcriptPath = writeRollout({ reviewer: 'user' })
+
+    expect(childPermissionRequest(transcriptPath)?.payload.state).toBe('waiting')
   })
 
   it('follows a thread settings update that switches the reviewer back to the user', () => {

@@ -18,6 +18,7 @@ import {
 // Why: retire a child whose rollout stays unreadable this long, else a deleted/never-written file pins a phantom row forever.
 const CHILD_UNREADABLE_GRACE_MS = 60_000
 const SAFE_THREAD_ID = /^[A-Za-z0-9-]{1,64}$/
+const REVIEWER_CURSOR_MAX_PATHS = 64
 
 type TrackedTranscriptSubagent = JsonlCursor & {
   description?: string
@@ -32,6 +33,8 @@ type TrackedTranscriptSubagent = JsonlCursor & {
 export type CodexSubagentTranscriptState = {
   parent: JsonlCursor
   subagents: Map<string, TrackedTranscriptSubagent>
+  /** Incremental reviewer cursors for child rollouts, which must not replace the parent cursor. */
+  reviewerCursorsByPath: Map<string, JsonlCursor>
   /** Who resolves this turn's approvals. Retained like a child's model because the cursor is
    *  incremental: `turn_context` is emitted once per turn, so later reads carry no reviewer. */
   approvalsReviewer?: CodexApprovalsReviewer
@@ -169,6 +172,13 @@ function readApprovalsReviewer(records: JsonRecord[]): CodexApprovalsReviewer | 
   return reviewer
 }
 
+function normalizedTranscriptPath(transcriptPath: string | undefined): string | undefined {
+  const normalizedPath = transcriptPath?.trim()
+  return normalizedPath && isAbsolute(normalizedPath) && extname(normalizedPath) === '.jsonl'
+    ? normalizedPath
+    : undefined
+}
+
 /**
  * Whether Codex's own review agent, not a human, resolves this turn's approvals.
  *
@@ -201,7 +211,8 @@ function childIsComplete(records: JsonRecord[]): boolean {
 export function createCodexSubagentTranscriptState(): CodexSubagentTranscriptState {
   return {
     parent: { offset: 0, carry: '' },
-    subagents: new Map()
+    subagents: new Map(),
+    reviewerCursorsByPath: new Map()
   }
 }
 
@@ -216,8 +227,8 @@ export function reconcileCodexSubagentTranscript(
   roster: CodexSubagentRoster,
   transcriptPath: string | undefined
 ): void {
-  const normalizedPath = transcriptPath?.trim()
-  if (!normalizedPath || !isAbsolute(normalizedPath) || extname(normalizedPath) !== '.jsonl') {
+  const normalizedPath = normalizedTranscriptPath(transcriptPath)
+  if (!normalizedPath) {
     return
   }
   if (state.parent.filePath !== normalizedPath) {
@@ -226,6 +237,7 @@ export function reconcileCodexSubagentTranscript(
     }
     state.parent = { filePath: normalizedPath, offset: 0, carry: '' }
     state.subagents.clear()
+    state.reviewerCursorsByPath.clear()
     // Why: a different rollout is a different session, so its predecessor's reviewer is void.
     state.approvalsReviewer = undefined
   }
@@ -292,4 +304,33 @@ export function reconcileCodexSubagentTranscript(
     finishCodexSubagent(roster, id)
     state.subagents.delete(id)
   }
+}
+
+/** Reads reviewer ownership from a child rollout without replacing the parent lifecycle cursor. */
+export function reconcileCodexSubagentReviewer(
+  state: CodexSubagentTranscriptState,
+  transcriptPath: string | undefined
+): void {
+  const normalizedPath = normalizedTranscriptPath(transcriptPath)
+  if (!normalizedPath) {
+    return
+  }
+  let cursor = state.reviewerCursorsByPath.get(normalizedPath)
+  if (!cursor) {
+    if (state.reviewerCursorsByPath.size >= REVIEWER_CURSOR_MAX_PATHS) {
+      const oldestPath = state.reviewerCursorsByPath.keys().next().value
+      if (typeof oldestPath === 'string') {
+        state.reviewerCursorsByPath.delete(oldestPath)
+      }
+    }
+    cursor = { filePath: normalizedPath, offset: 0, carry: '' }
+    state.reviewerCursorsByPath.set(normalizedPath, cursor)
+  }
+  const records = readJsonlCursor(cursor)
+  if (records === undefined) {
+    state.reviewerCursorsByPath.delete(normalizedPath)
+    state.approvalsReviewer = undefined
+    return
+  }
+  state.approvalsReviewer = readApprovalsReviewer(records) ?? state.approvalsReviewer
 }

@@ -13,6 +13,7 @@ import {
 } from '../../codex-subagent-roster'
 import {
   codexTurnApprovalsAreAutoReviewed,
+  reconcileCodexSubagentReviewer,
   reconcileCodexSubagentTranscript
 } from '../../codex-subagent-transcript'
 import { readFirstString } from '../interactive-tool'
@@ -158,9 +159,33 @@ export function normalizeCodexEvent(
   }
 
   const agentId = readString(hookPayload, 'agent_id')
+  const transcriptPath = readFirstString(hookPayload, ['transcript_path', 'transcriptPath'])
+  if (eventName === 'SessionStart' && !agentId) {
+    // Why: a pane can host a new Codex process after the old one exited without child Stop hooks.
+    state.codexSubagentRosterByPaneKey.delete(paneKey)
+    state.codexSubagentTranscriptByPaneKey.delete(paneKey)
+  }
+  if (agentId && transcriptPath) {
+    const transcriptState = getOrCreateCodexSubagentTranscriptState(state, paneKey)
+    if (transcriptState.parent.filePath === transcriptPath) {
+      reconcileCodexSubagentTranscript(
+        transcriptState,
+        getOrCreateCodexSubagentRoster(state, paneKey),
+        transcriptPath
+      )
+    } else {
+      reconcileCodexSubagentReviewer(transcriptState, transcriptPath)
+    }
+  }
+  if (transcriptPath && !agentId) {
+    reconcileCodexSubagentTranscript(
+      getOrCreateCodexSubagentTranscriptState(state, paneKey),
+      getOrCreateCodexSubagentRoster(state, paneKey),
+      transcriptPath
+    )
+  }
   if (agentId) {
-    // Why: a child's approval is reviewer-owned on the same terms as the lead's; the reviewer read
-    // is retained per pane, so the turn's earlier lead events have already supplied it.
+    // Why: reconcile the child rollout reviewer before classifying its approval, including after relay restart.
     const childState = resolveCodexApprovalOwnedState(state, eventName, paneKey, stateName)
     upsertCodexSubagent(
       getOrCreateCodexSubagentRoster(state, paneKey),
@@ -175,19 +200,6 @@ export function normalizeCodexEvent(
     return buildCodexChildDrivenStatusPayload(state, eventName, paneKey, hookPayload)
   }
 
-  if (eventName === 'SessionStart') {
-    // Why: a pane can host a new Codex process after the old one exited without child Stop hooks.
-    state.codexSubagentRosterByPaneKey.delete(paneKey)
-    state.codexSubagentTranscriptByPaneKey.delete(paneKey)
-  }
-  const transcriptPath = readFirstString(hookPayload, ['transcript_path', 'transcriptPath'])
-  if (transcriptPath) {
-    reconcileCodexSubagentTranscript(
-      getOrCreateCodexSubagentTranscriptState(state, paneKey),
-      getOrCreateCodexSubagentRoster(state, paneKey),
-      transcriptPath
-    )
-  }
   if (eventName === 'Stop' && !hasCodexTranscriptSubagents(state, paneKey)) {
     // Why: Codex CLI 0.144 can omit child Stop hooks; later child activity safely recreates any agent still running.
     state.codexSubagentRosterByPaneKey.delete(paneKey)
