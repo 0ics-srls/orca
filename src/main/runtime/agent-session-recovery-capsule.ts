@@ -56,14 +56,22 @@ export class AgentSessionRecoveryCapsule {
           }
           throw error
         }
-        const capsule = capsuleSchema.parse(JSON.parse(raw))
-        const markers = capsule.markers.map((value) => {
-          const marker = parseAgentSessionResumeMarker(value)
-          if (!marker) {
-            throw new Error('agent_session_recovery_capsule_invalid')
-          }
-          return marker
-        })
+        let markers: AgentSessionResumeMarker[]
+        try {
+          const capsule = capsuleSchema.parse(JSON.parse(raw))
+          markers = capsule.markers.map((value) => {
+            const marker = parseAgentSessionResumeMarker(value)
+            if (!marker) {
+              throw new Error('agent_session_recovery_capsule_invalid')
+            }
+            return marker
+          })
+        } catch (error) {
+          // Unreadable content never becomes readable, so clear it here or every later take refuses
+          // the same file forever; a failed clear must not mask why the take failed.
+          await this.publish([]).catch(() => {})
+          throw error
+        }
         await this.publish([])
         return markers.filter((marker) => !isExpiredAgentSessionResumeMarker(marker, now))
       },
