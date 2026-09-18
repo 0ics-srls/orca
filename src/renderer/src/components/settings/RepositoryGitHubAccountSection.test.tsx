@@ -177,6 +177,16 @@ function getSelect(): HTMLSelectElement {
   return select
 }
 
+function getRefreshButton(): HTMLButtonElement {
+  const button = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="Refresh GitHub accounts"]'
+  )
+  if (!button) {
+    throw new Error('refresh accounts button not found')
+  }
+  return button
+}
+
 function findOption(text: string): HTMLOptionElement {
   const option = Array.from(container.querySelectorAll('option')).find((entry) =>
     entry.textContent?.includes(text)
@@ -204,6 +214,20 @@ describe('RepositoryGitHubAccountSection', () => {
     expect(getSelect().value).toBe(AMBIENT_VALUE)
     expect(findOption('alice @ github.com').disabled).toBe(false)
     expect(findOption('bot @ github.com (GH_TOKEN)').disabled).toBe(true)
+  })
+
+  it('refreshes the account inventory from the secondary control', async () => {
+    listAccountsMock.mockResolvedValue(inventory([ALICE]))
+
+    await render(BASE_REPO)
+    await act(async () => {
+      getRefreshButton().click()
+      await Promise.resolve()
+    })
+
+    expect(listAccountsMock).toHaveBeenNthCalledWith(2, expect.anything(), BASE_REPO, {
+      refreshCapability: true
+    })
   })
 
   it('validates and then binds a keyring account', async () => {

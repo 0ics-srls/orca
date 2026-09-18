@@ -198,26 +198,35 @@ export function RepositoryGitHubAccountSection({
             )}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadInventory(true)}
-          disabled={loading || saving}
-          className="shrink-0"
-        >
-          <RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />
-          {translate('auto.components.settings.RepositoryGitHubAccountSection.retry', 'Retry')}
-        </Button>
       </div>
 
       <div className="space-y-1.5">
-        <span id={selectLabelId} className="block text-xs text-muted-foreground">
-          {translate(
-            'auto.components.settings.RepositoryGitHubAccountSection.selectLabel',
-            'Account'
-          )}
-        </span>
+        <div className="flex items-center gap-1">
+          <span id={selectLabelId} className="text-xs text-muted-foreground">
+            {translate(
+              'auto.components.settings.RepositoryGitHubAccountSection.selectLabel',
+              'Account'
+            )}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => void loadInventory(true)}
+            disabled={loading || saving}
+            aria-label={translate(
+              'auto.components.settings.RepositoryGitHubAccountSection.refreshAccounts',
+              'Refresh GitHub accounts'
+            )}
+            title={translate(
+              'auto.components.settings.RepositoryGitHubAccountSection.refreshAccounts',
+              'Refresh GitHub accounts'
+            )}
+            className="size-6 shrink-0"
+          >
+            <RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />
+          </Button>
+        </div>
         <Select
           value={repo.ghAccount ? selectedKey : AMBIENT_VALUE}
           disabled={loading || saving}
