@@ -1,6 +1,6 @@
 import type { IBuffer, Terminal } from '@xterm/headless'
 
-type OscLinkMarker = { dispose(): void }
+type OscLinkMarker = { dispose(): void; line?: number }
 type OscLinkEntry = { id: number; lines: OscLinkMarker[] }
 type TerminalBuffers = Pick<Terminal, 'buffer'>
 
@@ -34,9 +34,28 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
   }
 
-  function collectBufferLinks(buffer: IBuffer, links: Set<number>): void {
+  function collectBufferLinks(
+    buffer: IBuffer,
+    links: Set<number>,
+    rows?: ReadonlySet<number>
+  ): void {
     const cell = buffer.getNullCell()
-    for (let row = 0; row < buffer.length; row++) {
+    if (rows === undefined) {
+      for (let row = 0; row < buffer.length; row++) {
+        const line = buffer.getLine(row)
+        if (!line) {
+          continue
+        }
+        for (let column = 0; column < line.length; column++) {
+          addAttributeLink(line.getCell(column, cell), links)
+        }
+      }
+      return
+    }
+    for (const row of rows) {
+      if (row < 0 || row >= buffer.length) {
+        continue
+      }
       const line = buffer.getLine(row)
       if (!line) {
         continue
@@ -45,6 +64,23 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
         addAttributeLink(line.getCell(column, cell), links)
       }
     }
+  }
+
+  /** Marker lines identify the only rows that can still contain a registered link. */
+  function collectMarkerRows(entries: Iterable<unknown>): Set<number> | undefined {
+    const rows = new Set<number>()
+    for (const value of entries) {
+      if (!isLinkEntry(value)) {
+        return undefined
+      }
+      for (const marker of value.lines) {
+        if (typeof marker.line !== 'number' || marker.line < 0) {
+          return undefined
+        }
+        rows.add(marker.line)
+      }
+    }
+    return rows.size > 0 ? rows : undefined
   }
 
   return (): number => {
@@ -72,8 +108,9 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
 
     const live = new Set<number>()
-    collectBufferLinks(terminal.buffer.normal, live)
-    collectBufferLinks(terminal.buffer.alternate, live)
+    const markerRows = collectMarkerRows(entries.values())
+    collectBufferLinks(terminal.buffer.normal, live, markerRows)
+    collectBufferLinks(terminal.buffer.alternate, live, markerRows)
     // An OSC 8 open can finish one write before its linked text arrives in the next.
     addAttributeLink(input.getAttrData(), live)
     const bufferService = core._bufferService
