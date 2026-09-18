@@ -8,6 +8,7 @@ export type RateLimitSlice = {
   fetchRateLimits: () => Promise<void>
   refreshRateLimits: () => Promise<void>
   refreshGrokRateLimits: () => Promise<void>
+  refreshDevinRateLimits: () => Promise<void>
   refreshClaudeRateLimitsForTarget: (target: RateLimitRuntimeTarget) => Promise<void>
   refreshCodexRateLimitsForTarget: (target: RateLimitRuntimeTarget) => Promise<void>
   consumeCodexRateLimitResetCredit: () => Promise<void>
@@ -43,6 +44,17 @@ export const createRateLimitSlice: StateCreator<AppState, [], [], RateLimitSlice
       set({ rateLimits: state })
     } catch (error) {
       console.error('Failed to refresh Grok usage:', error)
+    }
+  },
+  refreshDevinRateLimits: async () => {
+    const previous = get().rateLimits
+    try {
+      const state = await window.api.rateLimits.refreshDevin()
+      if (get().rateLimits === previous) {
+        set({ rateLimits: state })
+      }
+    } catch (error) {
+      console.error('Failed to refresh Devin usage:', error)
     }
   },
 

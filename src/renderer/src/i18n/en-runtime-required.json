@@ -2193,6 +2193,9 @@
           "ae255c3dba": "n/a",
           "bf1bf2f674": "sessions •"
         },
+        "DevinUsagePane": {
+          "events": "events"
+        },
         "OpenCodeUsagePane": {
           "1e5d410df0": "events",
           "8095a63426": "n/a",
@@ -2574,7 +2577,8 @@
         "f6300deb8b": "New Browser Tab"
       },
       "useSettingsNavigationMetadata": {
-        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar."
+        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar.",
+        "b351014180": "Orca stats plus Claude, Codex, Devin, and OpenCode token analytics and Grok subscription usage."
       }
     },
     "lib": {
