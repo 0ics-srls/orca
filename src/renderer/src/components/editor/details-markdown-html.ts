@@ -344,7 +344,6 @@ export function isEditableDetailsHtmlBlock(block: DetailsHtmlBlock, nestingLevel
   if (!summary) {
     return false
   }
-
   if (summary.attributes.trim()) {
     return false
   }
@@ -352,7 +351,6 @@ export function isEditableDetailsHtmlBlock(block: DetailsHtmlBlock, nestingLevel
   if (hasHtmlTagOutsideCode(summary.content)) {
     return false
   }
-
   const bodyHtml = stripEditableNestedDetails(block.inner.slice(summary.rawLength), nestingLevel)
   if (bodyHtml === null) {
     return false
@@ -362,11 +360,8 @@ export function isEditableDetailsHtmlBlock(block: DetailsHtmlBlock, nestingLevel
     return false
   }
 
-  // Why: blanking the allowed tags rather than deleting them keeps every later
-  // offset aligned with the fence and code-span ranges scanned over the body.
-  const allowedHtmlBlanked = bodyHtml
-    .replace(/<\/?p\b[^>]*>/gi, (tag) => ' '.repeat(tag.length))
-    .replace(/<br\s*\/?>/gi, (tag) => ' '.repeat(tag.length))
+  // Why: blanking allowed tags preserves offsets for the shared range scans.
+  const allowedHtmlBlanked = bodyHtml.replace(/<\/?p\b[^>]*>/gi, (tag) => ' '.repeat(tag.length)).replace(/<br\s*\/?>/gi, (tag) => ' '.repeat(tag.length))
 
   return !hasHtmlTagOutsideCode(allowedHtmlBlanked)
 }
