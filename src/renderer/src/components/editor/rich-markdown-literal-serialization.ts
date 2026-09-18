@@ -170,6 +170,10 @@ function escapeLinkAndImageAttributes(node: JSONContent): void {
   forEachLinkOrImage(node, (attrs, kind) => {
     const destKey = kind === 'image' ? 'src' : 'href'
     const dest = attrs[destKey]
+    const rawDest = kind === 'link' ? attrs.rawHref : attrs.rawSrc
+    if (typeof rawDest === 'string') {
+      attrs[destKey] = rawDest
+    }
     if (typeof dest === 'string' && destNeedsEscape(dest)) {
       attrs[destKey] = escapeBare(dest, '()')
     }

@@ -68,7 +68,7 @@ function linkMarkToSourceForm(
     ...mark,
     attrs: {
       ...mark.attrs,
-      href: destinationToSourceForm(mark.attrs.href, context),
+      href: destinationToSourceForm(mark.attrs.rawHref ?? mark.attrs.href, context),
       title: titleToSourceForm(mark.attrs.title, context)
     }
   }
