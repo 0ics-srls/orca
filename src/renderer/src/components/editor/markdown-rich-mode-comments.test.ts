@@ -93,6 +93,8 @@ describe('rich editing of Markdown documents with HTML comments', () => {
       editor.view.dispatch(editor.state.tr.insertText(' edited', position, position + 6))
       editor.state.doc.check()
       const saved = editor.getMarkdown()
+      if (expected.startsWith('![')) console.log('IMAGE ALT SAVED', JSON.stringify(saved.slice(-250)))
+      if (expected.startsWith('![')) console.log('IMAGE ALT PROBE', JSON.stringify(roundTrip.getRichMarkdownRoundTripOutput(saved)?.slice(-250)))
       expect(saved).toContain(expected)
       expect(getMarkdownRichModeUnsupportedReason(saved)).toBeNull()
       editor.commands.setContent(rawHtml.encodeRawMarkdownHtmlForRichEditor(saved, codec), {
