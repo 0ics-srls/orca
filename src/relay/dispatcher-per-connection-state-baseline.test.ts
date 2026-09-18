@@ -13,7 +13,7 @@ type Probed = {
   requestHandlers: Map<string, unknown>
   notificationHandlers: Map<string, unknown>
   requestAborts: {
-    byClient: Map<number, Map<number, AbortController>>
+    byClient: Map<number, Map<string, AbortController>>
     create: (clientId: number, requestId: number) => unknown
   }
   publicationLedger: { clientBytes: Map<string, number>; aggregateBytes: number }

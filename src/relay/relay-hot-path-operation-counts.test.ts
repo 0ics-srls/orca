@@ -114,7 +114,7 @@ describe('relay hot-path operation counts', () => {
       }
     }
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: byClient is the private index this test exists to measure; the shape mirrors its declaration in client-request-aborts.ts.
-    const byClient = (aborts as unknown as { byClient: Map<number, Map<number, AbortController>> })
+    const byClient = (aborts as unknown as { byClient: Map<number, Map<string, AbortController>> })
       .byClient
 
     // The census must be able to find things: prove the maps really hold 160 controllers across 40
@@ -126,11 +126,11 @@ describe('relay hot-path operation counts', () => {
     }
     expect(totalControllers).toBe(clientCount * inFlightPerClient)
 
-    const index = new CountingMap<number, Map<number, AbortController>>()
+    const index = new CountingMap<number, Map<string, AbortController>>()
     for (const [k, v] of byClient) {
       index.set(k, v)
     }
-    const targetBucket = new CountingMap<number, AbortController>()
+    const targetBucket = new CountingMap<string, AbortController>()
     for (const [k, v] of byClient.get(1)!) {
       targetBucket.set(k, v)
     }
