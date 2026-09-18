@@ -1,4 +1,5 @@
 import { resolveSessionSearchLimit } from '../../shared/ai-vault-search-limit'
+import { isUnacknowledgedScopedSearch } from '../../shared/ai-vault-search-scope-acknowledgement'
 import type {
   AiVaultSearchHit,
   AiVaultSearchHostOutcome,
@@ -149,6 +150,12 @@ async function fetchHostPage(walk: HostWalk, entry: MergedSearchCursorEntry | nu
   // meaningful while that generation stands. Nothing emitted, nothing to fence.
   if (walk.emitted > 0 && walk.generation !== response.generation) {
     endHostWalk(walk, 'stale', false)
+    return
+  }
+  // This host ignored the scope and answered with everything it has. Merging
+  // those hits would put another project's sessions under this project's scope.
+  if (isUnacknowledgedScopedSearch(walk.request, response)) {
+    endHostWalk(walk, 'needs-update', false)
     return
   }
   walk.outcome = 'searched'

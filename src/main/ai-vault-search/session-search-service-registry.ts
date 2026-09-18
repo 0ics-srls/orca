@@ -41,7 +41,7 @@ export async function searchSessionService(
   // relay hosts all turn an identity into paths the same way, exactly once.
   const scoped = applySessionSearchScope(parsed)
   if (scoped === null) {
-    return { kind: 'unavailable', reason: 'scope-unknown' }
+    return unresolvedScopeAnswer(current)
   }
   const { request, resolvedWithin } = scoped
   const freshness =
@@ -101,6 +101,18 @@ export async function sessionSearchServiceStatus(
     ),
     transport
   )
+}
+
+/**
+ * A host that cannot resolve the scope reports being switched off first. Consent
+ * is the answer the reader can act on, and the relay's index ships off, so every
+ * scoped search there would otherwise blame a scope that host never indexes.
+ */
+async function unresolvedScopeAnswer(
+  current: SessionSearchService
+): Promise<AiVaultSearchResponse> {
+  const status = await current.status().catch(() => null)
+  return { kind: 'unavailable', reason: status && !status.enabled ? 'disabled' : 'scope-unknown' }
 }
 
 async function reconcileWithin(current: SessionSearchService, timeoutMs: number): Promise<boolean> {
