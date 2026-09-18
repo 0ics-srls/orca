@@ -7,7 +7,6 @@ import type { GitStatusEntry } from '../../../../shared/git-status-types'
 import { ConflictBanner, ConflictPlaceholderView, ConflictReviewPanel } from './ConflictComponents'
 import { ImageViewer, MonacoEditor } from './editor-lazy-views'
 import { EditorFileLoadErrorView } from './EditorFileLoadErrorView'
-import { requestEditorFileClose } from './editor-autosave'
 import type { FileContent } from './editor-panel-content-types'
 import { translate } from '@/i18n/i18n'
 import type { EditorConflictNavigation } from './useEditorConflictNavigation'
@@ -128,16 +127,12 @@ export function EditorConflictReviewSurface({
       )
     }
     if (fileContent.loadError) {
-      // Why: inline overview rows are synthesized per entry and are not tabs, so the
-      // close queue would drop the request; only a real open tab gets a Close action.
-      const isOpenTab = openFiles.some((file) => file.id === contentFile.id)
       return (
         <div className={className}>
           <EditorFileLoadErrorView
             message={fileContent.loadError}
             code={fileContent.loadErrorCode}
             onRetry={() => reloadContent(contentFile)}
-            onClose={isOpenTab ? () => requestEditorFileClose(contentFile.id) : undefined}
           />
         </div>
       )

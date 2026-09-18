@@ -10,28 +10,17 @@ import {
 describe('EditorFileLoadErrorView', () => {
   afterEach(cleanup)
 
-  it('offers Close only when the caller can route it, and never closes on its own', () => {
+  it('offers Retry as its only action', () => {
+    // Why: closing must stay with the tab strip, whose path carries the pin, shared-
+    // reference, and unsaved-changes checks; a second close control here would not.
     const onRetry = vi.fn()
-    const onClose = vi.fn()
 
-    render(
-      <EditorFileLoadErrorView message="selector_not_found" onRetry={onRetry} onClose={onClose} />
-    )
+    render(<EditorFileLoadErrorView message="selector_not_found" onRetry={onRetry} />)
 
     screen.getByText('selector_not_found')
+    expect(screen.getAllByRole('button')).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(onRetry).toHaveBeenCalledOnce()
-    expect(onClose).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Close tab' }))
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('renders no Close action without a handler', () => {
-    render(<EditorFileLoadErrorView message="ENOENT" onRetry={vi.fn()} />)
-
-    screen.getByRole('button', { name: 'Retry' })
-    expect(screen.queryByRole('button', { name: 'Close tab' })).toBeNull()
   })
 
   it('localizes the host-unresolved state by its sentinel code, not by the stored text', () => {

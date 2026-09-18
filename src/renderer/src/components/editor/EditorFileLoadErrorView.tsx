@@ -16,19 +16,18 @@ function localizeFileLoadError(message: string, code: string | undefined): strin
   return message
 }
 
+// Why no Close action here: this view renders for real tabs and for synthesized inline
+// conflict rows alike, and only the tab strip's own close path carries the pin, shared-
+// reference, and unsaved-changes semantics. The copy points the user at that path instead
+// of adding a second one that would have to reimplement it (#21041).
 export function EditorFileLoadErrorView({
   message,
   code,
-  onRetry,
-  onClose
+  onRetry
 }: {
   message: string
   code?: string
   onRetry: () => void
-  // Why: a tab whose read reached a terminal state must not vanish on its own — the user
-  // decides whether to keep retrying or close it (#21041). Callers route the close through
-  // the unsaved-changes queue so a dirty draft is still confirmed, never silently dropped.
-  onClose?: () => void
 }): React.JSX.Element {
   return (
     <div className="flex h-full items-center justify-center bg-editor-surface p-6 text-sm text-muted-foreground">
@@ -39,20 +38,10 @@ export function EditorFileLoadErrorView({
             {translate('auto.components.editor.EditorContent.39f018b052', 'Unable to load file')}
           </div>
           <div className="mt-1 break-words">{localizeFileLoadError(message, code)}</div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-              <RefreshCw className="size-3.5" />
-              {translate('auto.components.editor.EditorContent.2a512bb46a', 'Retry')}
-            </Button>
-            {onClose ? (
-              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                {translate(
-                  'auto.components.editor.EditorFileLoadErrorView.296b59cd29',
-                  'Close tab'
-                )}
-              </Button>
-            ) : null}
-          </div>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+            <RefreshCw className="size-3.5" />
+            {translate('auto.components.editor.EditorContent.2a512bb46a', 'Retry')}
+          </Button>
         </div>
       </div>
     </div>
