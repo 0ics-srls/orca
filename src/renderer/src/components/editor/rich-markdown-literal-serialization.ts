@@ -325,16 +325,6 @@ function hasEscapedEntityMark(node: JSONContent): boolean {
   )
 }
 
-function hasOnlyEscapedMarks(node: JSONContent): boolean {
-  if (
-    node.type === 'text' &&
-    node.marks?.some((mark) => mark.type !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
-  ) {
-    return false
-  }
-  return !(node.content ?? []).some((child) => !hasOnlyEscapedMarks(child))
-}
-
 function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
   let found = false
   block.descendants((node) => {
