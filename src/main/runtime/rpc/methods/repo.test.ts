@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { RpcDispatcher } from '../dispatcher'
 import type { RpcRequest } from '../core'
-import type { OrcaRuntimeService } from '../../orca-runtime'
+import { OrcaRuntimeService } from '../../orca-runtime'
 import { REPO_METHODS } from './repo'
 import { WORKTREE_VISIBILITY_DEFAULTS_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
 import { REPO_SEARCH_REFS_MAX_LIMIT } from '../../../../shared/repo-search-limits'
@@ -390,13 +390,17 @@ describe('repo RPC methods', () => {
   })
 
   it('persists normalized ghAccount bindings and clear sentinels', async () => {
-    const runtime = Object.assign(Object.create(null), {
-      getRuntimeId: () => 'test-runtime',
-      updateRepo: vi.fn().mockResolvedValue({
-        id: 'repo-1',
-        path: '/srv/repo',
-        ghAccount: { host: 'github.com', user: 'Alice' }
-      })
+    const runtime = new OrcaRuntimeService(null)
+    vi.spyOn(runtime, 'getClientSettings').mockReturnValue({
+      worktreeVisibilityDefaults: { external: 'hide' }
+    })
+    vi.spyOn(runtime, 'updateRepo').mockResolvedValue({
+      id: 'repo-1',
+      path: '/srv/repo',
+      displayName: 'repo',
+      badgeColor: '#000000',
+      addedAt: 0,
+      ghAccount: { host: 'github.com', user: 'Alice' }
     })
     const dispatcher = new RpcDispatcher({ runtime, methods: REPO_METHODS })
 
