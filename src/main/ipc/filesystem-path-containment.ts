@@ -5,11 +5,19 @@ import { realpath } from 'node:fs/promises'
  * Check whether resolvedTarget is equal to or a descendant of resolvedBase.
  * Uses relative() so it works with both `/` (Unix) and `\` (Windows) separators.
  */
-export function isDescendantOrEqual(resolvedTarget: string, resolvedBase: string): boolean {
-  if (resolvedTarget === resolvedBase) {
+export function isDescendantOrEqual(
+  resolvedTarget: string,
+  resolvedBase: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  // APFS commonly returns decomposed names while workspace state may contain composed names.
+  // Keep byte-distinct Linux/SSH paths distinct; only macOS treats these forms as the same name.
+  const target = platform === 'darwin' ? resolvedTarget.normalize('NFC') : resolvedTarget
+  const base = platform === 'darwin' ? resolvedBase.normalize('NFC') : resolvedBase
+  if (target === base) {
     return true
   }
-  const rel = relative(resolvedBase, resolvedTarget)
+  const rel = relative(base, target)
   // Security: reject "..", "../…" or an absolute rel — on Windows relative() returns absolute across drives, which would bypass drive-traversal checks.
   // Use isAbsolute, not rejoin+compare: Windows path.relative() ignores drive/root casing, so rejoining would deny valid c:\repo under C:\Repo.
   return rel !== '' && !(rel === '..' || rel.startsWith(`..${sep}`)) && !isAbsolute(rel)

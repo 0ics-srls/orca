@@ -1,5 +1,5 @@
 import type * as NodePath from 'node:path'
-import { mkdir, mkdtemp, realpath, rm, symlink } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -365,11 +365,56 @@ describe('filesystem-auth path containment', () => {
     }
   )
 
+  it.skipIf(process.platform !== 'darwin')(
+    'reads Korean folder workspace files across NFC/NFD spellings and rejects symlink escapes',
+    async () => {
+      const scratch = await mkdtemp(join(await realpath(tmpdir()), 'orca-korean-auth-'))
+      try {
+        const folderPath = join(scratch, '테스트프로젝트'.normalize('NFC'))
+        await mkdir(folderPath)
+        await writeFile(join(folderPath, 'test.txt'), 'Korean workspace proof')
+        const store = makeStore([], {
+          folderWorkspaces: [makeFolderWorkspace({ folderPath })]
+        })
+        const requestedPath = join(folderPath.normalize('NFD'), 'test.txt')
+        expect(await readFile(await resolveAuthorizedPath(requestedPath, store), 'utf8')).toBe(
+          'Korean workspace proof'
+        )
+        await expect(
+          resolveAuthorizedPath(join(folderPath.normalize('NFD'), 'new', 'file.txt'), store)
+        ).resolves.toBe(join(await realpath(folderPath), 'new', 'file.txt'))
+        const outside = join(scratch, 'outside')
+        await mkdir(outside)
+        await writeFile(join(outside, 'secret.txt'), 'outside')
+        await symlink(outside, join(folderPath, 'escape'))
+        await expect(
+          resolveAuthorizedPath(join(folderPath.normalize('NFD'), 'escape', 'secret.txt'), store)
+        ).rejects.toThrow('Access denied')
+      } finally {
+        await rm(scratch, { recursive: true, force: true })
+      }
+    }
+  )
+
   it('allows descendants whose path segment starts with dotdot characters', () => {
     const root = resolve('/workspace/repo')
     const child = resolve('/workspace/repo/..fixtures/file.ts')
 
     expect(isDescendantOrEqual(child, root)).toBe(true)
+  })
+
+  it('treats NFC and NFD macOS path spellings as the same descendant', () => {
+    const root = '/workspace/테스트프로젝트'.normalize('NFC')
+    const child = `${'/workspace/테스트프로젝트'.normalize('NFD')}/test.txt`
+
+    expect(isDescendantOrEqual(child, root, 'darwin')).toBe(true)
+    // Linux and SSH filesystems may distinguish these byte spellings.
+    expect(isDescendantOrEqual(child, root, 'linux')).toBe(false)
+    expect(isDescendantOrEqual(child, root, 'win32')).toBe(false)
+    expect(isDescendantOrEqual(root.normalize('NFD'), root, 'darwin')).toBe(true)
+    expect(isDescendantOrEqual(`${root.normalize('NFD')}-other/test.txt`, root, 'darwin')).toBe(
+      false
+    )
   })
 
   it('allows git-relative files under dotdot-prefixed child directories', () => {
