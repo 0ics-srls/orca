@@ -285,7 +285,12 @@ export function preserveLiteralMarkdownSource(
     const idle = serialize()
     hasRefDefs = REF_DEF.test(withoutOptionalEscapes(idle))
     const json = editor.getJSON()
-    if (!hasRefDefs && !CHEAP_NEEDS_WORK.test(idle) && !needsAttrRepair(json)) {
+    if (
+      !hasRefDefs &&
+      !CHEAP_NEEDS_WORK.test(idle) &&
+      !needsAttrRepair(json) &&
+      !hasEscapedEntityMark(json)
+    ) {
       return idle
     }
     escapeLinkAndImageAttributes(json)
