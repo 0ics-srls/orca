@@ -260,11 +260,9 @@ export function preserveLiteralMarkdownSource(
     if (isPlainEscapedBlock && !info.inTableCell) {
       result = result.replace(/\\\$(?=\d)/g, '$')
     }
-    if (info.inTableCell) {
-      result = result.replace(/(?<!\\)\$(?=\d)/g, '\\$&')
-    } else {
-      result = result.replace(/(?<!\\)\$(?=\d,)/g, '\\$&')
-    }
+    result = info.inTableCell
+      ? result.replace(/(?<!\\)\$(?=\d)/g, '\\$&')
+      : result.replace(/(?<!\\)\$(?=\d,)/g, '\\$&')
     if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
       result = result.replace(/\$(?!\d)/g, '\\$&')
     }
