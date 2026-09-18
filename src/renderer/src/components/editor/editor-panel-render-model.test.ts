@@ -77,7 +77,9 @@ describe('getEditorPanelRenderModel rich-mode fallback toggle', () => {
   it('offers Preview in Source view once a stored fault matches the current content', () => {
     const model = renderModel({
       markdownViewMode: { '/repo/README.md': 'source' },
-      editorDrafts: { '/repo/README.md': '[reference]: https://example.com' },
+      fileContents: {
+        '/repo/README.md': textContent({ content: '[reference]: https://example.com' })
+      },
       markdownRichModeFaultedContent: {
         '/repo/README.md': '[reference]: https://example.com'
       }

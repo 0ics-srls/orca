@@ -42,22 +42,8 @@ export const RichMarkdownEscapedCharacter = Mark.create({
       { type: 'text', text: character }
     ])
   },
-  // Why: a mark's markdown is one prefix for the whole run, so `\*\*` would come out as `\**`;
-  // this is only the fallback for a serializer that bypasses getMarkdown.
-  renderMarkdown: (node, helpers) => {
-    const rendered = helpers.renderChildren(node)
-    const plain = rendered.replace(/^\\+/, '')
-    if (node.marks?.some((mark) => mark.type === 'code')) {
-      return plain
-    }
-    if (plain === '&') {
-      return '&amp;'
-    }
-    if (plain === '<') {
-      return '&lt;'
-    }
-    return escapedCharacterSourceText(plain, false)
-  },
+  // Mark renderers receive a delimiter probe, so text escaping belongs in the text encoder.
+  renderMarkdown: (node, helpers) => helpers.renderChildren(node),
 
   parseHTML() {
     return [{ tag: `span[${MARKER_ATTRIBUTE}]` }]

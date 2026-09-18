@@ -131,12 +131,6 @@ export function getMarkdownRichModeUnsupportedReason(
   const htmlMatcher = UNSUPPORTED_PATTERNS.find((m) => m.reason === 'html-or-jsx')
   const hasHtml = htmlMatcher && hasHtmlOrJsx(contentWithoutCode, htmlMatcher.pattern)
 
-  // HTML comments inside image alt text are Markdown label content, not embedded
-  // document HTML; they remain literal through the rich serializer.
-  if (hasHtml && hasOnlyImageAltComments(contentWithoutCode)) {
-    return null
-  }
-
   for (const matcher of UNSUPPORTED_PATTERNS) {
     if (matcher.reason === 'html-or-jsx') {
       continue
@@ -150,7 +144,9 @@ export function getMarkdownRichModeUnsupportedReason(
     return matcher.reason
   }
 
-  if (hasHtml) {
+  // HTML comments inside image alt text are Markdown label content, not embedded
+  // document HTML; they remain literal through the rich serializer.
+  if (hasHtml && !hasOnlyImageAltComments(contentWithoutCode)) {
     // The source codec recognizes multiline code spans that the cheap scan can misclassify.
     const htmlOutput = getRichMarkdownHtmlValidationOutput(body)
     if (htmlOutput && preservesEmbeddedHtml(body, htmlOutput)) {
