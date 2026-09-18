@@ -1,11 +1,12 @@
-import { renderTableToMarkdown, Table } from '@tiptap/extension-table'
+import { Table } from '@tiptap/extension-table'
 import { encodeRawMarkdownHtmlForRichEditor } from './raw-markdown-html'
 import type { RichMarkdownEditorCodec } from './rich-markdown-source-transport'
+import { renderTableToCompactMarkdown } from './rich-markdown-table-markdown'
 
 export function createRichMarkdownTable(codec: RichMarkdownEditorCodec) {
   return Table.extend({
     renderMarkdown(node, helpers) {
-      return renderTableToMarkdown(node, {
+      return renderTableToCompactMarkdown(node, {
         ...helpers,
         // Escape cell content before the upstream renderer inserts column delimiters.
         renderChildren: (...args) => escapeTablePipes(helpers.renderChildren(...args), codec)
