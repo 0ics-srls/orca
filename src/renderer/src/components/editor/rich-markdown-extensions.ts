@@ -9,7 +9,7 @@ import { createRichMarkdownTable } from './rich-markdown-table'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableRow } from '@tiptap/extension-table-row'
-import { BlockMath } from '@tiptap/extension-mathematics'
+import { BlockMath, InlineMath } from '@tiptap/extension-mathematics'
 import { createRichMarkdownExtension } from './rich-markdown-extension'
 import { createLowlight, common } from 'lowlight'
 import {
