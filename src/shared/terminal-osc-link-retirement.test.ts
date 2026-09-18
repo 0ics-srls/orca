@@ -41,6 +41,26 @@ function cellUri(
   return record(entry) && record(entry.data) ? entry.data.uri : undefined
 }
 
+function hasUri(
+  terminal: HeadlessTerminal | RendererTerminal,
+  buffer: 'normal' | 'alternate',
+  uri: string
+): boolean {
+  const lines = terminal.buffer[buffer]
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines.getLine(row)
+    if (!line) {
+      continue
+    }
+    for (let column = 0; column < line.length; column++) {
+      if (cellUri(terminal, buffer, row, column) === uri) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 function write(terminal: HeadlessTerminal | RendererTerminal, data: string): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve))
 }
@@ -137,4 +157,39 @@ describe.each([
       terminal.dispose()
     }
   })
+
+  it.each(['reflow', 'insert-delete', 'scroll', 'alternate'] as const)(
+    'keeps a live link after %s while pruning links from the same marker row',
+    async (mode) => {
+      const terminal = new Terminal({
+        cols: 20,
+        rows: 5,
+        scrollback: 500,
+        allowProposedApi: true,
+        logLevel: 'off'
+      })
+      const retirement = createTerminalOscLinkRetirement(terminal)
+      const liveUri = `${URL}/${mode}/live`
+      try {
+        await write(terminal, `\x1b]8;;${liveUri}\x1b\\${'live-link-'.repeat(10)}${CLOSE}`)
+        if (mode === 'reflow') {
+          terminal.resize(8, 5)
+        } else if (mode === 'insert-delete') {
+          await write(terminal, '\x1b[1;1H\x1b[1L')
+        } else if (mode === 'scroll') {
+          await write(terminal, '\x1b[5;1H\n\n')
+        } else {
+          await write(terminal, '\x1b[?1049h')
+        }
+        await write(terminal, '\x1b[5;1H')
+        for (let index = 0; index < 1024; index++) {
+          await write(terminal, `\r\x1b[2K${OPEN}s${CLOSE}`)
+        }
+        retirement()
+        expect(hasUri(terminal, 'normal', liveUri)).toBe(true)
+      } finally {
+        terminal.dispose()
+      }
+    }
+  )
 })
