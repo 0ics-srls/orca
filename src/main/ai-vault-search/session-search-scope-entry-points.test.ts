@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { AiVaultHandler } from '../../relay/ai-vault-handler'
 import type { RelayDispatcher } from '../../relay/dispatcher'
+import { createSessionSearchClient } from '../../shared/ai-vault-search-client'
 import { fakeSearchService } from '../../shared/ai-vault-search-test-fixture'
 import { searchAllExecutionHosts } from '../ipc/ai-vault-search-all-hosts'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
@@ -83,6 +84,20 @@ describe('every search entry point carries the scope identity through', () => {
     expect(await relayHandler()({ query: 'needle', within: WITHIN })).toEqual({
       kind: 'unavailable',
       reason: 'scope-unknown'
+    })
+  })
+})
+
+describe('the shared remote client', () => {
+  it('carries the identity out and the acknowledgement back across a transport', async () => {
+    setSessionSearchService(fakeSearchService())
+    installSessionSearchScopeCatalogSource(() => CATALOG)
+    const client = createSessionSearchClient(
+      (_method, params) => searchSessionService(params, 'relay'),
+      'relay'
+    )
+    expect(await client.searchSessions({ query: 'needle', within: WITHIN })).toMatchObject({
+      resolvedWithin: { kind: 'workspace', paths: 1 }
     })
   })
 })

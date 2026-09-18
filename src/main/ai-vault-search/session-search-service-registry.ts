@@ -72,7 +72,7 @@ type ScopedSessionSearch = {
  * does not know the workspace or project, which is an answer — never a reason to
  * fall back to searching everything.
  */
-export function applySessionSearchScope(parsed: AiVaultSearchRequest): ScopedSessionSearch | null {
+function applySessionSearchScope(parsed: AiVaultSearchRequest): ScopedSessionSearch | null {
   const { within, ...request } = parsed
   if (!within) {
     return { request }
