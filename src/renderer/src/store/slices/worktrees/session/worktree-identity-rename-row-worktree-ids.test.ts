@@ -24,7 +24,12 @@ const OLD = 'repo1::/ws/old'
 const NEW = 'repo1::/ws/new'
 const OTHER = 'repo1::/ws/other'
 
-/** The real slice's state, so a fixture cannot drift from the shape the rename actually reads. */
+/**
+ * The real worktree slice, so every map the rename walks past the two under test is the shape it
+ * actually is. The two under test are hand-supplied: they live in the terminals and browser slices,
+ * which this harness does not mount, so a missing override reads as `undefined` and exercises the
+ * `?? {}` path rather than masking a regression.
+ */
 function appState(overrides: Partial<AppState>): AppState {
   const store = createTestStore()
   store.setState(overrides)
