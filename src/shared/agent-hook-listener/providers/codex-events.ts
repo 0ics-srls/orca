@@ -11,11 +11,11 @@ import {
   finishCodexSubagent,
   upsertCodexSubagent
 } from '../../codex-subagent-roster'
+import { reconcileCodexSubagentTranscript } from '../../codex-subagent-transcript'
 import {
   codexTurnApprovalsAreAutoReviewed,
-  reconcileCodexSubagentReviewer,
-  reconcileCodexSubagentTranscript
-} from '../../codex-subagent-transcript'
+  reconcileCodexSubagentReviewer
+} from '../../codex-subagent-reviewer'
 import { readFirstString } from '../interactive-tool'
 import type { HookListenerState } from '../listener-state'
 import { resolvePrompt, resolveToolState } from '../prompt-fields'
@@ -118,12 +118,16 @@ function resolveCodexApprovalOwnedState(
   state: HookListenerState,
   eventName: unknown,
   paneKey: string,
+  transcriptPath: string | undefined,
   stateName: 'working' | 'waiting' | 'done'
 ): 'working' | 'waiting' | 'done' {
   if (stateName !== 'waiting' || eventName !== 'PermissionRequest') {
     return stateName
   }
-  return codexTurnApprovalsAreAutoReviewed(state.codexSubagentTranscriptByPaneKey.get(paneKey))
+  return codexTurnApprovalsAreAutoReviewed(
+    state.codexSubagentTranscriptByPaneKey.get(paneKey),
+    transcriptPath
+  )
     ? 'working'
     : stateName
 }
@@ -186,7 +190,13 @@ export function normalizeCodexEvent(
   }
   if (agentId) {
     // Why: reconcile the child rollout reviewer before classifying its approval, including after relay restart.
-    const childState = resolveCodexApprovalOwnedState(state, eventName, paneKey, stateName)
+    const childState = resolveCodexApprovalOwnedState(
+      state,
+      eventName,
+      paneKey,
+      transcriptPath,
+      stateName
+    )
     upsertCodexSubagent(
       getOrCreateCodexSubagentRoster(state, paneKey),
       agentId,
@@ -206,7 +216,13 @@ export function normalizeCodexEvent(
   }
   // Why: resolved after the transcript reconcile above, so this turn's reviewer is read from the
   // rollout during the very PermissionRequest being classified, not from a prior event.
-  const ownedState = resolveCodexApprovalOwnedState(state, eventName, paneKey, stateName)
+  const ownedState = resolveCodexApprovalOwnedState(
+    state,
+    eventName,
+    paneKey,
+    transcriptPath,
+    stateName
+  )
   const previousLead = state.codexLeadStateByPaneKey.get(paneKey)
   state.codexLeadStateByPaneKey.set(paneKey, {
     state: ownedState,

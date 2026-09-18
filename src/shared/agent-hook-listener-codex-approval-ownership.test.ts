@@ -76,6 +76,15 @@ describe('Codex approval ownership', () => {
     })
   }
 
+  function childPostToolUse(): ReturnType<typeof normalizeHookPayload> {
+    return post({
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Bash',
+      agent_id: 'child-after-relay-restart',
+      agent_type: 'worker'
+    })
+  }
+
   it('reads an auto-reviewed approval as ongoing work, not as needing the user', () => {
     const transcriptPath = writeRollout({ reviewer: 'auto_review' })
 
@@ -98,6 +107,29 @@ describe('Codex approval ownership', () => {
     const transcriptPath = writeRollout({ reviewer: 'user' })
 
     expect(childPermissionRequest(transcriptPath)?.payload.state).toBe('waiting')
+  })
+
+  it('keeps the parent reviewer after a child with a different reviewer is observed', () => {
+    const parentPath = writeRollout({ reviewer: 'auto_review', fileName: 'rollout-parent.jsonl' })
+    const childPath = writeRollout({ reviewer: 'user', fileName: 'rollout-child.jsonl' })
+
+    expect(permissionRequest(parentPath)?.payload.state).toBe('working')
+    expect(childPermissionRequest(childPath)?.payload.state).toBe('waiting')
+    expect(childPostToolUse()?.payload.state).toBe('working')
+    expect(permissionRequest(parentPath)?.payload.state).toBe('working')
+  })
+
+  it('does not clear a readable parent reviewer when a child rollout is unavailable', () => {
+    const parentPath = writeRollout({ reviewer: 'auto_review', fileName: 'rollout-parent.jsonl' })
+    const childRoot = mkdtempSync(join(tmpdir(), 'codex-approval-ownership-child-'))
+    dirs.push(childRoot)
+
+    expect(permissionRequest(parentPath)?.payload.state).toBe('working')
+    expect(childPermissionRequest(join(childRoot, 'missing-child.jsonl'))?.payload.state).toBe(
+      'waiting'
+    )
+    expect(childPostToolUse()?.payload.state).toBe('working')
+    expect(permissionRequest(parentPath)?.payload.state).toBe('working')
   })
 
   it('follows a thread settings update that switches the reviewer back to the user', () => {

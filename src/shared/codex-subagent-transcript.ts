@@ -8,6 +8,9 @@ import {
   type JsonRecord
 } from './codex-rollout-jsonl-cursor'
 
+import { readApprovalsReviewer } from './codex-subagent-reviewer'
+import type { CodexApprovalsReviewer } from './codex-subagent-reviewer'
+
 import {
   finishCodexSubagent,
   setCodexSubagentModel,
@@ -18,7 +21,6 @@ import {
 // Why: retire a child whose rollout stays unreadable this long, else a deleted/never-written file pins a phantom row forever.
 const CHILD_UNREADABLE_GRACE_MS = 60_000
 const SAFE_THREAD_ID = /^[A-Za-z0-9-]{1,64}$/
-const REVIEWER_CURSOR_MAX_PATHS = 64
 
 type TrackedTranscriptSubagent = JsonlCursor & {
   description?: string
@@ -35,13 +37,11 @@ export type CodexSubagentTranscriptState = {
   subagents: Map<string, TrackedTranscriptSubagent>
   /** Incremental reviewer cursors for child rollouts, which must not replace the parent cursor. */
   reviewerCursorsByPath: Map<string, JsonlCursor>
-  /** Who resolves this turn's approvals. Retained like a child's model because the cursor is
-   *  incremental: `turn_context` is emitted once per turn, so later reads carry no reviewer. */
+  /** Reviewer ownership discovered from child rollouts, keyed by their bounded cursor paths. */
+  reviewersByPath: Map<string, CodexApprovalsReviewer>
+  /** Who resolves this turn's approvals in the parent rollout. */
   approvalsReviewer?: CodexApprovalsReviewer
 }
-
-/** Codex's `approvals_reviewer`: `user` is a human, `auto_review` is Codex's own review agent. */
-export type CodexApprovalsReviewer = 'user' | 'auto_review'
 
 // Why: Codex files each rollout under its OWN local start date, so a session running past midnight spawns children into a sibling day directory.
 function childDayDirectory(parentPath: string, startedAt: number): string | undefined {
@@ -149,47 +149,11 @@ function readChildModel(records: JsonRecord[]): string | undefined {
   return model
 }
 
-/** Latest reviewer evidence from turn or thread-settings records. Missing fields preserve Codex's
- *  fallback semantics; unreadable files are handled by the reconcile caller as unknown. */
-function readApprovalsReviewer(records: JsonRecord[]): CodexApprovalsReviewer | undefined {
-  let reviewer: CodexApprovalsReviewer | undefined
-  for (const recordValue of records) {
-    const payload = record(recordValue.payload)
-    const candidate =
-      recordValue.type === 'turn_context'
-        ? payload?.approvals_reviewer
-        : recordValue.type === 'event_msg' && payload?.type === 'thread_settings_applied'
-          ? record(payload.thread_settings)?.approvals_reviewer
-          : undefined
-    const value = typeof candidate === 'string' ? candidate : ''
-    if (value === 'user' || value === 'auto_review') {
-      reviewer = value
-    } else if (value === 'guardian_subagent') {
-      // Codex still accepts this legacy spelling and normalizes it to auto_review.
-      reviewer = 'auto_review'
-    }
-  }
-  return reviewer
-}
-
 function normalizedTranscriptPath(transcriptPath: string | undefined): string | undefined {
   const normalizedPath = transcriptPath?.trim()
   return normalizedPath && isAbsolute(normalizedPath) && extname(normalizedPath) === '.jsonl'
     ? normalizedPath
     : undefined
-}
-
-/**
- * Whether Codex's own review agent, not a human, resolves this turn's approvals.
- *
- * Positive evidence only: an absent field, an older rollout, or an unreadable file all read as
- * `false`, which is the pre-existing behaviour. This can only ever downgrade a false attention
- * state, never hide a real prompt.
- */
-export function codexTurnApprovalsAreAutoReviewed(
-  state: CodexSubagentTranscriptState | undefined
-): boolean {
-  return state?.approvalsReviewer === 'auto_review'
 }
 
 function childIsComplete(records: JsonRecord[]): boolean {
@@ -212,7 +176,8 @@ export function createCodexSubagentTranscriptState(): CodexSubagentTranscriptSta
   return {
     parent: { offset: 0, carry: '' },
     subagents: new Map(),
-    reviewerCursorsByPath: new Map()
+    reviewerCursorsByPath: new Map(),
+    reviewersByPath: new Map()
   }
 }
 
@@ -238,6 +203,7 @@ export function reconcileCodexSubagentTranscript(
     state.parent = { filePath: normalizedPath, offset: 0, carry: '' }
     state.subagents.clear()
     state.reviewerCursorsByPath.clear()
+    state.reviewersByPath.clear()
     // Why: a different rollout is a different session, so its predecessor's reviewer is void.
     state.approvalsReviewer = undefined
   }
@@ -304,33 +270,4 @@ export function reconcileCodexSubagentTranscript(
     finishCodexSubagent(roster, id)
     state.subagents.delete(id)
   }
-}
-
-/** Reads reviewer ownership from a child rollout without replacing the parent lifecycle cursor. */
-export function reconcileCodexSubagentReviewer(
-  state: CodexSubagentTranscriptState,
-  transcriptPath: string | undefined
-): void {
-  const normalizedPath = normalizedTranscriptPath(transcriptPath)
-  if (!normalizedPath) {
-    return
-  }
-  let cursor = state.reviewerCursorsByPath.get(normalizedPath)
-  if (!cursor) {
-    if (state.reviewerCursorsByPath.size >= REVIEWER_CURSOR_MAX_PATHS) {
-      const oldestPath = state.reviewerCursorsByPath.keys().next().value
-      if (typeof oldestPath === 'string') {
-        state.reviewerCursorsByPath.delete(oldestPath)
-      }
-    }
-    cursor = { filePath: normalizedPath, offset: 0, carry: '' }
-    state.reviewerCursorsByPath.set(normalizedPath, cursor)
-  }
-  const records = readJsonlCursor(cursor)
-  if (records === undefined) {
-    state.reviewerCursorsByPath.delete(normalizedPath)
-    state.approvalsReviewer = undefined
-    return
-  }
-  state.approvalsReviewer = readApprovalsReviewer(records) ?? state.approvalsReviewer
 }
