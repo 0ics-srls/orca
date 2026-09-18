@@ -54,7 +54,6 @@ function hasBare(markdown: string, chars: string): boolean {
 }
 
 function destNeedsEscape(dest: string): boolean {
-  let depth = 0
   let oddBackslash = false
   for (let i = 0; i < dest.length; i += 1) {
     const character = dest[i]
@@ -63,16 +62,9 @@ function destNeedsEscape(dest: string): boolean {
     if (!bare) {
       continue
     }
-    if (character === '(') {
-      depth += 1
-    } else if (character === ')') {
-      if (depth === 0) {
-        return true
-      }
-      depth -= 1
-    }
+    if (character === '(' || character === ')') return true
   }
-  return depth > 0
+  return false
 }
 
 function escapeLineLeading(markdown: string): string {
@@ -251,11 +243,9 @@ export function preserveLiteralMarkdownSource(
       return cached.result
     }
     let result = markdown
-    result = result.replace(/\\\$(?=\d)/g, '$')
     const preservesEscapedCharacters = blockHasEscapedCharacters(info.block)
     if (preservesEscapedCharacters && !blockHasInlineMath(info.block)) {
       result = result.replace(/\$(?!\d)/g, '\\$&')
-      result = result.replace(/\\\$(?=\d)/g, '$')
     }
     if (node.type === 'paragraph' && !info.inTableCell) {
       result = escapeLineLeading(result)
@@ -300,11 +290,21 @@ export function preserveLiteralMarkdownSource(
     blocks = new Map()
     pairBlocks(json, editor.state.doc, false, blocks)
     try {
-      return manager.serialize(json).replace(/\\\$(?=\d)/g, '$')
+      const output = manager.serialize(json)
+      return hasEscapedEntityMark(json)
+        ? output.replace(/&(?!amp;|lt;|gt;|#\w+;)/g, '&amp;').replace(/<(?!\/?[A-Za-z])/g, '&lt;')
+        : output
     } finally {
       blocks = undefined
     }
   }
+}
+
+function hasEscapedEntityMark(node: JSONContent): boolean {
+  return Boolean(
+    node.marks?.some((mark) => mark.type === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK) ||
+    node.content?.some((child) => hasEscapedEntityMark(child))
+  )
 }
 
 function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {

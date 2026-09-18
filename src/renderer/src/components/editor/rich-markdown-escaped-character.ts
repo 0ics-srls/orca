@@ -50,6 +50,12 @@ export const RichMarkdownEscapedCharacter = Mark.create({
     if (node.marks?.some((mark) => mark.type === 'code')) {
       return plain
     }
+    if (plain === '&') {
+      return '&amp;'
+    }
+    if (plain === '<') {
+      return '&lt;'
+    }
     return escapedCharacterSourceText(plain, false)
   },
 
