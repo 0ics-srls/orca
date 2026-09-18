@@ -11,7 +11,10 @@ import {
   finishCodexSubagent,
   upsertCodexSubagent
 } from '../../codex-subagent-roster'
-import { reconcileCodexSubagentTranscript } from '../../codex-subagent-transcript'
+import {
+  codexTurnApprovalsAreAutoReviewed,
+  reconcileCodexSubagentTranscript
+} from '../../codex-subagent-transcript'
 import { readFirstString } from '../interactive-tool'
 import type { HookListenerState } from '../listener-state'
 import { resolvePrompt, resolveToolState } from '../prompt-fields'
@@ -99,6 +102,31 @@ export function normalizeCodexSubagentLifecycleEvent(
   return buildCodexChildDrivenStatusPayload(state, eventName, paneKey, hookPayload)
 }
 
+/**
+ * Drops a `PermissionRequest` wait that Codex's own review agent owns.
+ *
+ * Codex runs this hook as decider #1, ahead of both its review agent and the user, so the event
+ * alone is "a decision is being made", not "a human is blocked". Under `approvals_reviewer =
+ * auto_review` ("Approve for me") the review agent resolves it seconds later and the pane flapped
+ * between Needs You and Working for every gated tool call (STA-7698).
+ *
+ * `request_user_input` is untouched: it arrives as `PreToolUse`, and no reviewer can answer a
+ * question addressed to the user (#9861).
+ */
+function resolveCodexApprovalOwnedState(
+  state: HookListenerState,
+  eventName: unknown,
+  paneKey: string,
+  stateName: 'working' | 'waiting' | 'done'
+): 'working' | 'waiting' | 'done' {
+  if (stateName !== 'waiting' || eventName !== 'PermissionRequest') {
+    return stateName
+  }
+  return codexTurnApprovalsAreAutoReviewed(state.codexSubagentTranscriptByPaneKey.get(paneKey))
+    ? 'working'
+    : stateName
+}
+
 export function normalizeCodexEvent(
   state: HookListenerState,
   eventName: unknown,
@@ -131,13 +159,16 @@ export function normalizeCodexEvent(
 
   const agentId = readString(hookPayload, 'agent_id')
   if (agentId) {
+    // Why: a child's approval is reviewer-owned on the same terms as the lead's; the reviewer read
+    // is retained per pane, so the turn's earlier lead events have already supplied it.
+    const childState = resolveCodexApprovalOwnedState(state, eventName, paneKey, stateName)
     upsertCodexSubagent(
       getOrCreateCodexSubagentRoster(state, paneKey),
       agentId,
       {
         agentType: readString(hookPayload, 'agent_type'),
         model: readString(hookPayload, 'model'),
-        state: stateName === 'waiting' ? 'waiting' : 'working'
+        state: childState === 'waiting' ? 'waiting' : 'working'
       },
       Date.now()
     )
@@ -161,16 +192,19 @@ export function normalizeCodexEvent(
     // Why: Codex CLI 0.144 can omit child Stop hooks; later child activity safely recreates any agent still running.
     state.codexSubagentRosterByPaneKey.delete(paneKey)
   }
+  // Why: resolved after the transcript reconcile above, so this turn's reviewer is read from the
+  // rollout during the very PermissionRequest being classified, not from a prior event.
+  const ownedState = resolveCodexApprovalOwnedState(state, eventName, paneKey, stateName)
   const previousLead = state.codexLeadStateByPaneKey.get(paneKey)
   state.codexLeadStateByPaneKey.set(paneKey, {
-    state: stateName,
+    state: ownedState,
     model:
       normalizeOptionalField(hookPayload['model'], AGENT_MODEL_MAX_LENGTH) ??
       (eventName === 'SessionStart' ? undefined : previousLead?.model)
   })
   const effectiveState = codexRosterEffectiveState(
     state.codexSubagentRosterByPaneKey.get(paneKey),
-    stateName
+    ownedState
   )
   return buildCodexStatusPayload(state, eventName, promptText, paneKey, hookPayload, {
     stateName: effectiveState,
