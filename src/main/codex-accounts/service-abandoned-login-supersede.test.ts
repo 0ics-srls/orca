@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
+import { existsSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import {
+  createCodexAuthJson,
   createRateLimits,
   createRuntimeHome,
   createSettings,
@@ -54,16 +57,20 @@ function createStubLoginChild(): StubLoginChild {
 /** A service whose `codex login` never finishes on its own. */
 async function createServiceWithHangingLogin(): Promise<{
   service: {
-    addAccount: () => Promise<unknown>
+    addAccount: () => Promise<{ accounts: { email: string }[] }>
     cancelPendingLogin: () => boolean
   }
   children: StubLoginChild[]
+  /** The `CODEX_HOME` each login was spawned against. */
+  loginHomes: string[]
 }> {
   vi.resetModules()
   const children: StubLoginChild[] = []
+  const loginHomes: string[] = []
   vi.doMock('node:child_process', () => ({
     execFileSync: vi.fn(),
-    spawn: vi.fn(() => {
+    spawn: vi.fn((_command: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+      loginHomes.push(options.env.CODEX_HOME ?? '')
       const child = createStubLoginChild()
       children.push(child)
       return child
@@ -78,7 +85,7 @@ async function createServiceWithHangingLogin(): Promise<{
     asServiceDouble(createRateLimits()),
     asServiceDouble(createRuntimeHome())
   )
-  return { service, children }
+  return { service, children, loginHomes }
 }
 
 describe('CodexAccountService abandoned login', () => {
@@ -104,6 +111,34 @@ describe('CodexAccountService abandoned login', () => {
 
       service.cancelPendingLogin()
       await retryRejection
+    } finally {
+      vi.doUnmock('node:child_process')
+      vi.doUnmock('../codex-cli/command')
+    }
+  })
+
+  it('refuses to cancel a sign-in that already wrote credentials, and keeps the account', async () => {
+    const { service, children, loginHomes } = await createServiceWithHangingLogin()
+    try {
+      const pending = service.addAccount()
+      await vi.waitUntil(() => children.length === 1)
+
+      // The browser half of the OAuth flow finishes while the CLI lingers.
+      writeFileSync(
+        join(loginHomes[0], 'auth.json'),
+        createCodexAuthJson('user@example.com', 'provider-account-1', 'refresh-token'),
+        'utf-8'
+      )
+
+      // Why: cancelling here would send the rollback at a home that just
+      // authenticated. There is nothing left to cancel.
+      expect(service.cancelPendingLogin()).toBe(false)
+      expect(children[0].kill).not.toHaveBeenCalled()
+
+      children[0].emit('close', 0)
+      const accounts = await pending
+      expect(accounts.accounts.map((account) => account.email)).toEqual(['user@example.com'])
+      expect(existsSync(join(loginHomes[0], 'auth.json'))).toBe(true)
     } finally {
       vi.doUnmock('node:child_process')
       vi.doUnmock('../codex-cli/command')

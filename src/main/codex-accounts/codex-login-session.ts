@@ -210,7 +210,10 @@ async function runCodexLoginProcess(
     }
 
     cancellation.setSpawnedCancel(() => {
-      if (settled) {
+      // Why: once codex has written new credential bytes the sign-in already
+      // succeeded, and rejecting here would send the caller's rollback at the
+      // home it just authenticated. Nothing left to cancel — let it settle.
+      if (settled || loginAuthChanged(initialAuthSnapshot, readLoginAuthSnapshot(authJsonPath))) {
         return false
       }
       dependencies.killProcessTree(child, spawnConfig.interactiveLogin)
