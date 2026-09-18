@@ -62,19 +62,38 @@ const HOST_COMPONENT_NAMES = new Set([
   'View'
 ])
 
-const HEAD_MAIN_HOOK_SHA256 = 'c7a1bbc0588a5d27797bbab13168e76eb20200288921fdc3347632c2b4afd0ae'
-const HEAD_HOOK_BINDING_SHA256 = '06edf1a4314eba41b1d3e1cb67b0cfab2a936aef7d127c5dc48e789c9adc6c8f'
+const HEAD_MAIN_HOOK_SHA256 = '1b436d21f48e4d7b316178ba9eb7d8f0d3801ffd4e42b6b8987adb1cfcbac570'
+const HEAD_HOOK_BINDING_SHA256 = '5b324d661574950c24c47ad9675afc40f34bf3d6dc0ea7b81a469cf708803dc8'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   '2a9e4825df007f6ef53b81aa5004991d6318eee7507b44d625c07e630be432eb'
 // Pins that no callback body in the route changed unnoticed. Body text, not behaviour: the sends
 // and repo reads inside them now name their `RpcOperation` instead of the raw `sendRequest` port.
-const HEAD_CALLBACK_BODY_SHA256 = 'bacd826b9fc4f16ddd052382787dad76cac1b962f7fdf6deb8c767e9fc8f09db'
-const HEAD_EFFECT_SHA256 = '73d80845e0a4b6363cfb4bb55551af97965b1f676b97adf0b2a8504219b9a501'
+// Refreshed in step 6 for the gesture flush, whose `terminal.send` became `terminalInputSend` and
+// whose accepted-check became that operation's own verdict, then again when that check was spelled
+// `=== true` to match the other four sites reading the same verdict. Refreshed in step 7 for the
+// reply casts the checked readers made unnecessary — the markdown tab doc, the worktree record's
+// `diffComments` and the browser tab's page id are typed by their schemas now. Refreshed once more
+// on the merge, for the display-mode toggle whose send became `terminalDisplayModeSet`. Refreshed
+// for the files domain's step 7, which retired the markdown disk fallback's `{ content, truncated,
+// byteLength }` cast: the preview reader checks the content and salvages the flag, so `readMarkdownTab`
+// reads `fallback.value` directly. The dictation-mode refresh is main's own body again — it forwards
+// whatever mode the reply carried, so an absent one leaves the mic as inert as main left it.
+const HEAD_CALLBACK_BODY_SHA256 = 'ceba525103ccac47df766063d58593ba083d59785f86257d849e355669ed47ae'
+// Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
+// the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
+// again when the reporter took the reply and interpreted it itself, retiring the hand-built
+// refusal the timer site passed when it had no reply at all.
+const HEAD_EFFECT_SHA256 = '812aaa9f5abf25dd5229f65231900825b2fd38d5d238b511f3fc2edf4ae31a47'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 // Same pin for the 12 bodies that sit in nested functions rather than callbacks, moved by the same
-// rewrite of those send and read expressions. Count unchanged.
+// rewrite of those send and read expressions. Count unchanged. Refreshed again in step 6 for
+// `handleClearTerminal`, whose send became `terminalBufferClear`, in step 7 for the browser tab
+// create, whose `{ browserPageId?: string }` cast its schema now carries, and once more for
+// `handleCreateTerminal`, whose send became `sessionTabCreateTerminal` and whose `response.ok`
+// branch became that operation's own throw-the-host-message acceptance. Refreshed for negotiated
+// optimistic placement, which defers to legacy host snapshots when ownership paths disagree.
 const HEAD_NESTED_FUNCTION_SHA256 =
-  '258930d2955a3689f2ae2a25392a75fd294513ad141bc6fbf5b7d9bafccf374e'
+  '923b5ea7fe3330cbd98213b72736bf1f653115ddb5492cb8eb8306d8ca4f28e8'
 const HEAD_NATIVE_REGISTRATION_SHA256 =
   'cab85e4e4a3f43289ba93ddea9ccce57aea83e0bf14fd1620a965aad0c1cb49e'
 const HEAD_NATIVE_REMOVAL_SHA256 =
@@ -82,8 +101,12 @@ const HEAD_NATIVE_REMOVAL_SHA256 =
 const HEAD_TIMER_CREATION_SHA256 =
   '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
 const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
+// Six method literals fewer than before step 6: `terminal.send` and `terminal.clearBuffer` went
+// first, then `worktree.activate` twice, `session.tabs.createTerminal` and
+// `terminal.setDisplayMode`. Each is now fixed at its operation's definition instead of being
+// spelled at the call site.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '0c713141a9e8b75d1435ffa6cc5f446b72e3316b5b553a4f3bb8f767831173b8'
+  'a5496f14589916b027334a236630720b39eb0360d91538d212b408c1f61bb523'
 const HEAD_HOST_JSX_SHA256 = '390405926b1695fa3a33686f0bc192b432f5468d8576499d7cafbb4922defbb5'
 const HEAD_LEAF_JSX_SHA256 = '21dba981875e173f692590bf910d60964660c5f4cbb79f3a377c7e54f6a1f016'
 const HEAD_STYLE_REFERENCE_SHA256 =
@@ -476,7 +499,7 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(269)
+    expect(main.hooks).toHaveLength(270)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
     expect(main.callbacks).toHaveLength(77)
@@ -521,7 +544,7 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(537)
+    expect(strings).toHaveLength(531)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)
