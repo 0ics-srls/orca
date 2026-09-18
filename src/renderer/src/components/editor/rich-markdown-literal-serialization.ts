@@ -320,7 +320,9 @@ function blockHasEscapedCharacters(block: ProseMirrorNode): boolean {
 function blockHasInlineMath(block: ProseMirrorNode): boolean {
   let found = false
   block.descendants((node) => {
-    if (node.type.name === 'inlineMath') found = true
+    if (node.type.name === 'inlineMath') {
+      found = true
+    }
   })
   return found
 }
