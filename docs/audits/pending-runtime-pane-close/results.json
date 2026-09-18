@@ -6,8 +6,8 @@
       "after": "f52f4b50d94e71506921788e3b49db547dbd879569d80151429adaeaa5865571"
     },
     "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts": {
-      "before": "22b379ff8b5277841ec4f701ed45206567266029aed8d8e0876ee4cc77d12c1b",
-      "after": "eeef3c514c2b74ee7c563a2679a71c880277728ed6058b838983fae08fdd642a"
+      "before": "bbfeb2385fd120a7a1407d043011fb689b5c2b652c31150de44061f1edb76a7b",
+      "after": "d9f0c08d82e70180f4e3c28ca33815314c580ba59c65cb3c5004079b56c3f227"
     },
     "src/renderer/src/runtime/runtime-rpc-client.ts": {
       "before": "d0ae689153ba0d972ba7a10484c2024bf9fd08c8628bd43009396aa0f653058e",
