@@ -28,11 +28,16 @@ export const WORKTREE_OWNER_UNREACHABLE_ERROR =
 export const WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE = 'selector_not_found'
 
 /**
- * Terminal message once the selector-not-found retry budget is spent. Truthful
- * about what is known (the host could not resolve the workspace) and what is
- * not (whether it still exists); Retry starts a fresh budget, Close is the
- * user's call so an unsaved draft is never discarded on the host's behalf.
+ * Client-side sentinel stored on `loadErrorCode` once the selector-not-found retry
+ * budget is spent. The comparison key is deliberately not the display text, so
+ * localizing the message can never break the terminal-state check. Truthful about
+ * what is known (the host could not resolve the workspace) and what is not (whether
+ * it still exists); Retry starts a fresh budget, Close is the user's call so an
+ * unsaved draft is never discarded on the host's behalf (#21041).
  */
+export const WORKTREE_HOST_UNRESOLVED_CODE = 'worktree_host_unresolved'
+
+/** English fallback for `loadError` alongside the code above; the error view localizes it by code. */
 export const WORKTREE_HOST_UNRESOLVED_ERROR =
   "The host couldn't find this file's workspace. It may have been removed, or the host may still be scanning. Retry, or close the tab."
 

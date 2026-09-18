@@ -3,6 +3,7 @@ import type { OpenFile } from '@/store/slices/editor'
 import { hasRuntimeRpcErrorCode } from '../../../../shared/runtime-rpc-error-code'
 import {
   WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE,
+  WORKTREE_HOST_UNRESOLVED_CODE,
   WORKTREE_HOST_UNRESOLVED_ERROR,
   WORKTREE_OWNER_NOT_READY_ERROR,
   WORKTREE_OWNER_UNREACHABLE_ERROR,
@@ -25,7 +26,7 @@ function isOwnerNotReadyError(message: string): boolean {
 // Why the shared matcher: the token may arrive on `.code` with prose on the message, as
 // the bare message, or transport-wrapped ("…: selector_not_found"); a message compare
 // alone would strand the first shape on raw text with no way out (#21041).
-function isHostSelectorNotFoundError(
+export function isHostSelectorNotFoundError(
   failure: Pick<FileContent, 'loadError' | 'loadErrorCode'>
 ): boolean {
   return hasRuntimeRpcErrorCode(
@@ -48,10 +49,10 @@ type UseEditorPanelFileLoadRetryParams = {
   setFileContents: Dispatch<SetStateAction<Record<string, FileContent>>>
 }
 
-export function shouldRetryFileLoadError(message: string): boolean {
+export function shouldRetryFileLoadError(message: string, code?: string): boolean {
   // Terminal: a retry budget is spent; only an explicit Retry should restart it,
   // never the automatic backoff.
-  if (message === WORKTREE_OWNER_UNREACHABLE_ERROR || message === WORKTREE_HOST_UNRESOLVED_ERROR) {
+  if (message === WORKTREE_OWNER_UNREACHABLE_ERROR || code === WORKTREE_HOST_UNRESOLVED_CODE) {
     return false
   }
   const lower = message.toLowerCase()
@@ -83,7 +84,7 @@ export function useEditorPanelFileLoadRetry({
     if (
       !activeFileLoadRetryId ||
       !activeFileLoadError ||
-      !shouldRetryFileLoadError(activeFileLoadError)
+      !shouldRetryFileLoadError(activeFileLoadError, activeFileLoadErrorCode)
     ) {
       return
     }
@@ -99,22 +100,25 @@ export function useEditorPanelFileLoadRetry({
       // retrying; Retry starts a fresh budget. selector_not_found is UNKNOWN, not
       // absence, so the tab stays open: closing is the user's call, which is also
       // what keeps an unsaved draft from being discarded on a resolver blip.
-      const terminalError = ownerNotReady
-        ? WORKTREE_OWNER_UNREACHABLE_ERROR
+      const terminalFailure: Pick<FileContent, 'loadError' | 'loadErrorCode'> | null = ownerNotReady
+        ? { loadError: WORKTREE_OWNER_UNREACHABLE_ERROR }
         : isHostSelectorNotFoundError({
               loadError: activeFileLoadError,
               loadErrorCode: activeFileLoadErrorCode
             })
-          ? WORKTREE_HOST_UNRESOLVED_ERROR
+          ? {
+              loadError: WORKTREE_HOST_UNRESOLVED_ERROR,
+              loadErrorCode: WORKTREE_HOST_UNRESOLVED_CODE
+            }
           : null
-      if (terminalError) {
+      if (terminalFailure) {
         setFileContents((prev) => {
           if (prev[activeFileLoadRetryId]?.loadError !== activeFileLoadError) {
             return prev
           }
           return {
             ...prev,
-            [activeFileLoadRetryId]: { content: '', isBinary: false, loadError: terminalError }
+            [activeFileLoadRetryId]: { content: '', isBinary: false, ...terminalFailure }
           }
         })
       }

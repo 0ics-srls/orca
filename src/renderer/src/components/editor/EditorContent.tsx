@@ -189,6 +189,7 @@ export function EditorContent({
       return (
         <EditorFileLoadErrorView
           message={fileContent.loadError}
+          code={fileContent.loadErrorCode}
           onRetry={() => reloadContent(activeFile)}
           onClose={() => requestEditorFileClose(activeFile.id)}
         />

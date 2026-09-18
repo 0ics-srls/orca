@@ -2,6 +2,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EditorFileLoadErrorView } from './EditorFileLoadErrorView'
+import {
+  WORKTREE_HOST_UNRESOLVED_CODE,
+  WORKTREE_HOST_UNRESOLVED_ERROR
+} from './editor-panel-content-types'
 
 describe('EditorFileLoadErrorView', () => {
   afterEach(cleanup)
@@ -28,5 +32,20 @@ describe('EditorFileLoadErrorView', () => {
 
     screen.getByRole('button', { name: 'Retry' })
     expect(screen.queryByRole('button', { name: 'Close tab' })).toBeNull()
+  })
+
+  it('localizes the host-unresolved state by its sentinel code, not by the stored text', () => {
+    // Why: the stored `loadError` is an English fallback; the code is what selects the
+    // localized copy, so a translated catalog cannot desynchronize from the comparison.
+    render(
+      <EditorFileLoadErrorView
+        message="stored fallback text"
+        code={WORKTREE_HOST_UNRESOLVED_CODE}
+        onRetry={vi.fn()}
+      />
+    )
+
+    screen.getByText(WORKTREE_HOST_UNRESOLVED_ERROR)
+    expect(screen.queryByText('stored fallback text')).toBeNull()
   })
 })

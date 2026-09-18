@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import type { OpenFile } from '@/store/slices/editor'
 import {
   WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE,
+  WORKTREE_HOST_UNRESOLVED_CODE,
   WORKTREE_HOST_UNRESOLVED_ERROR,
   WORKTREE_OWNER_NOT_READY_ERROR,
   WORKTREE_OWNER_UNREACHABLE_ERROR,
@@ -13,6 +14,7 @@ import {
 } from './editor-panel-content-types'
 import {
   FILE_LOAD_RETRY_DELAYS_MS,
+  isHostSelectorNotFoundError,
   OWNER_NOT_READY_RETRY_DELAY_MS,
   OWNER_NOT_READY_RETRY_LIMIT,
   shouldRetryFileLoadError,
@@ -293,10 +295,47 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
     vi.useRealTimers()
   })
 
-  it('retries the raw resolver code but never the terminal message', () => {
+  it('retries the raw resolver code but never the terminal sentinel', () => {
     expect(shouldRetryFileLoadError(WORKTREE_HOST_SELECTOR_NOT_FOUND_CODE)).toBe(true)
     expect(shouldRetryFileLoadError('Selector not found')).toBe(true)
-    expect(shouldRetryFileLoadError(WORKTREE_HOST_UNRESOLVED_ERROR)).toBe(false)
+    expect(
+      shouldRetryFileLoadError(WORKTREE_HOST_UNRESOLVED_ERROR, WORKTREE_HOST_UNRESOLVED_CODE)
+    ).toBe(false)
+    // Why: the sentinel is the code, so a localized or reworded message stays terminal.
+    expect(shouldRetryFileLoadError('texto localizado', WORKTREE_HOST_UNRESOLVED_CODE)).toBe(false)
+  })
+
+  it('matches only the exact selector_not_found token', () => {
+    expect(isHostSelectorNotFoundError({ loadError: 'selector_not_found' })).toBe(true)
+    expect(
+      isHostSelectorNotFoundError({
+        loadError: 'Selector not found',
+        loadErrorCode: 'selector_not_found'
+      })
+    ).toBe(true)
+    // Transport-wrapped token after a message boundary (shared matcher contract).
+    expect(
+      isHostSelectorNotFoundError({ loadError: 'relay call failed: selector_not_found\n' })
+    ).toBe(true)
+    // Near misses: not the defined token, must not classify.
+    expect(isHostSelectorNotFoundError({ loadError: 'Selector_Not_Found' })).toBe(false)
+    expect(isHostSelectorNotFoundError({ loadError: 'SELECTOR_NOT_FOUND' })).toBe(false)
+    expect(isHostSelectorNotFoundError({ loadError: 'selector_not_found_v2' })).toBe(false)
+    expect(isHostSelectorNotFoundError({ loadError: 'the selector_not_found branch ran' })).toBe(
+      false
+    )
+    expect(
+      isHostSelectorNotFoundError({
+        loadError: 'Selector not found',
+        loadErrorCode: 'Selector_Not_Found'
+      })
+    ).toBe(false)
+    expect(
+      isHostSelectorNotFoundError({
+        loadError: 'Selector not found',
+        loadErrorCode: 'tab_not_found'
+      })
+    ).toBe(false)
   })
 
   // Why both shapes: a host may put the bare code on the message, or the code on `.code`
@@ -358,6 +397,7 @@ describe('useEditorPanelFileLoadRetry — selector_not_found bounding (#21041)',
       // tab is still there for the user to retry or close.
       expect(loadFileContent).toHaveBeenCalledTimes(FILE_LOAD_RETRY_DELAYS_MS.length)
       expect(fileContents[file.id]?.loadError).toBe(WORKTREE_HOST_UNRESOLVED_ERROR)
+      expect(fileContents[file.id]?.loadErrorCode).toBe(WORKTREE_HOST_UNRESOLVED_CODE)
 
       // Terminal: the message is not auto-retried.
       act(() => {

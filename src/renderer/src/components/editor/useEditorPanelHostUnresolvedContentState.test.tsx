@@ -40,7 +40,10 @@ vi.mock('@/lib/runtime-workspace-file-route', () => ({
 vi.mock('@/store', () => ({ useAppStore: { getState: mocks.getState } }))
 
 import { RuntimeRpcCallError } from '@/runtime/runtime-rpc-result'
-import { WORKTREE_HOST_UNRESOLVED_ERROR } from './editor-panel-content-types'
+import {
+  WORKTREE_HOST_UNRESOLVED_CODE,
+  WORKTREE_HOST_UNRESOLVED_ERROR
+} from './editor-panel-content-types'
 import { useEditorPanelContentState } from './useEditorPanelContentState'
 import { FILE_LOAD_RETRY_DELAYS_MS } from './useEditorPanelFileLoadRetry'
 
@@ -163,6 +166,7 @@ describe('useEditorPanelContentState — host cannot resolve a mirrored file (#2
     const expectedReads = 1 + FILE_LOAD_RETRY_DELAYS_MS.length
     expect(mocks.readRuntimeFileContent).toHaveBeenCalledTimes(expectedReads)
     expect(latestFileContents[activeFile.id]?.loadError).toBe(WORKTREE_HOST_UNRESOLVED_ERROR)
+    expect(latestFileContents[activeFile.id]?.loadErrorCode).toBe(WORKTREE_HOST_UNRESOLVED_CODE)
 
     // Terminal: no more reads, still no eviction.
     await advanceTimers(60_000)
