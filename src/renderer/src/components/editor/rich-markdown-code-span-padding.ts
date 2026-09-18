@@ -1,9 +1,5 @@
 import { Extension } from '@tiptap/core'
 
-// Why: a private-use code point cannot appear in a markdown document, so it can stand
-// in for padding while the mark-boundary walk runs and be restored afterwards.
-const PADDING_PLACEHOLDER = String.fromCharCode(0xe000)
-
 type MarkdownNodeLike = {
   type?: string
   text?: string
@@ -32,30 +28,39 @@ function hasCodeMark(node: MarkdownNodeLike): boolean {
  * which is right for emphasis (`** text **` is not emphasis) and wrong for a code
  * span, where CommonMark strips one pad on render and the source keeps its bytes.
  */
-export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): MarkdownNodeLike[] {
+function paddingPlaceholder(nodes: MarkdownNodeLike[]): string {
+  const source = JSON.stringify(nodes)
+  let placeholder = '\uE000'
+  while (source.includes(placeholder)) {
+    placeholder += '\uE000'
+  }
+  return placeholder
+}
+
+export function maskCodeSpanPadding(
+  nodes: MarkdownNodeLike[],
+  placeholder = paddingPlaceholder(nodes)
+): MarkdownNodeLike[] {
   return nodes.map((node) => {
     if (node?.type !== 'text' || !hasCodeMark(node)) {
       return node
     }
     const text = node.text ?? ''
     const leading = text.match(/^(\s+)/)?.[1] ?? ''
-    const trailing = text.match(/(\s+)$/)?.[1] ?? ''
+    const trailing = text.slice(leading.length).match(/(\s+)$/)?.[1] ?? ''
     if (!leading && !trailing) {
       return node
     }
     const body = text.slice(leading.length, trailing ? text.length - trailing.length : text.length)
     return {
       ...node,
-      text:
-        PADDING_PLACEHOLDER.repeat(leading.length) +
-        body +
-        PADDING_PLACEHOLDER.repeat(trailing.length)
+      text: placeholder.repeat(leading.length) + body + placeholder.repeat(trailing.length)
     }
   })
 }
 
-export function restoreCodeSpanPadding(markdown: string): string {
-  return markdown.split(PADDING_PLACEHOLDER).join(' ')
+export function restoreCodeSpanPadding(markdown: string, placeholder = '\uE000'): string {
+  return markdown.split(placeholder).join(' ')
 }
 
 /**
@@ -82,8 +87,9 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
       nodes: MarkdownNodeLike[],
       ...rest: unknown[]
     ) {
-      const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? []), ...rest)
-      return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered) : rendered
+      const placeholder = paddingPlaceholder(nodes ?? [])
+      const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? [], placeholder), ...rest)
+      return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered, placeholder) : rendered
     }
   }
 })

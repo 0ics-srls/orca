@@ -320,10 +320,10 @@ describe('getMarkdownRichModeUnsupportedMessage', () => {
       ).toBeNull()
     })
 
-    it('conservatively blocks a pre-filter match in a document past the parse-size guard', () => {
+    it('does not infer a reference definition from document size', () => {
       const content = `${'a'.repeat(50_001)}\n[Bug]: text with spaces\n`
 
-      expect(getMarkdownRichModeUnsupportedMessage(content)).not.toBeNull()
+      expect(getMarkdownRichModeUnsupportedMessage(content)).toBeNull()
     })
 
     it('still parses to confirm a pre-filter match at or under the parse-size guard', () => {

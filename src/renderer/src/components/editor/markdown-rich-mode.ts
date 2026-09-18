@@ -214,7 +214,14 @@ function hasLinkReferenceDefinition(content: string): boolean {
     return false
   }
   if (commentStripped.length > 50_000) {
-    return true
+    // Probe candidate paragraphs separately; document size alone is not syntax evidence.
+    return commentStripped
+      .split(/\r?\n[ \t]*\r?\n/)
+      .some(
+        (block) =>
+          /^[ \t>*+\-\d.)]*\[[^\]]+\]:/m.test(block) &&
+          containsDefinitionNode(linkReferenceDefinitionProcessor.parse(block))
+      )
   }
   const tree = linkReferenceDefinitionProcessor.parse(commentStripped)
   return containsDefinitionNode(tree)

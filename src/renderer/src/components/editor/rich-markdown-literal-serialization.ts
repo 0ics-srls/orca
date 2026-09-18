@@ -6,7 +6,7 @@ import { RICH_MARKDOWN_ESCAPED_CHARACTER_MARK } from './rich-markdown-escaped-ch
 
 const DOLLAR_SKIP_TYPES = new Set(['inlineMath', 'rawMarkdownHtmlInline'])
 
-const CHEAP_NEEDS_WORK = /\$|\||\\[&<]|\\[[\]]|^( {0,3})(#|-|\d+\.)( |$)/m
+const CHEAP_NEEDS_WORK = /\$|\||\\[[\]]|^( {0,3})(#|[+-]|\d+\.)( |$)/m
 const REF_DEF = /^ {0,3}\[[^\n]*\]:/m
 
 type BlockInfo = { block: ProseMirrorNode; inTableCell: boolean }
@@ -80,7 +80,7 @@ function escapeLineLeading(markdown: string): string {
   // writes paragraph text "1." and tests assert getMarkdown() === '1.\n\n'.
   return markdown
     .replace(/^( {0,3})#(?= |$)/gm, '$1\\#')
-    .replace(/^( {0,3})-(?= )/gm, '$1\\-')
+    .replace(/^( {0,3})([+-])(?= )/gm, '$1\\$2')
     .replace(/^( {0,3})(\d+)\.(?= )/gm, '$1$2\\.')
 }
 

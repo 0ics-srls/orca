@@ -45,6 +45,8 @@ describe('code span padding round trip', () => {
     ['Read `Anexo v2.docx ` and write up.'],
     ['Read ` Anexo v2.docx` and write up.'],
     ['Plain `code` here.'],
+    ['Authored \uE000\uE001\uE002\uE003 and ` padded` text'],
+    ['`a\uE000b` and ` padded`'],
     ['**bold** and `code` and *it*'],
     ['`a` and `b`'],
     ['[`label`](https://example.com)'],

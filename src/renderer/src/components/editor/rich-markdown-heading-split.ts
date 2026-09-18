@@ -31,6 +31,11 @@ export function splitRichMarkdownHeading(editor: Editor): boolean {
   if (!empty || $from.parent.type.name !== 'heading') {
     return false
   }
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    if (['tableCell', 'tableHeader'].includes($from.node(depth).type.name)) {
+      return false
+    }
+  }
   if ($from.parentOffset === 0 || $from.parentOffset === $from.parent.content.size) {
     return false
   }

@@ -100,7 +100,9 @@ describe('getEditorPanelRenderModel rich-mode fallback toggle', () => {
 
   it('offers Preview when Rich view classifies live and this content falls back', () => {
     const model = renderModel({
-      editorDrafts: { '/repo/README.md': '[reference]: https://example.com' }
+      fileContents: {
+        '/repo/README.md': textContent({ content: '[reference]: https://example.com' })
+      }
     })
 
     expect(model.availableEditorToggleModes).toEqual(['source', 'rich', 'preview', 'changes'])
@@ -300,4 +302,12 @@ describe('getEditorPanelRenderModel markdown export affordance', () => {
       }).canExportMarkdownToPdf
     ).toBe(false)
   })
+})
+
+it('hides disk preview while a fallback draft is unsaved', () => {
+  const model = renderModel({
+    editorDrafts: { '/repo/README.md': '[reference]: https://example.com' }
+  })
+  expect(model.availableEditorToggleModes).not.toContain('preview')
+  expect(model.canOpenPreviewToSide).toBe(false)
 })
