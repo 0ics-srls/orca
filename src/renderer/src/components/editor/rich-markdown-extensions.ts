@@ -60,17 +60,28 @@ const RichMarkdownLink = Link.extend({
 const INLINE_MATH_PATTERN = /^\$(?![\s$])((?:\\[\s\S]|[^$\\])*?)(?<!\s)\$(?!\d)/
 const RichMarkdownInlineMath = InlineMath.extend({
   markdownTokenizer: {
-    name: 'inlineMath', level: 'inline', start: (src: string) => src.indexOf('$'),
-    tokenize: (src: string) => { const match = src.match(INLINE_MATH_PATTERN); if (!match) return undefined; return { type: 'inlineMath', raw: match[0], latex: match[1] } }
+    name: 'inlineMath',
+    level: 'inline',
+    start: (src: string) => src.indexOf('$'),
+    tokenize: (src: string) => {
+      const match = src.match(INLINE_MATH_PATTERN)
+      if (!match) return undefined
+      return { type: 'inlineMath', raw: match[0], latex: match[1] }
+    }
   }
 })
 const BLOCK_MATH_START_PATTERN = /\n[ \t]*\$\$/
 const BLOCK_MATH_PATTERN = /^[ \t]*\$\$((?:(?!\$\$)[\s\S])+?)\$\$/
 const RichMarkdownBlockMath = BlockMath.extend({
   markdownTokenizer: {
-    name: 'blockMath', level: 'block',
+    name: 'blockMath',
+    level: 'block',
     start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
-    tokenize: (src: string) => { const match = src.match(BLOCK_MATH_PATTERN); if (!match) return undefined; return { type: 'blockMath', raw: match[0], latex: match[1].trim() } }
+    tokenize: (src: string) => {
+      const match = src.match(BLOCK_MATH_PATTERN)
+      if (!match) return undefined
+      return { type: 'blockMath', raw: match[0], latex: match[1].trim() }
+    }
   }
 })
 const RichMarkdownBlockMath = BlockMath.extend({
