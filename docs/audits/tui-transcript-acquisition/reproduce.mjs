@@ -123,6 +123,7 @@ export default {...base, test: {...base.test, include: ${JSON.stringify(includes
     before.failed === 6 &&
     before.passed === 1 &&
     before.passed + before.failed === 7 &&
+    after.exitCode === 0 &&
     after.passed === 7 &&
     after.failed === 0
   console.log(

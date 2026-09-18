@@ -3,11 +3,15 @@
   "sourceHashes": {
     "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts": {
       "before": "c9bb6fbf8ca3fc3fad815f35a21c73e392dd6be267335984deb0b5c9319210f1",
-      "after": "89e1b6769dafde03be5de24f8a2e08b48a490527cab7568b9a5ec4a97a0593ea"
+      "after": "99204872e4432ea841be493012c23b00b67fedabe07a83332c995dec632839cc"
+    },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart-tui.ts": {
+      "before": "fcfcbd821816f33d1cf8bb71e6ecb40b03d4139affe8629f5baaa0a45f423921",
+      "after": "58a1b23f9390234e39bdb9681e43e9b32fd4d741a4242101a8d25e85a7001c6e"
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts": {
       "before": "8f2dc4f31fd2f96f3e9393afcc0826b712591c5d3bfa80965113e63be65f69ab",
-      "after": "03b76c1e3ba2389154f3fba4971fc17fbf3ba4ccde471f309e80f67134091d90"
+      "after": "73461453fba97bd0630471a224fc718ac2ce497c18fc95afb2ee264e7e42f791"
     },
     "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts": {
       "before": "36085d52e44152c7d8906ac2691242e8e31e54511fc908510c0d3aee10615973",

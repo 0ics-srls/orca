@@ -95,6 +95,7 @@ export async function handoffStructuredSessionToTui(
         processIdentityCommitted = true
       }
     })
+    prepared?.throwIfAborted()
     if (!processIdentityCommitted) {
       await deps.store.commitProcessIdentity({
         sessionId,
@@ -111,16 +112,6 @@ export async function handoffStructuredSessionToTui(
     })
   } catch (error) {
     deps.stopTuiHistoryCatchup?.(sessionId)
-    if (!owner && !processIdentityCommitted && error instanceof StructuredTuiCatchupStoppedError) {
-      await abandonStoredAgentSessionHandoffAttempt(deps.store, {
-        sessionId,
-        expectedFence: record.lease.runtimeFence,
-        operationId,
-        recoverableRuntimeKind: 'native',
-        now: deps.now()
-      })
-      throw error
-    }
     if (!owner && error instanceof StructuredTuiLaunchCleanupError) {
       await markStructuredHandoffManualRecovery(context, sessionId, operationId)
       throw error
@@ -141,6 +132,16 @@ export async function handoffStructuredSessionToTui(
           'The failed terminal launch could not be proven stopped.'
         )
       }
+    }
+    if (error instanceof StructuredTuiCatchupStoppedError && (owner || !processIdentityCommitted)) {
+      await abandonStoredAgentSessionHandoffAttempt(deps.store, {
+        sessionId,
+        expectedFence: record.lease.runtimeFence,
+        operationId,
+        recoverableRuntimeKind: 'native',
+        now: deps.now()
+      })
+      throw error
     }
     await recoverNativeAfterTuiFailure(context, sessionId, operationId)
     throw error

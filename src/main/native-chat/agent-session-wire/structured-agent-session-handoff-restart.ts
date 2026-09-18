@@ -17,6 +17,7 @@ import {
   persistReprovedTuiOwner,
   recoverTuiOwnerOrContinue,
   recoverUnavailableTuiAsNative,
+  startRecoveredTuiCatchup,
   type StructuredAgentSessionRestartAccess
 } from './structured-agent-session-handoff-restart-tui'
 
@@ -59,6 +60,12 @@ export async function restoreStructuredAgentSessionHandoff(
       return
     } catch (error) {
       if (error instanceof StructuredTuiCatchupStoppedError) {
+        if (operationId) {
+          await input.deps.store.recordOperationOutcome({
+            operationId,
+            outcome: { status: 'failed', code: 'agent_session_handoff_failed' }
+          })
+        }
         throw error
       }
       lastError = error
@@ -280,19 +287,6 @@ async function restoreProving(input: RestartAccess, record: AgentSessionRecord):
     now: input.deps.now()
   })
   await continueHandoff(input, stopped)
-}
-
-async function startRecoveredTuiCatchup(
-  input: RestartAccess,
-  record: AgentSessionRecord
-): Promise<void> {
-  const prepared = await input.deps.recoverTuiHistoryCatchup?.(
-    record.sessionId,
-    record.lease.runtimeFence
-  )
-  prepared?.throwIfAborted()
-  await input.deps.activateTuiHistoryCatchup?.(record.sessionId)
-  prepared?.throwIfAborted()
 }
 
 async function continueHandoff(input: RestartAccess, record: AgentSessionRecord): Promise<void> {
