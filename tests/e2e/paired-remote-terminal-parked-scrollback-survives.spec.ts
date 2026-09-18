@@ -382,16 +382,16 @@ const RESTORED_LOCAL_ONLY: ParkRevealOutcome = {
   parkedHome: 'local-only',
   tokenAfterReveal: true
 }
-// Why the reveal is not asserted here: a host without paired parking serves the reattach from its
-// own tail and paints it over whatever the client replayed at mount (apply-reattach-payload clears
-// the screen first), so tokenAfterReveal cannot speak for the client copy on this topology — it
-// was observed false with the copy intact. The retention fix is proven where it acts: the shared
-// layout still holds the bytes after the forced inventory frame (`survivedInventoryFrame` above).
-const FORCE_PARKED_SHARED = {
+// Why tokenAfterReveal is logged and not asserted here: a host without paired parking serves the
+// reattach from its own tail and paints it over whatever the client replayed at mount
+// (apply-reattach-payload clears the screen first), so on this topology it cannot speak for the
+// client copy — it measured false once and true twice with the copy intact. The retention fix is
+// proven where it acts: the shared layout still holds the bytes after the forced inventory frame
+// (`survivedInventoryFrame` above). It is left out of the assertion rather than matched loosely.
+const FORCE_PARKED_SHARED: Omit<ParkRevealOutcome, 'tokenAfterReveal'> = {
   tokenBeforePark: true,
   parked: true,
-  parkedHome: 'shared',
-  tokenAfterReveal: expect.any(Boolean)
+  parkedHome: 'shared'
 }
 
 test.describe('host retains the buffer', () => {
@@ -434,8 +434,11 @@ test.describe('force-park with a host that cannot answer', () => {
     orcaPage
   }, testInfo) => {
     test.setTimeout(600_000)
-    expect(await runScenario(orcaPage, testInfo, 'force-park', 'force')).toEqual(
-      FORCE_PARKED_SHARED
-    )
+    const outcome = await runScenario(orcaPage, testInfo, 'force-park', 'force')
+    expect({
+      tokenBeforePark: outcome.tokenBeforePark,
+      parked: outcome.parked,
+      parkedHome: outcome.parkedHome
+    }).toEqual(FORCE_PARKED_SHARED)
   })
 })
