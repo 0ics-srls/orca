@@ -44,15 +44,21 @@ function indentParagraphContinuations(markdown: string, column: number): string 
 }
 
 function renderOrderedBlocks(lines: string[], width: number): string[] {
-  let insideFence = false
+  let fence: { character: '`' | '~'; length: number } | null = null
   return lines.map((line) => {
     const trimmed = line.trimStart()
-    const isFence = /^(`{3,}|~{3,})/.test(trimmed)
-    if (isFence) {
-      insideFence = !insideFence
+    const match = trimmed.match(/^(`{3,}|~{3,})(.*)$/)
+    if (match) {
+      const character = match[1].startsWith('`') ? '`' : '~'
+      const length = match[1].length
+      const closesFence =
+        fence && fence.character === character && length >= fence.length && match[2].trim() === ''
+      if (closesFence || !fence) {
+        fence = closesFence ? null : { character, length }
+      }
       return line
     }
-    if (insideFence) {
+    if (fence) {
       return line.startsWith(' ') ? line.slice(1) : line
     }
     return line === '' ? line : `${' '.repeat(Math.max(0, width - BASE_INDENT))}${line}`

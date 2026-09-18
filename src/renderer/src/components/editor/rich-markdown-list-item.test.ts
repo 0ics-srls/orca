@@ -51,4 +51,13 @@ describe('ordered list continuation serialization', () => {
     }
     expect(current).toBe('1. one\n   ```\n   code\n   ```\n2. two')
   })
+
+  it('keeps tilde-fenced code with a language stable', () => {
+    const source = '1. one\n\n   ~~~~ts\n   const value = 1\n   ~~~~\n2. two'
+    let current = source
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      current = roundTrip(current)
+    }
+    expect(current).toBe('1. one\n   ```ts\n   const value = 1\n   ```\n2. two')
+  })
 })
