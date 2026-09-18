@@ -4273,7 +4273,7 @@
           "444585cb41": "with data",
           "ecb0cd8a4c": "enabled -",
           "33f7b043d2": "Providers",
-          "60002bb22f": "No local Claude, Codex, or OpenCode usage found yet. The overview will populate after the next agent session writes token logs.",
+          "60002bb22f": "No local Claude, Codex, Devin, or OpenCode usage found yet. The overview will populate after the next agent session writes token logs.",
           "70f36452d4": "Cache share",
           "327603fe8b": "Active days",
           "0eaf937335": "Est. cost",

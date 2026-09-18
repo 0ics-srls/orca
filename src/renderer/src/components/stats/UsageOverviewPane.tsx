@@ -254,7 +254,7 @@ export function UsageOverviewPane(): React.JSX.Element {
               <div className="mt-4 rounded-lg border border-dashed border-border/60 bg-card/30 px-4 py-5 text-sm text-muted-foreground">
                 {translate(
                   'auto.components.stats.UsageOverviewPane.60002bb22f',
-                  'No local Claude, Codex, or OpenCode usage found yet. The overview will populate after the next agent session writes token logs.'
+                  'No local Claude, Codex, Devin, or OpenCode usage found yet. The overview will populate after the next agent session writes token logs.'
                 )}
               </div>
             ) : (
