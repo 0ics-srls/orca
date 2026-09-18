@@ -335,17 +335,73 @@ describe('the restart-resume surface', () => {
   })
 
   // A launch that never read the offer must not answer for it — the flag was off, the first read
-  // failed, the window never mounted. Nothing revealed those sessions, so nothing here can judge
-  // them, and replacing the capsule with this launch's empty list deletes a recovery the user was
-  // never shown.
+  // failed, the window never mounted. NO SESSION IS INDEXED here, which is the whole point: that is
+  // what an unread offer looks like, and re-deriving against it refuses every marker, which is
+  // indistinguishable from deleting a recovery the user was never shown.
   it('leaves a durable offer this launch never claimed intact at teardown', async () => {
-    const { restartResume, live, recorded } = surface({})
+    const { restartResume, live, recorded } = surface({ sessions: new Map() })
 
     restartResume.captureMarkers('quit')
     await restartResume.recordMarkers()
 
     expect(recorded).toEqual([[expect.objectContaining({ sessionId: SESSION })]])
     expect([...live.keys()]).toEqual([SESSION])
+  })
+
+  // Teardown is RETRIED when a phase fails, and its own write-back read must not make the second
+  // attempt look like a launch that had read the offer — that would re-derive against a session map
+  // eviction has already emptied, and answer "nothing is resumable" for every carried marker.
+  it('carries the same unread offer again when teardown is repeated', async () => {
+    const { restartResume, live, recorded } = surface({ sessions: new Map() })
+
+    await restartResume.recordMarkers()
+    await restartResume.recordMarkers()
+
+    expect(recorded.map((entry) => entry.map((marker) => marker.sessionId))).toEqual([
+      [SESSION],
+      [SESSION]
+    ])
+    expect([...live.keys()]).toEqual([SESSION])
+  })
+
+  // A take that failed is not an empty offer. The markers are still on disk, unread and unknowable,
+  // and an empty write over them deletes exactly the recovery nobody was shown.
+  it('writes nothing over a durable offer it could not read', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { restartResume, live, recorded } = surface({ clearFails: true, sessions: new Map() })
+
+      restartResume.captureMarkers('quit')
+      await restartResume.recordMarkers()
+
+      expect(recorded).toEqual([])
+      expect([...live.keys()]).toEqual([SESSION])
+    } finally {
+      warning.mockRestore()
+    }
+  })
+
+  // ...but a witness from THIS teardown still has to reach disk, whatever the take did.
+  it('still records this teardown witness after a take it could not read', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { restartResume, recorded } = surface({
+        clearFails: true,
+        sessions: new Map([
+          [SESSION, { journal: journal([turnItem('turn-2', 'running')]), hasProviderChild: true }]
+        ])
+      })
+
+      restartResume.captureMarkers('update')
+      restartResume.confirmStoppedMarker(SESSION)
+      await restartResume.recordMarkers()
+
+      expect(recorded[0]).toMatchObject([
+        { sessionId: SESSION, work: { kind: 'turn', id: 'turn-2' } }
+      ])
+    } finally {
+      warning.mockRestore()
+    }
   })
 
   it('persists a snoozed claimed offer across the next teardown', async () => {

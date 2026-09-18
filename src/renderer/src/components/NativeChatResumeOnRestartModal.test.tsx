@@ -87,8 +87,7 @@ afterEach(() => {
 
 it.each([
   ['Reconnect 1', 'agentSession.restartResume'],
-  ['Reconnect and continue', 'agentSession.restartContinue'],
-  ['Not now', 'agentSession.restartResumableDismiss']
+  ['Reconnect and continue', 'agentSession.restartContinue']
 ])('keeps next-launch preference out of the current %s action', async (label, method) => {
   const action = Promise.withResolvers<unknown>()
   rpc.mockImplementation(async (_target, calledMethod) => {
@@ -102,30 +101,30 @@ it.each([
   await act(async () => checkbox(2).click())
   await act(async () => button(label).click())
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
-  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual(
-    method === 'agentSession.restartResumableDismiss'
-      ? [['agentSession.restartResumable', undefined]]
-      : [
-          ['agentSession.restartResumable', undefined],
-          [method, { sessionIds: ['a'] }]
-        ]
-  )
+  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+    ['agentSession.restartResumable', undefined],
+    [method, { sessionIds: ['a'] }]
+  ])
   await act(async () =>
     action.resolve({
       results: [{ sessionId: 'a', outcome: 'resumed' }],
       continued: [{ sessionId: 'a', outcome: 'continued' }]
     })
   )
-  expect(rpc).toHaveBeenCalledTimes(method === 'agentSession.restartResumableDismiss' ? 1 : 2)
+  expect(rpc).toHaveBeenCalledTimes(2)
 })
 
+// Snoozing saves the preference like every other way out of the dialog, and calls NOTHING: the
+// offer is the host's and stays exactly where it was.
 it('keeps Not now available through the status-bar offer', async () => {
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => checkbox(2).click())
   await act(async () => button('Not now').click())
-  expect(rpc).toHaveBeenCalledTimes(1)
+  expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
+  expect(rpc.mock.calls.map((call) => call[1])).toEqual(['agentSession.restartResumable'])
   expect(offerIds()).toEqual(['a', 'b'])
   expect(document.querySelector('[role="dialog"]')).toBeNull()
 })

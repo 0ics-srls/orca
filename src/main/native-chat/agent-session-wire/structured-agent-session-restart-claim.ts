@@ -23,14 +23,24 @@ export type StructuredAgentSessionRestartClaim = {
   /** What the host still advertises: evidence minus recovery. */
   offered: () => AgentSessionResumeMarker[]
   /**
-   * What teardown must write back, and whether this launch ever claimed it.
+   * What teardown must write back, whether this launch ever READ the offer, and whether the durable
+   * copy could be read at all.
    *
    * `claimed: false` is not "nothing is owed" — the durable copy is still intact and nothing here
    * revealed it, so it is taken now and must be carried forward VERBATIM. Re-deriving it would
    * refuse every marker for want of a journal nobody opened, which is indistinguishable from
-   * deleting an offer the user was never shown.
+   * deleting an offer the user was never shown. Reading it HERE is not reading it: the flag stays
+   * false, so a teardown repeated after a failed one carries the same offer forward again instead
+   * of answering for a session map that has since been emptied.
+   *
+   * `unreadable: true` means the take itself failed. The durable copy is then intact AND unknowable,
+   * so nothing here may answer for it.
    */
-  owed: () => Promise<{ markers: AgentSessionResumeMarker[]; claimed: boolean }>
+  owed: () => Promise<{
+    markers: AgentSessionResumeMarker[]
+    claimed: boolean
+    unreadable: boolean
+  }>
   /** Acted on. In memory, because the durable copy is already gone. */
   spend: (sessionId: string) => boolean
   /** This launch handed the provider back; see the header. */
@@ -47,6 +57,10 @@ export function createStructuredAgentSessionRestartClaim(deps: {
 }): StructuredAgentSessionRestartClaim {
   let claimed: AgentSessionResumeMarker[] | null = null
   let claiming: Promise<void> | undefined
+  /** Anything in this launch LOOKED at the offer. Teardown's own write-back read is not a reader. */
+  let read = false
+  /** The take failed, so an empty `claimed` says nothing about what is still on disk. */
+  let unreadable = false
   const recovered = new Set<string>()
 
   const claim = async (): Promise<AgentSessionResumeMarker[]> => {
@@ -56,6 +70,7 @@ export function createStructuredAgentSessionRestartClaim(deps: {
       } catch {
         console.warn('[structured-agent-session] taking recovery capsule failed')
         claimed = []
+        unreadable = true
       }
     })()
     await claiming
@@ -67,6 +82,7 @@ export function createStructuredAgentSessionRestartClaim(deps: {
 
   return {
     evidence: async () => {
+      read = true
       for (const marker of await claim()) {
         if (!deps.isOpen(marker.sessionId)) {
           await deps.open(marker.sessionId).catch(() => null)
@@ -76,9 +92,9 @@ export function createStructuredAgentSessionRestartClaim(deps: {
     },
     offered,
     owed: async () => {
-      const claimed = claiming !== undefined
+      const readBeforeThisTake = read
       await claim()
-      return { markers: offered(), claimed }
+      return { markers: offered(), claimed: readBeforeThisTake, unreadable }
     },
     spend: (sessionId) => {
       const before = claimed?.length ?? 0
@@ -93,6 +109,7 @@ export function createStructuredAgentSessionRestartClaim(deps: {
       }
     },
     abandon: async () => {
+      read = true
       await claim()
       const spent = offered().length
       claimed = []

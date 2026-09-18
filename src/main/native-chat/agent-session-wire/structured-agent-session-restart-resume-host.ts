@@ -2,23 +2,13 @@
 // still owes is written back during orderly teardown; a crash after take can still lose it.
 
 import { randomUUID } from 'node:crypto'
-import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import type {
   AgentSessionResumeMarker,
   AgentSessionResumeTrigger
 } from '../../../shared/agent-session-resume-marker'
-import {
-  latestStructuredAgentSessionPrompt,
-  latestStructuredAgentSessionUserItem,
-  newestStructuredAgentSessionTurn,
-  projectStructuredAgentSessionStatus
-} from '../../../shared/structured-agent-session-projection'
-import type {
-  AgentJournalMessageItem,
-  AgentJournalRenderItem
-} from '../../../shared/agent-session-journal-types'
+import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionMutationEnvelope,
   AgentSessionMutationResult,
@@ -26,12 +16,9 @@ import type {
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
-import { adapterSupportsRecord } from './structured-agent-session-provider-support'
+import { createStructuredAgentSessionRestartCandidateReader } from './structured-agent-session-restart-candidates'
 import { createStructuredAgentSessionRestartClaim } from './structured-agent-session-restart-claim'
-import {
-  structuredAgentSessionResumableSet,
-  type StructuredAgentSessionResumeCandidate
-} from './structured-agent-session-restart-resume-set'
+import type { StructuredAgentSessionResumeCandidate } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
   StructuredAgentSessionResumeAdmission,
@@ -117,45 +104,14 @@ export function createStructuredAgentSessionRestartResume(
     open: (sessionId) => surfaces.revealSession(sessionId)
   })
 
-  const derive = (
-    markers: readonly AgentSessionResumeMarker[],
-    leaseState: 'must-be-released' | 'may-be-held',
-    providerStopped = false,
-    pendingContinuationId?: string
-  ): StructuredAgentSessionResumeCandidate[] => {
-    const items = new Map<string, AgentJournalRenderItem[]>()
-    const itemsFor = (sessionId: string): AgentJournalRenderItem[] => {
-      let snapshot = items.get(sessionId)
-      if (!snapshot) {
-        snapshot = sessions.get(sessionId)?.journal.snapshot().items ?? []
-        if (pendingContinuationId) {
-          const ownItemId = agentJournalSubmissionKey(pendingContinuationId)
-          snapshot = snapshot.filter((item) => item.itemId !== ownItemId)
-        }
-        items.set(sessionId, snapshot)
-      }
-      return snapshot
-    }
-    return structuredAgentSessionResumableSet({
-      markers,
-      getRecord: deps.store.getRecord,
-      supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
-      waitingOnUser: (sessionId) =>
-        projectStructuredAgentSessionStatus(itemsFor(sessionId)) === 'attention',
-      providerStopped,
-      journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
-      journalSubmission: (sessionId, clientMessageId) =>
-        sessions
-          .get(sessionId)
-          ?.journal.submissions()
-          .find((submission) => submission.clientMessageId === clientMessageId) ?? null,
-      latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
-      latestUserItemId: (sessionId) =>
-        latestStructuredAgentSessionUserItem(itemsFor(sessionId))?.itemId ?? null,
-      now: surfaces.now(),
-      leaseState
-    })
-  }
+  // The predicate's reader, built once: the offer, the click and the write-back all ask it, and a
+  // second copy is how two of them come to disagree about what is resumable.
+  const derive = createStructuredAgentSessionRestartCandidateReader({
+    sessions,
+    getRecord: deps.store.getRecord,
+    adapter: deps.adapter,
+    now: surfaces.now
+  })
 
   const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> => {
     await claim.evidence()
@@ -307,10 +263,18 @@ export function createStructuredAgentSessionRestartResume(
       // capsule instead of just replacing it: those sessions were never revealed, so the predicate
       // has no journal to judge them by and would refuse every one. Answering for an offer nobody
       // read is how it gets deleted unseen, so it carries forward untouched.
+      //
+      // A take that FAILED is the third case. The durable copy is then intact and unknowable, so
+      // only this teardown's own witnesses may go out — and when it has none, writing at all would
+      // delete an offer no one here could even see.
       let carried: AgentSessionResumeMarker[] = []
       try {
         const owed = await claim.owed()
-        if (!owed.claimed) {
+        if (owed.unreadable) {
+          if (confirmedMarkers.size === 0) {
+            return
+          }
+        } else if (!owed.claimed) {
           carried = owed.markers
         } else {
           const stillResumable = new Set(
