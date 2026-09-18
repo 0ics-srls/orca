@@ -45,7 +45,8 @@ export function useFileExplorerNameFilter({
   }, [hasNameFilter])
   const nameFilterFiles = useRuntimeFileListForWorktree({
     enabled: hasNameFilter && !nameFilterQueryTooLarge,
-    worktreeId: activeWorktreeId
+    worktreeId: activeWorktreeId,
+    query: nameFilterQuery
   })
   const nameFilterSource = useMemo(
     () =>
