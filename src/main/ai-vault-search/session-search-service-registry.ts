@@ -53,7 +53,7 @@ export async function searchSessionService(
     ...fields,
     hits: result.hits.map((hit) => redactForTransport(hit, transport)),
     truncated: { ...result.truncated, freshness: result.truncated.freshness || freshness },
-    ...(hostScope ? { resolvedWithin: true as const } : {}),
+    ...(hostScope?.kind === 'resolved' ? { resolvedWithin: true as const } : {}),
     ...(request.debug && debug ? { debug } : {})
   }
 }

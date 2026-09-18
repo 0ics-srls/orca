@@ -90,7 +90,8 @@ describe('AiVaultPanelSearch', () => {
         response: {
           ...response,
           hosts: [
-            { executionHostId: 'local', outcome: 'searched' },
+            // Stale: it resolved the scope and searched, then the index moved.
+            { executionHostId: 'local', outcome: 'stale' },
             { executionHostId: 'ssh:box', outcome: 'scope-unknown' },
             { executionHostId: 'runtime:old', outcome: 'needs-update' }
           ]
@@ -98,7 +99,9 @@ describe('AiVaultPanelSearch', () => {
       })
     )
 
-    expect(screen.getByRole('status').textContent).toBe('Not searched: old (needs an update)')
+    expect(screen.getByRole('status').textContent).toBe(
+      `Not searched: ${getExecutionHostLabel('local')} (index changed) · old (needs an update)`
+    )
   })
 
   it('names the scope when it explains an empty result, because no computer had it', () => {
@@ -111,7 +114,9 @@ describe('AiVaultPanelSearch', () => {
           hits: [],
           hosts: [
             { executionHostId: 'local', outcome: 'scope-unknown' },
-            { executionHostId: 'ssh:box', outcome: 'scope-unknown' }
+            { executionHostId: 'ssh:box', outcome: 'scope-unknown' },
+            // Unreachable explains nothing about the scope, so it does not silence it.
+            { executionHostId: 'runtime:gone', outcome: 'unreachable' }
           ]
         }
       })

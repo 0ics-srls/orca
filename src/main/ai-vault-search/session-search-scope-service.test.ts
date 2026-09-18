@@ -71,6 +71,20 @@ describe('scope identity at the search choke point', () => {
     expect(service.status).not.toHaveBeenCalled()
   })
 
+  it('never acknowledges a scope it could not resolve', async () => {
+    const service = fakeSearchService()
+    setSessionSearchService(service)
+    installSessionSearchScopeCatalogSource(() => CATALOG)
+    // A live index answering `results` under an unknown verdict would otherwise
+    // be acknowledged as scoped, which is the one claim it cannot make.
+    expect(
+      await searchSessionService(
+        { query: 'needle', within: { kind: 'project', projectKey: 'repo:elsewhere' } },
+        'ipc'
+      )
+    ).not.toHaveProperty('resolvedWithin')
+  })
+
   it('says unknown on a host with no catalog at all, such as the relay', async () => {
     const service = fakeSearchService()
     setSessionSearchService(service)
