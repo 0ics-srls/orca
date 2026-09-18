@@ -277,7 +277,8 @@ it('leaves the box as the legacy title filter while local indexing consent is pe
   await debounce()
   expect(searchSessions).not.toHaveBeenCalled()
   expect(result.current.searching).toBe(false)
-  expect(result.current.consentOffer).toBe(true)
+  expect(result.current.queried).toBe(true)
+  expect(result.current.localConsent).toBe(true)
   expect(result.current.loading).toBe(false)
   expect(result.current.sessions).toEqual([])
   unmount()
@@ -294,17 +295,18 @@ it('searches the local index with the same query once consent is on', async () =
     'local'
   )
   expect(result.current.searching).toBe(true)
-  expect(result.current.consentOffer).toBe(false)
+  expect(result.current.queried).toBe(true)
+  expect(result.current.localConsent).toBe(false)
   unmount()
 })
 
-it('offers nothing and searches nothing for a blank query', async () => {
+it('is neither searching nor queried for a blank query', async () => {
   const { result, unmount } = renderHook(() =>
     useAiVaultPanelSearch('   ', ALL_AGENTS, undefined, 'local')
   )
   await debounce()
   expect(searchSessions).not.toHaveBeenCalled()
   expect(result.current.searching).toBe(false)
-  expect(result.current.consentOffer).toBe(false)
+  expect(result.current.queried).toBe(false)
   unmount()
 })

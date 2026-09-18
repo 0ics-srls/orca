@@ -132,7 +132,9 @@ afterEach(cleanup)
 async function typeQuery(text: string) {
   const { default: AiVaultPanel } = await import('./AiVaultPanel')
   render(<AiVaultPanel />)
-  await userEvent.type(screen.getByLabelText('Search sessions'), text)
+  if (text) {
+    await userEvent.type(screen.getByLabelText('Search sessions'), text)
+  }
 }
 
 it('offers indexing above the title-filtered history instead of hiding every session', async () => {
@@ -157,4 +159,16 @@ it('switches to index search with the same query once indexing is enabled', asyn
     expect(searchSessions).toHaveBeenCalledWith(expect.objectContaining({ query: 'foo' }), 'local')
   )
   expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull()
+  // The index answered with no hits, so the title filter's own row must not linger.
+  await waitFor(() => expect(screen.queryByText('Fix the foo pipeline')).toBeNull())
+})
+
+it('shows the whole history and no offer while the box is empty', async () => {
+  await typeQuery('')
+
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull()
+  expect(screen.getByText('Fix the foo pipeline')).toBeTruthy()
+  expect(screen.getByText('Rename the bar widget')).toBeTruthy()
+  expect(searchSessions).not.toHaveBeenCalled()
 })
