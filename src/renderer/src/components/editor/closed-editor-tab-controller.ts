@@ -2,11 +2,7 @@ import type { StoreApi } from 'zustand'
 import type { editor } from 'monaco-editor'
 import type { OpenFile } from '@/store/slices/editor'
 import { editorModelRegistry } from '@/lib/editor-model-registry'
-import {
-  disposeClosedEditorTabs,
-  disposeClosedEditorTabCaches,
-  type ClosedEditorTab
-} from './closed-editor-tab-disposal'
+import { disposeClosedEditorModels, type ClosedEditorTab } from './closed-editor-tab-disposal'
 import type { MonacoModelRegistry, DisposableMonacoModel } from './diff-monaco-model-disposal'
 
 type EditorStore = Pick<StoreApi<{ openFiles: OpenFile[] }>, 'getState' | 'subscribe'>
@@ -120,10 +116,6 @@ export function attachClosedEditorTabCleanup(
       models: ReadonlySet<editor.ITextModel>
     ): void => {
       if (!currentRegistry) {
-        disposeClosedEditorTabCaches(
-          files,
-          (file) => active && generation === flushGeneration && !stillOwned(file)
-        )
         return
       }
       const fencedRegistry: MonacoModelRegistry = {
@@ -140,7 +132,7 @@ export function attachClosedEditorTabCleanup(
             [...models].filter((model) => currentRegistry.editor.getModel(model.uri) === model)
         }
       }
-      disposeClosedEditorTabs(
+      disposeClosedEditorModels(
         fencedRegistry,
         files,
         retainAttachedModel,

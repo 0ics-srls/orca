@@ -48,7 +48,7 @@ it('preserves a shared URI until its final file owner closes', async () => {
   expect(model.isDisposed()).toBe(true)
 })
 
-it('waits beyond the real detach stack and removes its final scroll snapshot', async () => {
+it('waits beyond the real detach stack and preserves its bounded scroll snapshot', async () => {
   const { store, attach, add } = createModelLifetimeFixture()
   const { file, model } = add('attached')
   const detachView = attachModelLifetimeView(model)
@@ -61,7 +61,7 @@ it('waits beyond the real detach stack and removes its final scroll snapshot', a
   expect(model.isDisposed()).toBe(false)
   await Promise.resolve()
   expect(model.isDisposed()).toBe(true)
-  expect(scrollTopCache.has(file.filePath)).toBe(false)
+  expect(scrollTopCache.get(file.filePath)).toBe(42)
 })
 
 it('protects a reopened URI owner from a pending detach callback', async () => {

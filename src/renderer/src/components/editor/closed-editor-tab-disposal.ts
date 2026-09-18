@@ -25,7 +25,7 @@ export type ClosedEditorTab = Pick<OpenFile, 'id' | 'mode' | 'filePath'>
  * doing one per closed tab makes "close all"/worktree-switch quadratic in retained models. Takes
  * the monaco namespace as an argument so it stays testable without importing `monaco-editor`.
  */
-export function disposeClosedEditorTabs(
+export function disposeClosedEditorModels(
   monacoRegistry: MonacoModelRegistry,
   closedFiles: readonly ClosedEditorTab[],
   onAttachedModel?: (model: DisposableMonacoModel, file: ClosedEditorTab) => void,
@@ -69,6 +69,15 @@ export function disposeClosedEditorTabs(
       return file !== undefined && isStillClosed(file)
     }
   )
+}
+
+export function disposeClosedEditorTabs(
+  monacoRegistry: MonacoModelRegistry,
+  closedFiles: readonly ClosedEditorTab[],
+  onAttachedModel?: (model: DisposableMonacoModel, file: ClosedEditorTab) => void,
+  isStillClosed: (file: ClosedEditorTab) => boolean = () => true
+): void {
+  disposeClosedEditorModels(monacoRegistry, closedFiles, onAttachedModel, isStillClosed)
   disposeClosedEditorTabCaches(closedFiles, isStillClosed)
 }
 

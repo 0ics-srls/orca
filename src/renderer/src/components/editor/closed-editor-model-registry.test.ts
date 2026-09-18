@@ -81,7 +81,7 @@ it('releases generated closed diff namespaces after detachment and preserves sib
   expect(live.isDisposed()).toBe(false)
 })
 
-it('retires cold-registry rich, preview and PDF caches while preserving a live sibling', async () => {
+it('preserves bounded cold-registry rich, preview and PDF caches without loading Monaco', async () => {
   const { store, bridge, attach } = createModelLifetimeFixture(false)
   const file = modelLifetimeFile('cold-rich')
   const preview = modelLifetimeFile('cold-preview', 'markdown-preview')
@@ -101,6 +101,16 @@ it('retires cold-registry rich, preview and PDF caches while preserving a live s
   store.getState().closeFile(preview.id)
   await Promise.resolve()
   expect(bridge.get()).toBeNull()
-  expect([...scrollTopCache]).toEqual([[`${sibling.filePath}:rich`, 14]])
-  expect([...pdfViewPositionCache]).toEqual([[`${sibling.filePath}:pdf`, position]])
+  expect([...scrollTopCache]).toEqual([
+    [`${file.filePath}:rich`, 10],
+    [`${file.filePath}::pane`, 11],
+    [`${preview.id}:preview`, 12],
+    [`${preview.id}::pane`, 13],
+    [`${sibling.filePath}:rich`, 14]
+  ])
+  expect([...pdfViewPositionCache]).toEqual([
+    [`${file.filePath}:pdf`, position],
+    [`${file.filePath}::pane:pdf`, position],
+    [`${sibling.filePath}:pdf`, position]
+  ])
 })
