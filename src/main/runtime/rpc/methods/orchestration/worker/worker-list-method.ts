@@ -298,7 +298,7 @@ async function projectWorkerListPageWithFilteredSnapshot(
     ...(hasMore
       ? {
           warnings: [
-            `Showing the ${pageRows.length} newest of ${inventory.total} Dispatches; the older ones are on later pages. Follow page.nextCursor with --cursor.`
+            `Showing ${pageRows.length} of ${inventory.total} Dispatches, newest first; more are on later pages. Follow page.nextCursor with --cursor.`
           ]
         }
       : {}),

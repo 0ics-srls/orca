@@ -130,7 +130,7 @@ export function listWorkerTerminalResources(
   }
   if (params.after) {
     // Order and fence must share one key, or a row created between pages moves across the cut.
-    // Pages walk down from the newest row, so the continuation takes what sorts after the anchor.
+    // Pages walk down from the newest row, so the continuation takes what sits below the anchor.
     // A pre-v3 cursor is resolved from its anchor row; when a reset deleted that row
     // `rowid < NULL` matched nothing and the page read as a finished, empty inventory.
     where.push('d.rowid < ?')
@@ -156,7 +156,7 @@ export function listWorkerTerminalResources(
   if (detailLimit !== undefined) {
     detailValues.push(detailLimit)
   }
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field below is a column this SELECT names, and node:sqlite hands back rows untyped.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this cast is unchanged and matches every other row cast in db/; the gate flags it only because this diff edits the ORDER BY inside its span.
   const rows = this.db
     .prepare(
       `SELECT d.id AS dispatch_id,

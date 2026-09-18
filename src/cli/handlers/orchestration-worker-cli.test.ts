@@ -561,7 +561,7 @@ describe('orchestration worker-start CLI contract', () => {
         workers: [],
         counts: { active: 1 },
         page: { total: 105, hasMore: true, nextCursor: 'owlc_next' },
-        warnings: ['Showing the 100 newest of 105 Dispatches; the older ones are on later pages.']
+        warnings: ['Showing 100 of 105 Dispatches, newest first; more are on later pages.']
       }
     }
     callMock.mockResolvedValue(response)
@@ -582,7 +582,7 @@ describe('orchestration worker-start CLI contract', () => {
     const output = formatter?.(response.result)
     expect(output).toContain('More: --cursor owlc_next')
     expect(output).toContain(
-      'Warning: Showing the 100 newest of 105 Dispatches; the older ones are on later pages.'
+      'Warning: Showing 100 of 105 Dispatches, newest first; more are on later pages.'
     )
   })
 

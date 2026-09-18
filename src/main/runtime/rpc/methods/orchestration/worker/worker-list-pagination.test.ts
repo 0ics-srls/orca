@@ -82,7 +82,7 @@ describe('orchestration worker-list pagination', () => {
     )
     expect(first.page).toMatchObject({ total: 105, hasMore: true })
     expect(first.warnings).toEqual([
-      'Showing the 100 newest of 105 Dispatches; the older ones are on later pages. Follow page.nextCursor with --cursor.'
+      'Showing 100 of 105 Dispatches, newest first; more are on later pages. Follow page.nextCursor with --cursor.'
     ])
     expect(first.counts).toEqual({ retained: 105 })
 
@@ -99,6 +99,48 @@ describe('orchestration worker-list pagination', () => {
     expect(second.counts).toEqual({ retained: 105 })
   })
 
+  it('states what a middle page actually holds, not that it is the newest', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = new OrcaRuntimeService()
+    runtime.setOrchestrationDb(db)
+    const run = db.createRun({
+      objective: 'Middle-page truncation warning',
+      coordinatorHandle: 'term-coordinator',
+      coordinatorPaneKey: 'tab-coordinator:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    })
+    for (let index = 1; index <= 6; index += 1) {
+      insertDispatch(db, run.id, `dispatch-${index}`)
+    }
+
+    const pages: WorkerListResult[] = []
+    let cursor: string | null = null
+    do {
+      const page: WorkerListResult = await callWorkerList(runtime, {
+        run: run.id,
+        limit: 2,
+        ...(cursor ? { cursor } : {})
+      })
+      pages.push(page)
+      cursor = page.page.nextCursor
+    } while (cursor)
+
+    expect(pages.map((page) => page.workers.map((worker) => worker.dispatchId))).toEqual([
+      ['dispatch-6', 'dispatch-5'],
+      ['dispatch-4', 'dispatch-3'],
+      ['dispatch-2', 'dispatch-1']
+    ])
+    // Page two holds rows 4 and 3; a warning claiming "the 2 newest" would be a falsehood.
+    expect(pages.map((page) => page.warnings)).toEqual([
+      [
+        'Showing 2 of 6 Dispatches, newest first; more are on later pages. Follow page.nextCursor with --cursor.'
+      ],
+      [
+        'Showing 2 of 6 Dispatches, newest first; more are on later pages. Follow page.nextCursor with --cursor.'
+      ],
+      undefined
+    ])
+  })
+
   it('fails an omitted-pagination legacy result above the explicit safety ceiling', async () => {
     db = new OrchestrationDb(':memory:')
     const runtime = new OrcaRuntimeService()
@@ -113,7 +155,7 @@ describe('orchestration worker-list pagination', () => {
     })
   })
 
-  it('excludes later same-second rows that sort between snapshot cursors', async () => {
+  it('pins total and counts to the first call while paging down', async () => {
     db = new OrchestrationDb(':memory:')
     const runtime = new OrcaRuntimeService()
     runtime.setOrchestrationDb(db)

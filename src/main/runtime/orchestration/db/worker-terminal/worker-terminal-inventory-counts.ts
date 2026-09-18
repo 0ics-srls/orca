@@ -51,7 +51,7 @@ export function scanWorkerTerminalStates(
   where: string[],
   values: (string | number)[]
 ): WorkerTerminalStateRow[] {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field below is a column this SELECT names, and node:sqlite hands back rows untyped.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this cast is unchanged and matches every other row cast in db/; the gate flags it only because this diff edits the ORDER BY inside its span.
   const rows = this.db
     .prepare(
       `SELECT d.id AS dispatch_id,
