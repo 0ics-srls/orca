@@ -189,6 +189,34 @@ function drainingBlock() {
   )}\necho "\${PRECHECK_ADMISSION} \${PRECHECK_DRAINING} \${PREDECESSOR_DRAINING_OK}"`
 }
 
+// The three fields gcloud would otherwise default, as the MIG resource declares them.
+function migUpdatePolicy() {
+  const terraform = readFileSync(
+    new URL('../../infra/terraform/relay-gce-cells.tf', import.meta.url),
+    'utf8'
+  )
+  const policy = terraform.split('  update_policy {')[1]?.split('\n  }')[0] ?? ''
+  const method = /replacement_method\s+= "([A-Z]+)"/.exec(policy)?.[1]
+  assert.notEqual(method, undefined, 'the MIG declares no replacement method')
+  // Both fixed bounds come from the topology locals the MIG resource points at.
+  const surgeLocal = /max_surge_fixed\s+= local\.relay_gce_topology\.(\w+)/.exec(policy)?.[1]
+  const unavailableLocal =
+    /max_unavailable_fixed\s+= local\.relay_gce_topology\.(\w+)/.exec(policy)?.[1]
+  assert.notEqual(surgeLocal, undefined, 'the MIG pins no surge local')
+  assert.notEqual(unavailableLocal, undefined, 'the MIG pins no unavailable local')
+  const topology = terraform.split('  relay_gce_topology = {')[1]?.split('\n  }')[0] ?? ''
+  const local = (name) => {
+    const value = new RegExp(`${name}\\s+= (\\d+)`).exec(topology)?.[1]
+    assert.notEqual(value, undefined, `the topology locals pin no ${name}`)
+    return value
+  }
+  return {
+    replacementMethod: method.toLowerCase(),
+    maxSurge: local(surgeLocal),
+    maxUnavailable: local(unavailableLocal)
+  }
+}
+
 // The stage decides the predecessor, the plan's reviewed rollback image, and whether the
 // MIG is rolled explicitly, so run the real block rather than restating its rule.
 function stageBlock() {
@@ -644,16 +672,27 @@ describe('same-cap roll scripts accept every same-cap cell', () => {
       apply,
       /test "\$\{ROLLBACK_STAGE\}" = stranded \\\n\s+&& test "\$\(jq -er '\.changes' <<< "\$\{PLAN_REVIEW\}"\)" = 0/
     )
-    // The explicit roll has to use the MIG's own replacement policy, or it cannot proceed.
+    // gcloud persists all three fields into the MIG's update policy and defaults the
+    // method to substitute here, so every one has to match what Terraform declares or the
+    // recovery drifts the policy and the next targeted plan is refused as an unreviewed
+    // MIG change. Read the declared values rather than restating them.
     assert.match(apply, /rolling-action replace "\$\{MIG_NAME\}"/)
-    assert.match(apply, /--max-surge 0 --max-unavailable 1/)
-    assert.equal(apply.split('wait-until "${MIG_NAME}" --stable').length, 3)
-    const terraform = readFileSync(
-      new URL('../../infra/terraform/relay-gce-cells.tf', import.meta.url),
-      'utf8'
+    const declared = migUpdatePolicy()
+    assert.deepEqual(declared, {
+      replacementMethod: 'recreate',
+      maxSurge: '0',
+      maxUnavailable: '1'
+    })
+    assert.match(
+      apply,
+      new RegExp(
+        `--replacement-method ${declared.replacementMethod}` +
+          ` --max-surge ${declared.maxSurge} --max-unavailable ${declared.maxUnavailable}`
+      )
     )
-    assert.match(terraform, /max_surge\s+= 0/)
-    assert.match(terraform, /max_unavailable\s+= 1/)
+    // Nothing else may reach the group, and the roll has to be waited on.
+    assert.equal(apply.split('rolling-action').length, 2)
+    assert.equal(apply.split('wait-until "${MIG_NAME}" --stable').length, 3)
   })
 
   it('waits on the image a stranded cell actually serves', () => {
