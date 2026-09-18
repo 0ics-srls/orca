@@ -17,6 +17,17 @@ function markerWidth(context: RenderContext): number {
   return `${listStart(context) + (context.index ?? 0)}. `.length
 }
 
+function renderZeroStartMarker(rendered: string, context: RenderContext): string {
+  if (context.parentType !== 'orderedList' || listStart(context) !== 0) {
+    return rendered
+  }
+  const index = context.index ?? 0
+  const baseMarker = `${index + 1}. `
+  return rendered.startsWith(baseMarker)
+    ? `${index}. ${rendered.slice(baseMarker.length)}`
+    : rendered
+}
+
 function paragraphLineCount(node: JSONContent): number {
   const first = Array.isArray(node.content) ? node.content[0] : undefined
   if (first?.type !== 'paragraph') {
@@ -41,7 +52,9 @@ export const RichMarkdownListItem = ListItem.extend({
       return baseRenderMarkdown(node, helpers, context)
     }
     const width = markerWidth(context)
-    const lines = baseRenderMarkdown(node, helpers, context).split('\n')
+    const lines = renderZeroStartMarker(baseRenderMarkdown(node, helpers, context), context).split(
+      '\n'
+    )
     const paragraphLines = paragraphLineCount(node)
     const paragraph = indentParagraphContinuations(lines.slice(0, paragraphLines).join('\n'), width)
     const blocks = lines
