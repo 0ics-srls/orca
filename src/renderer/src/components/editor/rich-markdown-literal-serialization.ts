@@ -219,7 +219,6 @@ export function preserveLiteralMarkdownSource(
 ): void {
   const manager = editor.markdown!
   const render = manager.renderNodeToMarkdown.bind(manager)
-  const renderNodes = manager.renderNodes.bind(manager)
   const serialize = editor.getMarkdown.bind(editor)
   const cache = new WeakMap<ProseMirrorNode, CacheEntry>()
   let blocks: Map<JSONContent, BlockInfo> | undefined
@@ -234,14 +233,6 @@ export function preserveLiteralMarkdownSource(
     } catch {
       return false
     }
-  }
-
-  manager.renderNodes = (nodeOrNodes, parentNode, ...args) => {
-    const result = renderNodes(nodeOrNodes, parentNode, ...args)
-    if (parentNode?.type !== 'table' || nodeOrNodes === parentNode) {
-      return result
-    }
-    return escapeBare(result, '|')
   }
 
   manager.renderNodeToMarkdown = (node, ...args) => {
