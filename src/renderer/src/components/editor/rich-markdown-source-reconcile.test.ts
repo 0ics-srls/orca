@@ -410,6 +410,28 @@ describe('serializeRichMarkdownForReconcile (real editor pipeline)', () => {
     expect(serialize(once!)?.trimEnd()).toBe(once!.trimEnd())
   })
 
+  it('keeps wrapped task states and list prose stable from the corruption repro', () => {
+    const source = [
+      '# Markdown corruption repro',
+      '',
+      '9. **Single digit item.** This continuation line is indented three spaces',
+      '   and must stay inside item 9.',
+      '10. **Two digit item.** This continuation line is indented four spaces',
+      '    and must stay inside item 10.',
+      '',
+      '- [ ] An item that is not done.',
+      '- [ ] Another item that is not done.',
+      ''
+    ].join('\n')
+    const once = serialize(source)
+    expect(once).not.toBeNull()
+    expect(once).toContain('- [ ] An item that is not done.')
+    expect(once).toContain('- [ ] Another item that is not done.')
+    expect(once).toContain('9. **Single digit item.**')
+    expect(once).toContain('10. **Two digit item.**')
+    expect(serialize(once ?? '')).toBe(once)
+  })
+
   it('reconciles a non-canonical doc end-to-end with the real serializer, preserving style', () => {
     const originalSource = '# Title\n\n_emphasis_ text\n'
     const baseCanonical = serialize(originalSource)!
