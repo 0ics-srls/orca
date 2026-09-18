@@ -10,7 +10,7 @@ function localizeFileLoadError(message: string, code: string | undefined): strin
   if (code === WORKTREE_HOST_UNRESOLVED_CODE) {
     return translate(
       'editor.fileLoad.hostUnresolved',
-      "The host couldn't find this file's workspace. It may have been removed, or the host may still be scanning. Retry, or close the tab."
+      "The host couldn't find this file's workspace. It may have been removed, or the host may not know about it yet. Retry, or close this tab from the tab strip."
     )
   }
   return message
