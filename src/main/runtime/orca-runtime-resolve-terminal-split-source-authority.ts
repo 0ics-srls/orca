@@ -14,6 +14,7 @@ import {
   ensureClaudeAgentTeamsShimDir,
   resolveClaudeAgentTeamsShimBin
 } from './claude-agent-teams-shim-env'
+import { CLAUDE_AUTH_ENV_VARS, applyClaudeEnvPatch } from '../claude-accounts/environment'
 
 export class OrcaRuntimeWithResolveTerminalSplitSourceAuthority extends OrcaRuntimeWithSplitPtyBackedTerminal {
   protected resolveTerminalSplitSourceAuthority(
@@ -109,6 +110,7 @@ export class OrcaRuntimeWithResolveTerminalSplitSourceAuthority extends OrcaRunt
   async prepareClaudeAgentTeamsLeader(args: {
     paneKey: string
     baseEnv?: Record<string, string>
+    prepareAuth?: boolean
   }): Promise<{ env: Record<string, string> }> {
     const handle = this.getTerminalHandleForPaneKey(args.paneKey)
     if (!handle) {
@@ -116,26 +118,37 @@ export class OrcaRuntimeWithResolveTerminalSplitSourceAuthority extends OrcaRunt
     }
     return await this.prepareClaudeAgentTeamsLeaderForHandle({
       handle,
-      baseEnv: args.baseEnv
+      baseEnv: args.baseEnv,
+      prepareAuth: args.prepareAuth
     })
   }
 
   async prepareClaudeAgentTeamsLeaderForHandle(args: {
     handle: string
     baseEnv?: Record<string, string>
-  }): Promise<{ env: Record<string, string> }> {
+    prepareAuth?: boolean
+  }): Promise<{ env: Record<string, string>; envToDelete?: string[] }> {
     const baseEnv = {
       ...process.env,
       ...args.baseEnv
     }
+    const auth = args.prepareAuth && this.prepareClaudeAuth ? await this.prepareClaudeAuth() : null
+    const envToDelete = auth?.stripAuthEnv
+      ? [...CLAUDE_AUTH_ENV_VARS, 'ANTHROPIC_CUSTOM_HEADERS']
+      : undefined
+    if (auth) {
+      applyClaudeEnvPatch(baseEnv, auth.envPatch, { stripAuthEnv: auth.stripAuthEnv })
+    }
     const shimDir = await ensureClaudeAgentTeamsShimDir()
     const shimBin = resolveClaudeAgentTeamsShimBin(baseEnv)
-    return this.claudeAgentTeams.createLaunchEnv({
+    const launch = this.claudeAgentTeams.createLaunchEnv({
       leaderHandle: args.handle,
       baseEnv,
       shimDir,
       shimBin
     })
+    const env = auth ? { ...auth.envPatch, ...launch.env } : launch.env
+    return envToDelete ? { env, envToDelete } : { env }
   }
 
   // Why: a leader handle that never binds to a PTY (lost pane race) has no exit
