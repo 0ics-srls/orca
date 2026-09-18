@@ -3,6 +3,8 @@ import { fetchClaudeRateLimits } from '../claude-fetcher'
 import { fetchCodexRateLimits } from '../codex-fetcher'
 import { fetchGrokRateLimits } from '../grok-fetcher'
 import { readGrokAuthSession } from '../grok-auth'
+import { fetchDevinRateLimits } from '../devin-fetcher'
+import { readDevinCredentials } from '../devin-credentials'
 import type { ProviderRateLimits } from './service-types'
 
 export abstract class RateLimitServiceProviderCycles extends RateLimitServiceFullCycleApplication {
@@ -178,6 +180,43 @@ export abstract class RateLimitServiceProviderCycles extends RateLimitServiceFul
     this.updateState({
       ...this.state,
       grok: this.applyStalePolicy(grok, previousState.grok)
+    })
+  }
+  protected async runFetchDevinOnlyCycle(signal: AbortSignal): Promise<void> {
+    if (signal.aborted) {
+      return
+    }
+    const credentialsReadResult = readDevinCredentials()
+    const credentialFingerprint = this.getDevinCredentialFingerprint(credentialsReadResult)
+    const previousDevin = this.previousDevinSnapshot(credentialFingerprint)
+    this.devinAuthConfigured = credentialsReadResult.status === 'ok'
+    this.updateState({
+      ...this.state,
+      devin: this.withFetchingStatus(previousDevin, 'devin')
+    })
+    const devin = await fetchDevinRateLimits({ signal, credentialsReadResult }).catch(
+      (err): ProviderRateLimits => ({
+        provider: 'devin',
+        session: null,
+        weekly: null,
+        updatedAt: Date.now(),
+        error: err instanceof Error ? err.message : 'Unknown error',
+        status: 'error'
+      })
+    )
+    if (signal.aborted) {
+      return
+    }
+    const latestCredentials = readDevinCredentials()
+    if (credentialFingerprint !== this.getDevinCredentialFingerprint(latestCredentials)) {
+      this.devinAuthConfigured = latestCredentials.status === 'ok'
+      this.updateState({ ...this.state, devin: null })
+      return
+    }
+    this.trackActiveFailureStreak('devin', devin)
+    this.updateState({
+      ...this.state,
+      devin: this.applyStalePolicy(devin, previousDevin)
     })
   }
 }
