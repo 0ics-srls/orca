@@ -20,6 +20,7 @@ import {
 import { deleteAdjacentEmptyParagraph } from './rich-markdown-empty-paragraph-delete'
 import { handleRichMarkdownTableBackspace } from './rich-markdown-table-row-delete'
 import { handleRichMarkdownTableEnter } from './rich-markdown-table-enter'
+import { handleRichMarkdownHeadingEnter } from './rich-markdown-heading-split'
 import { handleRichMarkdownTableTab } from './rich-markdown-table-tab'
 import {
   indentRichMarkdownListItem,
@@ -176,6 +177,16 @@ export function createRichMarkdownKeyHandler(
         event.preventDefault()
         return true
       }
+      if (
+        ed &&
+        handleRichMarkdownHeadingEnter(
+          ed,
+          event,
+          !ctx.slashMenuRef.current && !ctx.docLinkMenuRef.current
+        )
+      ) {
+        return true
+      }
       // Why: table Enter (cell below / add row) must run before ProseMirror
       // inserts an in-cell paragraph that GFM serialization cannot keep — but
       // the slash/doc-link menus own Enter while open (their blocks run later).
@@ -295,24 +306,20 @@ export function createRichMarkdownKeyHandler(
     }
 
     const currentFilteredSlashCommands = ctx.filteredSlashCommandsRef.current
-
     if (event.key === 'Escape') {
       event.preventDefault()
       ctx.setSlashMenu(null)
       return true
     }
-
     if (currentFilteredSlashCommands.length === 0) {
       return false
     }
-
     // Why: handleKeyDown is frozen from the first render, so this closure
     // must read editorRef to get the live editor instance.
     const activeEditor = ctx.editorRef.current
     if (!activeEditor) {
       return false
     }
-
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       ctx.setSelectedCommandIndex(
