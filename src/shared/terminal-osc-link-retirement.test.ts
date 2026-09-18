@@ -192,4 +192,28 @@ describe.each([
       }
     }
   )
+
+  it('keeps wrapped continuation cells when reflow erased the marker row', async () => {
+    const terminal = new HeadlessTerminal({
+      cols: 20,
+      rows: 5,
+      scrollback: 500,
+      allowProposedApi: true,
+      logLevel: 'off'
+    })
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    const liveUri = `${URL}/reflow-erased-marker`
+    try {
+      await write(terminal, `\x1b]8;;${liveUri}\x1b\\abcdefghijklmno${CLOSE}\r\n`)
+      terminal.resize(5, 5)
+      await write(terminal, '\x1b[1;1H\x1b[2K\x1b[5;1H')
+      for (let index = 0; index < 1024; index++) {
+        await write(terminal, `\r\x1b[2K${OPEN}s${CLOSE}`)
+      }
+      retirement()
+      expect(hasUri(terminal, 'normal', liveUri)).toBe(true)
+    } finally {
+      terminal.dispose()
+    }
+  })
 })

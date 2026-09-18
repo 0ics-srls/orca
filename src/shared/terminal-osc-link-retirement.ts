@@ -2,13 +2,15 @@ import type { IBuffer, Terminal } from '@xterm/headless'
 
 type OscLinkMarker = { dispose(): void; line?: number }
 type OscLinkEntry = { id: number; lines: OscLinkMarker[] }
-type TerminalBuffers = Pick<Terminal, 'buffer'>
+type TerminalBuffers = Pick<Terminal, 'buffer' | 'cols'>
 
 /** xterm's line markers outlive overwritten hyperlinks, including redraws without scrollback. */
 export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () => number {
   const SWEEP_GROWTH = 1024
   let nextSweepSize = SWEEP_GROWTH
   let previousSize = 0
+  let markerRowsEnabled = true
+  let previousColumns = terminal.cols
 
   function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null
@@ -66,7 +68,7 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
   }
 
-  /** Marker lines identify the only rows that can still contain a registered link. */
+  /** Marker lines identify link rows until a reflow can leave text on unmarked continuation rows. */
   function collectMarkerRows(entries: Iterable<unknown>): Set<number> | undefined {
     const rows = new Set<number>()
     for (const value of entries) {
@@ -99,6 +101,10 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
       return 0
     }
     const entries: Map<unknown, unknown> = service._dataByLinkId
+    if (terminal.cols !== previousColumns) {
+      markerRowsEnabled = false
+      previousColumns = terminal.cols
+    }
     if (entries.size < previousSize) {
       nextSweepSize = entries.size + SWEEP_GROWTH
     }
@@ -108,7 +114,7 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
 
     const live = new Set<number>()
-    const markerRows = collectMarkerRows(entries.values())
+    const markerRows = markerRowsEnabled ? collectMarkerRows(entries.values()) : undefined
     collectBufferLinks(terminal.buffer.normal, live, markerRows)
     collectBufferLinks(terminal.buffer.alternate, live, markerRows)
     // An OSC 8 open can finish one write before its linked text arrives in the next.
