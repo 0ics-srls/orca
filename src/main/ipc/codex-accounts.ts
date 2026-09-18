@@ -43,7 +43,7 @@ export function registerCodexAccountHandlers(
   ipcMain.handle('codexAccounts:pendingLoginUrl', () => codexAccounts.getPendingLoginUrl())
   // Why: Settings can open after the login already printed its link, so the
   // renderer reads the current value on mount and this only carries changes.
-  codexAccounts.subscribePendingLoginUrl(broadcastCodexPendingLoginUrl)
+  codexAccounts.onPendingLoginUrlChanged(broadcastCodexPendingLoginUrl)
   ipcMain.handle(
     'codexAccounts:reauthenticate',
     (_event, args: { accountId: string; activateIfSelectionWasEmpty?: boolean }) =>

@@ -58,9 +58,10 @@ function createStubLoginChild(): StubLoginChild {
 async function createServiceWithHangingLogin(): Promise<{
   service: {
     addAccount: () => Promise<{ accounts: { email: string }[] }>
+    selectAccount: (accountId: string | null) => Promise<unknown>
     cancelPendingLogin: () => boolean
     getPendingLoginUrl: () => string | null
-    subscribePendingLoginUrl: (listener: (url: string | null) => void) => void
+    onPendingLoginUrlChanged: (listener: (url: string | null) => void) => void
   }
   children: StubLoginChild[]
   /** The `CODEX_HOME` each login was spawned against. */
@@ -119,6 +120,19 @@ describe('CodexAccountService abandoned login', () => {
     await retryRejection
   })
 
+  it('frees the queue for a plain account switch too, not only for another add', async () => {
+    const { service, children } = await createServiceWithHangingLogin()
+    const abandoned = service.addAccount()
+    const abandonedRejection = expect(abandoned).rejects.toThrow('Codex sign-in was cancelled.')
+    await vi.waitUntil(() => children.length === 1)
+
+    // Why: switching to the system default is the commonest thing a user does
+    // after giving up on a sign-in, and it shares the add's mutation queue.
+    await service.selectAccount(null)
+    await abandonedRejection
+    expect(children[0].kill).toHaveBeenCalled()
+  })
+
   it('refuses to cancel a sign-in that already wrote credentials, and keeps the account', async () => {
     const { service, children, loginHomes } = await createServiceWithHangingLogin()
     const pending = service.addAccount()
@@ -156,7 +170,7 @@ describe('CodexAccountService abandoned login', () => {
   it('publishes the sign-in link codex prints and drops it when the login ends', async () => {
     const { service, children } = await createServiceWithHangingLogin()
     const published: (string | null)[] = []
-    service.subscribePendingLoginUrl((url) => published.push(url))
+    service.onPendingLoginUrlChanged((url) => published.push(url))
 
     const pending = service.addAccount()
     const rejection = expect(pending).rejects.toThrow('Codex sign-in was cancelled.')

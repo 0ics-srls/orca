@@ -178,7 +178,8 @@ export class CodexAccountService {
     return this.pendingLoginUrl
   }
 
-  subscribePendingLoginUrl(listener: (url: string | null) => void): void {
+  /** Registration lasts the process's lifetime; there is no teardown to hand back. */
+  onPendingLoginUrlChanged(listener: (url: string | null) => void): void {
     this.pendingLoginUrlListeners.add(listener)
   }
 
@@ -195,8 +196,8 @@ export class CodexAccountService {
   }
 
   // Why before the queue, not inside it: the abandoned login owns the queue slot
-  // the next add is waiting for. Only add/reauthenticate open a browser, so only
-  // they supersede — never serializeMutation, which background work also uses.
+  // every later account action waits for. Called from the four the user drives,
+  // never from serializeMutation, which background reset-credit work also uses.
   private supersedePendingLogin(): void {
     if (this.cancelPendingLogin()) {
       console.info('[codex-accounts] Cancelled a pending Codex login superseded by a new request.')
@@ -225,10 +226,12 @@ export class CodexAccountService {
   }
 
   async removeAccount(accountId: string): Promise<CodexRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.remove(accountId))
   }
 
   async selectAccount(accountId: string | null): Promise<CodexRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId))
   }
 
@@ -236,6 +239,7 @@ export class CodexAccountService {
     accountId: string | null,
     target?: CodexAccountSelectionTarget
   ): Promise<CodexRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId, target))
   }
 

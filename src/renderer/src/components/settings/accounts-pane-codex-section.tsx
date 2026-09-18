@@ -187,6 +187,7 @@ export function renderCodexAccountsSection(model: AccountsPaneSectionModel): Rea
                 variant="ghost"
                 size="xs"
                 onClick={() => void window.api.codexAccounts.cancelPendingLogin()}
+                className="gap-1.5"
               >
                 <X />
                 {translate('auto.components.settings.AccountsPane.dbb9626ed1', 'Cancel')}

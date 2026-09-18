@@ -93,10 +93,12 @@ export class ClaudeAccountService {
   }
 
   async removeAccount(accountId: string): Promise<ClaudeRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.remove(accountId))
   }
 
   async selectAccount(accountId: string | null): Promise<ClaudeRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId))
   }
 
@@ -104,6 +106,7 @@ export class ClaudeAccountService {
     accountId: string | null,
     target?: ClaudeAccountSelectionTarget
   ): Promise<ClaudeRateLimitAccountsState> {
+    this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId, target))
   }
 
@@ -112,8 +115,8 @@ export class ClaudeAccountService {
   }
 
   // Why before the queue, not inside it: the abandoned login owns the queue slot
-  // the next add is waiting for. Only add/reauthenticate open a browser, so only
-  // they supersede — never serializeMutation, which background work also uses.
+  // every later account action waits for. Called from the four the user drives,
+  // never from serializeMutation, which background work also uses.
   private supersedePendingLogin(): void {
     if (this.cancelPendingLogin()) {
       console.info(
