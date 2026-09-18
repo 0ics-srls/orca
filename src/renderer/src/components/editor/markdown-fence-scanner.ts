@@ -6,10 +6,10 @@ export type MarkdownFenceTracker = {
   consume: (line: string) => boolean
 }
 
-// Indent stays unbounded on purpose: marked caps an opener at three spaces, but the
-// cap is relative to the enclosing block, so a flat `^ {0,3}` here would stop seeing
-// fenced code under a list item and lock those documents out of rich mode.
-const FENCE_LINE = /^[ \t]*(`{3,}|~{3,})/
+// A top-level opener may be indented by at most three spaces. Closers are matched
+// separately below because marked allows them to be indented within the fence.
+const FENCE_LINE = /^[ ]{0,3}(`{3,}|~{3,})/
+const INDENTED_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})/
 // marked lets a closer trail a run of fence characters, e.g. ```~~~ closes a ``` block.
 const CLOSING_FENCE_SUFFIX = /^[~`]*[ \t\r]*$/
 
@@ -23,7 +23,7 @@ export function createMarkdownFenceTracker(): MarkdownFenceTracker {
       return length > 0
     },
     consume(line: string): boolean {
-      const match = FENCE_LINE.exec(line)
+      const match = length > 0 ? INDENTED_FENCE_LINE.exec(line) : FENCE_LINE.exec(line)
       if (!match) {
         return false
       }

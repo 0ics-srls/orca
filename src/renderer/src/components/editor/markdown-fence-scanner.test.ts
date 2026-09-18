@@ -87,11 +87,12 @@ describe('createMarkdownFenceTracker', () => {
     ])
   })
 
-  // Deliberate: marked caps an opener at three spaces relative to the enclosing
-  // block, and a flat cap here would stop seeing fenced code under a list item.
-  it.each(['    ```', '\t```', '        ```'])('accepts the over-indented opener %j', (opener) => {
-    expect(insideFenceLines(`${opener}\nbody`)).toEqual(['body'])
-  })
+  it.each(['    ```', '\t```', '        ```'])(
+    'does not treat a flat over-indented opener %j as a fence',
+    (opener) => {
+      expect(insideFenceLines(`${opener}\nbody`)).toEqual([])
+    }
+  )
 })
 
 describe('markdown line splitting', () => {
