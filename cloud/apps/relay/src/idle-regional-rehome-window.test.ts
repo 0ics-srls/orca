@@ -187,6 +187,51 @@ describe('idle regional rehome candidate window', () => {
     expect(calls.some((sql) => /OFFSET/i.test(sql))).toBe(false)
   })
 
+  it('keeps the window\'s last host when a decision turns eligible between the two reads', async () => {
+    const { store, database, safety, now } = await setup()
+    await seedHost(store, identity)
+    // Exactly one full window, whose last key in sort order is the seeded host.
+    await cloneHosts(database, identity, IDLE_REHOME_DECISION_WINDOW - 1)
+    await database.query(
+      "UPDATE relay_assignment_activity_leases SET expires_at = ? WHERE user_id LIKE 'clone-%'",
+      [now - 1]
+    )
+    const template = (
+      await database.query('SELECT * FROM relay_region_decisions WHERE user_id = ?', [
+        identity.userId
+      ])
+    )[0]!
+    const columns = Object.keys(template)
+    const query = database.query.bind(database)
+    let inserted = false
+    vi.spyOn(database, 'query').mockImplementation(async (sql, params) => {
+      const rows = await query(sql, params)
+      // A decision that becomes eligible after the window is read and sorts
+      // inside it: a second LIMIT would push the window's last host out.
+      if (!inserted && /^SELECT user_id, relay_host_id FROM relay_region_decisions/.test(sql)) {
+        inserted = true
+        await query(
+          `INSERT INTO relay_region_decisions (${columns.join(', ')})
+           VALUES (${columns.map(() => '?').join(', ')})`,
+          columns.map((column) =>
+            column === 'user_id'
+              ? 'clone-99999'
+              : column === 'relay_host_id'
+                ? 'latehost99999999'
+                : template[column]
+          )
+        )
+      }
+      return rows
+    })
+    const candidates = await store.selectIdleRegionalRehomeCandidates(safety)
+    expect(candidates.map((candidate) => candidate.userId)).toEqual([
+      identity.userId,
+      identity.userId,
+      identity.userId
+    ])
+  })
+
   it('walks the whole population in bounded pages and wraps only at the end', async () => {
     const { store, database, safety } = await setup()
     await seedHost(store, identity)

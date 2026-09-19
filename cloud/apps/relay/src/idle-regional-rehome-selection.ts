@@ -90,14 +90,19 @@ export async function selectIdleRegionalRehomes(
 
   const sourceList = [...cells.sources.values()]
   const rows = await input.database.query(
+    // The verification names the window's keys rather than repeating its LIMIT:
+    // the two reads take separate snapshots, and a decision that turned eligible
+    // between them would otherwise shift the second LIMIT and push the last host
+    // out of it while the cursor still advanced past it.
     `SELECT d.user_id, d.relay_host_id, d.preferred_region, a.cell_id AS source_cell_id,
        a.assignment_epoch, host.generation
      FROM (SELECT user_id, relay_host_id, preferred_region, incumbent_region, assignment_epoch
        FROM relay_region_decisions
-       WHERE ${decisionFilter} ${afterFilter} AND (user_id, relay_host_id) <= (?, ?)
-       -- The LIMIT is what keeps this a window. Without it Postgres flattens the
-       -- subquery, estimates one row out of the join, and drives the whole plan
-       -- from a sequential scan of the control-capability table instead.
+       WHERE ${decisionFilter}
+         AND (user_id, relay_host_id) IN (${Array.from({ length: window.length }, () => '(?,?)').join(',')})
+       -- The LIMIT cannot truncate a key set this size; it is here because without
+       -- it Postgres flattens the subquery, estimates one row out of the join, and
+       -- drives the whole plan from a sequential scan of the capability table.
        ORDER BY user_id, relay_host_id LIMIT ?) d
      JOIN relay_assignments a ON a.user_id = d.user_id AND a.relay_host_id = d.relay_host_id
        AND a.assignment_epoch = d.assignment_epoch
@@ -118,12 +123,14 @@ export async function selectIdleRegionalRehomes(
          WHERE attempt.user_id = d.user_id AND attempt.relay_host_id = d.relay_host_id
            AND attempt.created_at > ?)
      ORDER BY d.user_id, d.relay_host_id, host.generation DESC
+     -- Counted in hosts, because a host with one eligible target has to be able
+     -- to fill a page on its own. A host with many leaves part of this page
+     -- unread, and the cursor stops where the page stopped, so it is re-read
+     -- next poll rather than skipped.
      LIMIT ?`,
     [
       ...decisionParams,
-      ...after,
-      windowEnd.user_id,
-      windowEnd.relay_host_id,
+      ...window.flatMap((row) => [row.user_id, row.relay_host_id]),
       IDLE_REHOME_DECISION_WINDOW,
       ...sourceList.flatMap((cell) => [cell.cellId, cell.region, cell.cellIncarnation, cell.startedAt]),
       input.now,
