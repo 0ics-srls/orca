@@ -6,6 +6,7 @@ import Database from '../sqlite/sync-database'
 import { buildOpenCodeSqliteCandidatePath } from './session-scanner-opencode-sqlite-paths'
 import { listOpenCode2SqliteSessions } from './session-scanner-opencode2-sqlite-list'
 import { parseOpenCode2SqliteSession } from './session-scanner-opencode2-sqlite'
+import { withFullFirstUserPromptCapture } from './session-scanner-first-user-prompt-capture'
 import type { AiVaultScanIssue } from '../../shared/ai-vault-types'
 
 // Why: the opencode2 (beta) channel-scoped DB schema differs from v1 —
@@ -209,7 +210,6 @@ describe('parseOpenCode2SqliteSession', () => {
       timeCreated: 1_777_634_000_500,
       data: JSON.stringify({
         id: 'msg_1',
-        type: 'user',
         text: 'Add login flow',
         time: { created: 1_777_634_000_500 }
       })
@@ -229,17 +229,20 @@ describe('parseOpenCode2SqliteSession', () => {
     })
     db.close()
 
-    const session = await parseOpenCode2SqliteSession({
-      dbPath: path,
-      sessionId: 'session_1',
-      platform: 'darwin'
-    })
+    const session = await withFullFirstUserPromptCapture(() =>
+      parseOpenCode2SqliteSession({
+        dbPath: path,
+        sessionId: 'session_1',
+        platform: 'darwin'
+      })
+    )
 
     expect(session).not.toBeNull()
     expect(session!.agent).toBe('opencode2')
     expect(session!.sessionId).toBe('session_1')
     expect(session!.filePath).toBe(path)
     expect(session!.title).toBe('Fix login')
+    expect(session?.firstUserPrompt).toBe('Add login flow')
     expect(session!.cwd).toBe('/repo')
     expect(session!.model).toBe('glm-5.2')
     expect(session!.totalTokens).toBe(35)
@@ -256,7 +259,9 @@ describe('parseOpenCode2SqliteSession', () => {
         timestamp: new Date(1_777_634_000_900).toISOString()
       }
     ])
-    expect(session!.resumeCommand).toBe("cd '/repo' && opencode2 --session 'session_1'")
+    expect(session!.resumeCommand).toBe(
+      "cd '/repo' && opencode2 --standalone --session 'session_1'"
+    )
   })
 
   it('extracts assistant text from content arrays and falls back to raw model ids', async () => {

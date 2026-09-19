@@ -263,7 +263,9 @@ export function getAgentResumeArgv(
     case 'opencode':
       return providerSession.key === 'session_id' ? ['opencode', '--session', id] : null
     case 'opencode2':
-      return providerSession.key === 'session_id' ? ['opencode2', '--session', id] : null
+      return providerSession.key === 'session_id'
+        ? ['opencode2', '--standalone', '--session', id]
+        : null
     case 'pi':
       return providerSession.key === 'session_id' && providerSession.transcriptPath
         ? ['pi', '--session', providerSession.transcriptPath]

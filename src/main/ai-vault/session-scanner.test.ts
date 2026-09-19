@@ -421,7 +421,7 @@ describe('scanAiVaultSessions', () => {
       "cd '/tmp/opencode' && opencode --session 'opencode-session'"
     )
     expect(commandByAgent.get('opencode2')).toBe(
-      "cd '/tmp/opencode2' && opencode2 --session 'opencode2-session'"
+      "cd '/tmp/opencode2' && opencode2 --standalone --session 'opencode2-session'"
     )
     expect(commandByAgent.get('grok')).toBe("cd '/tmp/grok' && grok --resume 'grok-session'")
     expect(commandByAgent.get('hermes')).toBe(

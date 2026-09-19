@@ -1,30 +1,14 @@
+import {
+  getOpenCode2SetupSource,
+  getOpenCode2EventNormalizationSource
+} from '../opencode2/status-plugin-setup-source'
+
 export function getStatusPluginFactorySource(options: {
   emitSessionStart: boolean
   emitNextEvents?: boolean
 }): string[] {
   return [
-    ...(options.emitNextEvents
-      ? [
-          '',
-          'function normalizeNextLifecycleEvent(event) {',
-          '  if (!event || typeof event.type !== "string") return event;',
-          '  const properties = event.properties || {};',
-          '  if (event.type === "permission.v2.asked") return { ...event, type: "permission.asked", properties: { ...properties, id: properties.id, permission: properties.action, patterns: properties.resources } };',
-          '  if (event.type === "permission.v2.replied") return { ...event, type: "permission.replied", properties: { ...properties } };',
-          '  if (event.type === "question.v2.asked") return { ...event, type: "question.asked", properties: { ...properties } };',
-          '  if (event.type === "question.v2.replied") return { ...event, type: "question.replied", properties: { ...properties } };',
-          '  if (event.type === "question.v2.rejected") return { ...event, type: "question.rejected", properties: { ...properties } };',
-          '  if (event.type === "session.next.step.started" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried") {',
-          '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "busy" } } };',
-          '  }',
-          '  if (event.type === "session.next.step.ended" || event.type === "session.next.step.failed") {',
-          '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "idle" } } };',
-          '  }',
-          '  return event;',
-          '}',
-          ''
-        ]
-      : []),
+    ...(options.emitNextEvents ? getOpenCode2EventNormalizationSource() : []),
     '// Why: accept the factory argument as an optional opaque parameter instead',
     '// of destructuring (`async ({ client }) => …`). OpenCode can invoke the',
     '// plugin factory with undefined during startup, which makes the',
@@ -290,10 +274,17 @@ export function getStatusPluginFactorySource(options: {
     '  },',
     '  };',
     '};',
-    '// Why: OpenCode also resolves plugins through the module default export, which must expose server(); keep the named factory too.',
+    ...(options.emitNextEvents ? getOpenCode2SetupSource() : []),
+    '',
+    '// Why: OpenCode also resolves plugins through the module default export, and that',
+    '// loader rejects the module unless the default exposes `server()` ("must default',
+    '// export an object with server()"). `setup()` does not satisfy it. Keep the named',
+    '// export so the factory-based loader still finds the same instance.',
     'export default {',
     '  id: "orca-opencode-status",',
     '  server: OrcaOpenCodeStatusPlugin,',
-    '};'
+    ...(options.emitNextEvents ? ['  setup: setupOpenCode2Status,'] : []),
+    '};',
+    ''
   ]
 }

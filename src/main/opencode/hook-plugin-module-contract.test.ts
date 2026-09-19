@@ -30,7 +30,11 @@ describe('OpenCode status plugin module contract', () => {
     dispose?: () => Promise<void>
   }
   type PluginModule = {
-    default?: { id?: unknown; server?: (ctx: unknown) => Promise<PluginHooks> }
+    default?: {
+      id?: unknown
+      server?: (ctx: unknown) => Promise<PluginHooks>
+      setup?: (ctx: unknown) => Promise<() => Promise<void>>
+    }
     OrcaOpenCodeStatusPlugin?: (ctx: unknown) => Promise<PluginHooks>
   }
 
@@ -156,6 +160,54 @@ describe('OpenCode status plugin module contract', () => {
       paneKey: 'tab-1:leaf-1',
       payload: { hook_event_name: 'SessionBusy' }
     })
+  })
+
+  it('subscribes through the OpenCode 2 setup API and disposes its registrations', async () => {
+    process.env.ORCA_PANE_KEY = 'tab-1:leaf-1'
+    const posts: unknown[] = []
+    globalThis.fetch = vi.fn(async (_input, init) => {
+      posts.push(JSON.parse(String(init?.body)))
+      return new Response('{}', { status: 200 })
+    })
+    const dispose = vi.fn()
+    let subscriptionSignal: AbortSignal | undefined
+    const module = await loadPluginModule(_internals.getOpenCode2PluginSource())
+    expect(module.default?.setup).toBeTypeOf('function')
+    const cleanup = await module.default?.setup?.({
+      session: {
+        get: async ({ sessionID }: { sessionID: string }) => ({ data: { id: sessionID } }),
+        hook: async () => ({ dispose })
+      },
+      event: {
+        subscribe: async function* ({ signal }: { signal: AbortSignal }) {
+          subscriptionSignal = signal
+          yield { type: 'session.created', data: { sessionID: 'ses_root' } }
+          yield {
+            type: 'session.execution.started',
+            data: { sessionID: 'ses_root' }
+          }
+          yield {
+            type: 'session.execution.succeeded',
+            data: { sessionID: 'ses_root' }
+          }
+        }
+      }
+    })
+    await vi.waitFor(() => {
+      expect(posts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            payload: expect.objectContaining({ hook_event_name: 'SessionBusy' })
+          }),
+          expect.objectContaining({
+            payload: expect.objectContaining({ hook_event_name: 'SessionIdle' })
+          })
+        ])
+      )
+    })
+    await cleanup?.()
+    expect(dispose).toHaveBeenCalledOnce()
+    expect(subscriptionSignal?.aborted).toBe(true)
   })
 
   it('turns OpenCode 2 step lifecycle events into working and done hooks', async () => {

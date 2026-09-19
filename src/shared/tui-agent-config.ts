@@ -132,7 +132,8 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
   // Its @opentui composer keeps the same cursor-gated paste signal.
   opencode2: {
     detectCmd: 'opencode2',
-    launchCmd: 'opencode2',
+    // The private server inherits this pane's hook endpoint and identity.
+    launchCmd: 'opencode2 --standalone',
     expectedProcess: 'opencode2',
     promptInjectionMode: 'flag-prompt',
     draftPasteReadySignal: 'render-cursor-after-bracketed-paste'

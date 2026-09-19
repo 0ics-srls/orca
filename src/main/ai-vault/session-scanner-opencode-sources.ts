@@ -10,27 +10,6 @@ import { listOpenCode2SqliteSessionsViaWorker } from './session-scanner-opencode
 import { isOpenCodeV2DatabaseName } from '../../shared/opencode-database-name'
 import type { AiVaultScanOptions, SessionFileDiscovery } from './session-scanner-types'
 
-// Why: opencode2 (beta) stores sessions in channel-scoped DBs
-// (opencode-next.db / opencode-local.db) alongside the v1 opencode.db. Both
-// match the `opencode*.db` glob, so paths are split by basename here: the v1
-// discovery never sees v2 DBs (different, beta-unstable schema) and vice versa.
-
-function splitDatabasePaths(dbPaths: readonly string[]): {
-  v1Paths: string[]
-  v2Paths: string[]
-} {
-  const v1Paths: string[] = []
-  const v2Paths: string[] = []
-  for (const dbPath of dbPaths) {
-    if (isOpenCodeV2DatabaseName(basename(dbPath))) {
-      v2Paths.push(dbPath)
-    } else {
-      v1Paths.push(dbPath)
-    }
-  }
-  return { v1Paths, v2Paths }
-}
-
 export function opencodeDiscoveries(
   options: AiVaultScanOptions,
   wslHomeDirs: readonly string[],
@@ -39,9 +18,8 @@ export function opencodeDiscoveries(
 ): Promise<SessionFileDiscovery>[] {
   const storageDirs = opencodeStorageDirs(options, wslHomeDirs)
   return storageDirs.map(async (storageDir, index) => {
-    const { v1Paths } = splitDatabasePaths(
-      await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
-    )
+    const dbPaths = await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
+    const v1Paths = dbPaths.filter((path) => !isOpenCodeV2DatabaseName(basename(path)))
     return discoverOpenCodeSessions({ storageDir, dbPaths: v1Paths, limitPerAgent: limit, issues })
   })
 }
@@ -53,9 +31,8 @@ export function opencode2Discoveries(
   issues: AiVaultScanIssue[]
 ): Promise<SessionFileDiscovery>[] {
   return opencodeStorageDirs(options, wslHomeDirs).map(async (storageDir, index) => {
-    const { v2Paths } = splitDatabasePaths(
-      await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
-    )
+    // Current releases share opencode.db with v1; the worker checks for v2 tables.
+    const v2Paths = await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
     return v2Paths.length > 0
       ? discoverOpenCode2Sessions(storageDir, v2Paths, limit, issues)
       : emptyOpenCode2Discovery(storageDir)
@@ -80,8 +57,7 @@ async function opencodeDbPathsForSource(
   issues: AiVaultScanIssue[]
 ): Promise<readonly string[]> {
   if (options.opencodeDbPaths) {
-    const split = splitDatabasePaths(sourceIndex === 0 ? options.opencodeDbPaths : [])
-    return [...split.v1Paths, ...split.v2Paths]
+    return sourceIndex === 0 ? options.opencodeDbPaths : []
   }
   // Why: custom OpenCode storage roots still keep SQLite DBs in the parent data dir.
   if (sourceIndex === 0 && options.opencodeStorageDir) {

@@ -1,4 +1,2 @@
-// OpenCode 2 uses the same supported server-plugin loader as OpenCode. The
-// variant is kept under the opencode module so config overlays and plugin
-// filenames stay isolated from the legacy agent.
+// Share overlay management while keeping the v2 plugin and config isolated.
 export { openCode2HookService as openCode2ConfigHookService } from '../opencode/hook-service'

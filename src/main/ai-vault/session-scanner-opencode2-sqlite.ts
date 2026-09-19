@@ -205,7 +205,6 @@ function readFirstUserPromptFromDb(db: SyncDatabase, sessionId: string): string 
         `SELECT data FROM ${OPENCODE2_MESSAGE_TABLE}
          WHERE session_id = ?
            AND type = 'user'
-           AND data LIKE '%"type":"user"%'
          ORDER BY time_created ASC, seq ASC
          LIMIT 1`
       )
