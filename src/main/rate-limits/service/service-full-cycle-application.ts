@@ -1,5 +1,6 @@
 import { RateLimitServiceFullCyclePreparation } from './service-full-cycle-preparation'
 import { deriveAntigravityRateLimits } from '../antigravity-usage-mirror'
+import { readDevinCredentials } from '../devin-credentials'
 import type { ProviderRateLimits } from './service-types'
 
 export abstract class RateLimitServiceFullCycleApplication extends RateLimitServiceFullCyclePreparation {
@@ -34,7 +35,10 @@ export abstract class RateLimitServiceFullCycleApplication extends RateLimitServ
         kimiResult,
         miniMaxResult
       ],
-      grokResultPromise
+      grokResultPromise,
+      devinResultPromise,
+      devinCredentialFingerprint,
+      previousDevin
     } = prepared
     if (signal.aborted) {
       return
@@ -210,6 +214,34 @@ export abstract class RateLimitServiceFullCycleApplication extends RateLimitServ
     this.updateState({
       ...this.state,
       grok: this.applyStalePolicy(grok, previousState.grok)
+    })
+
+    const devinResult = await devinResultPromise
+    if (signal.aborted) {
+      return
+    }
+    const latestDevinCredentials = readDevinCredentials()
+    if (devinCredentialFingerprint !== this.getDevinCredentialFingerprint(latestDevinCredentials)) {
+      this.devinAuthConfigured = latestDevinCredentials.status === 'ok'
+      this.updateState({ ...this.state, devin: null })
+      return
+    }
+    const devin =
+      devinResult.status === 'fulfilled'
+        ? devinResult.value
+        : ({
+            provider: 'devin',
+            session: null,
+            weekly: null,
+            updatedAt: Date.now(),
+            error:
+              devinResult.reason instanceof Error ? devinResult.reason.message : 'Unknown error',
+            status: 'error'
+          } satisfies ProviderRateLimits)
+    this.trackActiveFailureStreak('devin', devin)
+    this.updateState({
+      ...this.state,
+      devin: this.applyStalePolicy(devin, previousDevin)
     })
   }
 }

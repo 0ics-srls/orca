@@ -21,6 +21,7 @@ import {
   DEFAULT_POLL_MS
 } from './service-types'
 import { readGrokAuthSession } from '../grok-auth'
+import { readDevinCredentials, type DevinCredentialsReadResult } from '../devin-credentials'
 
 export abstract class RateLimitServiceState {
   protected state: InternalRateLimitState = {
@@ -31,9 +32,26 @@ export abstract class RateLimitServiceState {
     kimi: null,
     antigravity: null,
     minimax: null,
-    grok: null
+    grok: null,
+    devin: null
   }
   protected grokAuthConfigured = readGrokAuthSession().status === 'ok'
+  protected devinAuthConfigured = readDevinCredentials().status === 'ok'
+
+  protected devinSnapshotCredential: string | null = null
+
+  protected getDevinCredentialFingerprint(result: DevinCredentialsReadResult): string {
+    return result.status === 'ok'
+      ? `ok\u0000${result.credentials.apiServerUrl}\u0000${result.credentials.sessionToken}`
+      : result.status
+  }
+
+  protected previousDevinSnapshot(fingerprint: string): ProviderRateLimits | null {
+    const previous = this.devinSnapshotCredential === fingerprint ? this.state.devin : null
+    this.devinSnapshotCredential = fingerprint
+    return previous
+  }
+  protected devinOnlyFetchQueued = false
   protected pollInterval: number = DEFAULT_POLL_MS
   protected timer: ReturnType<typeof setInterval> | null = null
   protected deferredStartupRefreshTimer: ReturnType<typeof setTimeout> | null = null
@@ -46,7 +64,8 @@ export abstract class RateLimitServiceState {
     kimi: 0,
     minimax: 0,
     grok: 0,
-    antigravity: 0
+    antigravity: 0,
+    devin: 0
   }
   // Why: consecutive failures drive exponential backoff of the fast activation-retry lane; reset on any success/unavailable result.
   protected activeFailureStreakByProvider: Record<ActiveRateLimitProvider, number> = {
@@ -57,7 +76,8 @@ export abstract class RateLimitServiceState {
     kimi: 0,
     minimax: 0,
     grok: 0,
-    antigravity: 0
+    antigravity: 0,
+    devin: 0
   }
   protected mainWindow: BrowserWindow | null = null
   protected detachWindowListeners: (() => void) | null = null

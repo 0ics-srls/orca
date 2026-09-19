@@ -8,6 +8,8 @@ import { fetchKimiRateLimits } from './kimi-fetcher'
 import { fetchMiniMaxRateLimits } from './minimax/minimax-fetcher'
 import { fetchGrokRateLimits } from './grok-fetcher'
 import { readGrokAuthSession } from './grok-auth'
+import { fetchDevinRateLimits } from './devin-fetcher'
+import { readDevinCredentials } from './devin-credentials'
 import { fetchOpenCodeGoRateLimits } from './opencode-go-usage-fetcher'
 import {
   deferred,
@@ -15,7 +17,8 @@ import {
   flushMicrotasks,
   mockFreshBackgroundProviderFetches,
   okProvider,
-  resetRateLimitProviderMocks
+  resetRateLimitProviderMocks,
+  unavailableProvider
 } from './rate-limit-service-test-harness'
 
 vi.mock('./claude-fetcher', () => ({
@@ -50,6 +53,14 @@ vi.mock('./grok-fetcher', () => ({
 
 vi.mock('./grok-auth', () => ({
   readGrokAuthSession: vi.fn(() => ({ status: 'missing' }))
+}))
+
+vi.mock('./devin-fetcher', () => ({
+  fetchDevinRateLimits: vi.fn()
+}))
+
+vi.mock('./devin-credentials', () => ({
+  readDevinCredentials: vi.fn(() => ({ status: 'missing' }))
 }))
 
 vi.mock('../minimax/minimax-cookie-store', () => ({
@@ -117,6 +128,25 @@ describe('RateLimitService', () => {
     expect(fetchMiniMaxRateLimits).not.toHaveBeenCalled()
     expect(service.getState().grokAuthConfigured).toBe(true)
     expect(service.getState().grok?.status).toBe('ok')
+  })
+
+  it('preserves credential presence when a signed-in plan reports no quota windows', async () => {
+    vi.mocked(readDevinCredentials).mockReturnValue({
+      status: 'ok',
+      credentials: { sessionToken: 'tok', apiServerUrl: 'https://server.codeium.com' }
+    })
+    vi.mocked(fetchDevinRateLimits).mockResolvedValue(
+      unavailableProvider('devin', 'Devin did not report quota windows for this account')
+    )
+    vi.mocked(fetchClaudeRateLimits).mockResolvedValue(okProvider('claude', 0))
+    vi.mocked(fetchCodexRateLimits).mockResolvedValue(okProvider('codex', 0))
+    const service = new RateLimitService()
+
+    expect(service.getState().devinAuthConfigured).toBe(true)
+    await serviceInternals(service).fetchAll()
+
+    expect(service.getState().devinAuthConfigured).toBe(true)
+    expect(service.getState().devin?.status).toBe('unavailable')
   })
 
   it('does not refetch Claude when a Codex account switch is queued during fetchAll', async () => {
@@ -262,6 +292,57 @@ describe('RateLimitService', () => {
     expect(refreshResolved).toBe(true)
     expect(fetchClaudeRateLimits).toHaveBeenCalledTimes(2)
     expect(fetchCodexRateLimits).toHaveBeenCalledTimes(2)
+  })
+
+  it('runs a queued Devin refresh after an active Devin fetch settles', async () => {
+    const service = new RateLimitService()
+    const firstDevin = deferred<ProviderRateLimits>()
+    vi.mocked(fetchDevinRateLimits).mockImplementationOnce(() => firstDevin.promise)
+
+    const activeRefresh = service.refreshDevin()
+    await flushMicrotasks()
+    const queuedRefresh = service.refreshDevin()
+
+    firstDevin.resolve(okProvider('devin', 10))
+    await activeRefresh
+    await queuedRefresh
+
+    expect(fetchDevinRateLimits).toHaveBeenCalledTimes(2)
+  })
+
+  it('runs a queued provider refresh after an active Devin fetch settles', async () => {
+    const service = new RateLimitService()
+    const firstDevin = deferred<ProviderRateLimits>()
+    vi.mocked(fetchDevinRateLimits).mockImplementationOnce(() => firstDevin.promise)
+
+    const activeRefresh = service.refreshDevin()
+    await flushMicrotasks()
+    const queuedRefresh = service.refreshGrok()
+
+    firstDevin.resolve(okProvider('devin', 10))
+    await activeRefresh
+    await queuedRefresh
+
+    expect(fetchDevinRateLimits).toHaveBeenCalledTimes(1)
+    expect(fetchGrokRateLimits).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs a queued full refresh after an active Devin fetch settles', async () => {
+    const service = new RateLimitService()
+    const firstDevin = deferred<ProviderRateLimits>()
+    vi.mocked(fetchDevinRateLimits).mockImplementationOnce(() => firstDevin.promise)
+
+    const activeRefresh = service.refreshDevin()
+    await flushMicrotasks()
+    const queuedRefresh = service.refresh()
+
+    firstDevin.resolve(okProvider('devin', 10))
+    await activeRefresh
+    await queuedRefresh
+
+    expect(fetchDevinRateLimits).toHaveBeenCalledTimes(2)
+    expect(fetchClaudeRateLimits).toHaveBeenCalledTimes(1)
+    expect(fetchCodexRateLimits).toHaveBeenCalledTimes(1)
   })
 
   it('publishes non-Grok provider results before a slow Grok fetch completes', async () => {
