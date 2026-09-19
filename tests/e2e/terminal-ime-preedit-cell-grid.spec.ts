@@ -8,7 +8,7 @@ import {
 
 for (const dpr of [1, 1.25, 2]) {
   for (const gpu of ['on', 'off'] as const) {
-    test.describe(`IME preedit grid DPR ${dpr} GPU ${gpu}`, () => {
+    test.describe(`IME preedit grid DPR ${dpr} GPU ${gpu} @headful`, () => {
       test.use({ orcaAppExtraArgs: [`--force-device-scale-factor=${dpr}`] })
 
       test('matches committed character advances across font and spacing changes', async ({
