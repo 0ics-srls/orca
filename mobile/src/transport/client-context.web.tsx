@@ -140,7 +140,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
       getPendingPath: () => null,
       // Both are pairing verdicts, and pairing happened natively before this document existed.
       isPairingRejected: () => false,
-      isHostSignedOut: () => false,
+      getRelayHostReachability: () => 'connecting',
       subscribeHostState: (_hostId: string, listener: (next: ConnectionState) => void) =>
         clientRef.current?.onStateChange(listener) ?? (() => {}),
       getAllClients: () => {
