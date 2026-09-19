@@ -133,16 +133,7 @@ export function getPiAgentStatusHandlerSourceLines(kind: PiAgentKind): string[] 
     ...getOmpSessionOwnerHandlerSourceLines(),
     ...sessionStartHandler,
     ...(kind === 'omp' ? getPiPrefillHandlerSourceLines('omp') : []),
-    `  onStatus('before_agent_start', (event${ctxParam}) => {`, 
-    ...sessionStartHandler,
-<<<<<<< HEAD
-    ...(kind === 'omp' ? getPiPrefillHandlerSourceLines('omp') : []),
-    `  pi.on('before_agent_start', (event${ctxParam}) => {`,
-||||||| parent of 2d948aac594 (fix(omp): fence pane status to the root session manager)
-    `  pi.on('before_agent_start', (event${ctxParam}) => {`,
-=======
     `  onStatus('before_agent_start', (event${ctxParam}) => {`,
->>>>>>> 2d948aac594 (fix(omp): fence pane status to the root session manager)
     ...captureSessionMetadata,
     "    post('before_agent_start', { prompt: event.prompt ?? '' })",
     '  })',
