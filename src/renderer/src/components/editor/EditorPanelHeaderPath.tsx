@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, ExternalLink, Eye, Pencil, X } from 'lucide-react'
+import { Copy, ExternalLink, Eye, Pencil } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,13 +63,9 @@ export function EditorPanelHeaderPath({
   const {
     canRename,
     currentFileName,
-    currentBaseName,
-    pinnedExtension,
-    breadcrumbSegments,
     isRenaming,
     renameInputRef,
     openRenameInput,
-    setRenameDraft,
     commitRename,
     cancelRename
   } = useEditorHeaderFileRename(activeFile)
@@ -92,101 +88,41 @@ export function EditorPanelHeaderPath({
         }}
       >
         {isRenaming ? (
-          <div className="flex h-6 w-full min-w-0 max-w-full items-center gap-1 rounded-md border border-accent/40 bg-input/40 py-0.5 pl-1.5 pr-1 focus-within:border-accent focus-within:ring-1 focus-within:ring-ring">
-            {breadcrumbSegments.length > 0 ? (
-              <span className="min-w-0 shrink truncate font-mono text-xs text-muted-foreground">
-                {breadcrumbSegments.join(' / ')} /
-              </span>
-            ) : null}
-            <input
-              ref={renameInputRef}
-              data-editor-header-rename-input="true"
-              aria-label={translate(
-                'auto.components.editor.EditorPanelHeader.1bb1e226ec',
-                'Rename file {{value0}}',
-                { value0: currentFileName }
-              )}
-              defaultValue={currentBaseName}
-              className="h-full min-w-0 flex-1 bg-transparent font-mono text-xs font-semibold text-foreground outline-none"
-              spellCheck={false}
-              onPointerDown={(event) => event.stopPropagation()}
-              onMouseDown={(event) => event.stopPropagation()}
-              onClick={(event) => event.stopPropagation()}
-              onDoubleClick={(event) => event.stopPropagation()}
-              onChange={(event) => setRenameDraft(event.target.value)}
-              onKeyDown={(event) => {
-                // Why: an Enter that only confirms a CJK IME candidate must not
-                // commit the rename; wait for a non-composition Enter.
-                if (isImeCompositionKeyDown(event)) {
-                  return
-                }
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  commitRename()
-                } else if (event.key === 'Escape') {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  cancelRename()
-                }
-              }}
-            />
-            {pinnedExtension ? (
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                {pinnedExtension}
-              </span>
-            ) : null}
-            <div className="flex shrink-0 items-center">
-              <button
-                type="button"
-                aria-label={translate(
-                  'auto.components.editor.EditorPanelHeader.confirmRename',
-                  'Confirm rename'
-                )}
-                title={translate(
-                  'auto.components.editor.EditorPanelHeader.confirmRename',
-                  'Confirm rename'
-                )}
-                className="flex size-5 items-center justify-center rounded text-status-success hover:bg-status-success-background"
-                onMouseDown={(event) => {
-                  // Why: preventDefault keeps the caret in the input so the
-                  // field is still usable if the click misses the button.
-                  event.preventDefault()
-                  event.stopPropagation()
-                }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  commitRename()
-                }}
-              >
-                <Check className="size-3" strokeWidth={3} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                aria-label={translate(
-                  'auto.components.editor.EditorPanelHeader.cancelRename',
-                  'Cancel rename'
-                )}
-                title={translate(
-                  'auto.components.editor.EditorPanelHeader.cancelRename',
-                  'Cancel rename'
-                )}
-                className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
-                onMouseDown={(event) => {
-                  // Why: same as confirm — the pointer leaving the field must
-                  // not disturb the input it is about to dismiss.
-                  event.preventDefault()
-                  event.stopPropagation()
-                }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  cancelRename()
-                }}
-              >
-                <X className="size-3" strokeWidth={3} aria-hidden="true" />
-              </button>
-            </div>
-          </div>
+          <input
+            ref={renameInputRef}
+            data-editor-header-rename-input="true"
+            aria-label={translate(
+              'auto.components.editor.EditorPanelHeader.1bb1e226ec',
+              'Rename file {{value0}}',
+              { value0: currentFileName }
+            )}
+            defaultValue={currentFileName}
+            // Why: the field spans the header rather than sizing to the name —
+            // a long path is exactly when the rename field needs the room.
+            className="h-6 w-full min-w-0 max-w-full rounded-md border border-accent/40 bg-input/40 px-1.5 font-mono text-xs text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-ring"
+            spellCheck={false}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              // Why: an Enter that only confirms a CJK IME candidate must not
+              // commit the rename; wait for a non-composition Enter.
+              if (isImeCompositionKeyDown(event)) {
+                return
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                event.stopPropagation()
+                commitRename()
+              } else if (event.key === 'Escape') {
+                event.preventDefault()
+                event.stopPropagation()
+                cancelRename()
+              }
+            }}
+            onBlur={commitRename}
+          />
         ) : (
           <button
             type="button"
@@ -199,12 +135,17 @@ export function EditorPanelHeaderPath({
             <span className="editor-header-path-file">{displayPath.fileName}</span>
           </button>
         )}
-        <span
-          className={`editor-header-copy-toast${copiedPathVisible ? ' is-visible' : ''}`}
-          aria-live="polite"
-        >
-          {headerCopyState.copyToastLabel}
-        </span>
+        {/* Why: the toast is opacity-0 rather than display-none, so leaving it
+            mounted reserves ~100px of the row from the rename field for a
+            message that cannot fire while renaming. */}
+        {!isRenaming && (
+          <span
+            className={`editor-header-copy-toast${copiedPathVisible ? ' is-visible' : ''}`}
+            aria-live="polite"
+          >
+            {headerCopyState.copyToastLabel}
+          </span>
+        )}
       </div>
       <DropdownMenu open={pathMenuOpen} onOpenChange={setPathMenuOpen} modal={false}>
         <DropdownMenuTrigger asChild>

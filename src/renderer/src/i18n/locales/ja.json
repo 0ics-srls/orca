@@ -12906,12 +12906,7 @@
           "f0fd4174b5": "ファイルタブを開いてリッチ markdown 編集を使用する",
           "a10d9b8337": "ファイルを開く",
           "2076ecfc9c": "前の変更",
-          "631dab0df3": "次の変更",
-          "revealInFinder": "Finderで表示",
-          "openContainingFolder": "含まれるフォルダを開く",
-          "revealInFileExplorer": "エクスプローラーで表示",
-          "confirmRename": "名前の変更を確定する",
-          "cancelRename": "名前の変更をキャンセルする"
+          "631dab0df3": "次の変更"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "PDFとしてエクスポート",

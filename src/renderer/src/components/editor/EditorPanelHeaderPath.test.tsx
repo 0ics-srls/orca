@@ -84,7 +84,7 @@ function openRenameInput(): void {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
 }
 
-describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
+describe('EditorPanelHeaderPath inline rename', () => {
   beforeEach(() => {
     renameFileOnDiskMock.mockReset()
     Object.assign(window, { api: { ui: { writeClipboardText: vi.fn() } } })
@@ -95,40 +95,21 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn())
   })
 
-  it('morphs into a breadcrumb strip with the basename editable', () => {
+  it('opens a field holding the whole name', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
-    expect(input.value).toBe('notes')
-    expect(screen.getByText('.md')).toBeDefined()
-    expect(screen.getByText('repo /')).toBeDefined()
+    expect(input.value).toBe('notes.md')
   })
 
-  it('shows the full crumb chain without ellipsis cuts', () => {
-    renderPath(
-      baseFile({
-        id: '/repo/docs/marketing/notes.md',
-        filePath: '/repo/docs/marketing/notes.md',
-        relativePath: 'docs/marketing/notes.md'
-      })
-    )
-    openRenameInput()
-
-    expect(screen.getByText('repo / docs / marketing /')).toBeDefined()
-  })
-
-  it('lets the strip claim the full header width instead of capping at 520px', () => {
+  it('lets the field claim the full header width', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
-    const strip = input.parentElement
-    if (!strip) {
-      throw new Error('Missing rename strip')
-    }
-    expect(strip.className).toContain('w-full')
-    expect(strip.className).toContain('max-w-full')
+    expect(input.className).toContain('w-full')
+    expect(input.className).toContain('max-w-full')
   })
 
   it('selects the basename so typing replaces just the name', () => {
@@ -141,60 +122,42 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     expect(input.selectionEnd).toBe('notes'.length)
   })
 
-  it('re-attaches the pinned extension to a bare basename', () => {
-    renderPath(baseFile())
-    openRenameInput()
-
-    const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: 'renamed' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
-
-    expect(renameFileOnDiskMock).toHaveBeenCalledWith({
-      oldPath: '/repo/notes.md',
-      newName: 'renamed.md',
-      worktreeId: 'wt-1',
-      worktreePath: '/repo'
-    })
-  })
-
-  it('respects an explicitly typed extension and drops the pinned suffix', () => {
+  it('renames to the typed name verbatim', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
     fireEvent.change(input, { target: { value: 'renamed.mdx' } })
-    expect(screen.queryByText('.md')).toBeNull()
-
     fireEvent.keyDown(input, { key: 'Enter' })
-    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
-      expect.objectContaining({ newName: 'renamed.mdx' })
-    )
+
+    expect(renameFileOnDiskMock).toHaveBeenCalledWith({
+      oldPath: '/repo/notes.md',
+      newName: 'renamed.mdx',
+      worktreeId: 'wt-1',
+      worktreePath: '/repo'
+    })
   })
 
-  it('shows the same name it commits for a dotted basename', () => {
+  it('commits on blur like the tab bar and file explorer', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: 'v1.2' } })
-    expect(screen.queryByText('.md')).toBeNull()
+    fireEvent.change(input, { target: { value: 'renamed.md' } })
+    fireEvent.blur(input)
 
-    fireEvent.keyDown(input, { key: 'Enter' })
-    expect(renameFileOnDiskMock).toHaveBeenCalledWith(expect.objectContaining({ newName: 'v1.2' }))
+    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ newName: 'renamed.md' })
+    )
   })
 
-  it('keeps the pinned suffix for a leading-dot name', () => {
+  it('does not request a rename when the name was not edited', () => {
     renderPath(baseFile())
     openRenameInput()
 
-    const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: '.notes' } })
-    expect(screen.getByText('.md')).toBeDefined()
+    fireEvent.keyDown(getRenameInput('Rename file notes.md'), { key: 'Enter' })
 
-    fireEvent.keyDown(input, { key: 'Enter' })
-    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
-      expect.objectContaining({ newName: '.notes.md' })
-    )
+    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 
   it('ignores an Enter that only confirms an IME candidate', () => {
@@ -202,7 +165,7 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: 'renamed' } })
+    fireEvent.change(input, { target: { value: 'renamed.md' } })
     fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 })
     expect(renameFileOnDiskMock).not.toHaveBeenCalled()
 
@@ -212,23 +175,28 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
     )
   })
 
-  it('does not commit when the field merely loses focus', () => {
+  it('cancels on Escape without a trailing blur-commit, and ignores empty renames', () => {
     renderPath(baseFile())
     openRenameInput()
 
     const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: 'renamed' } })
+    fireEvent.change(input, { target: { value: 'renamed.md' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
     fireEvent.blur(input)
-
     expect(renameFileOnDiskMock).not.toHaveBeenCalled()
-    expect(screen.getByLabelText('Rename file notes.md')).toBeDefined()
+    expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
+
+    openRenameInput()
+    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: '   ' } })
+    fireEvent.keyDown(getRenameInput('Rename file notes.md'), { key: 'Enter' })
+    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 
   it('drops rename mode when the active file changes', () => {
     const rerenderPath = renderPath(baseFile())
     openRenameInput()
 
-    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: 'renamed' } })
+    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: 'renamed.md' } })
     rerenderPath(
       baseFile({
         id: '/repo/other.md',
@@ -239,52 +207,6 @@ describe('EditorPanelHeaderPath breadcrumb morph rename', () => {
 
     expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
     expect(screen.queryByLabelText('Rename file other.md')).toBeNull()
-    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
-  })
-
-  it('commits via the confirm button', () => {
-    renderPath(baseFile())
-    openRenameInput()
-
-    fireEvent.change(getRenameInput('Rename file notes.md'), {
-      target: { value: 'renamed.md' }
-    })
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Confirm rename' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm rename' }))
-
-    expect(renameFileOnDiskMock).toHaveBeenCalledTimes(1)
-    expect(renameFileOnDiskMock).toHaveBeenCalledWith(
-      expect.objectContaining({ newName: 'renamed.md' })
-    )
-  })
-
-  it('cancels via the cancel button without renaming', () => {
-    renderPath(baseFile())
-    openRenameInput()
-
-    fireEvent.change(getRenameInput('Rename file notes.md'), {
-      target: { value: 'renamed.md' }
-    })
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Cancel rename' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel rename' }))
-
-    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
-  })
-
-  it('cancels on Escape and ignores empty renames', () => {
-    renderPath(baseFile())
-    openRenameInput()
-
-    const input = getRenameInput('Rename file notes.md')
-    fireEvent.change(input, { target: { value: 'renamed.md' } })
-    fireEvent.keyDown(input, { key: 'Escape' })
-    expect(renameFileOnDiskMock).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
-
-    openRenameInput()
-    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: '   ' } })
-    fireEvent.keyDown(getRenameInput('Rename file notes.md'), { key: 'Enter' })
     expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 

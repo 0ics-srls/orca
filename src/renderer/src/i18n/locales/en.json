@@ -14875,9 +14875,7 @@
           "631dab0df3": "Next change",
           "revealInFinder": "Reveal in Finder",
           "openContainingFolder": "Open Containing Folder",
-          "revealInFileExplorer": "Reveal in File Explorer",
-          "confirmRename": "Confirm rename",
-          "cancelRename": "Cancel rename"
+          "revealInFileExplorer": "Reveal in File Explorer"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "Export as PDF",
