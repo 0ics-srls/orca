@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
-import { Script } from 'node:vm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { XTERM_ENGINE_JS } from './terminal-webview-engine.generated'
+import { Terminal } from '@xterm/xterm'
 
 type CachedColor = { css: string; rgba: number }
 type ContrastCache = {
@@ -12,9 +11,7 @@ type ContrastCache = {
   _color: { _data: Record<number, Record<number, CachedColor | null>> }
   _css: { _data: Record<number, Record<number, string | null>> }
 }
-type BundledTerminal = {
-  open(element: HTMLElement): void
-  dispose(): void
+type TerminalWithInternals = InstanceType<typeof Terminal> & {
   options: { theme: { background: string } }
   _core: {
     _themeService: { colors: { contrastCache: ContrastCache; halfContrastCache: ContrastCache } }
@@ -29,7 +26,7 @@ const entries = (cache: ContrastCache): number =>
   )
 
 describe('the mobile bundled xterm contrast caches', () => {
-  let terminal: BundledTerminal
+  let terminal: TerminalWithInternals
   let cache: ContrastCache
   let dimCache: ContrastCache
 
@@ -40,11 +37,9 @@ describe('the mobile bundled xterm contrast caches', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       font: '',
       measureText: () => ({ width: 8 })
-    } as CanvasRenderingContext2D)
-    const Terminal: new (options: { minimumContrastRatio: number }) => BundledTerminal = new Script(
-      `${XTERM_ENGINE_JS}\nwindow.Terminal`
-    ).runInThisContext()
-    terminal = new Terminal({ minimumContrastRatio: 3 })
+    } as unknown as CanvasRenderingContext2D)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test reads xterm's private theme-service cache to verify the patched package; Terminal's public API is unchanged.
+    terminal = new Terminal({ minimumContrastRatio: 3 }) as TerminalWithInternals
     document.body.innerHTML = '<div id="terminal"></div>'
     terminal.open(document.getElementById('terminal')!)
     cache = terminal._core._themeService.colors.contrastCache
