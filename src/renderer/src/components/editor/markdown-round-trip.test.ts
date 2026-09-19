@@ -104,6 +104,60 @@ function markdownAfterTextReplace(content: string, search: string, replacement: 
   }
 }
 
+function markdownAfterDestinationEdit(
+  content: string,
+  kind: 'link' | 'image',
+  destination: string
+): string {
+  const codec = createRichMarkdownEditorCodec()
+  const editor = new Editor({
+    element: null,
+    extensions: createRichMarkdownExtensions({ codec }),
+    content: encodeRawMarkdownHtmlForRichEditor(content, codec),
+    contentType: 'markdown'
+  })
+  try {
+    if (kind === 'link') {
+      let from: number | undefined
+      let to: number | undefined
+      editor.state.doc.descendants((node, pos) => {
+        if (
+          from === undefined &&
+          node.isText &&
+          node.marks.some((mark) => mark.type.name === 'link')
+        ) {
+          from = pos
+          to = pos + node.nodeSize
+        }
+      })
+      if (from === undefined || to === undefined) {
+        throw new Error(`Missing ${kind}`)
+      }
+      editor.chain().setTextSelection({ from, to }).setLink({ href: destination }).run()
+    } else {
+      let position: number | undefined
+      editor.state.doc.descendants((node, pos) => {
+        if (position === undefined && node.type.name === 'image') {
+          position = pos
+        }
+      })
+      if (position === undefined) {
+        throw new Error(`Missing ${kind}`)
+      }
+      const node = editor.state.doc.nodeAt(position)
+      if (!node) {
+        throw new Error(`Missing ${kind}`)
+      }
+      editor.view.dispatch(
+        editor.state.tr.setNodeMarkup(position, undefined, { ...node.attrs, src: destination })
+      )
+    }
+    return editor.getMarkdown().trimEnd()
+  } finally {
+    editor.destroy()
+  }
+}
+
 function markdownAfterTypingBesideImage(content: string, typed: string): string {
   const codec = createRichMarkdownEditorCodec()
   const editor = new Editor({
@@ -593,6 +647,15 @@ describe('rich markdown round trip', () => {
     expect(roundTripMarkdown('![a \\] b](x.png)\n')).toBe('![a \\] b](x.png)')
   })
 
+  it('uses the edited link or image destination instead of stale source bytes', () => {
+    expect(markdownAfterDestinationEdit('[a](old\\)path)\n', 'link', 'new)path')).toBe(
+      '[a](new\\)path)'
+    )
+    expect(markdownAfterDestinationEdit('![a](old\\(path.png)\n', 'image', 'new(path.png')).toBe(
+      '![a](new\\(path.png)'
+    )
+  })
+
   it('does not split a paragraph at a mid-line $$', () => {
     const content = 'costs $$ big money $$ here, honestly'
     expect(roundTripMarkdown(`${content}\n`)).toBe(content)
@@ -777,4 +840,18 @@ it('preserves code spacing inside a table across repeated saves', () => {
   const once = roundTripMarkdown(source)
   expect(once).toContain('`a  b`')
   expect(roundTripMarkdown(once)).toBe(once)
+})
+
+it('retains an unchanged raw destination while repairing nearby attributes', () => {
+  const source = '[a](a\\\\b\\)) and ![x](image.png "say \\"hi\\"")'
+  expect(roundTripMarkdown(source)).toBe(source)
+})
+
+it('encodes spaces in edited destinations', () => {
+  expect(markdownAfterDestinationEdit('[a](old)', 'link', 'docs/My File.md')).toBe(
+    '[a](docs/My%20File.md)'
+  )
+  expect(markdownAfterDestinationEdit('![a](old.png)', 'image', 'My Image.png')).toBe(
+    '![a](My%20Image.png)'
+  )
 })
