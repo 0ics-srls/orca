@@ -13,7 +13,10 @@
 // boundary rather than an empty window, because the two decide opposite things.
 
 import { join } from 'node:path'
-import { readNodeFileWithinLimit } from '../../shared/node-bounded-file-reader'
+import {
+  readNodeFileWithinLimit,
+  NodeFileReadTooLargeError
+} from '../../shared/node-bounded-file-reader'
 import type { AgentSessionJournalIdentity } from '../../shared/agent-session-journal-types'
 import { resolveSessionFilePath } from '../native-chat/session-file-resolver'
 import type {
@@ -289,7 +292,20 @@ export async function readClaudeProviderHistoryWindow(input: {
       MAX_HISTORY_WINDOW_SOURCE_BYTES
     )
     contents = read.buffer.toString('utf8')
-  } catch {
+  } catch (error) {
+    // Both causes surface as the same INCONSISTENT verdict; only the log separates them.
+    console.warn(
+      '[claude-history-window] transcript unreadable; history treated as inconsistent:',
+      {
+        transcriptPath: input.transcriptPath,
+        sessionId: input.sessionId,
+        cause:
+          error instanceof NodeFileReadTooLargeError
+            ? `oversize: ${error.observedBytes} bytes exceeds the ${error.maxBytes} byte window budget`
+            : 'read failed',
+        error
+      }
+    )
     return INCONSISTENT
   }
   return claudeProviderHistoryWindowFromJsonl({ ...input, contents })
