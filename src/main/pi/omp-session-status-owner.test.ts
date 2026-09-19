@@ -115,6 +115,30 @@ describe('OMP session status ownership', () => {
     await settle()
     expect(harness.fetchMock).not.toHaveBeenCalled()
   })
+
+  it('normalizes Windows task transcript paths', async () => {
+    const harness = createAgentStatusExtensionHarness({ kind: 'omp' })
+    const rootFile = 'C:\\Users\\orca\\root.jsonl'
+    const root = {
+      sessionManager: {
+        getSessionId: () => 'root-win',
+        getSessionFile: () => rootFile,
+        getHeader: () => ({})
+      }
+    }
+    await harness.callHook('session_start', {}, root)
+    harness.reload()
+    const child = {
+      sessionManager: {
+        getSessionId: () => 'child-win',
+        getSessionFile: () => 'c:\\users\\orca\\root\\child.jsonl',
+        getHeader: () => ({})
+      }
+    }
+    await harness.callHook('agent_start', {}, child)
+    await settle()
+    expect(harness.fetchMock).not.toHaveBeenCalled()
+  })
   it('keeps reporting for legacy callbacks without a session manager', async () => {
     const harness = createAgentStatusExtensionHarness({ kind: 'omp' })
     await harness.callHook('agent_start')
