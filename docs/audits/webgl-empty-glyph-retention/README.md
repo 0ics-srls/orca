@@ -38,7 +38,8 @@ two modes. It samples V8 heap after CDP collection and records bundle hashes in
 [results.json](./results.json). Two terminals share one atlas. Assertions cover:
 
 - Invisible entries stay at or below 4,096; the baseline accumulates 100,000.
-- Visible glyph caches and the one texture page stay intact across overflow.
+- After ASCII warmup finishes, visible cache and glyph counts stay exactly unchanged
+  across overflow, with no visible glyph rerasterized; the one texture page stays intact.
 - Rendered pixels for the unaffected first cell of both terminals stay identical.
 - The last 64 repeated variants cause no new rasterization.
 - Explicit clear drops invisible metadata even when the atlas has no drawn glyphs.
@@ -48,7 +49,13 @@ run ends with 1,789 entries (93 visible and 1,696 invisible), with roughly 0.3 M
 of heap growth. Exact heap samples vary; the bounded entry count is the invariant.
 No Orca window was launched, and no browser window was shown.
 
-Validation also passed 86 tests across the patch generator/runtime contract and
+A follow-up [review-validation.json](./review-validation.json) reruns both installed
+bundles and both output modes with the stronger warmup/count/rasterization checks
+on Node 24.20.0. The original before/after measurements above remain in `results.json`.
+The runtime contract test also guards the empty-glyph routing and cap in the source
+patch, installed source, and both shipped bundles. Its three checks pass.
+
+Original validation also passed 86 tests across the patch generator/runtime contract and
 WebGL lifecycle/context/recovery suites, full typecheck, lint, and changed-code
 quality. Test commands used `ORCA_BACKGROUND_LAUNCH=1`.
 

@@ -65,6 +65,21 @@ try {
           await new Promise(requestAnimationFrame)
           await new Promise(requestIdleCallback)
         }, mode)
+        // The atlas warms ASCII in idle tasks; sample only after the final queued glyph exists.
+        await page.waitForFunction(() =>
+          Boolean(window.glyphAudit.first.addon._renderer._charAtlas._cacheMap.get(125, 0, 0, 0))
+        )
+        await page.evaluate(() => {
+          const atlas = window.glyphAudit.first.addon._renderer._charAtlas
+          const draw = atlas._drawToCache
+          window.glyphAudit.visibleRasterizations = 0
+          atlas._drawToCache = function (...args) {
+            if (args[0] !== 32 && args[0] !== ' \u200d') {
+              window.glyphAudit.visibleRasterizations++
+            }
+            return draw.apply(this, args)
+          }
+        })
         const cdp = await page.context().newCDPSession(page)
         const samples = []
         for (const count of [0, 1000, 5000, 10000, 50000, 100000]) {
@@ -81,6 +96,7 @@ try {
             second.addon._renderer.renderRows(0, 0)
             window.glyphAudit.index = count
             const atlas = first.addon._renderer._charAtlas
+            // This audit is tied to the pinned addon's private FourKeyMap storage.
             const entries = (map) => {
               let result = 0
               for (const second of Object.values(map?._data._data ?? {})) {
@@ -106,6 +122,7 @@ try {
             }
             return {
               updates: count,
+              visibleRasterizations: window.glyphAudit.visibleRasterizations,
               firstCellPixels: pixels(first),
               secondCellPixels: pixels(second),
               regular: entries(atlas._cacheMap),
@@ -160,7 +177,12 @@ try {
         if (phase === 'after') {
           assert.ok(
             samples.every(
-              (sample) => sample.empty <= 4096 && sample.regular + sample.combined < 200
+              (sample) =>
+                sample.empty <= 4096 &&
+                sample.regular === samples[0].regular &&
+                sample.combined === samples[0].combined &&
+                sample.glyphs === samples[0].glyphs &&
+                sample.visibleRasterizations === 0
             )
           )
           assert.equal(checks.emptyAfterClear, 0)
