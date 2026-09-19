@@ -3,6 +3,11 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { Terminal } from '@xterm/xterm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+type ImeTerminalCore = {
+  _renderService: { dimensions: { css: { cell: { width: number } } } }
+  _compositionHelper: { updateCompositionElements: (dontRecurse: boolean) => void }
+}
+
 let terminal: Terminal
 let view: HTMLElement
 let assignedSpacing: WeakMap<CSSStyleDeclaration, string>
@@ -27,19 +32,39 @@ function compose(text: string): HTMLElement {
 function runs(preedit: HTMLElement): { text: string | null; spacing: string | undefined }[] {
   return Array.from(preedit.children, (child) => ({
     text: child.textContent,
-    spacing: assignedSpacing.get((child as HTMLElement).style)
+    spacing: assignedSpacing.get(elementStyle(child))
   }))
 }
 
+function elementStyle(element: Element): CSSStyleDeclaration {
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Expected an HTML element')
+  }
+  return element.style
+}
+
 function rendering() {
+  const core: unknown = Reflect.get(terminal, '_core')
+  if (!isImeTerminalCore(core)) {
+    throw new Error('xterm internals are unavailable')
+  }
+  return core
+}
+
+function isImeTerminalCore(value: unknown): value is ImeTerminalCore {
+  const renderService = objectProperty(value, '_renderService')
+  const dimensions = objectProperty(renderService, 'dimensions')
+  const css = objectProperty(dimensions, 'css')
+  const cell = objectProperty(css, 'cell')
+  const compositionHelper = objectProperty(value, '_compositionHelper')
   return (
-    terminal as unknown as {
-      _core: {
-        _renderService: { dimensions: { css: { cell: { width: number } } } }
-        _compositionHelper: { updateCompositionElements: (dontRecurse: boolean) => void }
-      }
-    }
-  )._core
+    typeof objectProperty(cell, 'width') === 'number' &&
+    typeof objectProperty(compositionHelper, 'updateCompositionElements') === 'function'
+  )
+}
+
+function objectProperty(value: unknown, key: string): unknown {
+  return typeof value === 'object' && value !== null ? Reflect.get(value, key) : undefined
 }
 
 describe('IME preedit advances on the terminal cell grid (#19315)', () => {
@@ -58,22 +83,23 @@ describe('IME preedit advances on the terminal cell grid (#19315)', () => {
         setter.call(this, value)
       }
     )
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-      () =>
-        ({
-          font: '13px monospace',
-          measureText(this: { font: string }, text: string) {
-            measurements.push(text)
-            const fontSize = Number(this.font.match(/([\d.]+)px/)?.[1] ?? 13)
-            const naturalWidth = /^[\uac00-\ud7a3]$/u.test(text)
-              ? 11.25
-              : /^[\x20-\x7e\uff61-\uff9f]$/u.test(text)
-                ? 6.5
-                : 13
-            return { width: naturalWidth * (fontSize / 13) * fontScale }
-          }
-        }) as unknown as CanvasRenderingContext2D
-    )
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
+      const context: CanvasRenderingContext2D = Object.create(null)
+      context.font = '13px monospace'
+      context.measureText = function (text: string) {
+        measurements.push(text)
+        const fontSize = Number(this.font.match(/([\d.]+)px/)?.[1] ?? 13)
+        const naturalWidth = /^[\uac00-\ud7a3]$/u.test(text)
+          ? 11.25
+          : /^[\x20-\x7e\uff61-\uff9f]$/u.test(text)
+            ? 6.5
+            : 13
+        return Object.assign(Object.create(null), {
+          width: naturalWidth * (fontSize / 13) * fontScale
+        })
+      }
+      return context
+    })
     const container = document.createElement('div')
     document.body.appendChild(container)
     terminal = new Terminal({ cols: 80, rows: 24, fontSize: 13, allowProposedApi: true })
@@ -100,7 +126,7 @@ describe('IME preedit advances on the terminal cell grid (#19315)', () => {
       { text: 'ｱ', spacing: 'calc(var(--xterm-composition-cell-width) * 1 - 6.5px)' }
     ])
     for (const child of Array.from(preedit.children)) {
-      const style = (child as HTMLElement).style
+      const style = elementStyle(child)
       expect(style.position).toBe('')
       expect(style.display).toBe('')
       expect(style.width).toBe('')

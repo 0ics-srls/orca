@@ -6,10 +6,6 @@ import {
   writeToActiveTerminal
 } from './terminal-ime-midline-occlusion-probe'
 
-type TerminalGrid = {
-  _core: { _renderService: { dimensions: { css: { cell: { width: number } } } } }
-}
-
 for (const dpr of [1, 1.25, 2]) {
   for (const gpu of ['on', 'off'] as const) {
     test.describe(`IME preedit grid DPR ${dpr} GPU ${gpu}`, () => {
@@ -59,8 +55,7 @@ for (const dpr of [1, 1.25, 2]) {
                 const screen = terminal.element!.querySelector<HTMLElement>('.xterm-screen')!
                 const preedit = screen.querySelector<HTMLElement>('.xterm-composition-preedit')!
                 // The canvas width rounds independently of fractional WebGL cell widths.
-                const cellWidth = (terminal as unknown as TerminalGrid)._core._renderService
-                  .dimensions.css.cell.width
+                const cellWidth = terminal._core._renderService.dimensions.css.cell.width
                 const line = terminal.buffer.active.getLine(terminal.buffer.active.baseY)!
                 const committed: { text: string; column: number; width: number }[] = []
                 const end = line.translateToString(true).length
@@ -169,8 +164,7 @@ for (const dpr of [1, 1.25, 2]) {
                 const terminal = window
                   .__paneManagers!.get(state.activeTabId!)!
                   .getActivePane()!.terminal
-                const cellWidth = (terminal as unknown as TerminalGrid)._core._renderService
-                  .dimensions.css.cell.width
+                const cellWidth = terminal._core._renderService.dimensions.css.cell.width
                 const preedit = terminal.element!.querySelector('.xterm-composition-preedit')!
                 return Math.abs(preedit.getBoundingClientRect().width - 16 * cellWidth)
               })
@@ -222,8 +216,7 @@ test('preserves native shaping for mixed text, complex scripts, and emoji', asyn
       const actual = await preedit.screenshot()
 
       // Compare against the original single-text-node browser rendering.
-      await preedit.evaluate((element, text) => {
-        const span = element as HTMLElement
+      await preedit.evaluate((span: HTMLElement, text) => {
         span.textContent = `‎${text}‎`
         for (const property of ['width', 'white-space', 'display', 'position']) {
           span.style.removeProperty(property)
