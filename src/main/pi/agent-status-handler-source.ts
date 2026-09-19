@@ -132,7 +132,7 @@ export function getPiAgentStatusHandlerSourceLines(kind: PiAgentKind): string[] 
       : []),
     ...getOmpSessionOwnerHandlerSourceLines(),
     ...sessionStartHandler,
-    ...(kind === 'omp' ? getPiPrefillHandlerSourceLines('omp') : []),
+    ...(kind === 'omp' ? getPiPrefillHandlerSourceLines('omp', true) : []),
     `  onStatus('before_agent_start', (event${ctxParam}) => {`,
     ...captureSessionMetadata,
     "    post('before_agent_start', { prompt: event.prompt ?? '' })",
