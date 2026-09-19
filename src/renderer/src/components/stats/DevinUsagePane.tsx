@@ -82,19 +82,21 @@ export function DevinUsagePane(): React.JSX.Element {
     )
   }
   if (!summary && (scanState.isScanning || scanState.lastScanCompletedAt === null)) {
-    return (
-      <ClaudeUsageLoadingState
-        title={title}
-        summaryCardCount={4}
-        summaryGridClassName="md:grid-cols-2"
-      />
-    )
+    return <ClaudeUsageLoadingState title={title} summaryCardCount={4} />
   }
   return (
     <UsageTrackingPaneShell
       enabled
       title={title}
-      status={`${formatUpdatedAt(scanState.lastScanCompletedAt)}${scanState.lastScanError ? ` • Last scan error: ${scanState.lastScanError}` : ''}`}
+      status={
+        scanState.lastScanError
+          ? `${formatUpdatedAt(scanState.lastScanCompletedAt)}${translate(
+              'auto.components.stats.DevinUsagePane.lastScanError',
+              ' • Last scan error: {{value0}}',
+              { value0: scanState.lastScanError }
+            )}`
+          : formatUpdatedAt(scanState.lastScanCompletedAt)
+      }
       isRefreshing={scanState.isScanning}
       hasData={summary?.hasAnyDevinData ?? scanState.hasAnyDevinData}
       enableLabel={enableLabel}
