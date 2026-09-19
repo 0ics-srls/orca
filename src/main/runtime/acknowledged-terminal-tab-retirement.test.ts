@@ -181,3 +181,34 @@ it('protects a persisted sibling omitted by a partial mobile snapshot', async ()
   await expect(pending).resolves.toMatchObject({ refused: true, refusalReason: 'stale-terminal' })
   expect(f.hasTab()).toBe(true)
 })
+
+it('never re-issues the renderer close against a successor that took the tab id', async () => {
+  const f = fixture()
+  const pending = f.close()
+  await f.entered.promise
+  const session = f.store.getWorkspaceSession()
+  f.store.setWorkspaceSession(
+    advanceTerminalTopologyRevision(
+      {
+        ...session,
+        tabsByWorktree: {
+          ...session.tabsByWorktree,
+          [ACK_WORKTREE]: session.tabsByWorktree[ACK_WORKTREE].map((tab) => ({
+            ...tab,
+            createdAt: 999
+          }))
+        }
+      },
+      ACK_WORKTREE
+    )
+  )
+  f.acknowledgement.resolve()
+  await expect(pending).resolves.toMatchObject({ refused: true, refusalReason: 'stale-terminal' })
+  // Why: notifier.closeTerminalTab carries only a tab id — no generation, PTY or
+  // incarnation — so the renderer kills whatever occupies that id when it arrives.
+  // Retrying the close after this refusal therefore destroys the successor, and
+  // re-capturing identity beforehand cannot prevent it (it only detects a further
+  // race). One call per close is what keeps the successor alive.
+  expect(f.closeTerminalTab).toHaveBeenCalledTimes(1)
+  expect(f.hasTab()).toBe(true)
+})
