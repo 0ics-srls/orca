@@ -44,27 +44,49 @@ function elementStyle(element: Element): CSSStyleDeclaration {
 }
 
 function rendering() {
-  const core: unknown = Reflect.get(terminal, '_core')
+  if (!hasTerminalCore(terminal)) {
+    throw new Error('xterm internals are unavailable')
+  }
+  const core: unknown = terminal._core
   if (!isImeTerminalCore(core)) {
     throw new Error('xterm internals are unavailable')
   }
   return core
 }
 
+function hasTerminalCore(value: Terminal): value is Terminal & { _core: unknown } {
+  return '_core' in value
+}
+
 function isImeTerminalCore(value: unknown): value is ImeTerminalCore {
-  const renderService = objectProperty(value, '_renderService')
-  const dimensions = objectProperty(renderService, 'dimensions')
-  const css = objectProperty(dimensions, 'css')
-  const cell = objectProperty(css, 'cell')
-  const compositionHelper = objectProperty(value, '_compositionHelper')
+  if (!isRecord(value)) {
+    return false
+  }
+  const renderService = value._renderService
+  if (!isRecord(renderService)) {
+    return false
+  }
+  const dimensions = renderService.dimensions
+  if (!isRecord(dimensions)) {
+    return false
+  }
+  const css = dimensions.css
+  if (!isRecord(css)) {
+    return false
+  }
+  const cell = css.cell
+  const compositionHelper = value._compositionHelper
+  if (!isRecord(cell) || !isRecord(compositionHelper)) {
+    return false
+  }
   return (
-    typeof objectProperty(cell, 'width') === 'number' &&
-    typeof objectProperty(compositionHelper, 'updateCompositionElements') === 'function'
+    typeof cell.width === 'number' &&
+    typeof compositionHelper.updateCompositionElements === 'function'
   )
 }
 
-function objectProperty(value: unknown, key: string): unknown {
-  return typeof value === 'object' && value !== null ? Reflect.get(value, key) : undefined
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 describe('IME preedit advances on the terminal cell grid (#19315)', () => {
