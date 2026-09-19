@@ -3821,14 +3821,16 @@ export class RelayAssignmentStore {
               ? activityId
               : pendingId
             : activityId
-        await this.removeSupersededSameCellControls(
+        // Accumulated, not applied: every cell-row write on this path is folded
+        // into one conditional statement issued last, below.
+        let reservationDelta = -(await this.removeSupersededSameCellControls(
           transaction,
           identity,
           activityLeases,
           input.cellId,
           retainedActivityId,
           now
-        )
+        ))
         if (existing) {
           await transaction.query(
             `UPDATE relay_assignment_activity_leases SET expires_at = ?, updated_at = ?
@@ -3846,7 +3848,7 @@ export class RelayAssignmentStore {
             )
             await this.touchAssignment(transaction, identity, expiresAt, now)
           } else {
-            await this.adjustCellReservationAtomically(transaction, input.cellId, 1)
+            reservationDelta += ACTIVITY_REQUEST_UNITS.control
             await this.adjustActivityCount(transaction, identity, 'control', 1, expiresAt, now)
             await transaction.query(
               `INSERT INTO relay_assignment_activity_leases
@@ -3902,6 +3904,17 @@ export class RelayAssignmentStore {
             input.idleRegionalRehome && input.cellIncarnation ? 1 : 0
           ]
         )
+        // Last, and only if the count actually moved: the cell row is shared by
+        // every host on the cell, and this transaction spans a dozen round
+        // trips. Holding its write lock from the first of them capped a
+        // far-from-Postgres cell at a couple of accepts a second.
+        if (reservationDelta !== 0) {
+          await this.adjustCellReservationAtomically(
+            transaction,
+            input.cellId,
+            reservationDelta
+          )
+        }
         return activityId
       })
     })
@@ -7641,6 +7654,9 @@ export class RelayAssignmentStore {
     await this.adjustActivityCount(database, identity, kind, -1, now, now)
   }
 
+  // Returns the request units this removal frees on `cellId`. The caller folds
+  // them into the one conditional cell-row write it makes just before COMMIT,
+  // so no statement here touches the fleet's most contended row.
   private async removeSupersededSameCellControls(
     database: RelayDatabase,
     identity: AssignmentIdentity,
@@ -7648,14 +7664,14 @@ export class RelayAssignmentStore {
     cellId: string,
     retainedActivityId: string,
     now: number
-  ): Promise<void> {
+  ): Promise<number> {
     const superseded = leases.filter(
       (lease) =>
         activityKind(lease) === 'control' &&
         text(lease, 'cell_id') === cellId &&
         text(lease, 'activity_id') !== retainedActivityId
     )
-    if (superseded.length === 0) return
+    if (superseded.length === 0) return 0
     if (
       superseded.some(
         (lease) => integer(lease, 'request_units') !== ACTIVITY_REQUEST_UNITS.control
@@ -7663,10 +7679,6 @@ export class RelayAssignmentStore {
     ) {
       throw new Error('activity_lease_shape_mismatch')
     }
-    // Why: this recomputes one cell's reservation from its leases, so only that
-    // row needs to be held; the 23-row inventory lock here serialised every
-    // desktop control rebind in the fleet behind every other one.
-    const cellRow = (await this.lockCellRows(database, [cellId]))[0]
     await database.query(
       `DELETE FROM relay_assignment_activity_leases
        WHERE user_id = ? AND relay_host_id = ? AND activity_kind = 'control'
@@ -7680,22 +7692,9 @@ export class RelayAssignmentStore {
        WHERE user_id = ? AND relay_host_id = ?`,
       [remainingControls, now, identity.userId, identity.relayHostId]
     )
-    const cellUnitsRow = (
-      await database.query(
-        `SELECT COALESCE(SUM(request_units), 0) AS request_units
-         FROM relay_assignment_activity_leases WHERE cell_id = ?`,
-        [cellId]
-      )
-    )[0]!
-    const cellUnits = integer(cellUnitsRow, 'request_units')
-    if (!cellRow) throw new Error('assigned_cell_missing')
-    if (cellUnits > integer(cellRow, 'capacity_requests')) {
-      throw new Error('relay_capacity_exhausted')
-    }
-    await database.query(
-      `UPDATE relay_cells SET reserved_requests = ?, updated_at = ? WHERE cell_id = ?`,
-      [cellUnits, now, cellId]
-    )
+    // The shape check above proved every superseded lease holds exactly the
+    // control unit, so the freed units are exact without re-summing the cell.
+    return superseded.length * ACTIVITY_REQUEST_UNITS.control
   }
 
   private async adjustActivityCount(

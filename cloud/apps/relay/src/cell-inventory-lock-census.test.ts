@@ -32,7 +32,9 @@ const CENSUS: CensusEntry[] = [
   // only the one or two cell rows they touch, in cell_id order (lockCellRows),
   // so they cannot cycle with placement's ordered inventory lock, and the
   // 23-row lock there had serialised every reconnect in the fleet behind every
-  // other one.
+  // other one. The control accept path went one step further and takes no cell
+  // read lock at all: its single conditional write is the last statement before
+  // COMMIT.
   { method: 'startEvacuation', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'nowait', reach: 'request' },
