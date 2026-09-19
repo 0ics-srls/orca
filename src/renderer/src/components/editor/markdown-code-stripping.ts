@@ -9,7 +9,7 @@ export function stripMarkdownCode(content: string): string {
   let rangeIndex = 0
   let sanitized = ''
 
-  forEachMarkdownLine(content, (lineStart, lineEnd) => {
+  forEachMarkdownLine(content, (lineStart, lineEnd, nextLineStart) => {
     while (rangeIndex < ranges.length && ranges[rangeIndex][1] <= lineStart) {
       rangeIndex += 1
     }
@@ -21,7 +21,7 @@ export function stripMarkdownCode(content: string): string {
     }
     sanitized += content.slice(cursor, lineEnd)
     if (lineEnd < content.length) {
-      sanitized += '\n'
+      sanitized += content.slice(lineEnd, nextLineStart)
     }
   })
 
