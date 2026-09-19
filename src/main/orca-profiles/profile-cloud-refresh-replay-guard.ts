@@ -7,6 +7,7 @@
 // A replay this soon after the ambiguous attempt is a retry loop, not a person
 // asking again; holding it back keeps one lost reply from becoming a storm.
 export const AMBIGUOUS_REFRESH_REPLAY_DELAY_MS = 30_000
+const AMBIGUOUS_REFRESH_ATTEMPTS_MAX_ENTRIES = 512
 
 type AmbiguousRefreshAttempt = {
   refreshToken: string
@@ -14,6 +15,21 @@ type AmbiguousRefreshAttempt = {
 }
 
 const ambiguousRefreshAttempts = new Map<string, AmbiguousRefreshAttempt>()
+
+function pruneAmbiguousRefreshAttempts(now: number): void {
+  for (const [key, attempt] of ambiguousRefreshAttempts) {
+    if (now - attempt.attemptedAt >= AMBIGUOUS_REFRESH_REPLAY_DELAY_MS) {
+      ambiguousRefreshAttempts.delete(key)
+    }
+  }
+  while (ambiguousRefreshAttempts.size > AMBIGUOUS_REFRESH_ATTEMPTS_MAX_ENTRIES) {
+    const oldest = ambiguousRefreshAttempts.keys().next()
+    if (oldest.done) {
+      return
+    }
+    ambiguousRefreshAttempts.delete(oldest.value)
+  }
+}
 
 export class AmbiguousRefreshReplayBlockedError extends Error {
   constructor() {
@@ -27,7 +43,10 @@ export function recordAmbiguousRefreshAttempt(
   refreshToken: string,
   now = Date.now()
 ): void {
+  pruneAmbiguousRefreshAttempts(now)
+  ambiguousRefreshAttempts.delete(key)
   ambiguousRefreshAttempts.set(key, { refreshToken, attemptedAt: now })
+  pruneAmbiguousRefreshAttempts(now)
 }
 
 // Call once the token's fate is known: it rotated, or the session it belonged to
@@ -45,6 +64,7 @@ export function blocksAmbiguousRefreshReplay(
   refreshToken: string,
   now = Date.now()
 ): boolean {
+  pruneAmbiguousRefreshAttempts(now)
   const attempt = ambiguousRefreshAttempts.get(key)
   if (!attempt || attempt.refreshToken !== refreshToken) {
     return false
