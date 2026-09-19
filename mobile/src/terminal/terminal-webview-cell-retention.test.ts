@@ -34,7 +34,7 @@ it.each([false, true])(
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       font: '',
       measureText: () => ({ width: 8 })
-    } as CanvasRenderingContext2D)
+    } as unknown as CanvasRenderingContext2D)
     const Terminal: new (options: Record<string, unknown>) => BundledTerminal = new Script(
       `${XTERM_ENGINE_JS}\nwindow.Terminal`
     ).runInThisContext()
