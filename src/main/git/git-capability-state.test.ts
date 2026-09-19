@@ -35,6 +35,19 @@ describe('Git capability execution-host state', () => {
     )
   })
 
+  it('bounds local capability entries during WSL distro churn', () => {
+    const first = getLocalGitCapabilityCache({ wslDistro: 'first-distro' })
+    first.rememberUnsupported('worktree-list-path-format')
+    for (let index = 0; index < 132; index += 1) {
+      getLocalGitCapabilityCache({ wslDistro: `distro-${index}` })
+    }
+    expect(
+      getLocalGitCapabilityCache({ wslDistro: 'first-distro' }).shouldTry(
+        'worktree-list-path-format'
+      )
+    ).toBe(true)
+  })
+
   it('shares one SSH provider lifetime without leaking into a replacement provider', () => {
     const provider = createProviderIdentity()
     const replacementProvider = createProviderIdentity()
