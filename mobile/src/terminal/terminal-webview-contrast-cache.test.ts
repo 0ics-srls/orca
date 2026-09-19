@@ -40,7 +40,7 @@ describe('the mobile bundled xterm contrast caches', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       font: '',
       measureText: () => ({ width: 8 })
-    } as CanvasRenderingContext2D)
+    } as unknown as CanvasRenderingContext2D)
     const Terminal: new (options: { minimumContrastRatio: number }) => BundledTerminal = new Script(
       `${XTERM_ENGINE_JS}\nwindow.Terminal`
     ).runInThisContext()
