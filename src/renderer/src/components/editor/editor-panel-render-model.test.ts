@@ -306,10 +306,11 @@ describe('getEditorPanelRenderModel markdown export affordance', () => {
   })
 })
 
-it('hides disk preview while a fallback draft is unsaved', () => {
+it('offers the live Markdown preview while a fallback draft is unsaved', () => {
   const model = renderModel({
     editorDrafts: { '/repo/README.md': '[reference]: https://example.com' }
   })
-  expect(model.availableEditorToggleModes).not.toContain('preview')
+  expect(model.availableEditorToggleModes).toContain('preview')
+  expect(model.canShowMarkdownPreview).toBe(true)
   expect(model.canOpenPreviewToSide).toBe(false)
 })
