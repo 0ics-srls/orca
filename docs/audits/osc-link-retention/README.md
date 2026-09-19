@@ -31,14 +31,16 @@ below are heap growth after GC, in decimal MB; these are isolated reproductions,
 not affected-host measurements.
 
 | Terminal | Before, across three modes | After, across three modes |
-| --- | ---: | ---: |
-| Headless | 20.59–20.93 MB | 1.65–1.72 MB |
-| Renderer | 20.52–20.76 MB | 1.66–1.71 MB |
+| -------- | -------------------------: | ------------------------: |
+| Headless |             20.59–20.93 MB |              1.65–1.72 MB |
+| Renderer |             20.52–20.76 MB |              1.66–1.71 MB |
 
 All baseline cases retained 10,000 entries/markers with only 24 rows. All fixed
-cases retained 785 entries/markers at the final sample. A separate sweep of a
-5,024-row, 160-column buffer removed 1,023 obsolete entries in 9.99 ms. Sweep cost
-scales with configured buffer size; this is one timing sample, not a latency bound.
+cases retained 785 entries/markers at the final sample. A sweep of a 5,024-row, 160-column buffer removed 1,024 obsolete entries in
+roughly 6–14 ms for plain rows and 14–16 ms for link-dense rows in the refreshed
+run. At 50,024 rows, plain sweeps measured roughly 45–51 ms and link-dense sweeps
+roughly 263–325 ms. Sweep cost
+scales with configured buffer size; these are isolated samples, not latency bounds.
 
 ## Fix and safeguards
 
@@ -49,11 +51,15 @@ no remaining reference. Existing xterm callbacks remove both registry indexes;
 unrelated markers are untouched. The check runs after headless parsing and through
 `onWriteParsed` for desktop panes, dashboard previews, and the mobile WebView.
 
-The scan deliberately does not rely solely on marker rows: wrapping can put live
-linked cells on a row other than the initial marker. Regression tests exercise
-real headless/renderer libraries, the generated mobile engine, scrollback,
-alternate-screen transitions, partial overwrite/reflow, explicit ID reuse,
-split writes, unrelated markers, and both production headless write paths.
+The scan deliberately checks every cell instead of trusting marker rows: wrapping
+can put live linked cells on a row other than the initial marker, and resize/reflow
+can make marker coordinates stale. Regression tests exercise real headless/renderer
+libraries, the generated mobile engine, scrollback, alternate-screen transitions,
+partial overwrite/reflow, explicit ID reuse, split writes, unrelated markers, and
+both production headless write paths. This keeps correctness sound but leaves a
+known performance gap for very large, link-dense scrollback: a synchronous sweep
+can take hundreds of milliseconds. A future time-budgeted or incremental collector
+should address that separately; this PR does not claim to remove that stall.
 
 The collector depends on private xterm registry/attribute fields, as Orca's
 existing snapshot hyperlink extraction does. Shape checks skip unsupported core

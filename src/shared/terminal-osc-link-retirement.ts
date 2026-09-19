@@ -2,15 +2,13 @@ import type { IBuffer, Terminal } from '@xterm/headless'
 
 type OscLinkMarker = { dispose(): void; line?: number }
 type OscLinkEntry = { id: number; lines: OscLinkMarker[] }
-type TerminalBuffers = Pick<Terminal, 'buffer' | 'cols'>
+type TerminalBuffers = Pick<Terminal, 'buffer'>
 
 /** xterm's line markers outlive overwritten hyperlinks, including redraws without scrollback. */
 export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () => number {
   const SWEEP_GROWTH = 1024
   let nextSweepSize = SWEEP_GROWTH
   let previousSize = 0
-  let markerRowsEnabled = true
-  let previousColumns = terminal.cols
 
   function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null
@@ -36,28 +34,10 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
   }
 
-  function collectBufferLinks(
-    buffer: IBuffer,
-    links: Set<number>,
-    rows?: ReadonlySet<number>
-  ): void {
+  function collectBufferLinks(buffer: IBuffer, links: Set<number>): void {
     const cell = buffer.getNullCell()
-    if (rows === undefined) {
-      for (let row = 0; row < buffer.length; row++) {
-        const line = buffer.getLine(row)
-        if (!line) {
-          continue
-        }
-        for (let column = 0; column < line.length; column++) {
-          addAttributeLink(line.getCell(column, cell), links)
-        }
-      }
-      return
-    }
-    for (const row of rows) {
-      if (row < 0 || row >= buffer.length) {
-        continue
-      }
+    // Scan every cell: marker rows are incomplete after autowrap and reflow.
+    for (let row = 0; row < buffer.length; row++) {
       const line = buffer.getLine(row)
       if (!line) {
         continue
@@ -66,23 +46,6 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
         addAttributeLink(line.getCell(column, cell), links)
       }
     }
-  }
-
-  /** Marker lines identify link rows until a reflow can leave text on unmarked continuation rows. */
-  function collectMarkerRows(entries: Iterable<unknown>): Set<number> | undefined {
-    const rows = new Set<number>()
-    for (const value of entries) {
-      if (!isLinkEntry(value)) {
-        return undefined
-      }
-      for (const marker of value.lines) {
-        if (typeof marker.line !== 'number' || marker.line < 0) {
-          return undefined
-        }
-        rows.add(marker.line)
-      }
-    }
-    return rows.size > 0 ? rows : undefined
   }
 
   return (): number => {
@@ -101,12 +64,8 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
       return 0
     }
     const entries: Map<unknown, unknown> = service._dataByLinkId
-    if (terminal.cols !== previousColumns) {
-      markerRowsEnabled = false
-      previousColumns = terminal.cols
-    }
     if (entries.size < previousSize) {
-      nextSweepSize = entries.size + SWEEP_GROWTH
+      nextSweepSize = Math.min(nextSweepSize, entries.size + SWEEP_GROWTH)
     }
     previousSize = entries.size
     if (entries.size < nextSweepSize) {
@@ -114,9 +73,8 @@ export function createTerminalOscLinkRetirement(terminal: TerminalBuffers): () =
     }
 
     const live = new Set<number>()
-    const markerRows = markerRowsEnabled ? collectMarkerRows(entries.values()) : undefined
-    collectBufferLinks(terminal.buffer.normal, live, markerRows)
-    collectBufferLinks(terminal.buffer.alternate, live, markerRows)
+    collectBufferLinks(terminal.buffer.normal, live)
+    collectBufferLinks(terminal.buffer.alternate, live)
     // An OSC 8 open can finish one write before its linked text arrives in the next.
     addAttributeLink(input.getAttrData(), live)
     const bufferService = core._bufferService

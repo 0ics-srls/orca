@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Terminal as HeadlessTerminal } from '@xterm/headless'
 import { Terminal as RendererTerminal } from '@xterm/xterm'
 import {
@@ -213,6 +213,89 @@ describe.each([
       retirement()
       expect(hasUri(terminal, 'normal', liveUri)).toBe(true)
     } finally {
+      terminal.dispose()
+    }
+  })
+
+  it('bounds redraws when alternate-screen exits remove entries between additions', async () => {
+    const terminal = createTerminal()
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    try {
+      for (let frame = 0; frame < 1300; frame++) {
+        await write(terminal, REDRAW)
+        retirement()
+        await write(terminal, `\x1b[?1049h${REDRAW}`)
+        retirement()
+        await write(terminal, '\x1b[?1049l')
+        retirement()
+      }
+      expect(linkRegistry(terminal).size).toBeLessThanOrEqual(1024)
+      expect(terminal.markers.length).toBeLessThanOrEqual(1024)
+      expect(cellUri(terminal, 'normal', 0, 0)).toBe(URL)
+    } finally {
+      terminal.dispose()
+    }
+  })
+
+  it.each(['autowrap', 'resize-back'] as const)(
+    'preserves unmarked live cells after %s',
+    async (mode) => {
+      const terminal = createTerminal()
+      terminal.resize(20, 24)
+      terminal.loadAddon(new TerminalOscLinkRetirementAddon())
+      const liveUri = `${URL}/${mode}`
+      try {
+        await write(terminal, `\x1b]8;;${liveUri}\x1b\\${'a'.repeat(21)}${CLOSE}`)
+        if (mode === 'resize-back') {
+          terminal.resize(5, 24)
+          terminal.resize(20, 24)
+        }
+        await write(terminal, '\x1b[1;1H\x1b[2K')
+        expect(hasUri(terminal, 'normal', liveUri)).toBe(true)
+        await write(terminal, `\x1b[24;1H${REDRAW.repeat(1100)}`)
+        expect(linkRegistry(terminal).size).toBeLessThanOrEqual(1024)
+        expect(hasUri(terminal, 'normal', liveUri)).toBe(true)
+      } finally {
+        terminal.dispose()
+      }
+    }
+  )
+
+  it('scans all rows when marker metadata is incomplete', async () => {
+    const terminal = createTerminal()
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    try {
+      await write(terminal, 'plain text\r\n'.repeat(1500))
+      await write(terminal, REDRAW.repeat(1024))
+      expect(retirement()).toBe(1023)
+      expect(hasUri(terminal, 'normal', URL)).toBe(true)
+    } finally {
+      terminal.dispose()
+    }
+  })
+
+  it('preserves links when an unfamiliar line layout requires the public cell scan', async () => {
+    const terminal = createTerminal()
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    const buffer = terminal.buffer.normal
+    const getLine = buffer.getLine.bind(buffer)
+    const publicLines = vi.spyOn(buffer, 'getLine').mockImplementation((row) => {
+      const line = getLine(row)
+      return (
+        line && {
+          isWrapped: line.isWrapped,
+          length: line.length,
+          getCell: line.getCell.bind(line),
+          translateToString: line.translateToString.bind(line)
+        }
+      )
+    })
+    try {
+      await write(terminal, REDRAW.repeat(1024))
+      expect(retirement()).toBe(1023)
+      expect(cellUri(terminal, 'normal', 0, 0)).toBe(URL)
+    } finally {
+      publicLines.mockRestore()
       terminal.dispose()
     }
   })
