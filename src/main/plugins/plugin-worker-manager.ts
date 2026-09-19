@@ -72,6 +72,11 @@ export class PluginWorkerManager {
     return new Map(this.knownSpecs)
   }
 
+  /** @internal - exposed for lifecycle retention tests. */
+  generationCountForTests(): number {
+    return this.generations.size
+  }
+
   async ensureActive(spec: PluginWorkerSpawnSpec): Promise<PluginWorkerHandle> {
     if (this.disposed) {
       throw new Error('plugin workers are shut down')
@@ -233,6 +238,7 @@ export class PluginWorkerManager {
       record?.handle.dispose().catch(() => undefined)
     ])
     record?.lease.release()
+    this.forgetGenerationIfIdle(pluginKey)
   }
 
   reapIdle(now = Date.now()): void {
@@ -255,7 +261,10 @@ export class PluginWorkerManager {
         .catch(() => undefined)
         .finally(() => record.lease.release())
       this.stoppingWorkers.add(stopping)
-      void stopping.then(() => this.stoppingWorkers.delete(stopping))
+      void stopping.then(() => {
+        this.stoppingWorkers.delete(stopping)
+        this.forgetGenerationIfIdle(pluginKey)
+      })
     }
   }
 
@@ -289,6 +298,16 @@ export class PluginWorkerManager {
     const generation = (this.generations.get(pluginKey) ?? 0) + 1
     this.generations.set(pluginKey, generation)
     return generation
+  }
+
+  private forgetGenerationIfIdle(pluginKey: string): void {
+    if (
+      !this.activations.has(pluginKey) &&
+      !this.workers.has(pluginKey) &&
+      !this.knownSpecs.has(pluginKey)
+    ) {
+      this.generations.delete(pluginKey)
+    }
   }
 
   private isCancelled(pluginKey: string, generation: number, signal?: AbortSignal): boolean {
