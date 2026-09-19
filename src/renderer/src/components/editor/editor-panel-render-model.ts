@@ -140,16 +140,11 @@ export function getEditorPanelRenderModel({
   const richModeFallsBackToSource =
     richModeEligibility !== null &&
     (richModeEligibility.exceedsSizeLimit || richModeUnsupportedMessage !== null)
-  const hasUnsavedMarkdownDraft =
-    viewerLanguage === 'markdown' &&
-    activeFile.mode === 'edit' &&
-    editorDrafts[activeFile.id] !== undefined &&
-    editorDrafts[activeFile.id] !== inlineFileContent?.content
   const editorToggleModes = getEditorToggleModes({
     language: viewerLanguage,
     mode: activeFile.mode,
     diffSource: activeFile.diffSource,
-    richModeFallsBackToSource: richModeFallsBackToSource && !hasUnsavedMarkdownDraft
+    richModeFallsBackToSource
   })
   const availableEditorToggleModes =
     isBinaryEditSurface || !canUseChangesModeForFile(activeFile)
@@ -201,7 +196,6 @@ export function getEditorPanelRenderModel({
     // files and commit diffs whose content may not match the working tree).
     canOpenPreviewToSide:
       canOpenWorkspaceFileBrowser &&
-      !hasUnsavedMarkdownDraft &&
       canPreviewLanguage(viewerLanguage) &&
       (activeFile.mode === 'edit' || (isSingleDiff && openFileState.canOpen)),
     mdViewMode,
