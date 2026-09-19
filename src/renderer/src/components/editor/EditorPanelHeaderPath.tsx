@@ -15,6 +15,7 @@ import type { OpenFile } from '@/store/slices/editor'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '../tab-bar/SortableTab'
 import { useEditorHeaderFileRename } from './editor-header-file-rename'
 import { getEditorHeaderCopyState } from './editor-header'
+import { splitPathForDisplay } from './editor-path-display'
 
 const isMac = navigator.userAgent.includes('Mac')
 const isLinux = navigator.userAgent.includes('Linux')
@@ -41,17 +42,6 @@ type EditorPanelHeaderPathProps = {
   onCopyPath: () => void
   onOpenMarkdownPreview: () => void
   onOpenContainingFolder: () => void
-}
-
-function splitPathForDisplay(path: string): { prefix: string; fileName: string } {
-  const separatorIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  if (separatorIndex < 0) {
-    return { prefix: '', fileName: path }
-  }
-  return {
-    prefix: path.slice(0, separatorIndex + 1),
-    fileName: path.slice(separatorIndex + 1)
-  }
 }
 
 export function EditorPanelHeaderPath({

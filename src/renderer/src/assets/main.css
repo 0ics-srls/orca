@@ -1121,6 +1121,7 @@ html.native-shell .app-layout {
   text-align: left;
 }
 
+.path-display-prefix,
 .editor-header-path-prefix {
   min-width: 0;
   overflow: hidden;
@@ -1128,6 +1129,7 @@ html.native-shell .app-layout {
   white-space: nowrap;
 }
 
+.path-display-file,
 .editor-header-path-file {
   flex: 0 0 auto;
   white-space: nowrap;
