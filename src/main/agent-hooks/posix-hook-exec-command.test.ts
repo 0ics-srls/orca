@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runProcessSync } from '../../shared/child-process/run-process'
+import { runProcess } from '../../shared/child-process/run-process'
 import { wrapPosixHookCommandForExec } from './posix-hook-command'
 import { shlexSplit } from './posix-hook-exec-command.test-fixture'
 
@@ -24,7 +24,7 @@ describe.skipIf(process.platform === 'win32')('POSIX exec hook command', () => {
 
   it.each(['present', 'missing', 'not-executable', 'missing-env'])(
     'preserves the gate response with a %s script',
-    (state) => {
+    async (state) => {
       const script = join(root, "hook 'quoted' $literal `name` 日本語.sh")
       writeFileSync(script, '#!/bin/sh\nprintf \'%s\\n\' "$ORCA_TEST_EVENT"\ncat >/dev/null\n', {
         mode: 0o700
@@ -47,10 +47,10 @@ describe.skipIf(process.platform === 'win32')('POSIX exec hook command', () => {
         throw new Error('missing hook program')
       }
       for (const route of ['exec', 'shell']) {
-        const result = runProcessSync({
+        const result = await runProcess({
           program: route === 'exec' ? program : '/bin/sh',
           args: route === 'exec' ? args : ['-c', command],
-          input: Buffer.from('{"toolCall":{"name":"read_file"}}'),
+          input: '{"toolCall":{"name":"read_file"}}',
           env: { ...process.env, ORCA_TEST_REQUIRED: state === 'missing-env' ? '' : '1' },
           timeoutMs: 5000
         })
