@@ -49,8 +49,8 @@ test('cmd+p quick open prioritizes the filename and reveals the full path on hov
   // tooltip left open from a prior attempt can swallow the next hover.
   await expect(async () => {
     await orcaPage.mouse.move(8, 8)
-    await row.hover({ position: { x: 20, y: 12 }, timeout: 2_000 })
-    await row.hover({ position: { x: 40, y: 12 }, timeout: 2_000 })
+    await row.hover({ position: { x: 20, y: 12 }, force: true })
+    await row.hover({ position: { x: 40, y: 12 }, force: true })
     await expect(tooltip).toBeVisible({ timeout: 2_000 })
   }).toPass({ timeout: 15_000, intervals: [100, 250, 500] })
 

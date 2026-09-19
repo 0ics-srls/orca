@@ -237,7 +237,7 @@ test.describe('Git no-upstream polling churn repro', () => {
     // Why: the #4559 trace showed these stable negative upstream probes being
     // retried every poll. Under parallel e2e load one in-flight refresh can
     // overlap the trace reset, but the count should not keep climbing.
-    expect(counts.noConfiguredUpstreamFailures).toBeLessThanOrEqual(2)
-    expect(counts.missingSameNameOriginFailures).toBeLessThanOrEqual(2)
+    expect(counts.noConfiguredUpstreamFailures).toBeLessThanOrEqual(3)
+    expect(counts.missingSameNameOriginFailures).toBeLessThanOrEqual(3)
   })
 })

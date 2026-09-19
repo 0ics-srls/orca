@@ -150,6 +150,34 @@ async function findMirroredPage(
   )
 }
 
+async function findNewMirroredPage(
+  page: Page,
+  worktreeId: string,
+  excludePageId: string
+): Promise<{
+  handleEnvironmentId: string | null
+  pageId: string
+} | null> {
+  return page.evaluate(
+    ({ excludePageId, worktreeId }) => {
+      const state = window.__store?.getState()
+      for (const workspace of state?.browserTabsByWorktree[worktreeId] ?? []) {
+        for (const browserPage of state?.browserPagesByWorkspace[workspace.id] ?? []) {
+          if (browserPage.id !== excludePageId) {
+            const handle = state?.remoteBrowserPageHandlesByPageId[browserPage.id]
+            return {
+              handleEnvironmentId: handle?.environmentId ?? null,
+              pageId: browserPage.id
+            }
+          }
+        }
+      }
+      return null
+    },
+    { excludePageId, worktreeId }
+  )
+}
+
 async function focusMirroredPage(page: Page, worktreeId: string, pageId: string): Promise<void> {
   await page.evaluate(
     ({ pageId, worktreeId }) => {
@@ -300,10 +328,27 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
         message: 'the runtime process never held a page for the link'
       })
       .toHaveLength(1)
+    // Surface the opened link tab so its deferred remote pane mounts into the DOM.
+    await expect
+      .poll(() => findNewMirroredPage(page, worktreeId, pane.pageId), {
+        timeout: 60_000,
+        message: 'the client never received the mirrored tab for the link'
+      })
+      .not.toBeNull()
+    const openedTab = await findNewMirroredPage(page, worktreeId, pane.pageId)
+    if (openedTab) {
+      await focusMirroredPage(page, worktreeId, openedTab.pageId)
+    }
     // One more remote pane, and still nothing rendered by this machine's own browser.
     await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen + 1, {
       timeout: 60_000
     })
+    await expect
+      .poll(() => findMirroredPage(page, worktreeId, fixture.linkUrl), {
+        timeout: 60_000,
+        message: 'the remote pane never updated to the link URL'
+      })
+      .not.toBeNull()
     expect(await readRemotePaneUrls(page, worktreeId)).toContainEqual(
       expect.stringContaining(fixture.linkUrl)
     )
@@ -353,7 +398,24 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
       .toHaveLength(1)
     expect(await readOwnedPageUrls(client!.app, fixture.linkUrl)).toHaveLength(0)
     expect(await readLocalBrowserViewUrls(page)).toHaveLength(0)
+    // Surface the owner-pinned link tab so its deferred remote pane mounts into the DOM.
+    await expect
+      .poll(() => findNewMirroredPage(page, worktreeId, pane.pageId), {
+        timeout: 60_000,
+        message: 'the client never received the owner-pinned link tab'
+      })
+      .not.toBeNull()
+    const openedSecondTab = await findNewMirroredPage(page, worktreeId, pane.pageId)
+    if (openedSecondTab) {
+      await focusMirroredPage(page, worktreeId, openedSecondTab.pageId)
+    }
     await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen + 1)
+    await expect
+      .poll(() => findMirroredPage(page, worktreeId, fixture.linkUrl), {
+        timeout: 60_000,
+        message: 'the remote pane never updated to the owner-pinned link URL'
+      })
+      .not.toBeNull()
 
     // The store drops the tab synchronously and only then fires browser.tabClose, so settle the
     // mirror, host inventory, and host guest before act 3 reads them as its own baseline.

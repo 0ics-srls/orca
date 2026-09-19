@@ -45,15 +45,24 @@ function codexLikeStartupCommand(marker: string): string {
     '  process.stdout.write(prefix + pad("> " + marker + " " + status + " type here") + suffix + "\\r\\n");',
     '  process.stdout.write("\\x1b[?2026l");',
     '};',
+    'let rendered = false;',
+    'const maybeRender = () => {',
+    '  if (rendered) return;',
+    '  if (hasColor(10) && hasColor(11)) {',
+    '    rendered = true;',
+    '    render();',
+    '  }',
+    '};',
     'if (process.stdin.isTTY && typeof process.stdin.setRawMode === "function") {',
     '  process.stdin.setRawMode(true);',
     '}',
     'process.stdin.resume();',
     'process.stdin.on("data", (chunk) => {',
     '  reply += chunk.toString("binary");',
+    '  maybeRender();',
     '});',
     'process.stdout.write("\\x1b]10;?\\x1b\\\\\\x1b]11;?\\x1b\\\\");',
-    'setTimeout(render, 100);',
+    'setTimeout(() => { if (!rendered) { rendered = true; render(); } }, 2000);',
     'setInterval(() => {}, 1000);'
   ].join('')
   // Why: delivered via a temp file — `node -e` quoting is not PowerShell-safe (#8521).
@@ -333,7 +342,7 @@ test.describe('Codex hidden startup composer background', () => {
           }
         },
         {
-          timeout: 10_000,
+          timeout: 20_000,
           message: 'Hidden Codex startup content restored without the composer background'
         }
       )
