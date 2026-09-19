@@ -19,6 +19,7 @@ import {
   evaluateDroppableEnqueue,
   refreshDroppableSessionMembership
 } from './daemon-stream-droppable-membership'
+import type { DaemonStreamDataBatcherOptions } from './daemon-stream-data-batcher-options'
 
 type StreamDataClient = {
   streamSocket: Socket | null
@@ -38,16 +39,6 @@ const HELD_WRITE_THROUGH_TOTAL_CHARS = 32 * 1024 * 1024
 // Small-session bypass: a few-KB session (echo, redraws, query replies) is never the flood, so it must not wait FIFO behind others' megabytes; backstops the 100ms interactive fast-path, which misses under event-loop load.
 const SMALL_SESSION_HOLD_BYPASS_CHARS = 4 * 1024
 
-type DaemonStreamDataBatcherOptions = {
-  maxLineBytes?: number
-  onProducerBackpressureChanged?: (sessionId: string, paused: boolean) => void
-  isSessionAttachedToClient?: (clientId: string, sessionId: string) => boolean
-  /** True for sessions whose queued output may be keep-tail dropped (main-marked background sessions). */
-  isSessionDroppable?: (sessionId: string) => boolean
-  /** Carve reply-eliciting query bytes (DSR/DA/DECRQM/OSC probes) out of dropped data — the hidden program blocks on the reply, so they must still be delivered even when their flood is not. */
-  salvageDroppedData?: (dropped: string) => string
-}
-
 export class DaemonStreamDataBatcher {
   private pendingByClient = new Map<string, PendingStreamDataBatch>()
   private getClient: (clientId: string) => StreamDataClient | undefined
@@ -63,13 +54,18 @@ export class DaemonStreamDataBatcher {
   ) {
     this.getClient = getClient
     this.maxLineBytes = Math.max(1, options.maxLineBytes ?? NDJSON_MAX_LINE_BYTES)
-    this.isSessionDroppable = options.isSessionDroppable ?? (() => false)
+    const isBackgroundDroppable = options.isSessionDroppable ?? (() => false)
+    // A stall-released session is droppable for as long as its backlog survives, whether or not main
+    // has backgrounded it: keep-tail thinning is what lets its producer run past an unreachable client.
+    this.isSessionDroppable = (sessionId) =>
+      this.backpressure?.isStallReleased(sessionId) === true || isBackgroundDroppable(sessionId)
     this.salvageDroppedData = options.salvageDroppedData ?? (() => '')
     this.backpressure = options.onProducerBackpressureChanged
       ? new DaemonStreamBackpressure(
           options.onProducerBackpressureChanged,
           this.isSessionDroppable,
-          options.isSessionAttachedToClient
+          options.isSessionAttachedToClient,
+          (sessionId) => this.refreshSessionDroppability(sessionId)
         )
       : undefined
   }

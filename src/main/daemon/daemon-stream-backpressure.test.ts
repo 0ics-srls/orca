@@ -83,7 +83,7 @@ describe('DaemonStreamBackpressure', () => {
       (clientId) => clientId === owner
     )
     pressure.setQueued('old', new Map([['session', 2 * MiB]]))
-    expect(setPaused).toHaveBeenLastCalledWith('session', true)
+    expect(setPaused).toHaveBeenLastCalledWith('session', true, expect.any(Function))
     owner = 'new'
     pressure.refresh()
     expect(setPaused).toHaveBeenLastCalledWith('session', false)
@@ -122,6 +122,67 @@ describe('DaemonStreamBackpressure', () => {
     expect(paused.has('session')).toBe(true)
     completions.shift()?.()
     expect(paused.size).toBe(0)
+  })
+
+  it('hands the producer a stall release for the pause it is arming', () => {
+    const stallTimeouts = new Map<string, () => void>()
+    const paused = new Set<string>()
+    const pressure = new DaemonStreamBackpressure(
+      (sessionId, value, onStallTimeout) => {
+        if (value) {
+          paused.add(sessionId)
+          if (onStallTimeout) {
+            stallTimeouts.set(sessionId, onStallTimeout)
+          }
+        } else {
+          paused.delete(sessionId)
+        }
+      },
+      () => false
+    )
+    pressure.setQueued('a', new Map([['flood', 2 * MiB]]))
+    expect(paused.has('flood')).toBe(true)
+    // The un-pause the watchdog reaches back through.
+    stallTimeouts.get('flood')?.()
+    expect(paused.has('flood')).toBe(false)
+    expect(pressure.isStallReleased('flood')).toBe(true)
+  })
+
+  it('will not re-pause a stall-released session whose backlog is still undelivered', () => {
+    const stallReleased = new Set<string>()
+    const { pressure, paused } = createBackpressure((sessionId) => stallReleased.has(sessionId))
+    pressure.setQueued('a', new Map([['flood', 2 * MiB]]))
+    expect(paused.has('flood')).toBe(true)
+    stallReleased.add('flood')
+    pressure.releaseStalledSession('flood')
+    expect(paused.size).toBe(0)
+    // Undroppable frames the keep-tail cannot shed must not drag the producer back under.
+    pressure.setQueued('a', new Map([['flood', 2 * MiB]]), new Map([['flood', 4 * MiB]]))
+    expect(paused.size).toBe(0)
+  })
+
+  it('reconciles droppability and restores ordinary pausing once the backlog is gone', () => {
+    const onDroppabilityChanged = vi.fn()
+    const stallReleased = new Set<string>()
+    const setPaused = vi.fn()
+    const pressure = new DaemonStreamBackpressure(
+      setPaused,
+      (sessionId) => stallReleased.has(sessionId),
+      () => true,
+      onDroppabilityChanged
+    )
+    pressure.setQueued('a', new Map([['flood', 2 * MiB]]))
+    stallReleased.add('flood')
+    pressure.releaseStalledSession('flood')
+    expect(onDroppabilityChanged).toHaveBeenCalledWith('flood')
+    expect(pressure.isStallReleased('flood')).toBe(true)
+
+    stallReleased.delete('flood')
+    pressure.setQueued('a', new Map())
+    expect(pressure.isStallReleased('flood')).toBe(false)
+    setPaused.mockClear()
+    pressure.setQueued('a', new Map([['flood', 2 * MiB]]))
+    expect(setPaused).toHaveBeenCalledWith('flood', true, expect.any(Function))
   })
 
   it('does not let an old refill callback flush a replacement connection', () => {

@@ -168,12 +168,12 @@ export class TerminalHost {
   }
 
   // Why null-not-throw (unlike write/resize): pause/resume are best-effort hints against a session that may have exited.
-  pauseProducer(sessionId: string, source?: 'stream'): void {
+  pauseProducer(sessionId: string, source?: 'stream', onStreamStall?: () => void): void {
     const session = this.sessions.get(sessionId)
     if (!session || !session.isAlive) {
       return
     }
-    session.pauseProducer(source)
+    session.pauseProducer(source, onStreamStall)
   }
 
   resumeProducer(sessionId: string, source?: 'stream'): void {

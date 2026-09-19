@@ -74,9 +74,9 @@ export class DaemonServer {
     this.streamDataBatcher = new DaemonStreamDataBatcher(
       (clientId) => this.connections.get(clientId),
       {
-        onProducerBackpressureChanged: (sessionId, paused) =>
+        onProducerBackpressureChanged: (sessionId, paused, onStallTimeout) =>
           paused
-            ? this.host.pauseProducer(sessionId, 'stream')
+            ? this.host.pauseProducer(sessionId, 'stream', onStallTimeout)
             : this.host.resumeProducer(sessionId, 'stream'),
         isSessionAttachedToClient: (clientId, sessionId) => {
           const owner = this.attachments.clientIdForSession(sessionId)

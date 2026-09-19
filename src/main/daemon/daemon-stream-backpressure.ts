@@ -16,12 +16,22 @@ type ClientBacklog = {
 export class DaemonStreamBackpressure {
   private readonly clients = new Map<string, ClientBacklog>()
   private readonly pausedSessions = new Set<string>()
+  // Sessions the producer-stall watchdog gave up on. Keep-tail dropping bounds them now, so re-pausing
+  // would only re-freeze the shell behind the same unreachable consumer.
+  private readonly stallReleasedSessions = new Set<string>()
   private pressured = false
 
   constructor(
-    private readonly setPaused: (sessionId: string, paused: boolean) => void,
+    private readonly setPaused: (
+      sessionId: string,
+      paused: boolean,
+      onStallTimeout?: () => void
+    ) => void,
     private readonly isDroppable: (sessionId: string) => boolean,
-    private readonly ownsSession: (clientId: string, sessionId: string) => boolean = () => true
+    private readonly ownsSession: (clientId: string, sessionId: string) => boolean = () => true,
+    // Already-queued data is pinned to the droppable membership cached when it was enqueued, so a
+    // stall release has to ask the batcher to reconcile it.
+    private readonly onDroppabilityChanged: (sessionId: string) => void = () => {}
   ) {}
 
   setQueued(
@@ -65,9 +75,13 @@ export class DaemonStreamBackpressure {
 
   refresh(): void {
     const bytesBySession = new Map<string, number>()
+    // Every session with anything accounted anywhere, droppable or not: a stall ends when the session's
+    // last byte leaves the daemon, which the pausing totals alone cannot see.
+    const accountedSessions = new Set<string>()
     let total = 0
     for (const [clientId, client] of this.clients) {
       for (const [sessionId, chars] of client.queuedChars) {
+        accountedSessions.add(sessionId)
         // Background data has its own keep-tail budget; only its undroppable frames need pausing.
         if (this.isDroppable(sessionId)) {
           continue
@@ -80,6 +94,7 @@ export class DaemonStreamBackpressure {
       }
       for (const counts of [client.queuedMetadataBytes, client.pendingWriteBytes]) {
         for (const [sessionId, bytes] of counts) {
+          accountedSessions.add(sessionId)
           total += bytes
           if (this.ownsSession(clientId, sessionId)) {
             bytesBySession.set(sessionId, (bytesBySession.get(sessionId) ?? 0) + bytes)
@@ -99,21 +114,45 @@ export class DaemonStreamBackpressure {
         this.setPaused(sessionId, false)
       }
     }
-    if (!this.pressured) {
-      return
-    }
-    for (const [sessionId, bytes] of bytesBySession) {
-      if (bytes >= SESSION_HIGH_WATER_BYTES) {
-        this.pausedSessions.add(sessionId)
-        // Detach/termination may have released the session's pause since the last update.
-        this.setPaused(sessionId, true)
+    if (this.pressured) {
+      for (const [sessionId, bytes] of bytesBySession) {
+        if (bytes >= SESSION_HIGH_WATER_BYTES && !this.stallReleasedSessions.has(sessionId)) {
+          this.pausedSessions.add(sessionId)
+          // Detach/termination may have released the session's pause since the last update.
+          this.setPaused(sessionId, true, () => this.releaseStalledSession(sessionId))
+        }
       }
     }
+    for (const sessionId of this.stallReleasedSessions) {
+      // Nothing of this session's is queued or in flight any more, so the consumer caught up (or went
+      // away) and ordinary producer pausing applies again.
+      if (!accountedSessions.has(sessionId)) {
+        this.stallReleasedSessions.delete(sessionId)
+      }
+    }
+  }
+
+  /** The producer-stall watchdog gave up on this session's consumer. Hand its backlog to the keep-tail
+   *  machinery and let the PTY run: the user gets a dataGap (the renderer restores the pane from the
+   *  daemon's snapshot) rather than a shell frozen behind an unreachable client. Says nothing about the
+   *  child process — loss of contact is not evidence of an exit, and nothing here reports one. */
+  releaseStalledSession(sessionId: string): void {
+    this.stallReleasedSessions.add(sessionId)
+    this.onDroppabilityChanged(sessionId)
+    if (this.pausedSessions.delete(sessionId)) {
+      this.setPaused(sessionId, false)
+    }
+    this.refresh()
+  }
+
+  isStallReleased(sessionId: string): boolean {
+    return this.stallReleasedSessions.has(sessionId)
   }
 
   clear(clientId?: string): void {
     if (clientId === undefined) {
       this.clients.clear()
+      this.stallReleasedSessions.clear()
     } else {
       this.clients.delete(clientId)
     }

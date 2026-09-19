@@ -168,12 +168,13 @@ export class Session {
   }
 
   /** Producer-side flow control: stop reading the PTY fd so a flooding child blocks on write.
-   *  Arms the lost-resume failsafe; re-pausing re-arms it. */
-  pauseProducer(source?: 'stream'): void {
+   *  Arms the lost-resume failsafe; re-pausing re-arms it. onStreamStall bounds a stream pause whose
+   *  consumer never drains and never closes. */
+  pauseProducer(source?: 'stream', onStreamStall?: () => void): void {
     if (this._state === 'exited' || this._disposed) {
       return
     }
-    this.producerPause.pause(source, this.hasAttachedClients && !this.isTerminating)
+    this.producerPause.pause(source, this.hasAttachedClients && !this.isTerminating, onStreamStall)
   }
 
   resumeProducer(source?: 'stream'): void {
