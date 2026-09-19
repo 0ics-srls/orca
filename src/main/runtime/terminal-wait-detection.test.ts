@@ -408,6 +408,20 @@ describe('Antigravity readiness does not absorb its own startup dialog', () => {
     expect(isKnownReadyPromptPreview(waitText)).toBe(true)
   })
 
+  it('rejects a visible unsent draft whose wrap continuation is a bare caret', () => {
+    const waitText = waitTextFor([
+      'Antigravity CLI 1.2.1',
+      'Gemini 3.7 Flash (Low)',
+      '────────────────────────────────────────',
+      '> abc',
+      '  >',
+      '────────────────────────────────────────',
+      'Gemini 3.7 Flash · low'
+    ])
+
+    expect(isKnownReadyPromptPreview(waitText)).toBe(false)
+  })
+
   // Ratchet: these dialogs must remain unready because their selection row is not a bare caret.
   const SILENT_STARTUP_DIALOGS: { name: string; lines: string[] }[] = [
     {

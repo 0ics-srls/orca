@@ -143,8 +143,9 @@ function findAntigravityReadyPromptIndex(normalized: string): number | null {
   }
   let lineStart = headerIndex
   let promptIndex: number | null = null
+  let previousNonEmpty: { start: number; end: number } | null = null
 
-  // Why: logo glyphs can prefix any model, while the standalone composer caret is the stable ready marker across model choices.
+  // Why: a column-0 caret is ready; an indented `>` under `> draft` is a wrap, not an empty box.
   for (let cursor = headerIndex; cursor <= normalized.length; cursor += 1) {
     if (cursor < normalized.length && normalized.charCodeAt(cursor) !== 10) {
       continue
@@ -158,9 +159,19 @@ function findAntigravityReadyPromptIndex(normalized: string): number | null {
       trimmedEnd -= 1
     }
     if (lineStart > headerIndex && trimmedStart < trimmedEnd) {
-      if (trimmedEnd - trimmedStart === 1 && normalized.charCodeAt(trimmedStart) === 62) {
+      if (
+        trimmedEnd - trimmedStart === 1 &&
+        normalized.charCodeAt(trimmedStart) === 62 &&
+        trimmedStart === lineStart &&
+        !(
+          previousNonEmpty !== null &&
+          normalized.charCodeAt(previousNonEmpty.start) === 62 &&
+          previousNonEmpty.end - previousNonEmpty.start > 1
+        )
+      ) {
         promptIndex = trimmedStart
       }
+      previousNonEmpty = { start: trimmedStart, end: trimmedEnd }
     }
     lineStart = cursor + 1
   }
