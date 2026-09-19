@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  MAX_WEB_SESSION_CLOSE_INTENT_PARTITIONS,
   isWebSessionCloseIntentPending,
   recordWebSessionCloseIntent,
   resetWebSessionCloseIntentForTests
@@ -69,6 +70,34 @@ describe('web session intent ownership', () => {
       false
     )
     expect(isWebSessionCloseIntentPending(OWNER_B, WORKTREE_ID, 'host-tab', 1_000)).toBe(false)
+  })
+
+  it('bounds close-intent partition churn', () => {
+    for (let index = 0; index < MAX_WEB_SESSION_CLOSE_INTENT_PARTITIONS + 4; index += 1) {
+      recordWebSessionCloseIntent(
+        { environmentId: `env-${index}`, pairingRevision: 1 },
+        WORKTREE_ID,
+        `host-tab-${index}`,
+        1_000
+      )
+    }
+
+    expect(
+      isWebSessionCloseIntentPending(
+        { environmentId: 'env-0', pairingRevision: 1 },
+        WORKTREE_ID,
+        'host-tab-0',
+        1_000
+      )
+    ).toBe(false)
+    expect(
+      isWebSessionCloseIntentPending(
+        { environmentId: `env-${MAX_WEB_SESSION_CLOSE_INTENT_PARTITIONS + 3}`, pairingRevision: 1 },
+        WORKTREE_ID,
+        `host-tab-${MAX_WEB_SESSION_CLOSE_INTENT_PARTITIONS + 3}`,
+        1_000
+      )
+    ).toBe(true)
   })
 
   it('isolates focus intents across runtimes and same-id re-pairs', () => {
