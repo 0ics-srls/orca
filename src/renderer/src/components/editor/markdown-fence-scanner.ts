@@ -6,14 +6,12 @@ export type MarkdownFenceTracker = {
   consume: (line: string) => boolean
 }
 
-// A top-level opener may be indented by at most three spaces. Closers are matched
-// separately below because marked allows them to be indented within the fence.
+// Top-level fence delimiters may be indented by at most three spaces.
 const FENCE_LINE = /^[ ]{0,3}(`{3,}|~{3,})/
-const INDENTED_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})/
 // marked lets a closer trail a run of fence characters, e.g. ```~~~ closes a ``` block.
 const CLOSING_FENCE_SUFFIX = /^[~`]*[ \t\r]*$/
 
-/** Tracks CommonMark fenced code blocks across the lines of one document. */
+/** Tracks fenced blocks using the editor parser's closing rules. */
 export function createMarkdownFenceTracker(): MarkdownFenceTracker {
   let marker = ''
   let length = 0
@@ -23,7 +21,7 @@ export function createMarkdownFenceTracker(): MarkdownFenceTracker {
       return length > 0
     },
     consume(line: string): boolean {
-      const match = length > 0 ? INDENTED_FENCE_LINE.exec(line) : FENCE_LINE.exec(line)
+      const match = FENCE_LINE.exec(line)
       if (!match) {
         return false
       }

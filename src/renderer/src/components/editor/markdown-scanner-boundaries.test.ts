@@ -1,3 +1,6 @@
+import { marked } from 'marked'
+import { stripMarkdownCode } from './markdown-code-stripping'
+import { getMarkdownFenceRanges } from './markdown-fence-scanner'
 import { describe, expect, it } from 'vitest'
 import { markdownCodeSpanRanges, markdownFenceRanges } from './markdown-scan-ranges'
 import { createMarkdownCodeSpanScanner } from './markdown-code-span-scanner'
@@ -18,4 +21,23 @@ describe('standalone Markdown boundaries', () => {
     const source = '```\rcode\r```\rafter'
     expect(markdownFenceRanges(source)).toEqual([[0, 13]])
   })
+})
+
+it('does not expose inline spans inside fenced content', () => {
+  const source = '```\n`x`\n```'
+  expect(createMarkdownCodeSpanScanner(source).findSpanEnd(4)).toBeNull()
+})
+
+it.each(['\n', '\r\n', '\r'])('retains %j terminators while stripping code', (eol) => {
+  expect(stripMarkdownCode(['before', '`code`', 'after'].join(eol))).toBe(
+    ['before', '', 'after'].join(eol)
+  )
+})
+
+it.each(['```~~~', '      ```'])('matches the parser on the closer %j', (closer) => {
+  const source = `\`\`\`\ncode\n${closer}\n<div>after</div>\n`
+  const code = marked.lexer(source)[0]
+  expect(code.type).toBe('code')
+  expect(getMarkdownFenceRanges(source)).toEqual([[0, code.raw.length]])
+  expect(stripMarkdownCode(source).includes('<div>after</div>')).toBe(closer === '```~~~')
 })
