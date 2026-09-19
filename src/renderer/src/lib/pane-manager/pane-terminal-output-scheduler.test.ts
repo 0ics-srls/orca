@@ -335,6 +335,68 @@ describe('pane terminal output scheduler', () => {
     expect(terminal.write).toHaveBeenCalledTimes(6)
   })
 
+  it('paces dense SGR output to one parser batch and preserves bytes', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const input = Array.from(
+      { length: 1_200 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, input, { foreground: false })
+    vi.advanceTimersByTime(50)
+
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    expect(parsed).toHaveLength(1)
+    const written: string[] = [terminal.write.mock.calls[0]?.[0] ?? '']
+    while (parsed.length > 0) {
+      parsed.shift()?.()
+      vi.advanceTimersByTime(0)
+      const next = terminal.write.mock.calls[written.length]?.[0]
+      if (next !== undefined) {
+        written.push(next)
+      }
+    }
+
+    expect(written.join('')).toBe(input)
+  })
+
+  it('keeps foreground bytes behind a dense batch retained by an explicit flush', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 600 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+    const input = dense.slice(0, 4 * 1024 + 256)
+
+    writeTerminalOutput(terminal, input, { foreground: false })
+    vi.advanceTimersByTime(50)
+    writeTerminalOutput(terminal, 'echo', { foreground: true })
+
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    parsed.shift()?.()
+    vi.advanceTimersByTime(0)
+    expect(terminal.write.mock.calls[1]?.[0]).toBe(input.slice(4 * 1024))
+    parsed.shift()?.()
+    vi.advanceTimersByTime(0)
+    expect(terminal.write.mock.calls[2]?.[0]).toBe('echo')
+  })
+
   it('promotes large background backlogs to high-priority drains', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()

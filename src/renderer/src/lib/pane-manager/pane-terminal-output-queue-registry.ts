@@ -15,6 +15,7 @@ import {
   terminalOutputSchedulerDebugEnabled as debugEnabled,
   terminalOutputSchedulerDebugState as debugState
 } from './pane-terminal-output-scheduler-debug'
+import { isDenseSgr } from '../../../../shared/terminal-sgr-density'
 
 export type TerminalOutputTarget = ForegroundTerminalOutputTarget
 
@@ -83,12 +84,17 @@ export type QueueEntry = {
   foregroundReleaseDeadlineAt: number | null
   // Why: an open frame's own hold chunks may still push the deadline out, but once coalesce has taken the entry over the deadline stops moving so the two mechanisms can't re-arm each other.
   foregroundReleaseDeadlineFixed: boolean
+  denseSgr: boolean
 }
 
 export const BACKGROUND_FLUSH_DELAY_MS = 50
 export const BACKGROUND_DRAIN_INTERVAL_MS = 16
 export const HIGH_PRIORITY_DRAIN_INTERVAL_MS = 4
 export const BACKGROUND_CHUNK_CHARS = 16 * 1024
+// Dense SGR control streams are much slower for xterm to parse than plain text.
+// Keep each parser submission small so input never queues behind many large
+// submissions already waiting in xterm's write buffer.
+export const DENSE_SGR_CHUNK_CHARS = 4 * 1024
 export const MAX_WRITES_PER_DRAIN = 2
 // Why 8: per-tick volume (8 x 16KB = 128KB ≈ 1.3ms parse) sets the sustained ceiling (~30MB/s) within DRAIN_TIME_BUDGET_MS; at 2 it was only 8MB/s against a ~100MB/s parser (see throughput bench).
 export const HIGH_PRIORITY_MAX_WRITES_PER_DRAIN = 8
@@ -128,6 +134,41 @@ let useMessageChannelDrain = typeof MessageChannel !== 'undefined' && !isVitestE
 let drainChannel: MessageChannel | null = null
 // Why indirect: the drain loop lives downstream of this module, so it registers itself here rather than being imported back into the queue state it operates on.
 let runDrain: (() => void) | null = null
+const denseSgrInFlightByTerminal = new WeakMap<TerminalOutputTarget, number>()
+
+export function canDrainQueueEntry(entry: QueueEntry): boolean {
+  return !entry.denseSgr || (denseSgrInFlightByTerminal.get(entry.terminal) ?? 0) === 0
+}
+
+export function reserveDenseSgrBatch(terminal: TerminalOutputTarget): () => void {
+  const current = denseSgrInFlightByTerminal.get(terminal) ?? 0
+  denseSgrInFlightByTerminal.set(terminal, current + 1)
+  let released = false
+  return () => {
+    if (released) {
+      return
+    }
+    released = true
+    const remaining = (denseSgrInFlightByTerminal.get(terminal) ?? 1) - 1
+    if (remaining > 0) {
+      denseSgrInFlightByTerminal.set(terminal, remaining)
+    } else {
+      denseSgrInFlightByTerminal.delete(terminal)
+    }
+    scheduleDrain(0)
+  }
+}
+
+export function clearDenseSgrPacing(terminal: TerminalOutputTarget): void {
+  denseSgrInFlightByTerminal.delete(terminal)
+}
+
+export function markQueueEntryData(entry: QueueEntry, data: string): void {
+  if (entry.denseSgr || data.length < DENSE_SGR_CHUNK_CHARS) {
+    return
+  }
+  entry.denseSgr = isDenseSgr(data)
+}
 
 export function setTerminalOutputDrainRunner(runner: () => void): void {
   runDrain = runner
@@ -239,6 +280,7 @@ export function discardTerminalOutput(terminal: TerminalOutputTarget): void {
   }
   discardInFlightTerminalOutputAckCredits(terminal)
   queuedByTerminal.delete(terminal)
+  clearDenseSgrPacing(terminal)
   discardForegroundRenderSettle(terminal)
   // Why: cancel the watch without masquerading as parse progress; replay guards use real completions to tell slow from wedged.
   cancelTerminalWriteStallWatch(terminal)

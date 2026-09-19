@@ -30,7 +30,8 @@ export function createQueueEntry(
     foregroundHoldSafetyTimer: null,
     foregroundCoalesceTimer: null,
     foregroundReleaseDeadlineAt: null,
-    foregroundReleaseDeadlineFixed: false
+    foregroundReleaseDeadlineFixed: false,
+    denseSgr: false
   }
 }
 
