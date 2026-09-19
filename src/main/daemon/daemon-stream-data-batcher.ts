@@ -312,6 +312,17 @@ export class DaemonStreamDataBatcher {
     this.updateBackpressure(clientId, batch)
   }
 
+  /** Reset socket-generation state without discarding queued payloads for a replacement stream. */
+  replaceStream(clientId: string): void {
+    const batch = this.pendingByClient.get(clientId)
+    if (batch?.timer) {
+      clearTimeout(batch.timer)
+      batch.timer = null
+    }
+    this.heldRefill.clear(clientId)
+    this.backpressure?.clear(clientId)
+  }
+
   clear(clientId?: string): void {
     const batches =
       clientId === undefined
