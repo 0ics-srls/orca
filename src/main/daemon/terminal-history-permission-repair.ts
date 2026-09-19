@@ -26,8 +26,8 @@ const REPAIR_START_DELAY_MS = 10_000
 const MAX_SCHEDULED_BASE_PATHS = 512
 
 // Per-process, keyed by base path: getDaemonHistoryDir() is the accessor every history producer
-// goes through, and a single startup calls it more than once. Never cleared, so a sweep that throws
-// cannot wedge a retry loop — the on-disk marker is what carries the decision across launches.
+// goes through, and a single startup calls it more than once. It is bounded so
+// unusual base-path churn cannot retain every historical path.
 const scheduledBasePaths = new Set<string>()
 
 async function chmodQuietly(path: string, mode: number): Promise<void> {
