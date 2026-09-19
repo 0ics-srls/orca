@@ -24,5 +24,5 @@ export function serializeRichMarkdownSliceAsMarkdown(
   serialize: MarkdownSliceSerializer
 ): string {
   const content = slice.content.toJSON()
-  return Array.isArray(content) ? serialize(content) : ''
+  return Array.isArray(content) ? serialize({ type: 'doc', content }) : ''
 }

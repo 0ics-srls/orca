@@ -1,9 +1,9 @@
-import { Extension } from '@tiptap/core'
+import { Extension, type JSONContent } from '@tiptap/core'
 
 const TAG_OPENING = /^<(?:[a-zA-Z][a-zA-Z0-9-]*|\/[a-zA-Z][a-zA-Z0-9-]*|!|\?)/
 
 type MarkdownTextEncoder = {
-  encodeTextForMarkdown?: (text: string, node: unknown, parentNode?: unknown) => string
+  encodeTextForMarkdown?: (text: string, node: JSONContent, parentNode?: JSONContent) => string
 }
 
 function isMarkdownTextEncoder(value: unknown): value is MarkdownTextEncoder {
@@ -54,7 +54,13 @@ export const RichMarkdownProseEntities = Extension.create({
     }
     managerValue.encodeTextForMarkdown = (text, node, parentNode) => {
       const encoded = base.call(managerValue, text, node, parentNode)
-      return encoded === text ? text : encodeProseTextForMarkdown(text)
+      const prose = encoded === text ? text : encodeProseTextForMarkdown(text)
+      const insideCode =
+        parentNode?.type === 'codeBlock' || node.marks?.some((mark) => mark.type === 'code')
+      const hasInlineSyntax = parentNode?.content?.some(
+        (child) => child.type === 'inlineMath' || child.type === 'rawMarkdownHtmlInline'
+      )
+      return !insideCode && hasInlineSyntax ? prose.replace(/\$/g, '\\$&') : prose
     }
   }
 })

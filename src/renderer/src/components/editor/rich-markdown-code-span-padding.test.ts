@@ -36,7 +36,21 @@ describe('maskCodeSpanPadding', () => {
       { type: 'text', text: ' code ', marks: [{ type: 'code' }] }
     ])
     expect(masked.nodes[0]?.text).not.toContain(' ')
-    expect(restoreCodeSpanPadding(masked.nodes[0]?.text ?? '', masked.placeholder)).toBe(' code ')
+    expect(
+      restoreCodeSpanPadding(masked.nodes[0]?.text ?? '', masked.placeholder, masked.replacements)
+    ).toBe(' code ')
+  })
+
+  it('restores the exact whitespace bytes at code-span boundaries', () => {
+    const leading = '\t\u00a0 '
+    const trailing = ' \u00a0\t'
+    const masked = maskCodeSpanPadding([
+      { type: 'text', text: `${leading}code${trailing}`, marks: [{ type: 'code' }] }
+    ])
+
+    expect(
+      restoreCodeSpanPadding(masked.nodes[0]?.text ?? '', masked.placeholder, masked.replacements)
+    ).toBe(`${leading}code${trailing}`)
   })
 })
 
@@ -49,7 +63,8 @@ describe('code span padding round trip', () => {
     ['`a\uE000b` and ` padded`'],
     ['**bold** and `code` and *it*'],
     ['`a` and `b`'],
-    ['[`label`](https://example.com)']
+    ['[`label`](https://example.com)'],
+    ['Read `\tcode\u00a0` and write up.']
   ])('preserves %j', (source) => {
     expect(roundTrip(source)).toBe(source)
   })
