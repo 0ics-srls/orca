@@ -102,8 +102,15 @@ export type MaterializePiResult = {
 
 /** Presence of this file is what makes an overlay usable — a rebuild that failed
  *  after the wipe leaves the dir itself present but the plugin missing. */
-export function getRelayOpenCodePluginPath(overlayDir: string, agent: 'opencode' | 'opencode2' = 'opencode'): string {
-  return join(overlayDir, 'plugins', agent === 'opencode2' ? OPENCODE2_PLUGIN_FILE : OPENCODE_PLUGIN_FILE)
+export function getRelayOpenCodePluginPath(
+  overlayDir: string,
+  agent: 'opencode' | 'opencode2' = 'opencode'
+): string {
+  return join(
+    overlayDir,
+    'plugins',
+    agent === 'opencode2' ? OPENCODE2_PLUGIN_FILE : OPENCODE_PLUGIN_FILE
+  )
 }
 
 export class PluginOverlayManager {
@@ -173,7 +180,11 @@ export class PluginOverlayManager {
     return source ?? (kind === 'omp' ? this.piExtensionSources.pi : null)
   }
 
-  private mirrorOpenCodeConfig(sourceDir: string, overlayDir: string, pluginFileName: string): void {
+  private mirrorOpenCodeConfig(
+    sourceDir: string,
+    overlayDir: string,
+    pluginFileName: string
+  ): void {
     for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
       const sourcePath = join(sourceDir, entry.name)
 
@@ -193,7 +204,11 @@ export class PluginOverlayManager {
           const overlayPluginsDir = join(overlayDir, 'plugins')
           mkdirSync(overlayPluginsDir, { recursive: true })
           for (const pluginEntry of readdirSync(resolvedSource, { withFileTypes: true })) {
-            if (pluginEntry.name === pluginFileName || pluginEntry.name === OPENCODE_PLUGIN_FILE || pluginEntry.name === OPENCODE2_PLUGIN_FILE) {
+            if (
+              pluginEntry.name === pluginFileName ||
+              pluginEntry.name === OPENCODE_PLUGIN_FILE ||
+              pluginEntry.name === OPENCODE2_PLUGIN_FILE
+            ) {
               continue
             }
             mirrorEntry(
@@ -227,7 +242,11 @@ export class PluginOverlayManager {
    *  the overlay write fails — caller falls back to no plugin (the agent
    *  CLI runs without status reporting), which is the existing fail-open
    *  behavior on the local side. */
-  materializeOpenCode(id: string, existingConfigDir?: string, agent: 'opencode' | 'opencode2' = 'opencode'): string | null {
+  materializeOpenCode(
+    id: string,
+    existingConfigDir?: string,
+    agent: 'opencode' | 'opencode2' = 'opencode'
+  ): string | null {
     const source = agent === 'opencode2' ? this.opencode2PluginSource : this.opencodePluginSource
     if (!source || !isUsableId(id)) {
       return null
@@ -265,8 +284,10 @@ export class PluginOverlayManager {
     return this.materializeOpenCode(id, existingConfigDir, 'opencode2')
   }
 
-  private getDefaultPiAgentDir(kind: PiAgentKind): string {
-    return join(this.homeDir, PI_AGENT_HOME_DIR_NAME[kind], PI_AGENT_SUBDIR)
+  private getDefaultPiAgentDir(kind: PiAgentKind, configDirName?: string): string {
+    const root =
+      kind === 'omp' ? configDirName || PI_AGENT_HOME_DIR_NAME.omp : PI_AGENT_HOME_DIR_NAME[kind]
+    return join(this.homeDir, root, PI_AGENT_SUBDIR)
   }
 
   private canOverwritePiExtension(path: string): boolean {
@@ -313,14 +334,15 @@ export class PluginOverlayManager {
     id: string,
     existingAgentDir?: string,
     kind: PiAgentKind = 'pi',
-    options?: { materializeDefaultHome?: boolean }
+    options?: { materializeDefaultHome?: boolean; configDirName?: string }
   ): MaterializePiResult | null {
     const extensionSource = this.getPiExtensionSource(kind)
     if (!extensionSource || !isUsableId(id)) {
       return null
     }
     try {
-      const sourceAgentDir = existingAgentDir ?? this.getDefaultPiAgentDir(kind)
+      const sourceAgentDir =
+        existingAgentDir ?? this.getDefaultPiAgentDir(kind, options?.configDirName)
       if (existingAgentDir && !existsSync(existingAgentDir)) {
         return null
       }
