@@ -48,6 +48,20 @@ describe('vendored xterm contrast cache', () => {
     expect(cache.getCss(2048, 1)).toBe('#eeeeee')
   })
 
+  it('counts a background/foreground pair once across both setters', () => {
+    const cache = new ColorContrastCache()
+    for (let index = 0; index < 4096; index++) {
+      cache.setColor(index, 0, null)
+      cache.setCss(index, 0, '#ffffff')
+    }
+    expect(cache.getColor(0, 0)).toBeNull()
+    expect(cache.getCss(0, 0)).toBe('#ffffff')
+    cache.setCss(4096, 0, '#eeeeee')
+    expect(cache.getColor(0, 0)).toBeUndefined()
+    expect(cache.getCss(0, 0)).toBeUndefined()
+    expect(cache.getCss(4096, 0)).toBe('#eeeeee')
+  })
+
   it('resets capacity after a theme clear and preserves independent terminal caches', () => {
     const cache = new ColorContrastCache()
     const sibling = new ColorContrastCache()
