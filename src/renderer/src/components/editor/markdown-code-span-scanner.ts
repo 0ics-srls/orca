@@ -35,7 +35,7 @@ const LEAF_BLOCK_START = new RegExp(
 
 // The row of dashes under a GFM table header. marked ends the paragraph above the
 // header on this line alone, before it checks that the cell counts agree.
-const TABLE_DELIMITER_ROW = /^ {0,3}(?:\| *)?:?-+:? *(?:\| *:?-+:? *)*(?:\| *)?$/
+const TABLE_DELIMITER_ROW = /^(?=[^\n]*[:|]) {0,3}(?:\| *)?:?-+:? *(?:\| *:?-+:? *)*(?:\| *)?$/
 
 /** Blockquote marker count opening `line`, and the content that follows it. */
 function splitBlockquotePrefix(line: string): { depth: number; rest: string } {
