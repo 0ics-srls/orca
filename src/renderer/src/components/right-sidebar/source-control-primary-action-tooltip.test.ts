@@ -16,7 +16,10 @@ describe('shouldShowPrimaryTooltip', () => {
   it('hides pure repeats on enabled Stage All and Create PR', () => {
     expect(shouldShowPrimaryTooltip(action('stage', false))).toBe(false)
     expect(shouldShowPrimaryTooltip(action('create_pr', false))).toBe(false)
-    expect(shouldShowPrimaryTooltip(action('create_pr_intent', false))).toBe(false)
+  })
+
+  it('keeps the Create PR intent tooltip — it explains the prepare step the label omits', () => {
+    expect(shouldShowPrimaryTooltip(action('create_pr_intent', false))).toBe(true)
   })
 
   it('shows informative tooltips for commit and remote counts', () => {

@@ -6,7 +6,8 @@ import type { PrimaryAction } from './source-control-primary-action'
 
 // Why: text primaries whose title merely repeats the label (enabled Stage All
 // and Create PR) get no tooltip — pure noise. Tooltips stay only when they
-// add info: disabled reasons, remote counts, and the Commit shortcut.
+// add info: disabled reasons, remote counts, the Commit shortcut, and the
+// Create PR intent, whose label hides that the click also stages/commits/pushes.
 export function shouldShowPrimaryTooltip(
   primaryAction: Pick<PrimaryAction, 'kind' | 'disabled'>
 ): boolean {
@@ -15,6 +16,7 @@ export function shouldShowPrimaryTooltip(
   }
   return (
     primaryAction.kind === 'commit' ||
+    primaryAction.kind === 'create_pr_intent' ||
     primaryAction.kind === 'push' ||
     primaryAction.kind === 'pull' ||
     primaryAction.kind === 'sync' ||
