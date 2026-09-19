@@ -150,6 +150,10 @@ describe('OpenCode 2 setup and prompt ordering', () => {
             data: { id: 'perm-1', sessionID: 'ses_root', action: 'bash', resources: ['pwd'] }
           }
           yield {
+            type: 'permission.replied',
+            data: { id: 'perm-1', requestID: 'perm-1', sessionID: 'ses_root' }
+          }
+          yield {
             type: 'form.created',
             data: {
               form: {
@@ -188,6 +192,30 @@ describe('OpenCode 2 setup and prompt ordering', () => {
         ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
       )
       expect(names).toEqual(expect.arrayContaining(['PermissionRequest', 'MessagePart']))
+    })
+    await vi.waitFor(() => {
+      const names = posts.map(
+        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
+      )
+      expect(names).toContain('AskUserQuestion')
+      expect(posts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            body: expect.objectContaining({
+              payload: expect.objectContaining({
+                hook_event_name: 'AskUserQuestion',
+                sessionID: 'ses_root'
+              })
+            })
+          })
+        ])
+      )
+    })
+    await vi.waitFor(() => {
+      const names = posts.map(
+        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
+      )
+      expect(names).toContain('SessionIdle')
     })
     await cleanup?.()
   })
