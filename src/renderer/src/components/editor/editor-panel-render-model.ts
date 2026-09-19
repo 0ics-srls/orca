@@ -133,7 +133,10 @@ export function getEditorPanelRenderModel({
   const richModeEligibility = canRenderInlineMarkdown
     ? getCachedMarkdownRichModeEligibility({
         content: inlineMarkdownContent,
-        sizeOverridden: markdownRichModeSizeOverridden
+        sizeOverridden: markdownRichModeSizeOverridden,
+        // Source mode only needs a conservative affordance decision. The full
+        // HTML round trip is reserved for rich rendering so typing stays cheap.
+        validateHtmlRoundTrip: mdViewMode === 'rich'
       })
     : null
   const richModeUnsupportedMessage = richModeEligibility?.unsupportedMessage ?? null
