@@ -39,19 +39,6 @@ function escapeBare(markdown: string, chars: string): string {
   return parts.join('')
 }
 
-function hasBare(markdown: string, chars: string): boolean {
-  let oddBackslash = false
-  for (let i = 0; i < markdown.length; i += 1) {
-    const character = markdown[i] ?? ''
-    const bare = !oddBackslash
-    oddBackslash = character === '\\' ? !oddBackslash : false
-    if (chars.includes(character) && bare) {
-      return true
-    }
-  }
-  return false
-}
-
 function destNeedsEscape(dest: string): boolean {
   let depth = 0
   let oddBackslash = false
@@ -150,8 +137,8 @@ function attrNeedsRepair(
   const dest = kind === 'image' ? attrs.src : attrs.href
   return (
     (typeof dest === 'string' && destNeedsEscape(dest)) ||
-    (typeof attrs.title === 'string' && hasBare(attrs.title, '"')) ||
-    (kind === 'image' && typeof attrs.alt === 'string' && hasBare(attrs.alt, '[]\\'))
+    (typeof attrs.title === 'string' && /["\\]/.test(attrs.title)) ||
+    (kind === 'image' && typeof attrs.alt === 'string' && /[\\[\]]/.test(attrs.alt))
   )
 }
 
@@ -172,11 +159,11 @@ function escapeLinkAndImageAttributes(node: JSONContent): void {
     if (typeof dest === 'string' && destNeedsEscape(dest)) {
       attrs[destKey] = escapeBare(dest, '()')
     }
-    if (typeof attrs.title === 'string' && hasBare(attrs.title, '"')) {
-      attrs.title = escapeBare(attrs.title, '"')
+    if (typeof attrs.title === 'string' && /["\\]/.test(attrs.title)) {
+      attrs.title = attrs.title.replace(/["\\]/g, '\\$&')
     }
-    if (kind === 'image' && typeof attrs.alt === 'string' && hasBare(attrs.alt, '[]\\')) {
-      attrs.alt = escapeBare(attrs.alt, '[]\\')
+    if (kind === 'image' && typeof attrs.alt === 'string' && /[\\[\]]/.test(attrs.alt)) {
+      attrs.alt = attrs.alt.replace(/[\\[\]]/g, '\\$&')
     }
   })
 }

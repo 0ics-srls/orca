@@ -62,3 +62,34 @@ describe('inline math delimiters', () => {
     expect(countInlineMath('A line with US$ 5,000 here\nand another with R$ 40,000 there.')).toBe(0)
   })
 })
+
+it.each([
+  '$x$ then \\$HOME',
+  '\\$HOME then $x$',
+  '$x$ and \\$a\\$b',
+  '<span>x</span> \\$HOME and \\$PATH'
+])('preserves literal dollars beside math or HTML: %s', (source) => {
+  withEditor(source, (editor) => {
+    const expectedText = editor.state.doc.textContent
+    const expectedMath: string[] = []
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'inlineMath') {
+        expectedMath.push(node.attrs.latex)
+      }
+    })
+    let saved = editor.getMarkdown()
+    for (let revision = 0; revision < 3; revision += 1) {
+      saved = withEditor(saved, (reopened) => {
+        const math: string[] = []
+        reopened.state.doc.descendants((node) => {
+          if (node.type.name === 'inlineMath') {
+            math.push(node.attrs.latex)
+          }
+        })
+        expect(reopened.state.doc.textContent).toBe(expectedText)
+        expect(math).toEqual(expectedMath)
+        return reopened.getMarkdown()
+      })
+    }
+  })
+})
