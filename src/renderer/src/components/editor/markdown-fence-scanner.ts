@@ -10,17 +10,20 @@ export type MarkdownFenceTracker = {
 // Top-level fence delimiters may be indented by at most three spaces.
 const FENCE_LINE = /[ ]{0,3}(`{3,}|~{3,})/y
 function hasClosingSuffix(content: string, start: number, end: number): boolean {
+  let sawWhitespace = false
   for (let index = start; index < end; index += 1) {
     const character = content.charCodeAt(index)
-    if (
-      character !== 126 &&
-      character !== 96 &&
-      character !== 32 &&
-      character !== 9 &&
-      character !== 13
-    ) {
+    if (character === 32 || character === 9 || character === 13) {
+      sawWhitespace = true
+      continue
+    }
+    if ((character === 126 || character === 96) && !sawWhitespace) {
+      continue
+    }
+    if (character !== 126 && character !== 96) {
       return false
     }
+    return false
   }
   return true
 }
