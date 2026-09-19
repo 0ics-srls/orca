@@ -34,7 +34,10 @@ export function createTiptapMarkedFacade(): typeof marked {
     tokenizer: {
       link(src) {
         const token = Tokenizer.prototype.link.call(this, src)
-        const label = token?.type === 'link' ? this.rules.inline.link.exec(src)?.[1] : undefined
+        const label = token ? this.rules.inline.link.exec(src)?.[1] : undefined
+        if (token?.type === 'image' && label !== undefined) {
+          token.text = label.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/g, '$1')
+        }
         if (token?.type === 'link' && label && /\\(?:\[|\])/.test(label)) {
           // Preserve label escapes before nested inline parsing can reinterpret them as links.
           const wasInLink = this.lexer.state.inLink

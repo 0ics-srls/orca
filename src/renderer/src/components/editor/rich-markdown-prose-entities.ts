@@ -64,7 +64,13 @@ export const RichMarkdownProseEntities = Extension.create({
         return escapedCharacterSourceText(text, insideCode)
       }
       const encoded = base.call(managerValue, text, node, parentNode)
-      return encoded === text ? text : encodeProseTextForMarkdown(text)
+      const prose = encoded === text ? text : encodeProseTextForMarkdown(text)
+      const insideCode =
+        parentNode?.type === 'codeBlock' || node.marks?.some((mark) => mark.type === 'code')
+      const hasInlineSyntax = parentNode?.content?.some(
+        (child) => child.type === 'inlineMath' || child.type === 'rawMarkdownHtmlInline'
+      )
+      return !insideCode && hasInlineSyntax ? prose.replace(/\$/g, '\\$&') : prose
     }
   }
 })

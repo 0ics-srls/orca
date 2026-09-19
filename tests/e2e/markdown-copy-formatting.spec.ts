@@ -53,6 +53,30 @@ test('copying a rich selection preserves Markdown formatting', async ({ orcaPage
     expect(copied.html).toContain('<strong>bold</strong>')
     await expect(editor.locator('p')).toHaveText('A bold paragraph with a link.')
     await testInfo.attach('copied-markdown', { body: copied.text, contentType: 'text/markdown' })
+
+    await editor.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const selection = window.getSelection()
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+      element.focus()
+      document.dispatchEvent(new Event('selectionchange'))
+    })
+    await expect
+      .poll(() => orcaPage.evaluate(() => window.getSelection()?.toString()))
+      .toContain('Copy formatting')
+    const copiedBlocks = await editor.evaluate((element) => {
+      const clipboardData = new DataTransfer()
+      element.dispatchEvent(
+        new ClipboardEvent('copy', { clipboardData, bubbles: true, cancelable: true })
+      )
+      return clipboardData.getData('text/plain')
+    })
+    expect(copiedBlocks).toBe(
+      '# Copy formatting\n\nA **bold** paragraph with a [link](https://example.com).'
+    )
+    await testInfo.attach('copied-blocks', { body: copiedBlocks, contentType: 'text/markdown' })
   } finally {
     await cleanupMarkdownFixture(filePath)
   }
