@@ -93,6 +93,8 @@ function targetGenerationsEqual(current: Map<string, number>, next: Map<string, 
 
 const stateGenerationByEnvironment = new Map<string, number>()
 const targetConnectionGenerationByEnvironment = new Map<string, number>()
+const MAX_SSH_STATE_GENERATIONS = 512
+const MAX_SSH_TARGET_GENERATIONS = 4096
 
 function targetGenerationKey(environmentId: string, targetId: string): string {
   return `${environmentId}\0${targetId}`
@@ -116,6 +118,13 @@ function advanceEnvironmentSshTargetConnectionGeneration(
     key,
     getEnvironmentSshTargetConnectionGeneration(environmentId, targetId) + 1
   )
+  while (targetConnectionGenerationByEnvironment.size > MAX_SSH_TARGET_GENERATIONS) {
+    const oldest = targetConnectionGenerationByEnvironment.keys().next()
+    if (oldest.done) {
+      break
+    }
+    targetConnectionGenerationByEnvironment.delete(oldest.value)
+  }
 }
 
 export function getEnvironmentSshStateGeneration(environmentId: string): number {
@@ -127,6 +136,13 @@ function advanceEnvironmentSshStateGeneration(environmentId: string): void {
     environmentId,
     getEnvironmentSshStateGeneration(environmentId) + 1
   )
+  while (stateGenerationByEnvironment.size > MAX_SSH_STATE_GENERATIONS) {
+    const oldest = stateGenerationByEnvironment.keys().next()
+    if (oldest.done) {
+      break
+    }
+    stateGenerationByEnvironment.delete(oldest.value)
+  }
 }
 
 function generationIsCurrent(environmentId: string, generation: number | undefined): boolean {

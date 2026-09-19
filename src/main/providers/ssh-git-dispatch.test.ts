@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  _getSshGitProviderGenerationCacheSize,
+  getSshGitProvider,
   getSshGitProviderGeneration,
   registerSshGitProvider,
   unregisterSshGitProvider
@@ -24,5 +26,20 @@ describe('SSH Git provider registry', () => {
     expect(registered).toBe(before + 1)
     expect(unregistered).toBe(registered + 1)
     expect(reRegistered).toBe(unregistered + 1)
+  })
+
+  it('bounds retired connection generations', () => {
+    registerSshGitProvider(connectionId, {} as never)
+    const provider = getSshGitProvider(connectionId)
+    if (!provider) {
+      throw new Error('test provider was not registered')
+    }
+    for (let index = 0; index < 600; index += 1) {
+      const id = `retired-${index}`
+      registerSshGitProvider(id, provider)
+      unregisterSshGitProvider(id)
+    }
+
+    expect(_getSshGitProviderGenerationCacheSize()).toBeLessThanOrEqual(512)
   })
 })

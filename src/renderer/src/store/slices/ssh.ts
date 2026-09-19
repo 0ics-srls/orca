@@ -86,6 +86,7 @@ export type SshSlice = {
 }
 
 const targetConnectionGeneration = new Map<string, number>()
+const MAX_LOCAL_SSH_TARGET_GENERATIONS = 4096
 
 export function getLocalSshTargetConnectionGeneration(targetId: string): number {
   return targetConnectionGeneration.get(targetId) ?? 0
@@ -93,6 +94,13 @@ export function getLocalSshTargetConnectionGeneration(targetId: string): number 
 
 function advanceLocalSshTargetConnectionGeneration(targetId: string): void {
   targetConnectionGeneration.set(targetId, getLocalSshTargetConnectionGeneration(targetId) + 1)
+  while (targetConnectionGeneration.size > MAX_LOCAL_SSH_TARGET_GENERATIONS) {
+    const oldest = targetConnectionGeneration.keys().next()
+    if (oldest.done) {
+      break
+    }
+    targetConnectionGeneration.delete(oldest.value)
+  }
 }
 
 export const createSshSlice: StateCreator<AppState, [], [], SshSlice> = (set) => ({

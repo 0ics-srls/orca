@@ -35,6 +35,7 @@ import { githubRepoIdentityKey } from '../../../shared/github/repository-identit
 export { lookupReposBySlugFromCache } from './repo-slug-cache'
 
 const slugResolutionInFlight = new Map<string, Promise<string | null>>()
+const MAX_SLUG_RESOLUTION_GENERATIONS = 1024
 
 // Why: an invalidation (repo removed, remote changed) can land while a
 // resolution is in-flight — before it ever wrote to `slugByRepoId`. Deleting
@@ -47,6 +48,13 @@ const slugResolutionGeneration = new Map<string, number>()
 function invalidateSlugResolution(cacheKey: string): void {
   slugResolutionInFlight.delete(cacheKey)
   slugResolutionGeneration.set(cacheKey, (slugResolutionGeneration.get(cacheKey) ?? 0) + 1)
+  while (slugResolutionGeneration.size > MAX_SLUG_RESOLUTION_GENERATIONS) {
+    const oldest = slugResolutionGeneration.keys().next()
+    if (oldest.done) {
+      return
+    }
+    slugResolutionGeneration.delete(oldest.value)
+  }
 }
 
 // Why: clear after remove/remote-change so the next index build re-resolves.
