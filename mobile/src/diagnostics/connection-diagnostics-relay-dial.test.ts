@@ -149,8 +149,7 @@ describe('diagnoseConnection on the other relay close codes', () => {
   it('explains a refused relay credential', () => {
     expect(diagnose(window(4401))).toEqual({
       likelyCause: 'Relay refused this device’s relay credential (close code 4401).',
-      nextStep:
-        'Connect to the desktop on the same network once so the credential refreshes, or re-pair.',
+      nextStep: 'Re-pair this phone with the desktop.',
       reportability: 'none'
     })
   })

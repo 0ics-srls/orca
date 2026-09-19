@@ -168,8 +168,7 @@ const RELAY_DIAL_ADVICE: Record<
   },
   'credential-refused': {
     likelyCause: (code) => `Relay refused this device’s relay credential (close code ${code}).`,
-    nextStep:
-      'Connect to the desktop on the same network once so the credential refreshes, or re-pair.'
+    nextStep: 'Re-pair this phone with the desktop.'
   },
   unreachable: {
     likelyCause: (code) => `The phone could not reach the Relay cell (transport close ${code}).`,

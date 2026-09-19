@@ -161,7 +161,7 @@ describe('classifyConnection with a relay host verdict', () => {
       kind: 'unreachable',
       label: 'Relay access expired for Host 1',
       reason: 'never-connected',
-      detail: 'Connect on the same network once, or re-pair'
+      detail: 'Re-pair with your desktop'
     })
   })
 

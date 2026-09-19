@@ -48,11 +48,13 @@ const RELAY_HOST_COPY: Record<
     label: (host) => `${host} is offline`,
     detail: "Check it's awake, Orca is running, and you're signed in"
   },
-  // The cell refused this phone's relay credential; a direct session rotates it.
+  // The cell refused this phone's relay credential (revoked, a month unused, or
+  // desynced). A direct session would also rotate it, but re-pairing is the one
+  // remedy that works from anywhere, so it is the only one worth printing.
   'credential-refused': {
     kind: 'unreachable',
     label: (host) => `Relay access expired for ${host}`,
-    detail: 'Connect on the same network once, or re-pair'
+    detail: 'Re-pair with your desktop'
   },
   // Amber, not red: the phone never reached the cell, which says nothing about
   // the desktop.
