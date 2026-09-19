@@ -169,13 +169,6 @@ export function isMimoLaunchCommand(launchCommand: string | undefined): boolean 
   return binary === 'mimo'
 }
 
-export function isOpenCode2LaunchCommand(launchCommand: string | undefined): boolean {
-  const binary = getCommandTokenPathBasename(getFirstCommandToken(launchCommand ?? ''))
-    .toLowerCase()
-    .replace(/\.(?:cmd|exe|sh)$/, '')
-  return binary === 'opencode2'
-}
-
 export function resolveMimocodeSourceHome(baseEnv: Record<string, string>): string | undefined {
   const sourceHome = baseEnv.ORCA_MIMOCODE_SOURCE_HOME ?? process.env.ORCA_MIMOCODE_SOURCE_HOME
   if (sourceHome) {

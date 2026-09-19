@@ -1,4 +1,5 @@
 import { resolveSetupAgentSequenceLaunchCommand } from '../../../../shared/setup-agent-sequencing'
+import { isOpenCode2LaunchCommand } from '../../../../shared/opencode-launch-command'
 import {
   detectExplicitPiAgentKindFromCommand,
   isPiCompatibleAgentType
@@ -21,7 +22,6 @@ import {
   clearPiAgentShadowEnv,
   exposePiManagedExtensionEnv,
   isMimoLaunchCommand,
-  isOpenCode2LaunchCommand,
   resolveMimocodeSourceHome,
   resolveOpenCodeSourceConfigDir,
   resolvePiAgentSourceDir,

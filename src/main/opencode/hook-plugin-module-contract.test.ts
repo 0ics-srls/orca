@@ -16,14 +16,7 @@ vi.mock('electron', () => ({
 
 import { _internals } from './hook-service'
 
-/**
- * OpenCode loads a plugin file either through a named factory export or through the
- * module default export. The default-export loader rejects the module outright unless
- * the default is an object exposing `server()` — verified against opencode 1.18.18,
- * which logs `failed to load plugin … must default export an object with server()` for
- * a default of `{ id, setup }` and accepts `{ id, server }`. These tests execute the
- * generated module so the shipped file is checked against both loaders, not a substring.
- */
+// Execute the generated module against legacy and current plugin contracts.
 describe('OpenCode status plugin module contract', () => {
   type PluginHooks = {
     event: (input: { event: unknown }) => Promise<void>
@@ -162,55 +155,7 @@ describe('OpenCode status plugin module contract', () => {
     })
   })
 
-  it('subscribes through the OpenCode 2 setup API and disposes its registrations', async () => {
-    process.env.ORCA_PANE_KEY = 'tab-1:leaf-1'
-    const posts: unknown[] = []
-    globalThis.fetch = vi.fn(async (_input, init) => {
-      posts.push(JSON.parse(String(init?.body)))
-      return new Response('{}', { status: 200 })
-    })
-    const dispose = vi.fn()
-    let subscriptionSignal: AbortSignal | undefined
-    const module = await loadPluginModule(_internals.getOpenCode2PluginSource())
-    expect(module.default?.setup).toBeTypeOf('function')
-    const cleanup = await module.default?.setup?.({
-      session: {
-        get: async ({ sessionID }: { sessionID: string }) => ({ data: { id: sessionID } }),
-        hook: async () => ({ dispose })
-      },
-      event: {
-        subscribe: async function* ({ signal }: { signal: AbortSignal }) {
-          subscriptionSignal = signal
-          yield { type: 'session.created', data: { sessionID: 'ses_root' } }
-          yield {
-            type: 'session.execution.started',
-            data: { sessionID: 'ses_root' }
-          }
-          yield {
-            type: 'session.execution.succeeded',
-            data: { sessionID: 'ses_root' }
-          }
-        }
-      }
-    })
-    await vi.waitFor(() => {
-      expect(posts).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            payload: expect.objectContaining({ hook_event_name: 'SessionBusy' })
-          }),
-          expect.objectContaining({
-            payload: expect.objectContaining({ hook_event_name: 'SessionIdle' })
-          })
-        ])
-      )
-    })
-    await cleanup?.()
-    expect(dispose).toHaveBeenCalledOnce()
-    expect(subscriptionSignal?.aborted).toBe(true)
-  })
-
-  it('turns OpenCode 2 step lifecycle events into working and done hooks', async () => {
+  it('keeps OpenCode 2 busy across steps until the session becomes idle', async () => {
     process.env.ORCA_PANE_KEY = 'tab-1:leaf-1'
     const posts: { body: Record<string, unknown> }[] = []
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The mocked fetch is assigned to the standard Fetch API shape.
@@ -237,6 +182,14 @@ describe('OpenCode status plugin module contract', () => {
         properties: { sessionID: 'ses_root', assistantMessageID: 'msg-1' }
       }
     })
+    expect(posts).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          payload: expect.objectContaining({ hook_event_name: 'SessionIdle' })
+        })
+      ])
+    )
+    await hooks?.event({ event: { type: 'session.idle', properties: { sessionID: 'ses_root' } } })
     await new Promise((resolve) => setTimeout(resolve, 50))
     const hookEvents = posts.map((post) => {
       const payload = post.body.payload

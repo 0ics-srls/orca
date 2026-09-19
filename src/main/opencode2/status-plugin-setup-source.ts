@@ -70,9 +70,6 @@ export function getOpenCode2EventNormalizationSource(): string[] {
     '  if (event.type === "session.next.step.started" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried") {',
     '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "busy" } } };',
     '  }',
-    '  if (event.type === "session.next.step.ended" || event.type === "session.next.step.failed") {',
-    '    return { ...event, type: "session.status", properties: { ...properties, status: { type: "idle" } } };',
-    '  }',
     '  return event;',
     '}',
     ''

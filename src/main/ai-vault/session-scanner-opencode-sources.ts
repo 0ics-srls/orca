@@ -16,26 +16,20 @@ export function opencodeDiscoveries(
   limit: number,
   issues: AiVaultScanIssue[]
 ): Promise<SessionFileDiscovery>[] {
-  const storageDirs = opencodeStorageDirs(options, wslHomeDirs)
-  return storageDirs.map(async (storageDir, index) => {
-    const dbPaths = await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
-    const v1Paths = dbPaths.filter((path) => !isOpenCodeV2DatabaseName(basename(path)))
-    return discoverOpenCodeSessions({ storageDir, dbPaths: v1Paths, limitPerAgent: limit, issues })
-  })
-}
-
-export function opencode2Discoveries(
-  options: AiVaultScanOptions,
-  wslHomeDirs: readonly string[],
-  limit: number,
-  issues: AiVaultScanIssue[]
-): Promise<SessionFileDiscovery>[] {
-  return opencodeStorageDirs(options, wslHomeDirs).map(async (storageDir, index) => {
-    // Current releases share opencode.db with v1; the worker checks for v2 tables.
-    const v2Paths = await opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
-    return v2Paths.length > 0
-      ? discoverOpenCode2Sessions(storageDir, v2Paths, limit, issues)
-      : emptyOpenCode2Discovery(storageDir)
+  return opencodeStorageDirs(options, wslHomeDirs).flatMap((storageDir, index) => {
+    const paths = opencodeDbPathsForSource(options, wslHomeDirs, storageDir, index, issues)
+    return [
+      paths.then((dbPaths) =>
+        discoverOpenCodeSessions({
+          storageDir,
+          dbPaths: dbPaths.filter((path) => !isOpenCodeV2DatabaseName(basename(path))),
+          limitPerAgent: limit,
+          issues
+        })
+      ),
+      // Current releases share opencode.db with v1; the worker checks for v2 tables.
+      paths.then((dbPaths) => discoverOpenCode2Sessions(storageDir, dbPaths, limit, issues))
+    ]
   })
 }
 
@@ -109,13 +103,5 @@ async function discoverOpenCode2Sessions(
     agent: 'opencode2' as const,
     rootDir: storageDir,
     files: files.map((candidate) => candidate.file)
-  }
-}
-
-function emptyOpenCode2Discovery(storageDir: string): SessionFileDiscovery {
-  return {
-    agent: 'opencode2' as const,
-    rootDir: storageDir,
-    files: []
   }
 }

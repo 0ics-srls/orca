@@ -91,7 +91,6 @@ function dedupeAndSortCandidates(candidates: SessionFileCandidate[]): SessionFil
  * List opencode2 sessions from one or more channel-scoped SQLite databases as
  * synthetic `SessionFileCandidate` entries, mirroring the v1 SQLite list leg.
  * Databases that lack the `session_v2` table are silently skipped; errors are
- // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
  * recorded as scan issues.
  */
 export async function listOpenCode2SqliteSessions(args: {

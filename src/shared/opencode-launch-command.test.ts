@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOpenCode2LaunchCommand } from './pi-agent'
+import { isOpenCode2LaunchCommand } from './opencode-launch-command'
 
 describe('isOpenCode2LaunchCommand', () => {
   it.each(['opencode2', '/usr/local/bin/opencode2', 'opencode2.exe', 'opencode2.cmd'])(

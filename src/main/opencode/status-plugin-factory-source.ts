@@ -49,6 +49,7 @@ export function getStatusPluginFactorySource(options: {
           '    if (event.type === "session.next.prompt.admitted") {',
           '      if (!sessionID) return;',
           '      if ((await isChildSession(client, sessionID)) !== false) return;',
+          '      if (disposed || authorityRevision !== stateArrivalRevision || desiredStatus === "waiting") return;',
           '      const prompt = event.properties?.prompt?.text;',
           '      if (typeof prompt !== "string" || !prompt) return;',
           '      await postMessagePart({',
@@ -129,7 +130,7 @@ export function getStatusPluginFactorySource(options: {
     '      event.type === "question.replied" ||',
     `      event.type === "question.rejected"${
       options.emitNextEvents
-        ? ' || event.type === "permission.v2.asked" || event.type === "permission.v2.replied" || event.type === "question.v2.asked" || event.type === "question.v2.replied" || event.type === "question.v2.rejected" || event.type === "session.next.step.started" || event.type === "session.next.step.ended" || event.type === "session.next.step.failed" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried"'
+        ? ' || event.type === "permission.v2.asked" || event.type === "permission.v2.replied" || event.type === "question.v2.asked" || event.type === "question.v2.replied" || event.type === "question.v2.rejected" || event.type === "session.next.step.started" || event.type === "session.next.tool.called" || event.type === "session.next.tool.progress" || event.type === "session.next.retried"'
         : ''
     }`,
     '    ) {',

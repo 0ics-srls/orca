@@ -19,6 +19,7 @@ import {
   isPiCompatibleAgentType
 } from '../shared/pi-agent-kind'
 import { resolveSetupAgentSequenceLaunchCommand } from '../shared/setup-agent-sequencing'
+import { isOpenCode2LaunchCommand } from '../shared/opencode-launch-command'
 import { relayLogLine } from './relay-diagnostic-log'
 import { registerManagedHookInstaller } from './managed-hook-installer'
 
@@ -83,7 +84,11 @@ export class RelayAgentHookRuntime {
   ): Promise<Record<string, string>> {
     const env: Record<string, string> = {}
     const overlayId = context.paneKey ?? context.id
-    const opencodeAgent = context.launchAgent === 'opencode2' ? 'opencode2' : 'opencode'
+    const launchCommandHint = resolveSetupAgentSequenceLaunchCommand(context.env, context.command)
+    const opencodeAgent =
+      context.launchAgent === 'opencode2' || isOpenCode2LaunchCommand(launchCommandHint)
+        ? 'opencode2'
+        : 'opencode'
     if (this.pluginOverlay.hasOpenCodeSource(opencodeAgent)) {
       const sourceDir = resolveOpenCodeSourceConfigDir(context.env, context.shell)
       const dir = this.pluginOverlay.materializeOpenCode(overlayId, sourceDir, opencodeAgent)
@@ -95,7 +100,9 @@ export class RelayAgentHookRuntime {
         }
       }
     }
-    const launchCommandHint = resolveSetupAgentSequenceLaunchCommand(context.env, context.command)
+    if (!this.pluginOverlay.hasPiSource()) {
+      return env
+    }
     const explicitKind = isPiCompatibleAgentType(context.launchAgent)
       ? context.launchAgent
       : context.launchAgent === undefined
@@ -104,12 +111,6 @@ export class RelayAgentHookRuntime {
     const kind = explicitKind ?? 'pi'
     const hasLaunchCommand =
       typeof launchCommandHint === 'string' && launchCommandHint.trim().length > 0
-    if (kind === 'omp' || !hasLaunchCommand) {
-      env.ORCA_OMP_FRESH_CONFIG = this.pluginOverlay.materializeOmpFreshConfig()
-    }
-    if (!this.pluginOverlay.hasPiSource()) {
-      return env
-    }
     if (kind === 'pi') {
       const sourceDir = resolvePiSourceAgentDir(context.env, context.shell, 'pi')
       const result = this.pluginOverlay.materializePi(overlayId, sourceDir, 'pi', {

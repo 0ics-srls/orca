@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import Database from '../sqlite/sync-database'
 import { buildOpenCodeSqliteCandidatePath } from './session-scanner-opencode-sqlite-paths'
 import { listOpenCode2SqliteSessions } from './session-scanner-opencode2-sqlite-list'
-import { parseOpenCode2SqliteSession } from './session-scanner-opencode2-sqlite'
+import {
+  parseOpenCode2SqliteSession,
+  captureOpenCode2SqliteSession
+} from './session-scanner-opencode2-sqlite'
 import { withFullFirstUserPromptCapture } from './session-scanner-first-user-prompt-capture'
 import type { AiVaultScanIssue } from '../../shared/ai-vault-types'
 
@@ -127,6 +130,41 @@ function insertMessage(
 }
 
 const issues: AiVaultScanIssue[] = []
+
+it('captures the full transcript while keeping list previews bounded', async () => {
+  const { db, path } = createTempDb('opencode.db')
+  applyOpenCode2Schema(db)
+  insertSession(db, { id: 'long', directory: '/repo', timeCreated: 1000, timeUpdated: 9000 })
+  for (let index = 0; index < 8; index++) {
+    insertMessage(db, {
+      id: `message_${index}`,
+      sessionId: 'long',
+      type: 'user',
+      seq: index,
+      timeCreated: 1000 + index,
+      data: JSON.stringify({ text: `Turn ${index}` })
+    })
+  }
+  db.close()
+  const args = { dbPath: path, sessionId: 'long', platform: 'darwin' as const }
+  const preview = await parseOpenCode2SqliteSession(args)
+  const capture = await captureOpenCode2SqliteSession(args)
+  expect(preview?.previewMessages).toHaveLength(5)
+  expect(capture.messages.map((message) => message.text)).toEqual(
+    Array.from({ length: 8 }, (_, index) => `Turn ${index}`)
+  )
+})
+
+it('keeps session metadata readable but refuses a complete capture when ordering columns are missing', async () => {
+  const { db, path } = createTempDb()
+  applyOpenCode2Schema(db)
+  insertSession(db, { id: 'partial', directory: '/repo', timeCreated: 1000, timeUpdated: 1000 })
+  db.exec('ALTER TABLE session_message DROP COLUMN seq')
+  db.close()
+  const args = { dbPath: path, sessionId: 'partial', platform: 'darwin' as const }
+  expect((await parseOpenCode2SqliteSession(args))?.sessionId).toBe('partial')
+  await expect(captureOpenCode2SqliteSession(args)).rejects.toThrow('schema is unreadable')
+})
 
 describe('listOpenCode2SqliteSessions', () => {
   it('lists top-level, non-archived sessions newest-first', async () => {

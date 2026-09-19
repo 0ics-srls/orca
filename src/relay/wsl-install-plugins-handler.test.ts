@@ -26,14 +26,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('writes orca-opencode-status.js into the overlay and returns that dir', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const source = '// orca opencode status plugin\nexport const Plugin = () => ({})\n'
       const res = install({ opencodePluginSource: source })
 
@@ -49,14 +45,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('writes the OpenCode 2 plugin to its separate overlay', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst-v2'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const source = '// opencode2\n'
       const res = install({ opencode2PluginSource: source })
       const dir = res.overlayDirs.opencode2
@@ -72,12 +64,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('reuses the overlay on repeat installs instead of rebuilding it', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const source = '// v1\n'
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       const dir = install({ opencodePluginSource: source }).overlayDirs.opencode as string
@@ -100,8 +90,7 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
       // this branch today; it exists so a plugin-only overlay can't outlive a source
       // dir becoming resolvable. Simulated by mutating the env the factory captured.
       const userConfig = join(home, 'my-opencode')
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      const env = { HOME: home, ORCA_WSL_HOOK_INSTANCE: 'inst1' } as NodeJS.ProcessEnv
+      const env: NodeJS.ProcessEnv = { HOME: home, ORCA_WSL_HOOK_INSTANCE: 'inst1' }
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), env)
       const source = '// v1\n'
       install({ opencodePluginSource: source })
@@ -118,12 +107,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('rebuilds when the cached overlay lost its plugin file', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const source = '// v1\n'
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       const dir = install({ opencodePluginSource: source }).overlayDirs.opencode as string
@@ -138,12 +125,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('re-materializes when the shipped source changes', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       install({ opencodePluginSource: '// v1\n' })
       // Why: a mid-session Orca upgrade ships new plugin source; future spawns must see it.
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
@@ -154,12 +139,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('rebuilds when the cached overlay disappeared from the guest', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const source = '// v1\n'
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       const dir = install({ opencodePluginSource: source }).overlayDirs.opencode as string
@@ -177,13 +160,11 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
       const userConfig = join(home, 'my-opencode')
       mkdirSync(userConfig, { recursive: true })
       writeFileSync(join(userConfig, 'opencode.json'), '{"model":"user-set"}')
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_OPENCODE_SOURCE_CONFIG_DIR: userConfig,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       const dir = install({ opencodePluginSource: '// v1\n' }).overlayDirs.opencode as string
 
@@ -200,12 +181,10 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
       const defaultConfig = join(home, '.config', 'opencode')
       mkdirSync(defaultConfig, { recursive: true })
       writeFileSync(join(defaultConfig, 'opencode.json'), '{"model":"default"}')
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home,
         ORCA_WSL_HOOK_INSTANCE: 'inst1'
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       const dir = install({ opencodePluginSource: '// v1\n' }).overlayDirs.opencode as string
 
@@ -217,11 +196,9 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
   it('rejects a source that exceeds the byte cap before writing anything', () => {
     withHome((home) => {
       const overlay = new PluginOverlayManager({ homeDir: home })
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(overlay, {
         HOME: home
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const tooBig = 'a'.repeat(PLUGIN_SOURCE_MAX_BYTES + 1)
       expect(() => install({ opencodePluginSource: tooBig })).toThrow(/byte cap/)
       expect(overlay.hasOpenCodeSource()).toBe(false)
@@ -230,11 +207,9 @@ describe.skipIf(process.platform === 'win32')('createInstallPluginsHandler (gues
 
   it('returns no overlay dir when no opencode source is provided', () => {
     withHome((home) => {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The test supplies the complete process environment fields used by the handler.
       const install = createInstallPluginsHandler(new PluginOverlayManager({ homeDir: home }), {
         HOME: home
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-      } as NodeJS.ProcessEnv)
+      })
       const res = install({})
       expect(res.installed.opencode).toBe(false)
       expect(res.overlayDirs.opencode).toBeUndefined()

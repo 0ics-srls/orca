@@ -1,15 +1,25 @@
+import {
+  OPENCODE_CAPTURE_RECORD_LIMIT,
+  OPENCODE_CAPTURE_TEXT_LIMIT
+} from './opencode-transcript-capture-limits'
 import type { AiVaultSession, AiVaultSessionPreviewMessage } from '../../shared/ai-vault-types'
 import {
   addPreviewMessage,
   createAccumulator,
   finalizeSession,
-  updateTimeline
+  updateTimeline,
+  timestampIso
 } from './session-scanner-accumulator'
 import {
   normalizeFullFirstUserPromptText,
   shouldCaptureFullFirstUserPrompt
 } from './session-scanner-first-user-prompt'
 import { normalizeTitleText } from './session-scanner-values'
+import {
+  extractOpenCode2MessageText,
+  decodeOpenCode2Message,
+  parseOpenCode2MessageRow
+} from './session-scanner-opencode2-message'
 import SyncDatabase from '../sqlite/sync-database'
 import { columnExists, tableExists } from '../opencode-usage/schema-helpers'
 import type { TranscriptMessage, TranscriptMessageSink } from './session-transcript-consumers'
@@ -146,56 +156,8 @@ function mapPreviewRole(type: string | null): AiVaultSessionPreviewMessage['role
   return 'unknown'
 }
 
-// Why: user messages carry `text` (string or array of strings); assistant
-// messages carry `content` as an array of {type:'text'|'reasoning', text}.
-function extractMessageText(data: string): string | null {
-  try {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-    const parsed = JSON.parse(data) as unknown
-    const record =
-      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-          (parsed as Record<string, unknown>)
-        : null
-    if (!record) {
-      return null
-    }
-    const text = record.text
-    if (typeof text === 'string') {
-      return text
-    }
-    if (Array.isArray(text)) {
-      const parts = text.filter((part): part is string => typeof part === 'string')
-      return parts.length > 0 ? parts.join('\n') : null
-    }
-    const content = record.content
-    if (Array.isArray(content)) {
-      const texts: string[] = []
-      for (const item of content) {
-        if (
-          item &&
-          typeof item === 'object' &&
-          !Array.isArray(item) &&
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-          (item as Record<string, unknown>).type === 'text' &&
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-          typeof (item as Record<string, unknown>).text === 'string'
-        ) {
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the guards immediately above prove this is a text record with a string text field.
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-          texts.push((item as Record<string, unknown>).text as string)
-        }
-      }
-      return texts.length > 0 ? texts.join('\n') : null
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
 function readFirstUserPromptFromDb(db: SyncDatabase, sessionId: string): string | null {
-  if (!canCountOpenCode2Messages(db) || !columnExists(db, OPENCODE2_MESSAGE_TABLE, 'data')) {
+  if (!canReadOpenCode2Messages(db)) {
     return null
   }
   try {
@@ -211,7 +173,7 @@ function readFirstUserPromptFromDb(db: SyncDatabase, sessionId: string): string 
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the SELECT projects one string data column and better-sqlite3 returns rows synchronously.
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
       .all(sessionId) as { data: string }[]
-    const text = rows[0] ? extractMessageText(rows[0].data) : null
+    const text = rows[0] ? extractOpenCode2MessageText(rows[0].data) : null
     return text ? normalizeFullFirstUserPromptText(text) : null
   } catch {
     return null
@@ -219,7 +181,7 @@ function readFirstUserPromptFromDb(db: SyncDatabase, sessionId: string): string 
 }
 
 function buildPreviewQuery(db: SyncDatabase): string | null {
-  if (!canCountOpenCode2Messages(db) || !columnExists(db, OPENCODE2_MESSAGE_TABLE, 'data')) {
+  if (!canReadOpenCode2Messages(db)) {
     return null
   }
   return `SELECT type, data, time_created
@@ -230,6 +192,35 @@ function buildPreviewQuery(db: SyncDatabase): string | null {
                 LIMIT ${OPENCODE2_PREVIEW_MESSAGE_WINDOW})
           ORDER BY time_created DESC, seq DESC
           LIMIT ?`
+}
+
+function canReadOpenCode2Messages(db: SyncDatabase): boolean {
+  return (
+    canCountOpenCode2Messages(db) &&
+    ['data', 'time_created', 'seq'].every((column) =>
+      columnExists(db, OPENCODE2_MESSAGE_TABLE, column)
+    )
+  )
+}
+
+function* readCaptureRows(db: SyncDatabase, sessionId: string): Generator<PreviewRow> {
+  if (!canReadOpenCode2Messages(db)) {
+    throw new Error('OpenCode 2 transcript schema is unreadable')
+  }
+  const rows = db
+    .prepare(`SELECT type, data, time_created FROM session_message
+    WHERE session_id = ? AND type IN ('user','assistant','tool') ORDER BY time_created, seq`)
+    .iterate(sessionId)
+  let count = 0
+  let bytes = 0
+  for (const value of rows) {
+    const row = parseOpenCode2MessageRow(value)
+    bytes += Buffer.byteLength(row.data)
+    if (++count > OPENCODE_CAPTURE_RECORD_LIMIT || bytes > OPENCODE_CAPTURE_TEXT_LIMIT) {
+      throw new Error('OpenCode 2 transcript exceeds capture limits; no partial read was published')
+    }
+    yield { type: row.type, data: row.data, time_created: row.time_created }
+  }
 }
 
 /**
@@ -288,27 +279,38 @@ export async function parseOpenCode2SqliteSession(args: {
     updateTimeline(accumulator, row.time_updated)
 
     const previewSql = buildPreviewQuery(db)
-    if (previewSql) {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The guarded preview query selects the declared PreviewRow columns.
-      const probedRows = db
-        .prepare(previewSql)
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Runtime validation or the local test fixture establishes the asserted shape.
-        .all(sessionId, OPENCODE2_PREVIEW_LIMIT + 1) as PreviewRow[]
+    if (args.messages?.active || previewSql) {
+      const probedRows =
+        previewSql && !args.messages?.active
+          ? db
+              .prepare(previewSql)
+              .all(sessionId, OPENCODE2_PREVIEW_LIMIT + 1)
+              .map(parseOpenCode2MessageRow)
+          : []
       if (probedRows.length > OPENCODE2_PREVIEW_LIMIT) {
         accumulator.previewMessagesTruncated = true
       }
-      const previewRows = probedRows.slice(0, OPENCODE2_PREVIEW_LIMIT)
-      for (let i = previewRows.length - 1; i >= 0; i--) {
-        const previewRow = previewRows[i]
-        if (!previewRow) {
-          continue
+      const previewRows = args.messages?.active
+        ? readCaptureRows(db, sessionId)
+        : probedRows.slice(0, OPENCODE2_PREVIEW_LIMIT).toReversed()
+      for (const previewRow of previewRows) {
+        const role = mapPreviewRole(previewRow.type)
+        if (args.messages?.active) {
+          for (const message of decodeOpenCode2Message(
+            previewRow.data,
+            role,
+            timestampIso(previewRow.time_created)
+          )) {
+            args.messages.push(message)
+          }
         }
-        const text = extractMessageText(previewRow.data)
+        const text = extractOpenCode2MessageText(previewRow.data)
         if (!text) {
           continue
         }
         addPreviewMessage(accumulator, {
-          role: mapPreviewRole(previewRow.type),
+          role,
+          publishMessage: false,
           text,
           timestamp: previewRow.time_created,
           seedFirstUserPrompt: false

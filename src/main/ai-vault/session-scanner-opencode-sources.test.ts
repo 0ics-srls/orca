@@ -1,12 +1,12 @@
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { opencode2Discoveries, opencodeDiscoveries } from './session-scanner-opencode-sources'
+import { opencodeDiscoveries } from './session-scanner-opencode-sources'
 
 const { discoverOpenCodeSessionsMock, listOpenCodeDatabasesMock, listOpenCode2SessionsMock } =
   vi.hoisted(() => ({
     discoverOpenCodeSessionsMock: vi.fn(),
     listOpenCodeDatabasesMock: vi.fn(),
-    listOpenCode2SessionsMock: vi.fn()
+    listOpenCode2SessionsMock: vi.fn().mockResolvedValue([])
   }))
 
 vi.mock('./session-scanner-opencode-sqlite-worker-spawn', () => ({
@@ -30,7 +30,7 @@ describe('opencodeDiscoveries', () => {
   it('checks the shared database for v2 sessions as well as the beta databases', async () => {
     const dbPaths = [join('/data', 'opencode.db'), join('/data', 'opencode-next.db')]
     listOpenCode2SessionsMock.mockResolvedValue([])
-    await Promise.all(opencode2Discoveries({ opencodeDbPaths: dbPaths }, [], 25, []))
+    await Promise.all(opencodeDiscoveries({ opencodeDbPaths: dbPaths }, [], 25, []))
     expect(listOpenCode2SessionsMock).toHaveBeenCalledWith({ dbPaths, limit: 25, issues: [] })
     await Promise.all(opencodeDiscoveries({ opencodeDbPaths: dbPaths }, [], 25, []))
     expect(discoverOpenCodeSessionsMock).toHaveBeenCalledWith(
