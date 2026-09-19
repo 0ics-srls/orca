@@ -34,7 +34,17 @@ export class CdpClientResponseWriter {
       byteLengthOf: (frame) => Buffer.byteLength(frame),
       getBufferedAmount: () => client.bufferedAmount,
       isWritable: () => client.readyState === WebSocket.OPEN,
-      onOverflow: () => client.terminate(),
+      onOverflow: (evidence) => {
+        // The client only sees an abrupt socket close, so name the cap here.
+        console.warn('[cdp] outbound queue overflow; terminating automation client:', {
+          cap: evidence.cap,
+          queuedBytes: evidence.queuedBytes,
+          queuedFrames: evidence.queuedFrames,
+          maxQueuedBytes: evidence.maxQueuedBytes,
+          maxQueuedFrames: evidence.maxQueuedFrames
+        })
+        client.terminate()
+      },
       // Preserve large PDF/screenshot replies on a draining connection; queued bursts stay capped.
       maxFrameBytes: Number.POSITIVE_INFINITY,
       maxDrainFramesPerTurn: 128
