@@ -10,9 +10,9 @@ import {
 import { advanceTerminalTopologyRevision } from './workspace-session-terminal-membership-authority'
 
 const fixtures: ReturnType<typeof createAcknowledgedTabRetirementFixture>[] = []
-afterEach(() => {
+afterEach(async () => {
   for (const fixture of fixtures.splice(0)) {
-    fixture.dispose()
+    await fixture.dispose()
   }
   vi.restoreAllMocks()
 })

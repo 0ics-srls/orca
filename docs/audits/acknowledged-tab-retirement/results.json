@@ -10,13 +10,13 @@
       "after": "333a0d11659e4034a634c423253b20f3aab25686c20894804b6a1f08aefcd702"
     },
     "src/main/runtime/acknowledged-terminal-tab-retirement.test.ts": {
-      "current": "27b3e01f0c334f0cd021a9e6ba7a5704ea62e4547173941f2bff6930ea6e0639"
+      "current": "efcd9dca5f4ceff69c968d886bf01ed87762301a4470fcadaae257c4e4881c81"
     },
     "src/main/runtime/acknowledged-terminal-tab-retirement-fixture.ts": {
-      "current": "d85069bd8c2b7823668fe49b198ffa8d96d5d618656507dafe3719483c2d0d2b"
+      "current": "632d0dd0535b136f0474ed7d0f8bcac6830a9a9e165e7696f6a7c89304eda058"
     },
     "docs/audits/acknowledged-tab-retirement/fixture.test.ts": {
-      "current": "885ccada0ae86ebabdd4361f5f5655ffea8ac1b2447f2d06ec3a6bcbcc8b70b7"
+      "current": "176f26c95a7cf7526e4a1e8131e5ac897f6ecd45876772945b7363db5f622aa6"
     }
   },
   "before": {

@@ -30,10 +30,10 @@ const LEAF = '22222222-2222-4222-8222-222222222222'
 const LEAF_B = '44444444-4444-4444-8444-444444444444'
 const INC = '33333333-3333-4333-8333-333333333333'
 const INC_B = '55555555-5555-4555-8555-555555555555'
-const cleanup: (() => void)[] = []
-afterEach(() => {
+const cleanup: (() => Promise<void>)[] = []
+afterEach(async () => {
   for (const fn of cleanup.splice(0)) {
-    fn()
+    await fn()
   }
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -180,10 +180,12 @@ function fixture(kind: 'repo' | 'folder' = 'repo', host: ExecutionHostId = 'loca
   })
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this proof exercises only the terminal-close notifier ports.
   runtime.setNotifier({ closeTerminalTab, closeTerminal: () => {} } as never)
-  cleanup.push(() => {
+  cleanup.push(async () => {
     runtime.setNotifier(null)
     runtime.syncWindowGraph(1, { tabs: [], leaves: [], mobileSessionTabs: [] })
     main.flush()
+    main.freezeWrites()
+    await main.waitForPendingWrite()
     rmSync(dir, { recursive: true, force: true })
   })
   const hasTab = () =>

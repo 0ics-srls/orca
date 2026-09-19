@@ -179,10 +179,12 @@ export function createAcknowledgedTabRetirementFixture(bound = false) {
       store.getWorkspaceSession().tabsByWorktree[ACK_WORKTREE].some((tab) => tab.id === ACK_TAB),
     close: (options: { force?: boolean } = {}) =>
       runtime.closeMobileSessionTab(`id:${ACK_WORKTREE}`, ACK_TAB, { reason: 'user', ...options }),
-    dispose: () => {
+    dispose: async () => {
       runtime.setNotifier(null)
       runtime.syncWindowGraph(1, { tabs: [], leaves: [], mobileSessionTabs: [] })
       store.flush()
+      store.freezeWrites()
+      await store.waitForPendingWrite()
       setRuntimeDesktopSurface(null)
       rmSync(directory, { recursive: true, force: true })
     }
