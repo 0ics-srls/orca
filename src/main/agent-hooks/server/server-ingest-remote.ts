@@ -1,11 +1,8 @@
 import { track } from '../../telemetry/client'
 import { normalizeAgentStatusPayload } from '../../../shared/agent-status-types'
-import { normalizeAgentProviderSession } from '../../../shared/agent-session-resume'
-import { isAgentHookSource, restoreShedStatusFields } from '../../../shared/agent-hook-relay'
+import { restoreShedStatusFields } from '../../../shared/agent-hook-relay'
 import {
   MAX_PANE_KEY_LEN,
-  normalizeClaudePromptId,
-  normalizeGrokPromptId,
   warnOnHookEnvOrVersionMismatch
 } from '../../../shared/agent-hook-listener/listener-limits'
 import {
@@ -23,6 +20,7 @@ import {
   olderPeerAgentStatusLegacyMode
 } from '../../../shared/agent-status-legacy-adapter'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
+import { normalizeRemoteEnvelopeFields } from './server-remote-envelope-normalization'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
 
 export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
@@ -124,50 +122,20 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       return
     }
     let tabId = paneKey !== physicalPaneKey ? parsedPaneKey.tabId : reportedTabId
-    const hookEventName =
-      typeof envelope.hookEventName === 'string' && envelope.hookEventName.trim().length > 0
-        ? envelope.hookEventName.trim()
-        : undefined
-    const source = isAgentHookSource(envelope.source) ? envelope.source : undefined
-    const providerPromptId =
-      source === 'claude'
-        ? normalizeClaudePromptId(envelope.providerPromptId)
-        : source === 'grok'
-          ? normalizeGrokPromptId(envelope.providerPromptId)
-          : undefined
-    const grokPromptBoundary =
-      source === 'grok' && envelope.grokPromptBoundary === true ? true : undefined
-    const compactTrigger =
-      source === 'claude' &&
-      (envelope.compactTrigger === 'manual' || envelope.compactTrigger === 'auto')
-        ? envelope.compactTrigger
-        : undefined
-    const worktreeId =
-      envelope.worktreeId !== undefined && envelope.worktreeId.trim().length > 0
-        ? envelope.worktreeId.trim()
-        : undefined
-    const promptInteractionKey =
-      typeof envelope.promptInteractionKey === 'string' &&
-      envelope.promptInteractionKey.trim().length > 0
-        ? envelope.promptInteractionKey.trim()
-        : undefined
-    const toolUseId =
-      typeof envelope.toolUseId === 'string' && envelope.toolUseId.trim().length > 0
-        ? envelope.toolUseId.trim()
-        : undefined
-    const toolAgentId =
-      typeof envelope.toolAgentId === 'string' && envelope.toolAgentId.trim().length > 0
-        ? envelope.toolAgentId.trim()
-        : undefined
-    const teammateName =
-      typeof envelope.teammateName === 'string' && envelope.teammateName.trim().length > 0
-        ? envelope.teammateName.trim()
-        : undefined
-    const toolAgentType =
-      typeof envelope.toolAgentType === 'string' && envelope.toolAgentType.trim().length > 0
-        ? envelope.toolAgentType.trim()
-        : undefined
-    const providerSession = normalizeAgentProviderSession(envelope.providerSession) ?? undefined
+    const {
+      hookEventName,
+      source,
+      providerPromptId,
+      grokPromptBoundary,
+      compactTrigger,
+      worktreeId,
+      promptInteractionKey,
+      toolUseId,
+      toolAgentId,
+      teammateName,
+      toolAgentType,
+      providerSession
+    } = normalizeRemoteEnvelopeFields(envelope)
     // Why: relay crosses a trust boundary — re-run the canonical normalizer to enforce caps/invariants (returns null on malformed).
     const validatedPayload = normalizeAgentStatusPayload(envelope.payload)
     if (!validatedPayload) {
@@ -261,17 +229,13 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
         paneKey,
         providerPromptId
       )
-      // Why: an older relay built this payload before the boundary flag existed, so it arrives as a
-      // plain `done` — which every completion-reactive consumer reads as a finished turn. Stamp the
-      // boundary here so a compact stays silent regardless of which relay normalized it.
+      // Older relays omit the boundary flag; stamp it so compact completion stays silent.
       if (normalizedPayload.sessionBoundary !== true) {
         normalizedPayload = { ...normalizedPayload, sessionBoundary: true }
       }
       acceptedCompactCompletion = true
     }
-    // Why: keyed on "did we accept a completion", not on the trigger surviving the wire — the
-    // trigger-stripped replay is exactly the shape that arrives without one, and it is still the
-    // compact's own promptless event, so it still needs the summarized turn's label.
+    // Accepted compact completions retain the summarized turn label, including trigger-stripped replays.
     if (
       source === 'claude' &&
       (compactTrigger !== undefined || acceptedCompactCompletion) &&
@@ -283,7 +247,6 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     const applyClaudeBackgroundWork =
       normalizedPayload.agentType === 'claude' &&
       typeof envelope.claudeRunningNonAgentTask === 'boolean' &&
-      // Why: reconnect replay may seed a restarted listener, but cannot override any observation made by this runtime.
       (envelope.isReplay !== true || !this.runtimeObservedStatusPaneKeys.has(paneKey))
     // Why: run the HTTP path's warn-once version/env-mismatch diagnostics with this.env as expected.
     warnOnHookEnvOrVersionMismatch(this.state, {
