@@ -27,7 +27,9 @@ test('source links stay outside mixed code fences', async ({ orcaPage }, testInf
       }
       state.setMarkdownViewMode(state.activeFileId, 'source')
     })
-    const links = orcaPage.locator('.monaco-editor .view-lines .monaco-markdown-doc-link')
+    const links = orcaPage.locator('.monaco-editor .view-line').filter({
+      has: orcaPage.locator('.monaco-markdown-doc-link')
+    })
     await expect(links).toHaveCount(1)
     await expect(links).toHaveText('[[outside-code]]')
     await testInfo.attach('fence-links', {
