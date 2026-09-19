@@ -395,3 +395,51 @@ describe('removal failure ordering', () => {
     expect(base.store.getWorkspaceSessionHostIds()).toContain(hostId)
   })
 })
+
+describe('async session admission failures', () => {
+  it.each(['session:set', 'session:patch'])(
+    'resolves %s without a write when the pairing catalog cannot be read',
+    async (channel) => {
+      const { dir, store } = fixture()
+      const environment = pair(dir, 'unreadable')
+      const hostId = toRuntimeExecutionHostId(environment.id)
+      writeFileSync(getEnvironmentStorePath(dir), '{broken')
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+      await expect(invokeWrite(channel, session('unverifiable'), hostId)).resolves.toBeUndefined()
+      expect(store.getWorkspaceSessionHostIds()).not.toContain(hostId)
+      expect(error).toHaveBeenCalledWith(
+        '[session] Failed to establish runtime session partition authority:',
+        expect.any(Error)
+      )
+    }
+  )
+
+  it.each(['session:set', 'session:patch'])(
+    'resolves %s without a write when main namespace custody cannot be established',
+    async (channel) => {
+      const { store } = fixture()
+      vi.spyOn(store, 'getRepos').mockImplementationOnce(() => {
+        throw new Error('folder_workspace_connection_ambiguous')
+      })
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      await expect(
+        invokeWrite(channel, session('unverifiable'), 'runtime:unverifiable')
+      ).resolves.toBeUndefined()
+      expect(store.getWorkspaceSessionHostIds()).not.toContain('runtime:unverifiable')
+    }
+  )
+
+  it.each(['session:set', 'session:patch'])(
+    'preserves actual Store failures for %s',
+    async (channel) => {
+      const { store } = fixture()
+      const method = channel === 'session:set' ? 'setWorkspaceSession' : 'patchWorkspaceSession'
+      vi.spyOn(store, method).mockImplementationOnce(() => {
+        throw new Error('actual Store write failure')
+      })
+      await expect(invokeWrite(channel, session('local'), 'local')).rejects.toThrow(
+        'actual Store write failure'
+      )
+    }
+  )
+})

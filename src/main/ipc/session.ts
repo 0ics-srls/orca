@@ -22,13 +22,13 @@ export function registerSessionHandlers(store: Store): void {
   })
 
   ipcMain.handle('session:set', (_event, args: WorkspaceSessionState, hostId?: string | null) => {
-    if (canCreateRendererSessionPartition(store, hostId)) {
+    if (isRendererSessionAdmitted(store, hostId)) {
       store.setWorkspaceSession(args, hostId)
     }
   })
 
   ipcMain.handle('session:patch', (_event, args: WorkspaceSessionPatch, hostId?: string | null) => {
-    if (canCreateRendererSessionPartition(store, hostId)) {
+    if (isRendererSessionAdmitted(store, hostId)) {
       store.patchWorkspaceSession(args, hostId)
     }
   })
@@ -66,4 +66,13 @@ export function registerSessionHandlers(store: Store): void {
         typeof args?.ref === 'string' ? store.readTerminalScrollbackSnapshot(args.ref) : null
     }
   )
+}
+
+function isRendererSessionAdmitted(store: Store, hostId?: string | null): boolean {
+  try {
+    return canCreateRendererSessionPartition(store, hostId)
+  } catch (error) {
+    console.error('[session] Failed to establish runtime session partition authority:', error)
+    return false
+  }
 }
