@@ -42,6 +42,8 @@ export function flushTerminalOutputImpl(
   if (!entry) {
     return
   }
+  // Why: a budget-free flush is an ordering barrier (replay paint, shutdown capture, parse settle) whose caller writes straight to xterm next, so it must submit every queued byte; only budgeted callers tolerate dense pacing.
+  const explicitFullDrain = options?.maxChars === undefined
   queuedByTerminal.delete(terminal)
   if (isTerminalWritePipelineCertifiedDead(terminal)) {
     discardDetachedQueueEntry(entry)
@@ -52,7 +54,7 @@ export function flushTerminalOutputImpl(
     queuedByTerminal.set(terminal, entry)
     return
   }
-  if (!canDrainQueueEntry(entry)) {
+  if (!explicitFullDrain && !canDrainQueueEntry(entry)) {
     queuedByTerminal.set(terminal, entry)
     scheduleDrain(0)
     return
@@ -71,7 +73,7 @@ export function flushTerminalOutputImpl(
   let flushedChars = 0
   let queuedWrite = takeQueuedChunk(
     entry,
-    entry.denseSgr ? DENSE_SGR_CHUNK_CHARS : BACKGROUND_CHUNK_CHARS
+    !explicitFullDrain && entry.denseSgr ? DENSE_SGR_CHUNK_CHARS : BACKGROUND_CHUNK_CHARS
   )
   while (queuedWrite) {
     flushedChars += queuedWrite.data.length
@@ -140,7 +142,7 @@ export function flushTerminalOutputImpl(
     if (options?.maxChars !== undefined && flushedChars >= options.maxChars) {
       break
     }
-    if (entry.denseSgr) {
+    if (!explicitFullDrain && entry.denseSgr) {
       break
     }
     queuedWrite = takeQueuedChunk(entry, BACKGROUND_CHUNK_CHARS)

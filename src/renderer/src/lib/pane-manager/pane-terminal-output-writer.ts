@@ -212,9 +212,8 @@ export function writeTerminalOutputImpl(
     flushTerminalOutputImpl(terminal)
     const remaining = queuedByTerminal.get(terminal)
     if (remaining) {
-      // A dense batch may still be parsing when an explicit flush returns.
-      // Keep the new foreground bytes behind its retained tail so terminal
-      // byte order remains intact.
+      // Keep the new bytes behind anything the flush could not submit, so
+      // terminal byte order survives a retained tail.
       remaining.onBackgroundBacklogDropped = options.onBackgroundBacklogDropped
       remaining.highPriority = true
       enqueueChunk(remaining, data, {

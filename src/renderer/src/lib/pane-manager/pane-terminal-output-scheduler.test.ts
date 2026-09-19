@@ -455,15 +455,67 @@ describe('pane terminal output scheduler', () => {
 
     writeTerminalOutput(terminal, input, { foreground: false })
     vi.advanceTimersByTime(50)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
     writeTerminalOutput(terminal, 'echo', { foreground: true })
 
+    // The foreground write's budget-free flush submits the retained dense tail first.
+    expect(terminal.write.mock.calls.map(([data]) => data)).toEqual([
+      input.slice(0, 4 * 1024),
+      input.slice(4 * 1024),
+      'echo'
+    ])
+  })
+
+  it('drains a dense entry completely when the flush carries no char budget', async () => {
+    vi.useFakeTimers()
+    const { flushTerminalOutput, queuedByTerminal, writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 1_300 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
     expect(terminal.write).toHaveBeenCalledTimes(1)
-    parsed.shift()?.()
-    vi.advanceTimersByTime(0)
-    expect(terminal.write.mock.calls[1]?.[0]).toBe(input.slice(4 * 1024))
-    parsed.shift()?.()
-    vi.advanceTimersByTime(0)
-    expect(terminal.write.mock.calls[2]?.[0]).toBe('echo')
+
+    // The replay/shutdown-capture callers write straight to xterm next, so the
+    // flush must leave nothing queued behind the batch still in flight.
+    flushTerminalOutput(terminal)
+
+    expect(queuedByTerminal.has(terminal)).toBe(false)
+    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(dense)
+  })
+
+  it('keeps pacing a dense entry when the flush carries a char budget', async () => {
+    vi.useFakeTimers()
+    const { flushTerminalOutput, queuedByTerminal, writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 1_300 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+
+    flushTerminalOutput(terminal, { maxChars: 64 * 1024 })
+
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    expect(queuedByTerminal.has(terminal)).toBe(true)
   })
 
   it('promotes large background backlogs to high-priority drains', async () => {
