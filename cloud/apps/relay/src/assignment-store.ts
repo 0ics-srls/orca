@@ -1084,8 +1084,10 @@ export class RelayAssignmentStore {
 
   // Only a known member is ever written: the close reason arrives as free text from the host's
   // socket, so anything unrecognised is dropped here rather than stored and replayed at a phone.
-  // The timestamp fences the write, which is what lets the caller fire it and forget it - a record
-  // that loses the race to a later one cannot overwrite it.
+  // One rule governs this and the clear below, which is what lets both be fired and forgotten:
+  // the newer event wins, and an equal timestamp goes to the close. A close cannot precede the
+  // proof of the socket it closes, so same-millisecond pairs are proof-then-close and the reason
+  // is real; a reason older than the proof is stale and loses, whichever write lands first.
   async recordHostCloseReason(
     identity: AssignmentIdentity,
     reason: unknown,
@@ -1097,22 +1099,27 @@ export class RelayAssignmentStore {
       `UPDATE relay_assignments
          SET last_host_close_reason = ?, last_host_close_reason_at = ?
        WHERE user_id = ? AND relay_host_id = ?
-         AND (last_host_close_reason_at IS NULL OR last_host_close_reason_at < ?)`,
+         AND (last_host_close_reason_at IS NULL OR last_host_close_reason_at <= ?)`,
       [parsed, at, identity.userId, identity.relayHostId, at]
     )
     return parsed
   }
 
-  // A host that proved itself is not signed out, whatever it said last. Fenced on `provedAt` so a
-  // clear still in flight cannot erase a reason the same host recorded after this proof, and
-  // predicated on a reason being there at all so the common case writes no row version.
+  // A host that proved itself is not signed out, whatever it said last. The proof advances the
+  // fence rather than erasing it, and does so whether or not there is a reason to clear: leaving
+  // the column NULL would let a record still in flight from an older close match `IS NULL` and
+  // land on a host that has since proved itself. That is why this writes a row version on every
+  // control connect. It is not folded into the UPDATE `activateControl` already makes on this row
+  // (`touchAssignment`, `adjustActivityCount`), which would make it free, because that statement
+  // is awaited and load bearing: on a boot that deferred the column addition it would raise 42703
+  // and fail every host control connect, where a statement of its own merely fails and is logged.
   async clearHostCloseReason(identity: AssignmentIdentity, provedAt: number): Promise<void> {
     await this.database.query(
       `UPDATE relay_assignments
-         SET last_host_close_reason = NULL, last_host_close_reason_at = NULL
+         SET last_host_close_reason = NULL, last_host_close_reason_at = ?
        WHERE user_id = ? AND relay_host_id = ?
-         AND last_host_close_reason IS NOT NULL AND last_host_close_reason_at <= ?`,
-      [identity.userId, identity.relayHostId, provedAt]
+         AND (last_host_close_reason_at IS NULL OR last_host_close_reason_at < ?)`,
+      [provedAt, identity.userId, identity.relayHostId, provedAt]
     )
   }
 

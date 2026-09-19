@@ -1177,6 +1177,12 @@ export class HostSessionRegistry {
       return
     }
     if (existing) this.observer.recordReconnect()
+    // The last point both admissions share: a rebind below returns without ever reaching the new
+    // session built at the end. A host that proved itself is not signed out, whatever it said
+    // last, and a close within the orphan grace leaves a session a later rebind reuses. Not
+    // awaited: the row is fenced on this timestamp, so no ordering against a close still being
+    // written can leave a reason on a host that proved itself at or after it.
+    this.clearHostCloseReason({ userId: identity.sub, relayHostId: identity.relayHostId })
     if (rebind && existing) {
       const previousSocket = existing.socket
       if (existing.orphanTimer) clearTimeout(existing.orphanTimer)
@@ -1257,10 +1263,6 @@ export class HostSessionRegistry {
       regionalDrainExpiresAt: null
     }
     const sessionKey = this.key(identity.sub, identity.relayHostId)
-    // A host that proved itself again is not signed out, whatever it said last. Not awaited:
-    // the row is fenced on this timestamp, so a slow clear cannot erase a later close, and the
-    // stale reason it leaves behind in the meantime is only readable while the host is absent.
-    this.clearHostCloseReason({ userId: identity.sub, relayHostId: identity.relayHostId })
     this.sessions.set(sessionKey, session)
     this.wireActiveControl(session)
     this.sendHelloAck(session)

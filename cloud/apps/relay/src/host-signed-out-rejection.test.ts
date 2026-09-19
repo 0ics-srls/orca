@@ -135,7 +135,32 @@ function createCell(
         ) => Promise<void>
       }
     ).activate(socket, identity, null, generation, false, 1, '1.4.173')
-  return { registry, activate, assignments, readHostCloseReason }
+  // A reconnect the registry treats as a resume: the orphaned session is reused rather than
+  // replaced, which is the branch that returns before a new session is ever built.
+  const activateRebind = (socket: WebSocket): Promise<void> => {
+    const sessions = (registry as unknown as { sessions: Map<string, { generation: number }> })
+      .sessions
+    const existing = sessions.get(`${identity.sub}\0${identity.relayHostId}`)
+    if (!existing) throw new Error('no session to rebind onto')
+    return (
+      registry as unknown as {
+        activate: (
+          socket: WebSocket,
+          identity: RelayTokenClaims,
+          existing: unknown,
+          generation: number,
+          rebind: boolean,
+          assignmentEpoch: number,
+          appVersion: string
+        ) => Promise<void>
+      }
+    ).activate(socket, identity, existing, existing.generation, true, 1, '1.4.173')
+  }
+  const sessionFor = (): unknown =>
+    (registry as unknown as { sessions: Map<string, unknown> }).sessions.get(
+      `${identity.sub}\0${identity.relayHostId}`
+    )
+  return { registry, activate, activateRebind, sessionFor, assignments, readHostCloseReason }
 }
 
 async function dialPhone(registry: HostSessionRegistry): Promise<FakeSocket> {
@@ -249,7 +274,9 @@ describe('host sign-out reason on phone rejection', () => {
       )
     )[0]
     expect(row?.['last_host_close_reason']).toBeNull()
-    expect(row?.['last_host_close_reason_at']).toBeNull()
+    // The fence still carries the proof this host gave when it connected; it is a timestamp, and
+    // the invented text reached neither column.
+    expect(typeof row?.['last_host_close_reason_at']).toBe('number')
   })
 
   it('forgets the sign-out once the host proves itself again', async () => {
@@ -322,6 +349,101 @@ describe('host sign-out reason on phone rejection', () => {
       RELAY_CLOSE_CODE.HOST_OFFLINE,
       RELAY_HOST_CLOSE_REASON.SIGNED_OUT
     )
+  })
+
+  it('clears the sign-out when the host rebinds onto its orphaned session', async () => {
+    const { registry, activate, activateRebind, sessionFor, assignments } = createCell(database)
+    const control = new FakeSocket()
+    await activate(control as unknown as WebSocket, 1)
+    const orphaned = sessionFor()
+    control.close(1000, RELAY_HOST_CLOSE_REASON.SIGNED_OUT)
+    // Inside the orphan grace, so the session is orphaned rather than gone and the reconnect
+    // resumes it. The branch that does so returns before the new-session path the clear used
+    // to sit on.
+    await settle(1)
+    expect(await assignments.readHostCloseReason(assignmentIdentity)).toBe(
+      RELAY_HOST_CLOSE_REASON.SIGNED_OUT
+    )
+
+    const rebound = new FakeSocket()
+    await activateRebind(rebound as unknown as WebSocket)
+    await settle(0)
+    // Not vacuous: a replaced session would make this a different object and prove nothing.
+    expect(sessionFor()).toBe(orphaned)
+    expect(await assignments.readHostCloseReason(assignmentIdentity)).toBeNull()
+
+    // Drop it the way a network death would, so only a stale reason could still name a cause.
+    rebound.terminate()
+    await settle()
+    const phone = await dialPhone(registry)
+    expect(phone.close).toHaveBeenCalledWith(
+      RELAY_CLOSE_CODE.HOST_OFFLINE,
+      'relay connection rejected'
+    )
+  })
+
+  // Both writes are unawaited, so either order can reach the row. These pin the rule that decides
+  // the outcome on timestamps alone, which is why they need no concurrency to be meaningful.
+  describe('when a close and a proof race to the row', () => {
+    const PROOF_AT = 2_000
+    const CLOSE_AT = 1_000
+
+    it('drops a close still being written when the host has since proved itself', async () => {
+      const store = new RelayAssignmentStore(database)
+      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.recordHostCloseReason(
+        assignmentIdentity,
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
+        CLOSE_AT
+      )
+
+      expect(await store.readHostCloseReason(assignmentIdentity)).toBeNull()
+    })
+
+    it('clears a reason the host recorded before it proved itself', async () => {
+      const store = new RelayAssignmentStore(database)
+      await store.recordHostCloseReason(
+        assignmentIdentity,
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
+        CLOSE_AT
+      )
+      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+
+      expect(await store.readHostCloseReason(assignmentIdentity)).toBeNull()
+    })
+
+    // The rule has to keep real sign-outs, or it would trade one wrong verdict for another.
+    it('keeps a close that lands at the same instant as the proof, in either order', async () => {
+      const store = new RelayAssignmentStore(database)
+      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.recordHostCloseReason(
+        assignmentIdentity,
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
+        PROOF_AT
+      )
+      expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT
+      )
+
+      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT
+      )
+    })
+
+    it('keeps a close that happened after the proof', async () => {
+      const store = new RelayAssignmentStore(database)
+      await store.clearHostCloseReason(assignmentIdentity, CLOSE_AT)
+      await store.recordHostCloseReason(
+        assignmentIdentity,
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
+        PROOF_AT
+      )
+
+      expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
+        RELAY_HOST_CLOSE_REASON.SIGNED_OUT
+      )
+    })
   })
 
   // What makes the column addition deferrable: a boot that could not take the lock still serves,
