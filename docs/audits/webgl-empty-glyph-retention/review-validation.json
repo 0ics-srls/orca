@@ -1,12 +1,12 @@
 {
   "node": "v24.20.0",
-  "browser": "146.0.7680.0",
+  "browser": "147.0.7727.15",
   "results": [
     {
       "phase": "after",
       "format": "cjs",
       "mode": "space",
-      "sha256": "0667d4850345c52271515c6ffe434c40687c59db007ddd32aabc02f0118a1cad",
+      "sha256": "61aac33b7054f2fceec6399bb9f0a3289828cbfeca088bcf88bb2295414dae21",
       "samples": [
         {
           "updates": 0,
@@ -21,7 +21,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3336616
+          "heap": 3327600
         },
         {
           "updates": 1000,
@@ -36,7 +36,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3808452
+          "heap": 3718672
         },
         {
           "updates": 5000,
@@ -45,13 +45,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 904,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3799644
+          "heap": 3880852
         },
         {
           "updates": 10000,
@@ -60,13 +60,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1808,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3918852
+          "heap": 3883656
         },
         {
           "updates": 50000,
@@ -75,13 +75,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 848,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3519764
+          "heap": 3916752
         },
         {
           "updates": 100000,
@@ -90,17 +90,19 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1696,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3632676
+          "heap": 3608368
         }
       ],
       "checks": {
         "rasterizations": 0,
+        "residentRasterizations": 1,
+        "evictedRasterizations": 1,
         "emptyAfterClear": 0
       }
     },
@@ -108,7 +110,7 @@
       "phase": "after",
       "format": "cjs",
       "mode": "space-joiner",
-      "sha256": "0667d4850345c52271515c6ffe434c40687c59db007ddd32aabc02f0118a1cad",
+      "sha256": "61aac33b7054f2fceec6399bb9f0a3289828cbfeca088bcf88bb2295414dae21",
       "samples": [
         {
           "updates": 0,
@@ -123,7 +125,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3336388
+          "heap": 3327604
         },
         {
           "updates": 1000,
@@ -138,7 +140,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3788324
+          "heap": 3757648
         },
         {
           "updates": 5000,
@@ -147,13 +149,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 904,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3817620
+          "heap": 3962360
         },
         {
           "updates": 10000,
@@ -162,13 +164,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1808,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3937304
+          "heap": 3965852
         },
         {
           "updates": 50000,
@@ -177,13 +179,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 848,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3855688
+          "heap": 3998520
         },
         {
           "updates": 100000,
@@ -192,17 +194,19 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1696,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3653104
+          "heap": 3683148
         }
       ],
       "checks": {
         "rasterizations": 0,
+        "residentRasterizations": 1,
+        "evictedRasterizations": 1,
         "emptyAfterClear": 0
       }
     },
@@ -210,7 +214,7 @@
       "phase": "after",
       "format": "esm",
       "mode": "space",
-      "sha256": "1ff2a59921ed5d53c0958110dac290c8d9f8d4502ea631fac7fd8575227b30f0",
+      "sha256": "ac3cf4124572e1ea19e3e9c15a41a1b944571f8ae339542ac11bce37e6a789dd",
       "samples": [
         {
           "updates": 0,
@@ -225,7 +229,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3295588
+          "heap": 3294880
         },
         {
           "updates": 1000,
@@ -240,7 +244,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3768188
+          "heap": 3678664
         },
         {
           "updates": 5000,
@@ -249,13 +253,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 904,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3759512
+          "heap": 3840944
         },
         {
           "updates": 10000,
@@ -264,13 +268,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1808,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3878776
+          "heap": 3843804
         },
         {
           "updates": 50000,
@@ -279,13 +283,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 848,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3798292
+          "heap": 3876940
         },
         {
           "updates": 100000,
@@ -294,17 +298,19 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1696,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3668712
+          "heap": 3634552
         }
       ],
       "checks": {
         "rasterizations": 0,
+        "residentRasterizations": 1,
+        "evictedRasterizations": 1,
         "emptyAfterClear": 0
       }
     },
@@ -312,7 +318,7 @@
       "phase": "after",
       "format": "esm",
       "mode": "space-joiner",
-      "sha256": "1ff2a59921ed5d53c0958110dac290c8d9f8d4502ea631fac7fd8575227b30f0",
+      "sha256": "ac3cf4124572e1ea19e3e9c15a41a1b944571f8ae339542ac11bce37e6a789dd",
       "samples": [
         {
           "updates": 0,
@@ -327,7 +333,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3286928
+          "heap": 3294884
         },
         {
           "updates": 1000,
@@ -342,7 +348,7 @@
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3783224
+          "heap": 3668820
         },
         {
           "updates": 5000,
@@ -351,13 +357,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 904,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3777172
+          "heap": 3922936
         },
         {
           "updates": 10000,
@@ -366,13 +372,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1808,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3896896
+          "heap": 3926404
         },
         {
           "updates": 50000,
@@ -381,13 +387,13 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 848,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3814948
+          "heap": 3959276
         },
         {
           "updates": 100000,
@@ -396,17 +402,19 @@
           "secondCellPixels": 395161943,
           "regular": 93,
           "combined": 0,
-          "empty": 1696,
+          "empty": 4096,
           "pages": 1,
           "glyphs": 93,
           "layoutVersion": 0,
           "shared": true,
           "preserved": true,
-          "heap": 3678164
+          "heap": 3716164
         }
       ],
       "checks": {
         "rasterizations": 0,
+        "residentRasterizations": 1,
+        "evictedRasterizations": 1,
         "emptyAfterClear": 0
       }
     }
