@@ -385,16 +385,17 @@ describe('host sign-out reason on phone rejection', () => {
   // Both writes are unawaited, so either order can reach the row. These pin the rule that decides
   // the outcome on timestamps alone, which is why they need no concurrency to be meaningful.
   describe('when a close and a proof race to the row', () => {
-    const PROOF_AT = 2_000
-    const CLOSE_AT = 1_000
+    // Order-neutral on purpose: each test says which event gets which instant.
+    const EARLIER = 1_000
+    const LATER = 2_000
 
     it('drops a close still being written when the host has since proved itself', async () => {
       const store = new RelayAssignmentStore(database)
-      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.clearHostCloseReason(assignmentIdentity, LATER)
       await store.recordHostCloseReason(
         assignmentIdentity,
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
-        CLOSE_AT
+        EARLIER
       )
 
       expect(await store.readHostCloseReason(assignmentIdentity)).toBeNull()
@@ -405,9 +406,9 @@ describe('host sign-out reason on phone rejection', () => {
       await store.recordHostCloseReason(
         assignmentIdentity,
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
-        CLOSE_AT
+        EARLIER
       )
-      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.clearHostCloseReason(assignmentIdentity, LATER)
 
       expect(await store.readHostCloseReason(assignmentIdentity)).toBeNull()
     })
@@ -415,17 +416,17 @@ describe('host sign-out reason on phone rejection', () => {
     // The rule has to keep real sign-outs, or it would trade one wrong verdict for another.
     it('keeps a close that lands at the same instant as the proof, in either order', async () => {
       const store = new RelayAssignmentStore(database)
-      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.clearHostCloseReason(assignmentIdentity, LATER)
       await store.recordHostCloseReason(
         assignmentIdentity,
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
-        PROOF_AT
+        LATER
       )
       expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT
       )
 
-      await store.clearHostCloseReason(assignmentIdentity, PROOF_AT)
+      await store.clearHostCloseReason(assignmentIdentity, LATER)
       expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT
       )
@@ -433,11 +434,11 @@ describe('host sign-out reason on phone rejection', () => {
 
     it('keeps a close that happened after the proof', async () => {
       const store = new RelayAssignmentStore(database)
-      await store.clearHostCloseReason(assignmentIdentity, CLOSE_AT)
+      await store.clearHostCloseReason(assignmentIdentity, EARLIER)
       await store.recordHostCloseReason(
         assignmentIdentity,
         RELAY_HOST_CLOSE_REASON.SIGNED_OUT,
-        PROOF_AT
+        LATER
       )
 
       expect(await store.readHostCloseReason(assignmentIdentity)).toBe(
