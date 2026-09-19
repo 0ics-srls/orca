@@ -49,6 +49,39 @@ import {
   removeWebSessionTabsEnvironment
 } from './tracking'
 
+const MAX_SESSION_TABS_TRACKING_GENERATIONS = 512
+const evictedSessionTabsTrackingEnvironments = new Set<string>()
+let sessionTabsTrackingGenerationFloor = 0
+
+function advanceSessionTabsTrackingGeneration(environmentId: string): void {
+  const previous = sessionTabsTrackingGenerationByEnvironment.get(environmentId)
+  const next =
+    previous !== undefined
+      ? previous + 1
+      : evictedSessionTabsTrackingEnvironments.has(environmentId)
+        ? sessionTabsTrackingGenerationFloor + 1
+        : 1
+  sessionTabsTrackingGenerationFloor = Math.max(sessionTabsTrackingGenerationFloor, next)
+  evictedSessionTabsTrackingEnvironments.delete(environmentId)
+  sessionTabsTrackingGenerationByEnvironment.set(environmentId, next)
+  while (sessionTabsTrackingGenerationByEnvironment.size > MAX_SESSION_TABS_TRACKING_GENERATIONS) {
+    const oldest = sessionTabsTrackingGenerationByEnvironment.keys().next()
+    if (oldest.done) {
+      break
+    }
+    const oldestEnvironmentId = oldest.value
+    sessionTabsTrackingGenerationByEnvironment.delete(oldestEnvironmentId)
+    evictedSessionTabsTrackingEnvironments.add(oldestEnvironmentId)
+  }
+  while (evictedSessionTabsTrackingEnvironments.size > MAX_SESSION_TABS_TRACKING_GENERATIONS) {
+    const oldest = evictedSessionTabsTrackingEnvironments.values().next()
+    if (oldest.done) {
+      break
+    }
+    evictedSessionTabsTrackingEnvironments.delete(oldest.value)
+  }
+}
+
 export function getLastKnownHostTerminalTabCount(
   environmentId: string,
   worktreeId: string
@@ -97,6 +130,9 @@ export function resetWebSessionTabsSnapshotFreshnessForTests(): void {
   hostSessionTabIdByLocalKey.clear()
   hostSessionTabMappingKeysByEnvironmentAndWorktree.clear()
   hostWorkingClientBoundaryByPaneKey.clear()
+  sessionTabsTrackingGenerationByEnvironment.clear()
+  evictedSessionTabsTrackingEnvironments.clear()
+  sessionTabsTrackingGenerationFloor = 0
   resetWebSessionBrowserPlacementsForTests()
 }
 
@@ -157,10 +193,7 @@ export function clearWebSessionTabsTrackingForEnvironment(environmentId: string)
     return
   }
   const keyPrefix = `${trimmedEnvironmentId}:`
-  sessionTabsTrackingGenerationByEnvironment.set(
-    trimmedEnvironmentId,
-    (sessionTabsTrackingGenerationByEnvironment.get(trimmedEnvironmentId) ?? 0) + 1
-  )
+  advanceSessionTabsTrackingGeneration(trimmedEnvironmentId)
   for (const key of latestSessionTabsSnapshotByWorktree.keys()) {
     if (key.startsWith(keyPrefix)) {
       latestSessionTabsSnapshotByWorktree.delete(key)
@@ -223,5 +256,9 @@ export function clearWebSessionTabsTrackingForEnvironment(environmentId: string)
 }
 
 export function getWebSessionTabsTrackingGeneration(environmentId: string): number {
-  return sessionTabsTrackingGenerationByEnvironment.get(environmentId.trim()) ?? 0
+  const key = environmentId.trim()
+  return (
+    sessionTabsTrackingGenerationByEnvironment.get(key) ??
+    (evictedSessionTabsTrackingEnvironments.has(key) ? sessionTabsTrackingGenerationFloor + 1 : 0)
+  )
 }
