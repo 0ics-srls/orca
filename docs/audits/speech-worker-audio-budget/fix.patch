@@ -12,7 +12,10 @@
 +++ b/src/main/speech/stt-service.ts	
 @@ -1,0 +2,1 @@
 +import { STT_AUDIO_OVERLOAD_ERROR } from './stt-audio-pending-budget'
-@@ -48,3 +49,6 @@
+@@ -13,1 +14,1 @@
+-  | { type: 'error'; error?: string }
++  | { type: 'error'; error?: string; recoverable?: boolean }
+@@ -48,3 +49,7 @@
 -    this.state.worker?.postMessage({ type: 'feed', samples, sampleRate }, [
 -      samples.buffer as ArrayBuffer
 -    ])
@@ -20,7 +23,8 @@
 +    if (worker && !this.state.audioPending.tryPost(worker, samples, sampleRate)) {
 +      const sink = this.state.eventSink
 +      void stopSttDictation(this.state, owner).catch(() => undefined)
-+      sink?.({ type: 'error', error: STT_AUDIO_OVERLOAD_ERROR })
++      // Queue overload stops capture while preserving already accepted audio for final delivery.
++      sink?.({ type: 'error', error: STT_AUDIO_OVERLOAD_ERROR, recoverable: true })
 +    }
 ===================================================================
 --- a/src/main/speech/stt-worker-startup.ts	
@@ -37,7 +41,7 @@
 +++ b/src/main/speech/stt-session-start.ts	
 @@ -158,1 +158,1 @@
 -    void worker.terminate()
-+    void state.audioPending.terminateWorker(worker)
++    void state.audioPending.terminateWorker(worker).catch(() => undefined)
 ===================================================================
 --- a/src/main/speech/stt-session-stop.ts	
 +++ b/src/main/speech/stt-session-stop.ts	

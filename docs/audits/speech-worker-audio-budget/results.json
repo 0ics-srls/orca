@@ -1,34 +1,33 @@
 {
   "runtime": {
-    "node": "26.6.0",
-    "acorn": "8.17.0",
+    "node": "24.20.0",
+    "acorn": "8.18.0",
     "ada": "4.0.0",
     "amaro": "1.1.11",
     "ares": "1.34.8",
     "brotli": "1.2.0",
     "cldr": "48.0",
     "icu": "78.3",
-    "libffi": "3.7.1",
     "llhttp": "9.4.3",
     "merve": "1.2.2",
-    "modules": "147",
+    "modules": "137",
     "napi": "10",
     "nbytes": "0.1.4",
     "ncrypto": "0.0.1",
     "nghttp2": "1.70.0",
     "nghttp3": "",
     "ngtcp2": "",
-    "openssl": "3.6.3",
+    "openssl": "3.5.7",
     "simdjson": "4.6.6",
-    "simdutf": "7.7.0",
+    "simdutf": "6.4.0",
     "sqlite": "3.53.4",
-    "tz": "2026a",
-    "undici": "8.9.0",
+    "tz": "2026c",
+    "undici": "7.29.0",
     "unicode": "17.0",
     "uv": "1.52.1",
     "uvwasi": "0.0.23",
-    "v8": "14.6.202.34-node.26",
-    "zlib": "1.2.12",
+    "v8": "13.6.233.17-node.53",
+    "zlib": "1.3.2.1-motley-42c2f19",
     "zstd": "1.5.7"
   },
   "byteLimit": 8388608,
@@ -40,7 +39,7 @@
     },
     "src/main/speech/stt-service.ts": {
       "baseline": "464c6ca825277a6c834816ae4cd014c52f3a96d620f3146e65a6a7ed383c52ce",
-      "fixed": "5dbc8d39f35e444b31cc6f75c0d3d86b3c3917eeb9cc67e325d0b3315a32dd00"
+      "fixed": "4230b61a620dc0c06bdd6c87e20404eb1b67f27d8efdbea23330e81274fa2793"
     },
     "src/main/speech/stt-worker-startup.ts": {
       "baseline": "519496e70e6652cbfe7b2030c8c6c5d16fa099203de117a883f6fe7fb7bec77a",
@@ -48,7 +47,7 @@
     },
     "src/main/speech/stt-session-start.ts": {
       "baseline": "1d4f0905b9d969c78fd96874b3a1e25c67698848d856391f12f6cef5b36795d2",
-      "fixed": "302b871f65383345d22eaef950cdc9abba9dc1fb2c0a9241c111532d1fbb7520"
+      "fixed": "41c3f36d31dbae337c636a5d8ed82250e9e3767d08c65daf5e258a007c6514ab"
     },
     "src/main/speech/stt-session-stop.ts": {
       "baseline": "08d5db6147a929241e5fed3aa37bcf9597deca662e806ad9264349626ea9ea03",
@@ -79,7 +78,7 @@
     "run-case.cjs": "54e19d14d1ab8d2281b701f077c00caa7416566e9686e3625e4a49fb596815a3",
     "recognizer.cjs": "a022d119f2d767df5d2a3e81d41b4b378ac3a3e0604ff9bd9128f02b05e77024",
     "reproduce.cjs": "90a25caf22d590697e49867adfb298e24fb054c41bfe2c46a499f9e931a288e6",
-    "fix.patch": "d668d07618f36d3b62438cb2350c3c64c6c9aa86da0bcd31d082c514a4b711bc",
+    "fix.patch": "7835bc2e2c8ff9bd45bcc1e8f04e8fc582493b6e1e7f688e0c89175bfb52b065",
     "original-source-hashes.json": "b0a4703798b79ffd3ba0762fe245adb1aecddf0a6f14f0b9f0586c64ecb2c13a"
   },
   "cases": [
@@ -96,8 +95,8 @@
       "reportedError": null,
       "finalPendingBytes": null,
       "warmReuse": true,
-      "rssDelta": 17317888,
-      "mainHeapDelta": 21488
+      "rssDelta": 17301504,
+      "mainHeapDelta": 19616
     },
     {
       "phase": "baseline",
@@ -112,8 +111,8 @@
       "reportedError": null,
       "finalPendingBytes": null,
       "warmReuse": true,
-      "rssDelta": 442368,
-      "mainHeapDelta": 944
+      "rssDelta": 589824,
+      "mainHeapDelta": 440
     },
     {
       "phase": "baseline",
@@ -129,7 +128,7 @@
       "finalPendingBytes": null,
       "warmReuse": true,
       "rssDelta": 0,
-      "mainHeapDelta": 984
+      "mainHeapDelta": 896
     },
     {
       "phase": "fixed",
@@ -144,8 +143,8 @@
       "reportedError": "Speech recognition cannot keep up with microphone audio. Dictation stopped; please try again.",
       "finalPendingBytes": 0,
       "warmReuse": true,
-      "rssDelta": 262144,
-      "mainHeapDelta": 21888
+      "rssDelta": 212992,
+      "mainHeapDelta": 18688
     },
     {
       "phase": "fixed",
@@ -160,8 +159,8 @@
       "reportedError": "Speech recognition cannot keep up with microphone audio. Dictation stopped; please try again.",
       "finalPendingBytes": 0,
       "warmReuse": true,
-      "rssDelta": 114688,
-      "mainHeapDelta": 7112
+      "rssDelta": 147456,
+      "mainHeapDelta": 7008
     },
     {
       "phase": "fixed",
@@ -177,7 +176,7 @@
       "finalPendingBytes": 0,
       "warmReuse": true,
       "rssDelta": 0,
-      "mainHeapDelta": -8016
+      "mainHeapDelta": -7448
     }
   ]
 }

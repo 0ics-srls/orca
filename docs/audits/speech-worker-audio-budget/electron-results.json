@@ -41,7 +41,7 @@
     },
     "src/main/speech/stt-service.ts": {
       "baseline": "464c6ca825277a6c834816ae4cd014c52f3a96d620f3146e65a6a7ed383c52ce",
-      "fixed": "5dbc8d39f35e444b31cc6f75c0d3d86b3c3917eeb9cc67e325d0b3315a32dd00"
+      "fixed": "4230b61a620dc0c06bdd6c87e20404eb1b67f27d8efdbea23330e81274fa2793"
     },
     "src/main/speech/stt-worker-startup.ts": {
       "baseline": "519496e70e6652cbfe7b2030c8c6c5d16fa099203de117a883f6fe7fb7bec77a",
@@ -49,7 +49,7 @@
     },
     "src/main/speech/stt-session-start.ts": {
       "baseline": "1d4f0905b9d969c78fd96874b3a1e25c67698848d856391f12f6cef5b36795d2",
-      "fixed": "302b871f65383345d22eaef950cdc9abba9dc1fb2c0a9241c111532d1fbb7520"
+      "fixed": "41c3f36d31dbae337c636a5d8ed82250e9e3767d08c65daf5e258a007c6514ab"
     },
     "src/main/speech/stt-session-stop.ts": {
       "baseline": "08d5db6147a929241e5fed3aa37bcf9597deca662e806ad9264349626ea9ea03",
@@ -80,7 +80,7 @@
     "run-case.cjs": "54e19d14d1ab8d2281b701f077c00caa7416566e9686e3625e4a49fb596815a3",
     "recognizer.cjs": "a022d119f2d767df5d2a3e81d41b4b378ac3a3e0604ff9bd9128f02b05e77024",
     "reproduce.cjs": "90a25caf22d590697e49867adfb298e24fb054c41bfe2c46a499f9e931a288e6",
-    "fix.patch": "d668d07618f36d3b62438cb2350c3c64c6c9aa86da0bcd31d082c514a4b711bc",
+    "fix.patch": "7835bc2e2c8ff9bd45bcc1e8f04e8fc582493b6e1e7f688e0c89175bfb52b065",
     "original-source-hashes.json": "b0a4703798b79ffd3ba0762fe245adb1aecddf0a6f14f0b9f0586c64ecb2c13a"
   },
   "cases": [
@@ -97,8 +97,8 @@
       "reportedError": null,
       "finalPendingBytes": null,
       "warmReuse": true,
-      "rssDelta": 17563648,
-      "mainHeapDelta": 19232
+      "rssDelta": 17498112,
+      "mainHeapDelta": 19956
     },
     {
       "phase": "baseline",
@@ -113,7 +113,7 @@
       "reportedError": null,
       "finalPendingBytes": null,
       "warmReuse": true,
-      "rssDelta": 507904,
+      "rssDelta": 475136,
       "mainHeapDelta": 524
     },
     {
@@ -145,8 +145,8 @@
       "reportedError": "Speech recognition cannot keep up with microphone audio. Dictation stopped; please try again.",
       "finalPendingBytes": 0,
       "warmReuse": true,
-      "rssDelta": 147456,
-      "mainHeapDelta": 17272
+      "rssDelta": 212992,
+      "mainHeapDelta": 16536
     },
     {
       "phase": "fixed",
@@ -161,8 +161,8 @@
       "reportedError": "Speech recognition cannot keep up with microphone audio. Dictation stopped; please try again.",
       "finalPendingBytes": 0,
       "warmReuse": true,
-      "rssDelta": 114688,
-      "mainHeapDelta": 13332
+      "rssDelta": 131072,
+      "mainHeapDelta": 13292
     },
     {
       "phase": "fixed",
@@ -177,8 +177,8 @@
       "reportedError": "Error: Controlled recognizer failure",
       "finalPendingBytes": 0,
       "warmReuse": true,
-      "rssDelta": 16384,
-      "mainHeapDelta": -668
+      "rssDelta": 32768,
+      "mainHeapDelta": -5496
     }
   ]
 }
