@@ -7,12 +7,14 @@ therefore never collect a stream of new invisible variants. Changing true-color
 foreground values while redrawing a space reproduces the growth; a space followed
 by a zero-width joiner exercises the separate combined-character cache.
 
-The source patch keeps invisible entries in separate caches with a shared
-4,096-entry cap. Overflow clears only those entries. Visible glyphs, texture pages,
-and the atlas layout version stay intact, so a sibling terminal sharing the atlas
-does not need to rebuild its model. Explicit atlas clearing and page eviction
-also clear invisible entries. A cache miss after eviction rasterizes the invisible
-glyph again; recent repeated variants remain cache hits.
+The source patch keeps invisible entries in a single insertion-ordered key set with
+a 4,096-entry cap, separate from the visible caches. Overflow drops only the oldest
+admission, so a workload that stays above the cap pays one rasterization per new
+variant instead of re-rasterizing all 4,096 on every cap-th miss. Rasterizing costs
+a canvas draw plus a `getImageData` readback on the renderer thread, so the wipe was
+recurring frame-time noise. Visible glyphs, texture pages, and the atlas layout
+version stay intact, so a sibling terminal sharing the atlas does not need to rebuild
+its model. Explicit atlas clearing and page eviction still clear invisible entries.
 
 Both generated bundles and their source maps were regenerated using Orca's pinned
 xterm patch generator, the lockfile hashes were updated, and the dependency was
@@ -38,6 +40,9 @@ two modes. It samples V8 heap after CDP collection and records bundle hashes in
 [results.json](./results.json). Two terminals share one atlas. Assertions cover:
 
 - Invisible entries stay at or below 4,096; the baseline accumulates 100,000.
+- After a fresh fill of 4,096 variants, redrawing that whole window rasterizes nothing,
+  and redrawing the one variant that aged out rasterizes exactly once. Clear-all
+  eviction scores in the thousands on the first of those two counts.
 - After ASCII warmup finishes, visible cache and glyph counts stay exactly unchanged
   across overflow, with no visible glyph rerasterized; the one texture page stays intact.
 - Rendered pixels for the unaffected first cell of both terminals stay identical.
@@ -45,15 +50,18 @@ two modes. It samples V8 heap after CDP collection and records bundle hashes in
 - Explicit clear drops invisible metadata even when the atlas has no drawn glyphs.
 
 The baseline ends with 100,093 entries and about 13.6 MB of heap growth. The fixed
-run ends with 1,789 entries (93 visible and 1,696 invisible), with roughly 0.3 MB
-of heap growth. Exact heap samples vary; the bounded entry count is the invariant.
-No Orca window was launched, and no browser window was shown.
+run ends with 4,189 entries (93 visible and the full 4,096 invisible), with roughly
+0.3 to 0.4 MB of heap growth. Exact heap samples vary; the bounded entry count is the
+invariant. No Orca window was launched, and no browser window was shown.
 
-A follow-up [review-validation.json](./review-validation.json) reruns both installed
-bundles and both output modes with the stronger warmup/count/rasterization checks
-on Node 24.20.0. The original before/after measurements above remain in `results.json`.
-The runtime contract test also guards the empty-glyph routing and cap in the source
-patch, installed source, and both shipped bundles. Its three checks pass.
+[review-validation.json](./review-validation.json) is the current run, covering both
+installed bundles and both output modes on Node 24.20.0 and Chromium 147. Its four
+`checks` blocks each report `residentRasterizations: 1` and `evictedRasterizations: 1`.
+`results.json` holds the original before/after comparison; its `after` half was recorded
+against the earlier clear-all eviction, so its invisible entry counts sit below the cap
+rather than at it. The runtime contract test also guards the empty-glyph routing, the
+cap, and the single-entry eviction in the source patch, installed source, and both
+shipped bundles.
 
 Original validation also passed 86 tests across the patch generator/runtime contract and
 WebGL lifecycle/context/recovery suites, full typecheck, lint, and changed-code

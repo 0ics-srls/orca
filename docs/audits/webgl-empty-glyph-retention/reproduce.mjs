@@ -127,7 +127,7 @@ try {
               secondCellPixels: pixels(second),
               regular: entries(atlas._cacheMap),
               combined: entries(atlas._cacheMapCombined),
-              empty: entries(atlas._emptyCacheMap) + entries(atlas._emptyCacheMapCombined),
+              empty: atlas._emptyGlyphKeys.size,
               pages: atlas.pages.length,
               glyphs: atlas.pages.reduce((n, page) => n + page.glyphs.length, 0),
               layoutVersion: atlas.pageLayoutVersion,
@@ -149,23 +149,60 @@ try {
             rasterizations++
             return draw.apply(this, args)
           }
-          for (let color = 99937; color <= 100000; color++) {
+          const paint = (color) => {
             first.terminal._core.writeSync(
               `\x1b[1;2H\x1b[38;2;${color >> 16};${(color >> 8) & 255};${color & 255}m ${mode === 'space-joiner' ? '\u200d' : ''}`
             )
             first.addon._renderer.renderRows(0, 0)
           }
+          for (let color = 99937; color <= 100000; color++) {
+            paint(color)
+          }
           atlas._drawToCache = draw
+
+          // Eviction drops the oldest admission only, so a full cap's worth of fresh variants
+          // stays resident and redrawing all of them is free. Clear-all eviction wipes the cap
+          // mid-fill, and re-probing would rasterize most of the window again.
+          const cap = 4096
+          // Overfill and probe inside a margin, so a stray admission shifting the window cannot
+          // turn a single miss into a cascade of them and make the result unreadable.
+          const margin = 128
+          for (let index = 0; index < cap + margin; index++) {
+            paint(200000 + index)
+          }
+          let residentRasterizations = 0
+          atlas._drawToCache = function (...args) {
+            residentRasterizations++
+            return draw.apply(this, args)
+          }
+          for (let index = margin; index < cap + margin; index++) {
+            paint(200000 + index)
+          }
+          // Only the oldest admission of the fill was evicted, so redrawing it costs one draw.
+          const beforeEvicted = residentRasterizations
+          paint(200000)
+          const evictedRasterizations = residentRasterizations - beforeEvicted
+          atlas._drawToCache = draw
+
           first.addon.clearTextureAtlas()
           // Exercise explicit clear with only invisible glyph metadata and no drawn atlas cells.
           atlas.getRasterizedGlyph(32, 0, 0x3000001, 0, false, first.terminal.element)
           first.addon.clearTextureAtlas()
-          return { rasterizations, emptyAfterClear: atlas._emptyGlyphCount ?? null }
+          return {
+            rasterizations,
+            residentRasterizations,
+            evictedRasterizations,
+            emptyAfterClear: atlas._emptyGlyphKeys?.size ?? null
+          }
         })
         assert.ok(
           samples.every((sample) => sample.shared && sample.preserved && sample.pages === 1)
         )
         assert.equal(checks.rasterizations, 0)
+        // Clear-all eviction wipes the window mid-fill and scores in the thousands here. The
+        // slack covers the default-colour space aging out of the window and being re-admitted.
+        assert.ok(checks.residentRasterizations <= 2, `resident ${checks.residentRasterizations}`)
+        assert.equal(checks.evictedRasterizations, 1)
         assert.notEqual(samples[0].firstCellPixels, samples[0].secondCellPixels)
         assert.ok(
           samples.every(
