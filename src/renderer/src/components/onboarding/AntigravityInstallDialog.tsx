@@ -61,7 +61,7 @@ export function AntigravityInstallDialog({
           prepareCommandForShell={prepareCommand}
           shellOverride={target.shellOverride}
           forceHostRuntime
-          title="Antigravity installer"
+          title={translate('components.onboarding.agyInstall.terminal', 'Antigravity installer')}
           ariaLabel={translate(
             'components.onboarding.agyInstall.terminal',
             'Antigravity installer'
