@@ -106,6 +106,7 @@ type ExpiredHandleGapVerdict = {
   /** Sorted environment-minted PTY ids the tab's leaves held AT PARK TIME; '' when none. */
   paneBinding: string
 }
+const MAX_EXPIRED_HANDLE_GAP_VERDICTS = 512
 const expiredGenerationByPane = new Map<string, ExpiredHandleGapVerdict>()
 let unsubscribeStore: (() => void) | null = null
 
@@ -199,6 +200,16 @@ function recordExpiredWait(environmentId: string, key: string): void {
   // gate stops recording anything at all rather than admitting ''. It pins a different property
   // (reconnect-void, host-mirror-handle-gap-resume.test.ts). Both are load-bearing, for different
   // reasons — do not collapse them as redundant.
+  // Eviction is conservative: a missing verdict makes the pane wait once more, never resume early.
+  if (!expiredGenerationByPane.has(key)) {
+    while (expiredGenerationByPane.size >= MAX_EXPIRED_HANDLE_GAP_VERDICTS) {
+      const oldest = expiredGenerationByPane.keys().next()
+      if (oldest.done) {
+        break
+      }
+      expiredGenerationByPane.delete(oldest.value)
+    }
+  }
   expiredGenerationByPane.set(key, {
     generation,
     paneBinding: waitersByPane.get(key)?.paneBinding ?? ''
