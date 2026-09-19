@@ -123,6 +123,9 @@ export function createMarkdownCodeSpanScanner(content: string): MarkdownCodeSpan
     }
     previousWasBoundary = isBoundary || endsWithLine
     previousQuoteDepth = quoteDepth
+    if (isBoundary) {
+      return
+    }
 
     let index = lineStart
     while (index < lineEnd) {
