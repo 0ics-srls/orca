@@ -613,16 +613,10 @@ describe('pane terminal output scheduler', () => {
     expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(`${dense}${tail}`)
   })
 
-  it('paces a latency-sensitive dense foreground redraw instead of writing it whole', async () => {
+  it('writes a latency-sensitive foreground redraw whole, even when it is dense', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()
     const terminal = createForegroundTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const dense = Array.from(
       { length: 1_300 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
@@ -630,30 +624,9 @@ describe('pane terminal output scheduler', () => {
 
     writeTerminalOutput(terminal, dense, { foreground: true, latencySensitive: true })
 
-    // The redraw is queued rather than submitted whole, then released one
-    // parser batch at a time.
-    expect(terminal.write).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(0)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-    expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
-
-    while (parsed.length > 0) {
-      parsed.shift()?.()
-      vi.advanceTimersByTime(0)
-    }
-    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(dense)
-    expect(terminal.write.mock.calls.length).toBeGreaterThan(1)
-  })
-
-  it('writes a latency-sensitive foreground redraw whole when it is not dense', async () => {
-    vi.useFakeTimers()
-    const { writeTerminalOutput } = await loadScheduler()
-    const terminal = createForegroundTerminal()
-    const plain = 'plain redraw line\r\n'.repeat(1_000)
-
-    writeTerminalOutput(terminal, plain, { foreground: true, latencySensitive: true })
-
-    expect(terminal.write.mock.calls.map(([data]) => data)).toEqual([plain])
+    // Pacing this path would delay first paint by a macrotask and multiply the
+    // per-write viewport settle inside the post-keystroke window.
+    expect(terminal.write.mock.calls.map(([data]) => data)).toEqual([dense])
   })
 
   it('holds the parse probe behind terminal output the flush could not submit', async () => {

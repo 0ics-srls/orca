@@ -34,7 +34,6 @@ import {
 import {
   ALWAYS_REFRESH_FOREGROUND_SYNCHRONOUSLY,
   BACKGROUND_FLUSH_DELAY_MS,
-  DENSE_SGR_CHUNK_CHARS,
   FOREGROUND_BACKLOG_WARNING,
   LARGE_BACKLOG_CHARS,
   discardTerminalOutput,
@@ -43,7 +42,6 @@ import {
   type TerminalOutputTarget,
   type WriteTerminalOutputOptions
 } from './pane-terminal-output-queue-registry'
-import { isDenseSgr } from '../../../../shared/terminal-sgr-density'
 
 export function writeTerminalOutputImpl(
   terminal: TerminalOutputTarget,
@@ -185,27 +183,6 @@ export function writeTerminalOutputImpl(
         replaceBacklogWithWarning(queued, FOREGROUND_BACKLOG_WARNING)
       }
       // Why: visible command floods are throughput work, not keystroke echo — queue behind a zero-delay drain so one IPC callback can't pin the renderer while input/paint wait.
-      scheduleDrain(0)
-      return
-    }
-    if (data.length >= DENSE_SGR_CHUNK_CHARS && isDenseSgr(data)) {
-      const queued = entry ?? createQueueEntry(terminal, options)
-      queued.onBackgroundBacklogDropped = options.onBackgroundBacklogDropped
-      queued.highPriority = true
-      queuedByTerminal.set(terminal, queued)
-      enqueueChunk(queued, data, {
-        foreground: true,
-        forceForegroundRefresh: options.forceForegroundRefresh,
-        followupForegroundRefresh: options.followupForegroundRefresh,
-        shouldRefreshForegroundSynchronously: options.shouldRefreshForegroundSynchronously,
-        stripTransientCursorShows: options.stripTransientCursorShows,
-        beforeWrite: options.beforeWrite,
-        onParsed: options.onParsed,
-        ackCredit: options.ackCredit
-      })
-      if (queueCapExceeded(queued)) {
-        replaceBacklogWithWarning(queued, FOREGROUND_BACKLOG_WARNING)
-      }
       scheduleDrain(0)
       return
     }
