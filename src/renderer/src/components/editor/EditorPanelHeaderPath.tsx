@@ -43,6 +43,17 @@ type EditorPanelHeaderPathProps = {
   onOpenContainingFolder: () => void
 }
 
+function splitPathForDisplay(path: string): { prefix: string; fileName: string } {
+  const separatorIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  if (separatorIndex < 0) {
+    return { prefix: '', fileName: path }
+  }
+  return {
+    prefix: path.slice(0, separatorIndex + 1),
+    fileName: path.slice(separatorIndex + 1)
+  }
+}
+
 export function EditorPanelHeaderPath({
   activeFile,
   copiedPathVisible,
@@ -55,6 +66,7 @@ export function EditorPanelHeaderPath({
   const [pathMenuPoint, setPathMenuPoint] = useState({ x: 0, y: 0 })
   const skipMenuFocusRestoreRef = useRef(false)
   const headerCopyState = getEditorHeaderCopyState(activeFile)
+  const displayPath = splitPathForDisplay(headerCopyState.pathLabel)
   const canCopyHeaderPath = headerCopyState.copyText !== null
   const isVirtualEditorTab = activeFile.mode === 'check-details'
   const markdownPreviewShortcutLabel = useShortcutLabel('editor.markdownPreview')
@@ -124,7 +136,8 @@ export function EditorPanelHeaderPath({
             disabled={!canCopyHeaderPath}
             title={headerCopyState.pathTitle}
           >
-            {headerCopyState.pathLabel}
+            <span className="editor-header-path-prefix">{displayPath.prefix}</span>
+            <span className="editor-header-path-file">{displayPath.fileName}</span>
           </button>
         )}
         <span

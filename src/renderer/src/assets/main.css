@@ -1097,11 +1097,13 @@ html.native-shell .app-layout {
 }
 
 .editor-header-path {
-  display: block;
+  display: flex;
+  align-items: center;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   padding: 0;
   max-width: 100%;
+  width: 100%;
   border: none;
   background: transparent;
   color: var(--muted-foreground);
@@ -1116,9 +1118,19 @@ html.native-shell .app-layout {
     Consolas,
     monospace;
   white-space: nowrap;
+  text-align: left;
+}
+
+.editor-header-path-prefix {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: left;
+  white-space: nowrap;
+}
+
+.editor-header-path-file {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .editor-header-path:hover,
