@@ -80,3 +80,10 @@ The fixed engine stays within 4,096 entries; the baseline exceeds 10,000.
 - Revisited evicted pairs incur the existing contrast calculation again. No
   incident report establishes the distinct-color traffic used in this proof;
   renderer retention does not explain #19768's separately measured main PID.
+
+The follow-up [review-validation.json](./review-validation.json) reruns both installed
+WebGL bundles in normal and dim modes on Node 24.20.0. Its clear/recompute check
+also clears the glyph atlas, requires the contrast cache to repopulate, and compares
+the probe pixels after fresh calculation. The original before/after measurements
+remain in `results.json`. The focused contrast and CI-scope suites pass 41 tests;
+changes to the shared patch-text generator now trigger desktop and mobile checks.

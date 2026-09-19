@@ -171,12 +171,21 @@ try {
           const afterAtlasClear = entries()
           cache.clear()
           const afterThemeClear = entries()
+          first.addon.clearTextureAtlas()
           first.addon._renderer.renderRows(0, 0)
+          const afterRecompute = entries()
           const recomputedProbePixels = window.glyphAudit.pixelHash(first, 2)
-          return { beforeAtlasClear, afterAtlasClear, afterThemeClear, recomputedProbePixels }
+          return {
+            beforeAtlasClear,
+            afterAtlasClear,
+            afterThemeClear,
+            afterRecompute,
+            recomputedProbePixels
+          }
         })
         assert.equal(checks.beforeAtlasClear, checks.afterAtlasClear)
         assert.equal(checks.afterThemeClear, 0)
+        assert.ok(checks.afterRecompute > 0)
         assert.equal(checks.recomputedProbePixels, samples[0].contrastProbePixels)
         results.push({
           phase,
