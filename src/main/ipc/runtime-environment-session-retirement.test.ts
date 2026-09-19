@@ -240,14 +240,14 @@ describe('renderer session partition admission', () => {
     expect(store.getWorkspaceSession('runtime:reported-runtime-id').activeTabId).toBe('still-owned')
   })
 
-  it('persists unrelated shutdown sessions and UI while reporting an unreadable new-host authority', async () => {
+  it('stages every shutdown session, including a host whose authority is unreadable', async () => {
     const { dir, store, dataFile } = fixture()
     const environment = pair(dir, 'new')
     const hostId = toRuntimeExecutionHostId(environment.id)
     const knownHost = 'runtime:known-existing'
     store.setWorkspaceSession(session('known-before'), knownHost)
     writeFileSync(getEnvironmentStorePath(dir), '{broken')
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const event: { returnValue?: unknown } = {}
     handlers.get('app:stage-before-unload-sync')!(event, {
       sessions: [
@@ -258,15 +258,21 @@ describe('renderer session partition admission', () => {
       ],
       ui: { sidebarWidth: 477 }
     })
-    expect(event.returnValue).toEqual({ ok: false })
+    expect(event.returnValue).toEqual({ ok: true })
     await expect(handlers.get('app:await-before-unload-checkpoint')!()).resolves.toEqual({
-      ok: false
+      ok: true
     })
-    expect(store.getWorkspaceSessionHostIds()).not.toContain(hostId)
+    expect(error).toHaveBeenCalledWith(
+      '[app] Staging session state after partition authority failure:',
+      expect.any(Error)
+    )
     const disk = JSON.parse(readFileSync(dataFile, 'utf8'))
     expect(disk.ui.sidebarWidth).toBe(477)
     expect(Object.keys(disk.workspaceSession.tabsByWorktree)).toEqual([
       'repo-a::/audit/local-after'
+    ])
+    expect(Object.keys(disk.workspaceSessionsByHostId[hostId].tabsByWorktree)).toEqual([
+      'repo-a::/audit/unverifiable'
     ])
     expect(Object.keys(disk.workspaceSessionsByHostId['ssh:target'].tabsByWorktree)).toEqual([
       'repo-a::/audit/ssh-after'
@@ -274,6 +280,27 @@ describe('renderer session partition admission', () => {
     expect(Object.keys(disk.workspaceSessionsByHostId[knownHost].tabsByWorktree)).toEqual([
       'repo-a::/audit/known-after'
     ])
+  })
+
+  it('stages a shutdown session whose namespace custody verdict is ambiguous', async () => {
+    const { store, dataFile } = fixture()
+    vi.spyOn(store, 'getRepos').mockImplementationOnce(() => {
+      throw new Error('folder_workspace_connection_ambiguous')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const event: { returnValue?: unknown } = {}
+    handlers.get('app:stage-before-unload-sync')!(event, {
+      sessions: [{ state: session('ambiguous'), hostId: 'runtime:ambiguous' }],
+      ui: {}
+    })
+    expect(event.returnValue).toEqual({ ok: true })
+    await expect(handlers.get('app:await-before-unload-checkpoint')!()).resolves.toEqual({
+      ok: true
+    })
+    const disk = JSON.parse(readFileSync(dataFile, 'utf8'))
+    expect(Object.keys(disk.workspaceSessionsByHostId['runtime:ambiguous'].tabsByWorktree)).toEqual(
+      ['repo-a::/audit/ambiguous']
+    )
   })
 
   it('keeps existing no-flush behavior for actual staging errors', async () => {
@@ -324,7 +351,7 @@ describe('bounded paired mirror retirement', () => {
 })
 
 describe('removal failure ordering', () => {
-  it('replies to the legacy sync channel and flushes unrelated state when admission fails', async () => {
+  it('writes and acknowledges the legacy sync channel when admission authority is unreadable', async () => {
     const { dir, store, dataFile } = fixture()
     const environment = pair(dir, 'unreadable')
     const hostId = toRuntimeExecutionHostId(environment.id)
@@ -334,12 +361,14 @@ describe('removal failure ordering', () => {
     writeFileSync(getEnvironmentStorePath(dir), '{broken')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     await expect(invokeWrite('session:set-sync', session('unverifiable'), hostId)).resolves.toBe(
-      false
+      true
     )
-    expect(store.getWorkspaceSessionHostIds()).not.toContain(hostId)
     const disk = JSON.parse(readFileSync(dataFile, 'utf8'))
     expect(Object.keys(disk.workspaceSession.tabsByWorktree)).toEqual([
       'repo-a::/audit/local-pending'
+    ])
+    expect(Object.keys(disk.workspaceSessionsByHostId[hostId].tabsByWorktree)).toEqual([
+      'repo-a::/audit/unverifiable'
     ])
     const readsAfterFailure = authority.reads
     await expect(invokeWrite('session:set-sync', session('known-after'), knownHost)).resolves.toBe(
@@ -361,21 +390,34 @@ describe('removal failure ordering', () => {
     )
   })
 
-  it('keeps pairing and transport intact if custody cannot be established', () => {
-    const base = fixture()
-    const environment = pair(base.dir, 'custody-failure')
-    const hostId = toRuntimeExecutionHostId(environment.id)
-    base.store.setWorkspaceSession(session('before'), hostId)
-    vi.spyOn(base.store, 'getRepos').mockImplementation(() => {
-      throw new Error('controlled custody read failure')
-    })
-    expect(() =>
-      handlers.get('runtimeEnvironments:remove')!(null, { selector: environment.id })
-    ).toThrow('controlled custody read failure')
-    expect(listEnvironments(base.dir).some((entry) => entry.id === environment.id)).toBe(true)
-    expect(base.invalidateTransport).not.toHaveBeenCalled()
-    expect(base.store.getWorkspaceSessionHostIds()).toContain(hostId)
-  })
+  it.each(['controlled custody read failure', 'folder_workspace_connection_ambiguous'])(
+    'unpairs but preserves the session partition when custody reports %s',
+    (message) => {
+      const base = fixture()
+      const environment = pair(base.dir, 'custody-failure')
+      const hostId = toRuntimeExecutionHostId(environment.id)
+      base.store.setWorkspaceSession(session('before'), hostId)
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vi.spyOn(base.store, 'getRepos').mockImplementation(() => {
+        throw new Error(message)
+      })
+      const removal = vi.spyOn(base.store, 'removeRuntimeWorkspaceSessionPartition')
+      expect(
+        handlers.get('runtimeEnvironments:remove')!(null, { selector: environment.id })
+      ).toMatchObject({ removed: { id: environment.id } })
+      expect(listEnvironments(base.dir).some((entry) => entry.id === environment.id)).toBe(false)
+      expect(base.invalidateTransport).toHaveBeenCalledWith(environment.id)
+      expect(removal).not.toHaveBeenCalled()
+      expect(base.store.getWorkspaceSessionHostIds()).toContain(hostId)
+      expect(Object.keys(base.store.getWorkspaceSession(hostId).tabsByWorktree)).toEqual([
+        'repo-a::/audit/before'
+      ])
+      expect(warn).toHaveBeenCalledWith(
+        '[runtime-environments] Preserving session partition after custody lookup failure:',
+        expect.any(Error)
+      )
+    }
+  )
 
   it('starts transport and browser retirement even if exact Store partition deletion fails', async () => {
     const base = fixture()
@@ -398,7 +440,7 @@ describe('removal failure ordering', () => {
 
 describe('async session admission failures', () => {
   it.each(['session:set', 'session:patch'])(
-    'resolves %s without a write when the pairing catalog cannot be read',
+    'still writes %s when the pairing catalog cannot be read',
     async (channel) => {
       const { dir, store } = fixture()
       const environment = pair(dir, 'unreadable')
@@ -406,16 +448,19 @@ describe('async session admission failures', () => {
       writeFileSync(getEnvironmentStorePath(dir), '{broken')
       const error = vi.spyOn(console, 'error').mockImplementation(() => {})
       await expect(invokeWrite(channel, session('unverifiable'), hostId)).resolves.toBeUndefined()
-      expect(store.getWorkspaceSessionHostIds()).not.toContain(hostId)
+      expect(store.getWorkspaceSessionHostIds()).toContain(hostId)
+      expect(Object.keys(store.getWorkspaceSession(hostId).tabsByWorktree)).toEqual([
+        'repo-a::/audit/unverifiable'
+      ])
       expect(error).toHaveBeenCalledWith(
-        '[session] Failed to establish runtime session partition authority:',
+        '[session] Admitting session write after partition authority failure:',
         expect.any(Error)
       )
     }
   )
 
   it.each(['session:set', 'session:patch'])(
-    'resolves %s without a write when main namespace custody cannot be established',
+    'still writes %s when main namespace custody is ambiguous',
     async (channel) => {
       const { store } = fixture()
       vi.spyOn(store, 'getRepos').mockImplementationOnce(() => {
@@ -425,9 +470,25 @@ describe('async session admission failures', () => {
       await expect(
         invokeWrite(channel, session('unverifiable'), 'runtime:unverifiable')
       ).resolves.toBeUndefined()
-      expect(store.getWorkspaceSessionHostIds()).not.toContain('runtime:unverifiable')
+      expect(Object.keys(store.getWorkspaceSession('runtime:unverifiable').tabsByWorktree)).toEqual(
+        ['repo-a::/audit/unverifiable']
+      )
     }
   )
+
+  it('still writes session:set-sync when main namespace custody is ambiguous', async () => {
+    const { store } = fixture()
+    vi.spyOn(store, 'getRepos').mockImplementationOnce(() => {
+      throw new Error('folder_workspace_connection_ambiguous')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(
+      invokeWrite('session:set-sync', session('ambiguous'), 'runtime:ambiguous')
+    ).resolves.toBe(true)
+    expect(Object.keys(store.getWorkspaceSession('runtime:ambiguous').tabsByWorktree)).toEqual([
+      'repo-a::/audit/ambiguous'
+    ])
+  })
 
   it.each(['session:set', 'session:patch'])(
     'preserves actual Store failures for %s',

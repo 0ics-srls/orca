@@ -48,18 +48,9 @@ export function registerRendererShutdownCheckpointHandler(store: Store): void {
 
   ipcMain.on('app:stage-before-unload-sync', (event, args: StageBeforeUnloadSyncArgs) => {
     let ok = true
-    let admissionOk = true
     try {
       for (const { state, hostId } of args.sessions) {
-        let admitted: boolean
-        try {
-          admitted = canCreateRendererSessionPartition(store, hostId)
-        } catch (error) {
-          console.error('[app] Failed to establish runtime session partition authority:', error)
-          admissionOk = false
-          continue
-        }
-        if (admitted) {
+        if (isShutdownSessionAdmitted(store, hostId)) {
           store.stageWorkspaceSessionBeforeUnload(state, hostId)
         }
       }
@@ -68,14 +59,23 @@ export function registerRendererShutdownCheckpointHandler(store: Store): void {
       console.error('[app] Failed to stage renderer state before unload:', error)
       ok = false
     }
-    pendingCheckpoint = ok
-      ? flushStagedStateWithDeadline(store).then((result) => ({ ok: result.ok && admissionOk }))
-      : Promise.resolve({ ok: false })
-    event.returnValue = { ok: ok && admissionOk }
+    pendingCheckpoint = ok ? flushStagedStateWithDeadline(store) : Promise.resolve({ ok: false })
+    event.returnValue = { ok }
   })
 
   ipcMain.handle(
     'app:await-before-unload-checkpoint',
     (): Promise<ShutdownCheckpointResult> => pendingCheckpoint
   )
+}
+
+// Why fail open: this is the last save before the window closes, so an unrelated host's ambiguous
+// custody verdict must not be allowed to discard the staged state.
+function isShutdownSessionAdmitted(store: Store, hostId?: string | null): boolean {
+  try {
+    return canCreateRendererSessionPartition(store, hostId)
+  } catch (error) {
+    console.error('[app] Staging session state after partition authority failure:', error)
+    return true
+  }
 }

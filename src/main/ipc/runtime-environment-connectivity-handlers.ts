@@ -108,7 +108,17 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
         throw new Error('Choose another Active Server in Advanced before removing this server.')
       }
       const hostId = toRuntimeExecutionHostId(environment.id)
-      const preserveMainNamespace = hasMainOwnedRuntimeSessionNamespace(store, hostId)
+      // Why default to preserving: an unreadable custody verdict is not evidence that nothing owns
+      // this namespace, and unpair must still succeed rather than fail with an opaque error.
+      let preserveMainNamespace = true
+      try {
+        preserveMainNamespace = hasMainOwnedRuntimeSessionNamespace(store, hostId)
+      } catch (error) {
+        console.warn(
+          '[runtime-environments] Preserving session partition after custody lookup failure:',
+          error
+        )
+      }
       const removed = removeEnvironment(getUserDataPath(), args.selector)
       clearRuntimeEnvironmentCapabilityEvidence(removed.id)
       clearRuntimeEnvironmentManualDisconnect(removed.id)

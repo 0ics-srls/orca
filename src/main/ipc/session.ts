@@ -44,19 +44,11 @@ export function registerSessionHandlers(store: Store): void {
   // data (including terminal scrollback buffers) is persisted to disk
   // before the window closes — regardless of before-quit ordering.
   ipcMain.on('session:set-sync', (event, args: WorkspaceSessionState, hostId?: string | null) => {
-    let admitted = false
-    let admissionOk = true
-    try {
-      admitted = canCreateRendererSessionPartition(store, hostId)
-    } catch (error) {
-      console.error('[session] Failed to establish runtime session partition authority:', error)
-      admissionOk = false
-    }
-    if (admitted) {
+    if (isRendererSessionAdmitted(store, hostId)) {
       store.setWorkspaceSession(args, hostId)
     }
     store.flush()
-    event.returnValue = admissionOk
+    event.returnValue = true
   })
 
   ipcMain.on(
@@ -68,11 +60,13 @@ export function registerSessionHandlers(store: Store): void {
   )
 }
 
+// Why fail open: an ambiguity raised by an unrelated workspace must never silently drop a user's
+// session write. A resurrected partition is recoverable on the next unpair; a lost save is not.
 function isRendererSessionAdmitted(store: Store, hostId?: string | null): boolean {
   try {
     return canCreateRendererSessionPartition(store, hostId)
   } catch (error) {
-    console.error('[session] Failed to establish runtime session partition authority:', error)
-    return false
+    console.error('[session] Admitting session write after partition authority failure:', error)
+    return true
   }
 }
