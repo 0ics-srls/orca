@@ -37,6 +37,15 @@ function touchDistroState(distro: string): void {
     environmentByDistro.delete(oldest)
     transientRetryAfterByDistro.delete(oldest)
   }
+  while (environmentByDistro.size > MAX_WSL_GIT_READ_ENVIRONMENT_DISTROS) {
+    const oldest = environmentByDistro.keys().next().value
+    if (oldest === undefined) {
+      break
+    }
+    environmentByDistro.delete(oldest)
+    settledEnvironmentByDistro.delete(oldest)
+    transientRetryAfterByDistro.delete(oldest)
+  }
 }
 
 type ProbeOutcome =
@@ -125,6 +134,7 @@ export function getWslGitReadEnvironment(distro: string): Promise<WslGitReadEnvi
       return null
     })
     environmentByDistro.set(distro, environment)
+    touchDistroState(distro)
   }
   touchDistroState(distro)
   return environment
