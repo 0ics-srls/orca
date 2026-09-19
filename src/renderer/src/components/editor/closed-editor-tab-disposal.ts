@@ -15,6 +15,7 @@ import {
   deletePaneScopedCacheEntries,
   sweepClosedPdfViewPositions
 } from './closed-editor-tab-cache-sweep'
+import { toEditorModelUri } from './editor-model-uri'
 
 export type ClosedEditorTab = Pick<OpenFile, 'id' | 'mode' | 'filePath'>
 
@@ -35,7 +36,9 @@ export function disposeClosedEditorModels(
       continue
     }
     if (closedFile.mode === 'edit') {
-      const model = monacoRegistry.editor.getModel(monacoRegistry.Uri.parse(closedFile.filePath))
+      const model = monacoRegistry.editor.getModel(
+        monacoRegistry.Uri.parse(toEditorModelUri(closedFile.filePath))
+      )
       if (model?.isAttachedToEditor()) {
         onAttachedModel?.(model, closedFile)
       } else {

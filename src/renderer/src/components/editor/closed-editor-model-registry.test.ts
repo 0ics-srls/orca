@@ -6,6 +6,7 @@ import {
   createModelLifetimeFixture,
   modelLifetimeFile,
   modelLifetimeTextModel,
+  modelLifetimeEditorModel,
   resetModelLifetimeFixtures
 } from './editor-model-lifetime-fixture'
 import { getDiffViewerMonacoModelPaths } from './diff-monaco-model-disposal'
@@ -20,7 +21,7 @@ it('does not replay earlier model-disposal authority after first registry regist
   attach()
   store.setState({ openFiles: [file] })
   store.getState().closeFile(file.id)
-  const model = modelLifetimeTextModel(file.filePath)
+  const model = modelLifetimeEditorModel(file.filePath)
   const unregister = bridge.register(monaco)
   try {
     await Promise.resolve()
@@ -161,7 +162,7 @@ it('preserves successor models at a captured URI across registry replacement', a
   store.getState().closeFile(file.id)
   unregister()
   model.dispose()
-  const successor = modelLifetimeTextModel(file.filePath)
+  const successor = modelLifetimeEditorModel(file.filePath)
   const unregisterNext = bridge.register(monaco)
   try {
     await Promise.resolve()

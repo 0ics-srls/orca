@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import {
   attachModelLifetimeView,
   createModelLifetimeFixture,
-  modelLifetimeTextModel,
+  modelLifetimeEditorModel,
   resetModelLifetimeFixtures
 } from './editor-model-lifetime-fixture'
 import { scrollTopCache } from '@/lib/scroll-cache'
@@ -86,7 +86,7 @@ it('does not dispose a replacement model at an older queued URI', async () => {
   attach()
   store.getState().closeFile(file.id)
   model.dispose()
-  const successor = modelLifetimeTextModel(file.filePath, 'successor')
+  const successor = modelLifetimeEditorModel(file.filePath, 'successor')
   await Promise.resolve()
   expect(successor.isDisposed()).toBe(false)
 })

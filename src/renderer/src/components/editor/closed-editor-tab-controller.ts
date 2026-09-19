@@ -4,6 +4,7 @@ import type { OpenFile } from '@/store/slices/editor'
 import { editorModelRegistry } from '@/lib/editor-model-registry'
 import { disposeClosedEditorModels, type ClosedEditorTab } from './closed-editor-tab-disposal'
 import type { MonacoModelRegistry, DisposableMonacoModel } from './diff-monaco-model-disposal'
+import { toEditorModelUri } from './editor-model-uri'
 
 type EditorStore = Pick<StoreApi<{ openFiles: OpenFile[] }>, 'getState' | 'subscribe'>
 type RetainedModel = {
@@ -69,6 +70,7 @@ export function attachClosedEditorTabCleanup(
     if (!registry) {
       return
     }
+    // Not `toEditorModelUri`: this re-resolves a live model's own URI (diff models are not `file:`).
     const model = registry.editor.getModel(registry.Uri.parse(candidate.uri.toString()))
     if (!model || model !== candidate) {
       return
@@ -105,16 +107,12 @@ export function attachClosedEditorTabCleanup(
         openEditUris = new Set(
           openFiles
             .filter((openFile) => openFile.mode === 'edit')
-            .map(
-              (openFile) =>
-                currentRegistry?.Uri.parse(openFile.filePath).toString() ?? openFile.filePath
-            )
+            .map((openFile) => toEditorModelUri(openFile.filePath))
         )
       }
       return (
         openIds.has(file.id) ||
-        (file.mode === 'edit' &&
-          openEditUris.has(currentRegistry?.Uri.parse(file.filePath).toString() ?? file.filePath))
+        (file.mode === 'edit' && openEditUris.has(toEditorModelUri(file.filePath)))
       )
     }
     const disposeCaptured = (
@@ -198,7 +196,9 @@ export function attachClosedEditorTabCleanup(
         pendingFiles.set(ownerKey(descriptor), descriptor)
         removed = true
         if (file.mode === 'edit' && registry) {
-          const model = registry.editor.getModel(registry.Uri.parse(file.filePath))
+          const model = registry.editor.getModel(
+            registry.Uri.parse(toEditorModelUri(file.filePath))
+          )
           if (model) {
             candidateModels.add(model)
           }

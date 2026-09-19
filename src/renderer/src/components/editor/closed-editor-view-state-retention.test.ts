@@ -5,6 +5,7 @@ import { afterEach, expect, it } from 'vitest'
 import type { OpenFile } from '@/store/slices/editor'
 import { createEditorModelRegistry } from '@/lib/editor-model-registry'
 import { attachClosedEditorTabCleanup } from '@/components/editor/closed-editor-tab-controller'
+import { toEditorModelUri } from '@/components/editor/editor-model-uri'
 import {
   scrollTopCache,
   editorSelectionCache,
@@ -35,7 +36,12 @@ function open(path: string, text = 'original') {
     language: 'plaintext',
     isDirty: false
   }
-  const model = monaco.editor.createModel(text, 'plaintext', monaco.Uri.parse(path))
+  // Mirrors `MonacoEditor`: the `path` prop is what `@monaco-editor/react` hands to `Uri.parse`.
+  const model = monaco.editor.createModel(
+    text,
+    'plaintext',
+    monaco.Uri.parse(toEditorModelUri(path))
+  )
   const store = createStore(() => ({ openFiles: [file] }))
   const bridge = createEditorModelRegistry()
   disposeOwners.push(bridge.register(monaco), attachClosedEditorTabCleanup(store, bridge))
@@ -94,15 +100,21 @@ it('measures the existing Monaco large-file undo retention limit', async () => {
   expect(owner.model.canUndo()).toBe(true)
   const content = owner.model.getValue()
   await owner.close()
-  const reopened = monaco.editor.createModel(content, 'plaintext', monaco.Uri.parse(path))
+  const reopened = monaco.editor.createModel(
+    content,
+    'plaintext',
+    monaco.Uri.parse(toEditorModelUri(path))
+  )
   expect(reopened.canUndo()).toBe(false)
 })
 
 it.each([
-  ['/tradeoff/undo-posix.txt', true],
-  ['file:///C:/tradeoff/undo-file-uri.txt', true],
-  ['C:/tradeoff/undo-raw-drive.txt', false]
-] as const)('measures existing Monaco close/reopen undo for %s', async (path, expectedUndo) => {
+  '/tradeoff/undo-posix.txt',
+  'file:///C:/tradeoff/undo-file-uri.txt',
+  'C:/tradeoff/undo-raw-drive.txt',
+  'C:\\tradeoff\\undo-raw-drive-backslash.txt',
+  '\\\\server\\share\\undo-unc.txt'
+] as const)('restores closed-file undo after reopening %s', async (path) => {
   const owner = open(path)
   owner.model.pushEditOperations(
     [],
@@ -113,10 +125,38 @@ it.each([
   expect(owner.model.canUndo()).toBe(true)
   const content = owner.model.getValue()
   await owner.close()
-  const reopened = monaco.editor.createModel(content, 'plaintext', monaco.Uri.parse(path))
-  expect(reopened.canUndo()).toBe(expectedUndo)
-  if (expectedUndo) {
-    await reopened.undo()
-    expect(reopened.getValue()).toBe('original')
+  const reopened = monaco.editor.createModel(
+    content,
+    'plaintext',
+    monaco.Uri.parse(toEditorModelUri(path))
+  )
+  expect(reopened.canUndo()).toBe(true)
+  await reopened.undo()
+  expect(reopened.getValue()).toBe('original')
+})
+
+// Guards the construction/comparison symmetry: the disposal lookup and the still-open ownership
+// check must normalize a path the same way, or closing one tab drops a model another tab is editing.
+it('keeps a Windows-path model that a second open tab still owns', async () => {
+  const filePath = 'C:\\repo\\shared.ts'
+  const editing: OpenFile = {
+    id: 'tab-a',
+    worktreeId: 'fixture',
+    filePath,
+    relativePath: filePath,
+    mode: 'edit',
+    language: 'plaintext',
+    isDirty: false
   }
+  const modelUri = monaco.Uri.parse(toEditorModelUri(filePath))
+  const model = monaco.editor.createModel('live', 'plaintext', modelUri)
+  const store = createStore(() => ({ openFiles: [editing, { ...editing, id: 'tab-b' }] }))
+  const bridge = createEditorModelRegistry()
+  disposeOwners.push(bridge.register(monaco), attachClosedEditorTabCleanup(store, bridge))
+
+  store.setState({ openFiles: [editing] })
+  await Promise.resolve()
+
+  expect(model.isDisposed()).toBe(false)
+  expect(monaco.editor.getModel(modelUri)).toBe(model)
 })
