@@ -130,6 +130,69 @@ describe('OpenCode 2 setup and prompt ordering', () => {
     expect(subscriptionSignal?.aborted).toBe(true)
   })
 
+  it('maps permission, form, and text events through the live setup bridge', async () => {
+    process.env.ORCA_PANE_KEY = 'tab-1:leaf-1'
+    const posts: { body: Record<string, unknown> }[] = []
+    globalThis.fetch = vi.fn(async (_input, init) => {
+      posts.push({ body: JSON.parse(String(init?.body)) })
+      return new Response('{}', { status: 200 })
+    })
+    const module = await loadPluginModule(_internals.getOpenCode2PluginSource())
+    const cleanup = await module.default?.setup?.({
+      session: {
+        get: async ({ sessionID }: { sessionID: string }) => ({ data: { id: sessionID } }),
+        hook: async () => ({ dispose: vi.fn() })
+      },
+      event: {
+        subscribe: async function* () {
+          yield {
+            type: 'permission.asked',
+            data: { id: 'perm-1', sessionID: 'ses_root', action: 'bash', resources: ['pwd'] }
+          }
+          yield {
+            type: 'form.created',
+            data: {
+              form: {
+                id: 'form-1',
+                sessionID: 'ses_root',
+                title: 'Pick',
+                fields: [
+                  {
+                    title: 'Color',
+                    description: 'Choose',
+                    type: 'string',
+                    options: [{ label: 'Red', value: 'red' }]
+                  }
+                ]
+              }
+            }
+          }
+          yield {
+            type: 'session.text.started',
+            data: { sessionID: 'ses_root', assistantMessageID: 'msg-1' }
+          }
+          yield {
+            type: 'session.text.delta',
+            data: { sessionID: 'ses_root', assistantMessageID: 'msg-1', delta: 'hello' }
+          }
+          yield {
+            type: 'session.text.ended',
+            data: { sessionID: 'ses_root', assistantMessageID: 'msg-1', text: 'hello' }
+          }
+          yield { type: 'form.cancelled', data: { id: 'form-1', sessionID: 'ses_root' } }
+        }
+      }
+    })
+    await vi.waitFor(() => {
+      const names = posts.map(
+        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
+      )
+      expect(names).toEqual(expect.arrayContaining(['PermissionRequest', 'MessagePart']))
+      expect(posts.some(({ body }) => JSON.stringify(body).includes('form-1'))).toBe(true)
+    })
+    await cleanup?.()
+  })
+
   it.each(['waiting', 'idle', 'disposed'])(
     'drops an admitted prompt overtaken by %s',
     async (transition) => {
