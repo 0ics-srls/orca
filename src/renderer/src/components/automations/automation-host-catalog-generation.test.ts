@@ -67,6 +67,14 @@ describe('automation catalog generation', () => {
     expect(registry.get(ENV_B)).toBe(1)
   })
 
+  it('bounds authority generations without reopening an evicted fence', () => {
+    const authorities = Array.from({ length: 600 }, (_, index) => runtime(`env-${index}`))
+    registry.sync(buildAutomationHostCatalog(input({ runtimes: authorities })))
+
+    expect(registry.get({ kind: 'runtime', environmentId: 'env-0' })).toBeGreaterThan(1)
+    expect(registry.get({ kind: 'runtime', environmentId: 'env-599' })).toBe(1)
+  })
+
   it('advances only the authority whose target bucket hydrated', () => {
     registry.sync(
       buildAutomationHostCatalog(

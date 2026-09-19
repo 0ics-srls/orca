@@ -38,6 +38,8 @@ export type AutomationCatalogGenerationRegistry = {
   reset: () => void
 }
 
+const AUTOMATION_AUTHORITY_GENERATION_MAX_ENTRIES = 512
+
 // Health is deliberately absent: only membership and incarnation belong here.
 export function automationHostCatalogEntryFingerprint(entry: AutomationHostCatalogEntry): string {
   return `${entry.stableKey}|${entry.catalogState}|${entry.owner ? ownerKey(entry.owner) : '-'}`
@@ -62,6 +64,29 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
   const generationByAuthorityKey = new Map<string, number>()
   const fingerprintByAuthorityKey = new Map<string, string>()
   const ownerKeyByStableKey = new Map<string, string>()
+  const evictedAuthorityKeys = new Set<string>()
+  let generationFloor = 0
+
+  const trimAuthorityGenerations = (): void => {
+    while (generationByAuthorityKey.size > AUTOMATION_AUTHORITY_GENERATION_MAX_ENTRIES) {
+      const oldest = generationByAuthorityKey.keys().next()
+      if (oldest.done) {
+        break
+      }
+      const key = oldest.value
+      generationByAuthorityKey.delete(key)
+      fingerprintByAuthorityKey.delete(key)
+      evictedAuthorityKeys.delete(key)
+      evictedAuthorityKeys.add(key)
+    }
+    while (evictedAuthorityKeys.size > AUTOMATION_AUTHORITY_GENERATION_MAX_ENTRIES) {
+      const oldest = evictedAuthorityKeys.keys().next()
+      if (oldest.done) {
+        break
+      }
+      evictedAuthorityKeys.delete(oldest.value)
+    }
+  }
 
   /** Compared only where an owner exists: a disconnect can strip owner refs, and that is not a new incarnation. */
   const reincarnations = (catalog: AutomationHostCatalog): string[] => {
@@ -90,14 +115,28 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
 
   const advance = (authorityKey: string, fingerprint: string): void => {
     fingerprintByAuthorityKey.set(authorityKey, fingerprint)
-    generationByAuthorityKey.set(
-      authorityKey,
-      (generationByAuthorityKey.get(authorityKey) ?? 0) + 1
-    )
+    const previous = generationByAuthorityKey.get(authorityKey)
+    const next =
+      previous !== undefined
+        ? previous + 1
+        : evictedAuthorityKeys.has(authorityKey)
+          ? generationFloor + 1
+          : 1
+    generationFloor = next
+    evictedAuthorityKeys.delete(authorityKey)
+    generationByAuthorityKey.set(authorityKey, next)
+    trimAuthorityGenerations()
   }
 
   return {
-    get: (authority) => generationByAuthorityKey.get(automationAuthorityCatalogKey(authority)) ?? 0,
+    get: (authority) => {
+      const key = automationAuthorityCatalogKey(authority)
+      const generation = generationByAuthorityKey.get(key)
+      if (generation !== undefined) {
+        return generation
+      }
+      return evictedAuthorityKeys.has(key) ? generationFloor + 1 : 0
+    },
     sync: (catalog) => {
       const reincarnatedStableKeys = reincarnations(catalog)
       const next = fingerprintByAuthority(catalog)
@@ -121,6 +160,8 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
       generationByAuthorityKey.clear()
       fingerprintByAuthorityKey.clear()
       ownerKeyByStableKey.clear()
+      evictedAuthorityKeys.clear()
+      generationFloor = 0
     }
   }
 }
