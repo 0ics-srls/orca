@@ -4429,7 +4429,8 @@
           "input": "Input",
           "output": "Output",
           "total": "Total",
-          "unknown": "Unknown"
+          "unknown": "Unknown",
+          "lastScanError": " • Last scan error: {{value0}}"
         }
       },
       "sparse": {
