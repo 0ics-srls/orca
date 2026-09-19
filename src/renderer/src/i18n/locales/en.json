@@ -2,8 +2,8 @@
   "sidebar": {
     "revealFiltered": {
       "title": "Reveal hidden workspace?",
-      "description": "The active workspace is hidden in the sidebar. Revealing it will clear your sidebar filters.",
-      "confirm": "Clear filters and reveal",
+      "description": "The active workspace is hidden in the sidebar. Revealing it will adjust only the filters hiding it.",
+      "confirm": "Adjust filters and reveal",
       "cancel": "Keep filters"
     }
   },
@@ -118,6 +118,9 @@
     "richMarkdown": {
       "tooLarge": "File is larger than the {{limit}} rich editing limit. Showing source mode instead.",
       "openAnyway": "Open anyway"
+    },
+    "fileLoad": {
+      "hostUnresolved": "The host couldn't find this file's workspace. It may have been removed, or the host may not know about it yet. Retry, or close this tab from the tab strip."
     }
   },
   "githubChecks": {
@@ -1942,6 +1945,46 @@
       "SelectedTextCopyMenu": {
         "9b40d7b018": "Copy"
       },
+      "NativeChatResumeOnRestartModal": {
+        "title": "Reconnect interrupted chats?",
+        "body": "These chats were mid-turn when Orca closed. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.",
+        "updateBody": "These chats were mid-turn when Orca installed an update. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.",
+        "terminalSessionsUnaffected": "Only chats are affected — your terminal sessions kept running and need nothing from you.",
+        "resume": "Reconnect",
+        "reconnectAgent": "Reconnect {{value0}} chat",
+        "resumeAll": "Reconnect all",
+        "resuming": "Reconnecting…",
+        "notNow": "Not now",
+        "untitled": "Untitled chat",
+        "listLabel": "Chats that would be reconnected",
+        "notNowHint": "Not now keeps everything — you can reopen any chat later and carry on from the same point.",
+        "dontAskAgain": "Don't ask again — reconnect automatically next time",
+        "dontAskAgainHint": "Qualifying chats will be reconnected automatically after a restart, and Orca will tell you when it happens. You can turn this off in Settings → Experimental → Chat UI.",
+        "resumedOne": "Reconnected 1 chat",
+        "resumedMany": "Reconnected {{value0}} chats",
+        "oneAgent": "1 agent",
+        "manyAgents": "{{value0}} agents",
+        "reconnectAndContinue": "Reconnect and continue",
+        "continuedOne": "Reconnected 1 chat and asked it to continue",
+        "continuedMany": "Reconnected {{value0}} chats and asked them to continue",
+        "whatIsSentTitle": "What Orca sends",
+        "whatIsSentBody": "Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.",
+        "selectAgent": "Reconnect {{value0}} chat \"{{value1}}\" in {{value2}}",
+        "projects": "Folder workspaces",
+        "resumeSelected": "Reconnect {{value0}}",
+        "continueUnconfirmed": "Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.",
+        "continueUnconfirmed_one": "Continuation delivery is unconfirmed for {{value0}} chat. Open it to check before sending another message.",
+        "continueUnconfirmed_other": "Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.",
+        "reconnectUnconfirmed": "Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.",
+        "reconnectUnconfirmed_one": "Reconnection is unconfirmed for {{value0}} chat. You can still open it normally.",
+        "reconnectUnconfirmed_other": "Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.",
+        "continueRefused": "{{value0}} chats could not be continued. Open them to continue manually.",
+        "continueRefused_one": "{{value0}} chat could not be continued. Open it to continue manually.",
+        "continueRefused_other": "{{value0}} chats could not be continued. Open them to continue manually.",
+        "reconnectRefused": "{{value0}} chats could not be reconnected. You can still open them normally.",
+        "reconnectRefused_one": "{{value0}} chat could not be reconnected. You can still open it normally.",
+        "reconnectRefused_other": "{{value0}} chats could not be reconnected. You can still open them normally."
+      },
       "StarNagCard": {
         "92b0f9d921": "is authenticated and try again.",
         "cd8c34aac1": "gh",
@@ -2315,7 +2358,8 @@
         "0f3066256e": "Previous match",
         "42e466b9f1": "Regex",
         "90c61387d9": "Case sensitive",
-        "e07012f26e": "Search..."
+        "e07012f26e": "Search...",
+        "10e039b591": "No results"
       },
       "UpdateCard": {
         "68b235d264": "Restart to Update",
@@ -6315,7 +6359,12 @@
         "RepoScanUnavailableIndicator": {
           "title": "Worktree scan failed for {{value0}}",
           "retry": "Retry scan",
-          "retained": "Existing worktrees are kept until a scan succeeds. Click to retry."
+          "retained": "Existing worktrees are kept until a scan succeeds. Click to retry.",
+          "xcodeLicense": "Apple developer tools require license acceptance before Git can run.",
+          "developerTools": "Apple command-line developer tools are missing or unavailable.",
+          "architectureMismatch": "A Git-related executable could not run because its CPU architecture is incompatible with this execution host. Install Git and related tools for the host architecture.",
+          "copyCommand": "Copy command",
+          "copyDiagnostics": "Copy diagnostics"
         }
       },
       "shared": {
@@ -6504,6 +6553,11 @@
           "codexConfigSyncBlankSource": "Codex is still using the settings it last synced because {{value0}} is empty. That is expected while a synced folder finishes downloading.",
           "codexConfigSyncManagedHomeUnavailable": "Orca could not read this account’s Codex files just now, so settings may not be syncing. This usually clears on its own — antivirus or a backup tool briefly locks them.",
           "codexConfigSyncUnreadableSource": "Codex is still using the settings it last synced because {{value0}} could not be read. Check that file's permissions.",
+          "codexLoginLinkPending": "Codex opened this sign-in link in your browser. Copy it to finish signing in somewhere else — a private window, or another profile.",
+          "codexLoginLinkCopied": "Copied",
+          "codexLoginLinkCopy": "Copy link",
+          "codexLoginLinkOpen": "Open",
+          "codexLoginLinkCopyFailed": "Could not copy the link.",
           "d6f1b9b6a2": "MiniMax API key is required.",
           "7c5d8a4e1b": "MiniMax API key was not saved.",
           "4d2c7b9e83": "MiniMax API key saved.",
@@ -7072,7 +7126,10 @@
             "structuredTitle": "Use updated structured native chat",
             "structuredCopy": "Opt in to the host-owned structured chat runtime for Codex and Claude. Off keeps the existing terminal-backed chat path.",
             "structuredScope": "Local sessions only for now. WSL and remote execution hosts (including SSH) continue to use terminal chat, and Windows falls back to it unless Orca can read process start times.",
-            "structuredToggleLabel": "Toggle updated structured native chat"
+            "structuredToggleLabel": "Toggle updated structured native chat",
+            "resumeTitle": "Reconnect working chats automatically after a restart",
+            "resumeCopy": "When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. On, they are reconnected without asking and Orca tells you afterwards — the same thing as ticking \"Don't ask again\" in that prompt. Off, you choose from the list each time. Reconnecting restores a chat where it stopped; it does not continue the interrupted reply.",
+            "resumeToggleLabel": "Toggle automatic reconnect after a restart"
           },
           "agentDashboard": {
             "title": "Agent Dashboard",
@@ -11272,8 +11329,18 @@
           "descriptionOrca": "Links open in your system browser. When enabled, {{chord}}+click opens one in Orca's built-in browser instead."
         },
         "BrowserTerminalLinkActionsSetting": {
-          "title": "Show link actions",
-          "description": "Show available actions when you click a link in the terminal or a chat transcript. Turn this off to require {{modifier}}-click in the terminal."
+          "title": "Terminal URL clicks",
+          "description": "Show available actions when you click a link in the terminal or a chat transcript. Turn this off to require {{modifier}}-click in the terminal.",
+          "descriptionV2": "Control clicks on detected URLs printed in terminal panes and chat transcripts.",
+          "plainClickLabel": "Plain click",
+          "plainClickDescription": "Choose whether a left-click shows actions, opens the URL, or leaves it to the terminal. Cmd/Ctrl-click always opens directly.",
+          "plainClickAriaLabel": "Plain click URL behavior",
+          "middleClickLabel": "Middle click",
+          "middleClickDescription": "Choose what a mouse-wheel click does on a detected terminal URL.",
+          "middleClickAriaLabel": "Middle click",
+          "actionsLabel": "Actions",
+          "openUrlLabel": "Open URL",
+          "leaveToTerminalLabel": "Leave to terminal"
         },
         "PluginConsentDialog": {
           "workerTrust": "Background worker — runs its own process",
@@ -11896,6 +11963,10 @@
           "targetDescription": "Higher values increase contrast where possible. Background colors stay unchanged.",
           "subtle": "Subtle",
           "strong": "Strong"
+        },
+        "TerminalRenderingSection": {
+          "6d4c55bacc": "Inline Images",
+          "fffab5890b": "Display images directly in the terminal using SIXEL, iTerm2 (IIP), and Kitty graphics protocols."
         }
       },
       "right": {
@@ -17235,6 +17306,7 @@
         "command": "Background command",
         "monitor": "Background monitor",
         "task": "Background task",
+        "outputFile": "Output: {{value0}}",
         "detailsUnavailable": "Task details are unavailable for this session.",
         "countAgentsOne": "1 agent",
         "countAgentsMany": "{{value0}} agents",
@@ -17899,8 +17971,8 @@
       "truncated": "Some results or matching text were limited. Narrow your search for more precise results.",
       "enableFailed": "Could not enable search. Try again.",
       "enable": "Enable",
-      "notNow": "Not now",
-      "retry": "Try again"
+      "retry": "Try again",
+      "scopeUnknown": "This computer does not have this workspace or project. Switch the scope to All to search everything on it."
     }
   },
   "sessionHistory": {

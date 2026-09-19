@@ -59,7 +59,7 @@ The source check preserves cells and translations across 25,000 seeded mutations
 and proves the scratch-cell release directly. The actual-source parser benchmark
 has a low single-digit cost. The emitted CJS comparison batches eight 1.2 MB ASCII
 writes per round, alternates execution order, and discards four warmup rounds:
-median time per write is 8.165 ms before and 8.57 ms after, about 5% slower in this
+median time per write is 7.665 ms before and 8.04 ms after, about 5% slower in this
 synthetic hot path. This is a measured cleanup cost, not an application-wide
 performance estimate. Timings and source/bundle hashes accompany both scripts.
 
@@ -89,3 +89,17 @@ normal/alternate-buffer cases in Happy DOM.
 The PR is stacked on contrast-cache PR #20981. Its regenerated desktop and mobile
 patches include that prerequisite; it is not a standalone patch against main.
 The separate headless source patch contains only the `BufferLine` change.
+
+## Review follow-up
+
+The branch now includes the current #20981 base. Both source patches had stale hunk
+counts after conditional cache invalidation was added; those counts and the generated
+headless, desktop, and mobile bundles/maps are now rebuilt from the pinned upstream.
+Both lockfiles contain the matching patch hashes. The mobile WebView engine and its
+expected payload hash were regenerated from the installed mobile package.
+
+Both complete `--check` commands pass. The patch-generation/source-map/headless suites
+pass 62 tests, and the generated mobile engine/payload suites pass all three tests.
+The 70 allocation cases, 25,000 source mutations, and both throughput artifacts were
+rerun against these exact rebuilt packages on macOS arm64 / Node 24.20.0. `diff` is now
+a direct development dependency, so the source audit does not rely on hoisting.

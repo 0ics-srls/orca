@@ -1,8 +1,8 @@
 diff --git a/src/common/buffer/BufferLine.ts b/src/common/buffer/BufferLine.ts
-index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e970b6a2ec6 100644
+index 4984f3a49abe8437475c206db1345f5f5fe3979c..c6e91a357f25b4d671ee48242f8eed28721fceaf 100644
 --- a/src/common/buffer/BufferLine.ts
 +++ b/src/common/buffer/BufferLine.ts
-@@ -116,12 +116,16 @@ export class BufferLine implements IBufferLine {
+@@ -116,12 +116,18 @@ export class BufferLine implements IBufferLine {
     * @deprecated
     */
    public set(index: number, value: CharData): void {
@@ -21,7 +21,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
        this._data[index * Constants.CELL_INDICIES + Cell.CONTENT] = value[CHAR_DATA_CHAR_INDEX].charCodeAt(0) | (value[CHAR_DATA_WIDTH_INDEX] << Content.WIDTH_SHIFT);
      }
    }
-@@ -226,12 +230,21 @@ export class BufferLine implements IBufferLine {
+@@ -226,12 +232,23 @@ export class BufferLine implements IBufferLine {
     * Set data at `index` to `cell`.
     */
    public setCell(index: number, cell: ICellData): void {
@@ -45,7 +45,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      }
      this._data[index * Constants.CELL_INDICIES + Cell.CONTENT] = cell.content;
      this._data[index * Constants.CELL_INDICIES + Cell.FG] = cell.fg;
-@@ -244,9 +257,17 @@ export class BufferLine implements IBufferLine {
+@@ -244,9 +261,19 @@ export class BufferLine implements IBufferLine {
     * it gets an optimized access method.
     */
    public setCellFromCodepoint(index: number, codePoint: number, width: number, attrs: IAttributeData): void {
@@ -65,7 +65,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      }
      const $idx = index * Constants.CELL_INDICIES;
      this._data[$idx + Cell.CONTENT] = codePoint | (width << Content.WIDTH_SHIFT);
-@@ -261,6 +282,7 @@ export class BufferLine implements IBufferLine {
+@@ -261,6 +288,9 @@ export class BufferLine implements IBufferLine {
     * by the previous `setDataFromCodePoint` call, we can omit it here.
     */
    public addCodepointToCell(index: number, codePoint: number, width: number): void {
@@ -75,7 +75,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      let content = this._data[index * Constants.CELL_INDICIES + Cell.CONTENT];
      if (content & Content.IS_COMBINED_MASK) {
-@@ -288,6 +310,7 @@ export class BufferLine implements IBufferLine {
+@@ -288,6 +318,9 @@ export class BufferLine implements IBufferLine {
    }
  
    public insertCells(pos: number, n: number, fillCellData: ICellData): void {
@@ -85,7 +85,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      pos %= this.length;
  
-@@ -309,6 +332,8 @@ export class BufferLine implements IBufferLine {
+@@ -309,6 +342,8 @@ export class BufferLine implements IBufferLine {
        }
      }
  
@@ -94,7 +94,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      // handle fullwidth at line end: reset last cell if it is first cell of a wide char
      if (this.getWidth(this.length - 1) === 2) {
        this.setCellFromCodepoint(this.length - 1, 0, 1, fillCellData);
-@@ -316,6 +341,7 @@ export class BufferLine implements IBufferLine {
+@@ -316,6 +351,9 @@ export class BufferLine implements IBufferLine {
    }
  
    public deleteCells(pos: number, n: number, fillCellData: ICellData): void {
@@ -104,7 +104,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      pos %= this.length;
      if (n < this.length - pos) {
-@@ -331,6 +357,8 @@ export class BufferLine implements IBufferLine {
+@@ -331,6 +369,8 @@ export class BufferLine implements IBufferLine {
        }
      }
  
@@ -113,7 +113,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      // handle fullwidth at pos:
      // - reset pos-1 if wide char
      // - reset pos if width==0 (previous second cell of a wide char)
-@@ -343,6 +371,7 @@ export class BufferLine implements IBufferLine {
+@@ -343,6 +383,9 @@ export class BufferLine implements IBufferLine {
    }
  
    public replaceCells(start: number, end: number, fillCellData: ICellData, respectProtect: boolean = false): void {
@@ -123,7 +123,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      // full branching on respectProtect==true, hopefully getting fast JIT for standard case
      if (respectProtect) {
-@@ -383,6 +412,7 @@ export class BufferLine implements IBufferLine {
+@@ -383,6 +426,9 @@ export class BufferLine implements IBufferLine {
     * excess memory (true after shrinking > Constants.CLEANUP_THRESHOLD).
     */
    public resize(cols: number, fillCellData: ICellData): boolean {
@@ -133,7 +133,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      if (cols === this.length) {
        return this._data.length * 4 * Constants.CLEANUP_THRESHOLD < this._data.buffer.byteLength;
-@@ -443,6 +473,7 @@ export class BufferLine implements IBufferLine {
+@@ -443,6 +489,9 @@ export class BufferLine implements IBufferLine {
  
    /** fill a line with fillCharData */
    public fill(fillCellData: ICellData, respectProtect: boolean = false): void {
@@ -143,7 +143,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      // full branching on respectProtect==true, hopefully getting fast JIT for standard case
      if (respectProtect) {
-@@ -515,6 +546,7 @@ export class BufferLine implements IBufferLine {
+@@ -515,6 +564,9 @@ export class BufferLine implements IBufferLine {
    }
  
    public copyCellsFrom(src: BufferLine, srcCol: number, destCol: number, length: number, applyInReverse: boolean): void {
@@ -153,7 +153,7 @@ index 4984f3a49abe8437475c206db1345f5f5fe3979c..43fd5c5b286f23f11d407c9098062e97
      this._cacheValid = false;
      const srcData = src._data;
      if (applyInReverse) {
-@@ -596,9 +628,17 @@ export class BufferLine implements IBufferLine {
+@@ -596,9 +648,17 @@ export class BufferLine implements IBufferLine {
      const srcStart = srcCol * Constants.CELL_INDICIES;
      if (src._data[srcStart + Cell.CONTENT] & Content.IS_COMBINED_MASK) {
        this._combined[destCol] = src._combined[srcCol];
