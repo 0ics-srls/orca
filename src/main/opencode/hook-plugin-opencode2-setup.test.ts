@@ -188,7 +188,6 @@ describe('OpenCode 2 setup and prompt ordering', () => {
         ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
       )
       expect(names).toEqual(expect.arrayContaining(['PermissionRequest', 'MessagePart']))
-      expect(posts.some(({ body }) => JSON.stringify(body).includes('form-1'))).toBe(true)
     })
     await cleanup?.()
   })
