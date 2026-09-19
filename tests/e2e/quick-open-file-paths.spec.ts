@@ -48,9 +48,11 @@ test('cmd+p quick open prioritizes the filename and reveals the full path on hov
   // Streaming results can remount the row under a stationary pointer, and a
   // tooltip left open from a prior attempt can swallow the next hover.
   await expect(async () => {
+    const currentRow = dialog.getByRole('option').filter({ hasText: 'QuickOpenTarget.tsx' }).first()
+    await expect(currentRow).toBeVisible()
     await orcaPage.mouse.move(8, 8)
-    await row.hover({ position: { x: 20, y: 12 }, timeout: 2_000 })
-    await row.hover({ position: { x: 40, y: 12 }, timeout: 2_000 })
+    await currentRow.hover({ position: { x: 20, y: 12 }, timeout: 2_000 })
+    await currentRow.hover({ position: { x: 40, y: 12 }, timeout: 2_000 })
     await expect(tooltip).toBeVisible({ timeout: 2_000 })
   }).toPass({ timeout: 15_000, intervals: [100, 250, 500] })
 
