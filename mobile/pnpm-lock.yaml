@@ -9,7 +9,7 @@ overrides:
   query-string: 9.5.1
 
 patchedDependencies:
-  '@xterm/xterm@6.1.0-beta.303': 3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163
+  '@xterm/xterm@6.1.0-beta.303': 8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc
   expo-notifications@55.0.27: ce20843a3daad4185d7e8571788fa323ba4d11984936188790858650a61749c0
   react-native-webview@13.16.2: de6761dfa76a5491a23e49f1262566a8831cab26736a336fdffc5d4e7d05ff27
   react-native@0.83.10: 44876634a8efbb0f2c3f66cd4332be170ec821d1cbfc0264ac80680983e8513d
@@ -29,13 +29,13 @@ importers:
         version: 2.2.0(react-native@0.83.10(patch_hash=44876634a8efbb0f2c3f66cd4332be170ec821d1cbfc0264ac80680983e8513d)(@babel/core@7.29.7)(@react-native/metro-config@0.85.2(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.8))
       '@xterm/addon-unicode11':
         specifier: 0.10.0-beta.300
-        version: 0.10.0-beta.300(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))
+        version: 0.10.0-beta.300(@xterm/xterm@6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc))
       '@xterm/addon-webgl':
         specifier: 0.20.0-beta.299
-        version: 0.20.0-beta.299(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))
+        version: 0.20.0-beta.299(@xterm/xterm@6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc))
       '@xterm/xterm':
         specifier: 6.1.0-beta.303
-        version: 6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)
+        version: 6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc)
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -10511,15 +10511,15 @@ snapshots:
 
   '@xmldom/xmldom@0.9.12': {}
 
-  '@xterm/addon-unicode11@0.10.0-beta.300(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))':
+  '@xterm/addon-unicode11@0.10.0-beta.300(@xterm/xterm@6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc))':
     dependencies:
-      '@xterm/xterm': 6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)
+      '@xterm/xterm': 6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc)
 
-  '@xterm/addon-webgl@0.20.0-beta.299(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))':
+  '@xterm/addon-webgl@0.20.0-beta.299(@xterm/xterm@6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc))':
     dependencies:
-      '@xterm/xterm': 6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)
+      '@xterm/xterm': 6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc)
 
-  '@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)': {}
+  '@xterm/xterm@6.1.0-beta.303(patch_hash=8e3f250e8d66b10cbaefef476ee7519c1cd8ec1c732553657188b2a4a285f1bc)': {}
 
   abab@2.0.6: {}
 
