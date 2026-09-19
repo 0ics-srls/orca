@@ -613,6 +613,81 @@ describe('pane terminal output scheduler', () => {
     expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(`${dense}${tail}`)
   })
 
+  it('paces a latency-sensitive dense foreground redraw instead of writing it whole', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createForegroundTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 1_300 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, dense, { foreground: true, latencySensitive: true })
+
+    // The redraw is queued rather than submitted whole, then released one
+    // parser batch at a time.
+    expect(terminal.write).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(0)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
+
+    while (parsed.length > 0) {
+      parsed.shift()?.()
+      vi.advanceTimersByTime(0)
+    }
+    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(dense)
+    expect(terminal.write.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('writes a latency-sensitive foreground redraw whole when it is not dense', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createForegroundTerminal()
+    const plain = 'plain redraw line\r\n'.repeat(1_000)
+
+    writeTerminalOutput(terminal, plain, { foreground: true, latencySensitive: true })
+
+    expect(terminal.write.mock.calls.map(([data]) => data)).toEqual([plain])
+  })
+
+  it('holds the parse probe behind terminal output the flush could not submit', async () => {
+    vi.useFakeTimers()
+    const { waitForTerminalOutputParsed, writeTerminalOutput } = await loadScheduler()
+    const terminal = createForegroundTerminal()
+    const written: string[] = []
+    terminal.write.mockImplementation((data: string, callback?: () => void) => {
+      written.push(data)
+      callback?.()
+    })
+
+    writeTerminalOutput(terminal, 'frame', {
+      foreground: true,
+      holdForeground: true,
+      latencySensitive: true
+    })
+    let settled = false
+    const pending = waitForTerminalOutputParsed(terminal).then(() => {
+      settled = true
+    })
+
+    // A held frame survives the flush, so the empty probe must keep waiting
+    // rather than settle ahead of the bytes it is meant to certify.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(written).toEqual([])
+    expect(settled).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(64)
+    await pending
+
+    expect(written).toEqual(['frame', ''])
+  })
+
   it('promotes large background backlogs to high-priority drains', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()
