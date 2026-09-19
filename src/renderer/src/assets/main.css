@@ -1094,6 +1094,7 @@ html.native-shell .app-layout {
 .editor-header-text {
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .editor-header-path {
@@ -1104,6 +1105,7 @@ html.native-shell .app-layout {
   padding: 0;
   max-width: 100%;
   width: 100%;
+  overflow: hidden;
   border: none;
   background: transparent;
   color: var(--muted-foreground);
@@ -1154,6 +1156,7 @@ html.native-shell .app-layout {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .editor-header-copy-toast {

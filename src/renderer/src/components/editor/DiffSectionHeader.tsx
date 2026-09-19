@@ -36,7 +36,7 @@ export function DiffSectionHeader({
         <span
           role="button"
           tabIndex={0}
-          className="inline-flex min-w-0 max-w-full cursor-copy hover:underline"
+          className="flex min-w-0 flex-1 cursor-copy overflow-hidden hover:underline"
           onMouseDown={(event) => {
             event.preventDefault()
             event.stopPropagation()
@@ -65,14 +65,16 @@ export function DiffSectionHeader({
           <span className="path-display-prefix">{displayPath.prefix}</span>
           <span className="path-display-file">{displayPath.fileName}</span>
         </span>
-        {dirty && <span className="font-medium ml-1">M</span>}
-        {(added > 0 || removed > 0) && (
-          <span className="tabular-nums ml-2">
-            {added > 0 && <span className="text-green-600 dark:text-green-500">+{added}</span>}
-            {added > 0 && removed > 0 && <span> </span>}
-            {removed > 0 && <span className="text-red-500">-{removed}</span>}
-          </span>
-        )}
+        <span className="flex shrink-0 items-center">
+          {dirty && <span className="font-medium ml-1">M</span>}
+          {(added > 0 || removed > 0) && (
+            <span className="tabular-nums ml-2">
+              {added > 0 && <span className="text-green-600 dark:text-green-500">+{added}</span>}
+              {added > 0 && removed > 0 && <span> </span>}
+              {removed > 0 && <span className="text-red-500">-{removed}</span>}
+            </span>
+          )}
+        </span>
       </span>
       <div className="flex items-center gap-1 shrink-0 ml-2">
         {trailingContent}
