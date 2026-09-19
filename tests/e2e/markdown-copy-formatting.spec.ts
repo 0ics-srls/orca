@@ -23,15 +23,7 @@ test('copying a rich selection preserves Markdown formatting', async ({ orcaPage
     await openMarkdownFixture(orcaPage, context, filePath)
     const editor = await waitForRichMarkdownEditor(orcaPage)
     await expect(editor.locator('strong')).toHaveText('bold')
-    await editor.locator('p').evaluate((paragraph) => {
-      const range = document.createRange()
-      range.selectNodeContents(paragraph)
-      const selection = window.getSelection()
-      selection?.removeAllRanges()
-      selection?.addRange(range)
-      paragraph.closest<HTMLElement>('[contenteditable]')?.focus()
-      document.dispatchEvent(new Event('selectionchange'))
-    })
+    await editor.locator('p').selectText()
     await expect
       .poll(() => orcaPage.evaluate(() => window.getSelection()?.toString()))
       .toBe('A bold paragraph with a link.')
@@ -54,15 +46,7 @@ test('copying a rich selection preserves Markdown formatting', async ({ orcaPage
     await expect(editor.locator('p')).toHaveText('A bold paragraph with a link.')
     await testInfo.attach('copied-markdown', { body: copied.text, contentType: 'text/markdown' })
 
-    await editor.evaluate((element) => {
-      const range = document.createRange()
-      range.selectNodeContents(element)
-      const selection = window.getSelection()
-      selection?.removeAllRanges()
-      selection?.addRange(range)
-      element.focus()
-      document.dispatchEvent(new Event('selectionchange'))
-    })
+    await editor.selectText()
     await expect
       .poll(() => orcaPage.evaluate(() => window.getSelection()?.toString()))
       .toContain('Copy formatting')
