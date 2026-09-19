@@ -23,12 +23,12 @@ import { discardDetachedQueueEntry, hasQueuedChunks } from './pane-terminal-outp
 import { clearForegroundRelease, isEntryDrainable } from './pane-terminal-foreground-queue-state'
 import {
   BACKGROUND_CHUNK_CHARS,
-  DENSE_SGR_CHUNK_CHARS,
   canDrainQueueEntry,
   discardTerminalOutput,
   fireQueuedAckCredits,
   queuedByTerminal,
   requestRegisteredTerminalBacklogRecovery,
+  resolveQueueEntryChunkLimit,
   scheduleDrain,
   reserveDenseSgrBatch,
   type TerminalOutputTarget
@@ -72,10 +72,8 @@ export function flushTerminalOutputImpl(
   }
 
   let flushedChars = 0
-  let queuedWrite = takeQueuedChunk(
-    entry,
-    !explicitFullDrain && entry.denseSgr ? DENSE_SGR_CHUNK_CHARS : BACKGROUND_CHUNK_CHARS
-  )
+  const chunkLimit = resolveQueueEntryChunkLimit(entry)
+  let queuedWrite = takeQueuedChunk(entry, explicitFullDrain ? BACKGROUND_CHUNK_CHARS : chunkLimit)
   while (queuedWrite) {
     flushedChars += queuedWrite.data.length
     if (debugEnabled) {

@@ -1,10 +1,9 @@
 import { flattenRetainedSlice } from '@/lib/flatten-retained-slice'
-import {
-  markQueueEntryData,
-  type QueueEntry,
-  type QueuedWrite,
-  type TerminalOutputBeforeWrite,
-  type TerminalOutputParsedCallback
+import type {
+  QueueEntry,
+  QueuedWrite,
+  TerminalOutputBeforeWrite,
+  TerminalOutputParsedCallback
 } from './pane-terminal-output-queue-registry'
 import { recordTerminalOutputQueueDebugPressure as recordQueueDebugPressure } from './pane-terminal-output-scheduler-debug'
 
@@ -199,6 +198,5 @@ export function enqueueChunk(
     ackCredit: options?.ackCredit
   })
   entry.queuedChars += data.length
-  markQueueEntryData(entry)
   recordQueueDebugPressure()
 }

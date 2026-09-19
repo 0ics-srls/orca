@@ -13,12 +13,11 @@ import { takeQueuedChunk } from './pane-terminal-output-queue-chunks'
 import { recordTerminalOutputQueueDebugPressure as recordQueueDebugPressure } from './pane-terminal-output-scheduler-debug'
 import { clearForegroundRelease } from './pane-terminal-foreground-queue-state'
 import {
-  BACKGROUND_CHUNK_CHARS,
-  DENSE_SGR_CHUNK_CHARS,
   discardTerminalOutput,
   fireQueuedAckCredits,
   queuedByTerminal,
   reserveDenseSgrBatch,
+  resolveQueueEntryChunkLimit,
   scheduleDrain,
   type QueueEntry,
   type TerminalOutputParsedCallback,
@@ -127,10 +126,7 @@ export function writeQueuedChunk(entry: QueueEntry): 'foreground' | 'background'
     discardTerminalOutput(entry.terminal)
     return null
   }
-  const queuedWrite = takeQueuedChunk(
-    entry,
-    entry.denseSgr ? DENSE_SGR_CHUNK_CHARS : BACKGROUND_CHUNK_CHARS
-  )
+  const queuedWrite = takeQueuedChunk(entry, resolveQueueEntryChunkLimit(entry))
   if (!queuedWrite) {
     return null
   }

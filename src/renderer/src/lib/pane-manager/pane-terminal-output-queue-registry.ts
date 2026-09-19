@@ -85,7 +85,6 @@ export type QueueEntry = {
   // Why: an open frame's own hold chunks may still push the deadline out, but once coalesce has taken the entry over the deadline stops moving so the two mechanisms can't re-arm each other.
   foregroundReleaseDeadlineFixed: boolean
   denseSgr: boolean
-  denseSgrClassified: boolean
 }
 
 export const BACKGROUND_FLUSH_DELAY_MS = 50
@@ -181,11 +180,18 @@ export function clearDenseSgrPacing(terminal: TerminalOutputTarget): void {
   denseSgrPacingByTerminal.set(terminal, { generation: 1, inFlight: 0 })
 }
 
-export function markQueueEntryData(entry: QueueEntry): void {
-  if (entry.denseSgrClassified || entry.queuedChars < DENSE_SGR_CHUNK_CHARS) {
-    return
+// Why re-classified per batch rather than latched at enqueue: density changes mid-stream — a plain banner ahead of a TUI would miss the pacing entirely, and a dense header ahead of a long plain tail would pin that tail at the dense budget, which is slower than no pacing at all.
+export function resolveQueueEntryChunkLimit(entry: QueueEntry): number {
+  entry.denseSgr = entry.queuedChars >= DENSE_SGR_CHUNK_CHARS && isDenseSgr(sampleQueueFront(entry))
+  return entry.denseSgr ? DENSE_SGR_CHUNK_CHARS : BACKGROUND_CHUNK_CHARS
+}
+
+// Bounded to one dense batch so classification is never O(queue); small PTY fragments are spanned so they receive the same verdict as one large chunk.
+function sampleQueueFront(entry: QueueEntry): string {
+  const front = entry.chunks[entry.chunkIndex]
+  if (front && front.data.length >= DENSE_SGR_CHUNK_CHARS) {
+    return front.data.slice(0, DENSE_SGR_CHUNK_CHARS)
   }
-  // Classify one bounded prefix so small PTY fragments receive the same pacing.
   const sampleParts: string[] = []
   let sampleChars = 0
   for (let index = entry.chunkIndex; index < entry.chunks.length; index += 1) {
@@ -197,8 +203,7 @@ export function markQueueEntryData(entry: QueueEntry): void {
     sampleParts.push(chunk.data.slice(0, remaining))
     sampleChars += Math.min(chunk.data.length, remaining)
   }
-  entry.denseSgr = isDenseSgr(sampleParts.join(''))
-  entry.denseSgrClassified = true
+  return sampleParts.join('')
 }
 
 export function setTerminalOutputDrainRunner(runner: () => void): void {

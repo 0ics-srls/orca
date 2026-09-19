@@ -555,6 +555,64 @@ describe('pane terminal output scheduler', () => {
     )
   })
 
+  it('starts pacing once a plain banner gives way to dense output', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    terminal.write.mockImplementation(() => {})
+    const banner = 'banner\r\n'.repeat(640)
+    const dense = Array.from(
+      { length: 2_000 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, banner, { foreground: false })
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
+
+    const written = terminal.write.mock.calls.map(([data]) => data)
+    expect(written[0]).toHaveLength(16 * 1024)
+    // Once the dense body reaches the front the budget must drop, or this is
+    // the 128 KiB parser burst the pacing exists to bound.
+    expect(written[1]).toHaveLength(4 * 1024)
+  })
+
+  it('stops pacing once a dense header gives way to a plain tail', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 500 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+    const tail = 'plain output line\r\n'.repeat(3_000)
+
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    writeTerminalOutput(terminal, tail, { foreground: false })
+    vi.advanceTimersByTime(50)
+    expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+
+    parsed.shift()?.()
+    vi.advanceTimersByTime(0)
+
+    // A latched verdict would pin the plain tail at 4 KiB per parse
+    // round-trip, which is slower than not pacing at all.
+    expect(terminal.write.mock.calls[1]?.[0]).toHaveLength(16 * 1024)
+
+    while (parsed.length > 0 || terminal.write.mock.calls.length < 2) {
+      parsed.shift()?.()
+      vi.advanceTimersByTime(16)
+    }
+    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(`${dense}${tail}`)
+  })
+
   it('promotes large background backlogs to high-priority drains', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()
