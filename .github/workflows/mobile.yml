@@ -9,6 +9,7 @@ on:
       - ready_for_review
     paths:
       - 'mobile/**'
+      - 'config/scripts/xterm-patch-text*'
       # Mobile launch contracts exercise the real host dispatcher and durable receipt store.
       - 'src/main/agent-launch/**'
       - 'src/main/runtime/rpc/**'
@@ -46,6 +47,7 @@ on:
       - main
     paths:
       - 'mobile/**'
+      - 'config/scripts/xterm-patch-text*'
       - '.github/workflows/mobile.yml'
 
 concurrency:
