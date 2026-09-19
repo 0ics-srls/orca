@@ -109,7 +109,7 @@ describe('OMP child lifecycle recovery boundaries', () => {
     expect(getAgentResumeArgv(record.agent, record.providerSession)).toEqual([
       'omp',
       '--resume',
-      ROOT_SESSION
+      '/sessions/root.jsonl'
     ])
     const startup = buildAgentResumeStartupPlan({
       agent: record.agent,
@@ -118,7 +118,7 @@ describe('OMP child lifecycle recovery boundaries', () => {
       platform: 'linux',
       ...record.launchConfig
     })
-    expect(startup?.launchCommand).toBe(`omp '--resume' '${ROOT_SESSION}'`)
+    expect(startup?.launchCommand).toBe(`omp '--resume' '/sessions/root.jsonl'`)
     expect(serialized).not.toContain(CHILD_SESSION)
   })
 })

@@ -44,7 +44,7 @@ describe.each([
       const payload = JSON.parse(String(harness.fetchMock.mock.lastCall?.[1]?.body)).payload
       const session = extractAgentProviderSession('omp', payload)
       expect(session).toEqual({ key: 'session_id', id, transcriptPath: file })
-      expect(getAgentResumeArgv('omp', session!)).toEqual(['omp', '--resume', id])
+      expect(getAgentResumeArgv('omp', session!)).toEqual(['omp', '--resume', file])
       expect(getAgentResumeArgv('omp', session!, 'explicit.jsonl')).toEqual([
         'omp',
         '--resume',
