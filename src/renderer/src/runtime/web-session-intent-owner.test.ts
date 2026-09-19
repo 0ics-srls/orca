@@ -11,6 +11,7 @@ import {
   resetWebSessionFocusIntentForTests
 } from './web-session-focus-intent'
 import {
+  MAX_REORDER_INTENT_PARTITIONS,
   recordWebSessionReorderIntent,
   resetWebSessionReorderIntentForTests,
   resolveWebSessionReorderedOrder
@@ -28,6 +29,37 @@ afterEach(() => {
 })
 
 describe('web session intent ownership', () => {
+  it('bounds unresolved reorder intent churn', () => {
+    for (let index = 0; index < MAX_REORDER_INTENT_PARTITIONS + 4; index += 1) {
+      recordWebSessionReorderIntent(
+        { environmentId: `env-${index}`, pairingRevision: 1 },
+        WORKTREE_ID,
+        'group-1',
+        ['tab-b', 'tab-a'],
+        1_000
+      )
+    }
+
+    expect(
+      resolveWebSessionReorderedOrder(
+        { environmentId: 'env-0', pairingRevision: 1 },
+        WORKTREE_ID,
+        'group-1',
+        ['tab-a', 'tab-b'],
+        1_000
+      )
+    ).toEqual(['tab-a', 'tab-b'])
+    expect(
+      resolveWebSessionReorderedOrder(
+        { environmentId: `env-${MAX_REORDER_INTENT_PARTITIONS + 3}`, pairingRevision: 1 },
+        WORKTREE_ID,
+        'group-1',
+        ['tab-a', 'tab-b'],
+        1_000
+      )
+    ).toEqual(['tab-b', 'tab-a'])
+  })
+
   it('isolates close intents across runtimes and same-id re-pairs', () => {
     recordWebSessionCloseIntent(OWNER_A, WORKTREE_ID, 'host-tab', 1_000)
 
