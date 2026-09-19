@@ -150,7 +150,7 @@ describe('client-hosted screenshot markup', () => {
         image: backdrop,
         displayCssWidth: 800,
         displayCssHeight: 600,
-        shapes: []
+        ['shapes']: []
       })
     )
     await waitFor(() => expect(overlay()).toBeNull())
