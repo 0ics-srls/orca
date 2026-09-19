@@ -53,10 +53,7 @@ describe('AgentSessionSubscribers', () => {
       subscribers.publish(`session-${index}`, journal, { turnId: `turn-${index}`, text: 'working' })
     }
 
-    const internals = subscribers as unknown as {
-      activityBySession: Map<string, unknown>
-    }
-    expect(internals.activityBySession.size).toBe(MAX_RETAINED_SESSION_ACTIVITIES)
+    expect(subscribers.retainedActivityCountForTests).toBe(MAX_RETAINED_SESSION_ACTIVITIES)
   })
 
   it('publishes the current fence when a resumed cursor is already caught up', async () => {

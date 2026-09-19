@@ -54,6 +54,10 @@ export class AgentSessionSubscribers {
 
   constructor(private readonly hooks: AgentSessionSubscribersHooks = {}) {}
 
+  get retainedActivityCountForTests(): number {
+    return this.activityBySession.size
+  }
+
   open(input: {
     id: string
     sessionId: string
