@@ -104,10 +104,10 @@ export function createRichMarkdownKeyHandler(
       ctx.openSearchRef.current()
       return true
     }
-    if (handleRichMarkdownSaveShortcut(ctx, event)) {
-      return true
-    }
-    if (handleRichMarkdownAddReviewNoteShortcut(ctx, event)) {
+    if (
+      handleRichMarkdownSaveShortcut(ctx, event) ||
+      handleRichMarkdownAddReviewNoteShortcut(ctx, event)
+    ) {
       return true
     }
 
@@ -305,13 +305,13 @@ export function createRichMarkdownKeyHandler(
       return false
     }
 
-    const currentFilteredSlashCommands = ctx.filteredSlashCommandsRef.current
+    const commands = ctx.filteredSlashCommandsRef.current
     if (event.key === 'Escape') {
       event.preventDefault()
       ctx.setSlashMenu(null)
       return true
     }
-    if (currentFilteredSlashCommands.length === 0) {
+    if (commands.length === 0) {
       return false
     }
     // Why: handleKeyDown is frozen from the first render, so this closure
@@ -322,17 +322,13 @@ export function createRichMarkdownKeyHandler(
     }
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      ctx.setSelectedCommandIndex(
-        (currentIndex) => (currentIndex + 1) % currentFilteredSlashCommands.length
-      )
+      ctx.setSelectedCommandIndex((currentIndex) => (currentIndex + 1) % commands.length)
       return true
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault()
       ctx.setSelectedCommandIndex(
-        (currentIndex) =>
-          (currentIndex - 1 + currentFilteredSlashCommands.length) %
-          currentFilteredSlashCommands.length
+        (currentIndex) => (currentIndex - 1 + commands.length) % commands.length
       )
       return true
     }
@@ -340,7 +336,7 @@ export function createRichMarkdownKeyHandler(
       event.preventDefault()
       // Why: this key handler is stable for the editor lifetime, so the ref
       // mirrors the latest highlighted slash-menu item for keyboard picks.
-      const selectedCommand = currentFilteredSlashCommands[ctx.selectedCommandIndexRef.current]
+      const selectedCommand = commands[ctx.selectedCommandIndexRef.current]
       if (selectedCommand) {
         runSlashCommand(
           activeEditor,
