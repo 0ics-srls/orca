@@ -7,15 +7,18 @@ import {
 import { isNativeChatTranscriptLocalReadable } from './native-chat-transcript-readability'
 
 describe('decideInitialAgentTabViewMode', () => {
-  it("returns 'chat' when native chat and the opt-in default setting are on", () => {
-    expect(
-      decideInitialAgentTabViewMode({
-        experimentalNativeChat: true,
-        openAgentTabsInChatByDefault: true,
-        agent: 'codex'
-      })
-    ).toBe('chat')
-  })
+  it.each(['codex', 'antigravity'] as const)(
+    'opens %s in chat when native chat and the opt-in default setting are on',
+    (agent) => {
+      expect(
+        decideInitialAgentTabViewMode({
+          experimentalNativeChat: true,
+          openAgentTabsInChatByDefault: true,
+          agent
+        })
+      ).toBe('chat')
+    }
+  )
 
   it('returns undefined when native chat is disabled', () => {
     expect(
