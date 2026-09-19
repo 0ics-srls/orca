@@ -62,6 +62,24 @@ function htmlFile(overrides: Partial<OpenFile> = {}): OpenFile {
   }
 }
 
+describe('getEditorPanelRenderModel rich-mode fallback toggle', () => {
+  it('offers Preview once rich mode falls back for this content', () => {
+    const model = renderModel({
+      fileContents: {
+        '/repo/README.md': textContent({ content: '[reference]: https://example.com' })
+      }
+    })
+
+    expect(model.availableEditorToggleModes).toEqual(['source', 'rich', 'preview', 'changes'])
+  })
+
+  it('omits Preview for ordinary markdown content', () => {
+    const model = renderModel({})
+
+    expect(model.availableEditorToggleModes).toEqual(['source', 'rich', 'changes'])
+  })
+})
+
 describe('getEditorPanelRenderModel HTML preview affordance', () => {
   it('enables preview for HTML edit tabs', () => {
     expect(renderModel({ activeFile: htmlFile(), fileContents: {} }).canOpenPreviewToSide).toBe(
@@ -248,4 +266,13 @@ describe('getEditorPanelRenderModel markdown export affordance', () => {
       }).canExportMarkdownToPdf
     ).toBe(false)
   })
+})
+
+it('offers the live Markdown preview while a fallback draft is unsaved', () => {
+  const model = renderModel({
+    editorDrafts: { '/repo/README.md': '[reference]: https://example.com' }
+  })
+  expect(model.availableEditorToggleModes).toContain('preview')
+  expect(model.canShowMarkdownPreview).toBe(true)
+  expect(model.canOpenPreviewToSide).toBe(false)
 })
