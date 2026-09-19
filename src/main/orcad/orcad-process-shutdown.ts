@@ -4,11 +4,19 @@ import {
   type OrcadStopRequestListener
 } from './orcad-stop-request-listener'
 import type { OrcadManagedStopRequestContext } from './orcad-managed-stop-request'
+import { OrcadBindAddressError } from './orcad-bind-address'
+import { OrcadInstanceLockError } from './orcad-instance-lock'
 
 export const ORCAD_EXIT_OK = 0
 export const ORCAD_EXIT_FAILED = 1
 export const ORCAD_EXIT_CONFIGURATION = 78
 export const ORCAD_SHUTDOWN_DEADLINE_MS = 15_000
+
+export function resolveOrcadExitCode(error: unknown): number {
+  return error instanceof OrcadInstanceLockError || error instanceof OrcadBindAddressError
+    ? ORCAD_EXIT_CONFIGURATION
+    : ORCAD_EXIT_FAILED
+}
 
 export function installOrcadProcessShutdown(
   handle: { stop(): Promise<void> },

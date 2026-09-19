@@ -13,34 +13,27 @@
  */
 import process from 'node:process'
 import { join } from 'node:path'
-import { setAppEnvironment, type AppEnvironment } from '../../shared/app-environment'
-import { setSecretStore, type SecretStore } from '../../shared/secret-store'
 import type { ServeReadiness } from '../server/serve-readiness'
+import type { OrcadManagedStopRequestContext } from './orcad-managed-stop-request'
+import { installOrcadHostAdapters, runOrcadQuitHandlers } from './orcad-host-adapters'
+export { installOrcadHostAdapters } from './orcad-host-adapters'
 import { setRuntimeBrowserCommandsFactory } from '../runtime/runtime-browser-commands-factory'
 import { startOrcadBrowserProvider } from './orcad-browser-startup'
 import { OrcadRuntimeLifetime } from './orcad-runtime-lifetime'
 import { recoverOrcadRuntimeTerminals } from './orcad-runtime-terminal-recovery'
 import { configureOrcadHostDecommission } from './orcad-host-decommission'
-import { parseArgs, type OrcadOptions } from './orcad-launch-options'
-export { parseArgs, type OrcadOptions } from './orcad-launch-options'
-import { resolveOrcadInstallRoot, resolveOrcadPath, resolveUserDataPath } from './orcad-app-paths'
-import {
-  describeOrcadBindExposure,
-  OrcadBindAddressError,
-  resolveOrcadBindHost
-} from './orcad-bind-address'
-import { acquireOrcadInstanceLock, OrcadInstanceLockError } from './orcad-instance-lock'
-import type { OrcadManagedStopRequestContext } from './orcad-managed-stop-request'
-import {
-  installOrcadProcessShutdown,
-  ORCAD_EXIT_CONFIGURATION,
-  ORCAD_EXIT_FAILED
-} from './orcad-process-shutdown'
+import { parseArgs, type OrcadOptions } from './orcad-command-arguments'
+export { parseArgs, type OrcadOptions } from './orcad-command-arguments'
+import { resolveOrcadInstallRoot, resolveUserDataPath } from './orcad-app-paths'
+import { describeOrcadBindExposure, resolveOrcadBindHost } from './orcad-bind-address'
+import { acquireOrcadInstanceLock } from './orcad-instance-lock'
+import { installOrcadProcessShutdown } from './orcad-process-shutdown'
 export {
   ORCAD_EXIT_OK,
   ORCAD_EXIT_FAILED,
   ORCAD_EXIT_CONFIGURATION,
-  ORCAD_SHUTDOWN_DEADLINE_MS
+  ORCAD_SHUTDOWN_DEADLINE_MS,
+  resolveOrcadExitCode
 } from './orcad-process-shutdown'
 import { isPtyOwnershipTransferMutationEnabled } from '../../shared/pty-ownership-transfer-release-gate'
 import { initializeProfileLifetimeAdmission } from '../ssh/profile-lifetime-admission'
@@ -48,66 +41,6 @@ import {
   changedAiVaultSearchSettings,
   type AiVaultSearchSettings
 } from '../../shared/ai-vault-search-settings'
-
-let runOrcadQuitHandlers = (): void => {}
-
-function createNodeAppEnvironment(): AppEnvironment {
-  const quitHandlers: (() => void)[] = []
-  // The main signal handler awaits runtime and browser teardown before process.exit.
-  // Keep will-quit callbacks synchronous, but never let them pre-empt that async barrier.
-  runOrcadQuitHandlers = (): void => {
-    const errors: unknown[] = []
-    for (const handler of quitHandlers.splice(0)) {
-      try {
-        handler()
-      } catch (error) {
-        errors.push(error)
-      }
-    }
-    if (errors.length) {
-      throw new AggregateError(errors, 'orcad_quit_handlers_failed')
-    }
-  }
-  return {
-    getPath: resolveOrcadPath,
-    getAppPath: () => resolveOrcadInstallRoot(),
-    getVersion: () => process.env.ORCA_VERSION ?? '0.0.0-orcad',
-    // Why still true: consumers read this as "production build, not a dev checkout" —
-    // it gates HTTPS-only skill downloads, the real CLI command name, and shell-PATH
-    // hydration. Answering false to satisfy a path resolver would relax a security
-    // posture. Layout questions must ask whether the app root is an asar archive
-    // instead (see parcel-watcher-entry-path.ts).
-    isPackaged: () => true,
-    onWillQuit: (handler) => quitHandlers.push(handler),
-    exit: (code = 0) => process.exit(code),
-    // Why []: there are no Chromium processes on this host to measure.
-    getAppMetrics: () => []
-  }
-}
-
-/**
- * Why not silently plaintext: `isEncryptionAvailable() === false` already makes every
- * caller fall back to unsealed storage, which is a security posture, not a detail.
- * `describeProtectionGap()` gives the reason a client can surface.
- */
-function createNodeSecretStore(): SecretStore {
-  return {
-    isEncryptionAvailable: () => false,
-    encryptString: () => {
-      throw new Error('orcad_secret_sealing_unavailable')
-    },
-    decryptString: () => {
-      throw new Error('orcad_secret_sealing_unavailable')
-    },
-    describeProtectionGap: () =>
-      'This host has no OS keyring, so credentials are stored unencrypted. Pair from a desktop to manage secrets, or install and unlock a keyring.'
-  }
-}
-
-export function installOrcadHostAdapters(): void {
-  setAppEnvironment(createNodeAppEnvironment())
-  setSecretStore(createNodeSecretStore())
-}
 
 export type OrcadHandle = {
   readiness: ServeReadiness
@@ -413,20 +346,6 @@ async function startOrcadRuntime(
     },
     stop: () => lifetime.stop()
   }
-}
-
-/**
- * Exit codes a supervisor can act on. Closed set — see docs/reference/orcad-operations.md.
- *
- * `ORCAD_EXIT_CONFIGURATION` is the load-bearing one: a data root owned by someone else, or
- * held by another orcad, is not fixed by restarting. Restarting on it is the crash-loop the
- * supervision contract has to prevent, so systemd's `RestartPreventExitStatus` needs a code
- * that means "do not retry" and nothing else does.
- */
-export function resolveOrcadExitCode(error: unknown): number {
-  return error instanceof OrcadInstanceLockError || error instanceof OrcadBindAddressError
-    ? ORCAD_EXIT_CONFIGURATION
-    : ORCAD_EXIT_FAILED
 }
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {

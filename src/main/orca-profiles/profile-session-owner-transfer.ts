@@ -309,10 +309,7 @@ function mapUnifiedTab(tab: Tab, projection: SessionOwnerProjection): Tab {
 }
 
 function mapTabGroup(group: TabGroup, projection: SessionOwnerProjection): TabGroup {
-  return {
-    ...structuredClone(group),
-    worktreeId: projection.mapWorktreeId(group.worktreeId)
-  }
+  return { ...structuredClone(group), worktreeId: projection.mapWorktreeId(group.worktreeId) }
 }
 
 function paneBelongsToTabs(paneKey: string, tabIds: ReadonlySet<string>): boolean {

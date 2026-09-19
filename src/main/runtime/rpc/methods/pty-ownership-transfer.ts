@@ -22,7 +22,7 @@ import {
 } from '../../../../shared/pty-ownership-transfer-control-wire'
 import { parsePtyOwnershipTransferReconnectRekeyRequest } from '../../../../shared/pty-ownership-transfer-reconnect-rekey-wire'
 import type { RuntimePtyOwnershipTransferSourceAdapter } from '../../../providers/runtime-pty-ownership-transfer-source-adapter'
-import { defineMethod, type RpcMethod } from '../core'
+import { defineMethod, type RpcTypedMethod } from '../core'
 import { parsePtyOwnershipTransferSourceGrantRequest } from '../../../../shared/pty-ownership-transfer-source-grant'
 
 const RuntimeOwnedPtyPreflight = z.object({
@@ -153,8 +153,8 @@ export const PTY_OWNERSHIP_TRANSFER_METHODS = [
   PTY_TRANSFER_SOURCE_STREAM_METHOD
 ]
 
-function sourceMethod<T>(
-  name: string,
+function sourceMethod<TName extends string, T>(
+  name: TName,
   params: z.ZodType,
   parse: (value: unknown) => T,
   invoke: (
@@ -162,7 +162,7 @@ function sourceMethod<T>(
     request: T,
     binding: Parameters<RuntimePtyOwnershipTransferSourceAdapter['prepare']>[1]
   ) => unknown
-): RpcMethod {
+): RpcTypedMethod<TName, z.ZodType, unknown> {
   return defineMethod({
     name,
     params,

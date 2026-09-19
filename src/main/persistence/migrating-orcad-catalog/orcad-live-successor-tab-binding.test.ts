@@ -39,7 +39,18 @@ it.each(['folder', 'worktree'] as const)('admits the real %s reconnect binding w
   const sessions = {
     getWorkspaceSession: () => state.workspaceSession
   } as ConstructorParameters<typeof PtyBindingPersistenceOperations>[1]
-  const writer = new PtyBindingPersistenceOperations({ state, flushOrThrow }, sessions)
+  const writer = new PtyBindingPersistenceOperations(
+    {
+      state,
+      flushOrThrow,
+      writeTimer: null,
+      pendingWrite: null,
+      writeGeneration: 1,
+      quitFlushStarted: false,
+      lastDurableWriteGeneration: 0
+    },
+    sessions
+  )
   const { identity, surfaceBinding } = f.binding
   expect(
     writer.persistPtyBinding({
@@ -52,7 +63,10 @@ it.each(['folder', 'worktree'] as const)('admits the real %s reconnect binding w
     })
   ).toBe(true)
   expect(flushOrThrow).toHaveBeenCalledOnce()
-  expect(Object.values(state.workspaceSession.tabsByWorktree).flat()[0].ptyId).toBe(f.tab.ptyId)
+  // A split-pane rebind must not let a later leaf steal the tab row's first-pane PTY.
+  expect(Object.values(state.workspaceSession.tabsByWorktree).flat()[0].ptyId).toBe(
+    Object.values(f.original.workspaceSession.tabsByWorktree).flat()[0].ptyId
+  )
   expect(() =>
     assertOrcadLiveSuccessorTabBindingChange(
       f.before,
