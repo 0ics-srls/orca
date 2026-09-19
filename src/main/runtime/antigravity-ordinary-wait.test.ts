@@ -127,4 +127,23 @@ describe('Antigravity ordinary waits use the current screen', () => {
     runtime.onPtyData(TRANSCRIPT_PANE_PTY_ID, capture('antigravity-ready-plan-127'), Date.now())
     await vi.waitFor(() => expect(deliver).toHaveBeenCalled(), { timeout: 4500 })
   }, 10000)
+
+  it('does not reuse a ready screen after the execution host becomes unverifiable', async () => {
+    const { runtime, handle } = await createTranscriptPane({
+      paneTitle: 'agy',
+      foregroundProcess: 'agy',
+      data: '',
+      connectionId: 'ssh-host'
+    })
+    runtime.seedHeadlessTerminal(TRANSCRIPT_PANE_PTY_ID, '\x1b[0m', { cols: 120, rows: 40 })
+    runtime.onPtyData(TRANSCRIPT_PANE_PTY_ID, capture('antigravity-ready-default-127'), Date.now())
+    await expect(
+      runtime.waitForTerminal(handle, { condition: 'tui-idle', timeoutMs: 3500 })
+    ).resolves.toMatchObject({ satisfied: true })
+    runtime.markPtyLivenessUnverifiable(TRANSCRIPT_PANE_PTY_ID, 'SSH transport disconnected')
+    await expect(
+      runtime.waitForTerminal(handle, { condition: 'tui-idle', timeoutMs: 2500 })
+    ).rejects.toThrow('timeout')
+    expect(runtime.getPtyLivenessVerdict(TRANSCRIPT_PANE_PTY_ID)?.status).toBe('unverifiable')
+  }, 10000)
 })

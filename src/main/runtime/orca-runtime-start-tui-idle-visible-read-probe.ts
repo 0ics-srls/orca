@@ -64,6 +64,12 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         ) {
           return
         }
+        const ptyId =
+          this.getLivePtyForHandle(waiter.handle)?.pty.ptyId ??
+          this.getLiveLeafForHandle(waiter.handle).leaf.ptyId
+        if (ptyId && this.getPtyLivenessVerdict(ptyId)?.status === 'unverifiable') {
+          return
+        }
         const snapshotText = projection.tail.join('\n')
         const blockedReason = detectTerminalWaitBlockedReason(snapshotText)
         if (!blockedReason && !isKnownReadyTerminalScreen(projection)) {

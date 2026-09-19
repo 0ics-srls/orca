@@ -27,6 +27,9 @@ export class OrcaRuntimeWithVisibleSnapshotPreview extends OrcaRuntimeWithCaptur
     ) {
       return null
     }
+    if (this.getPtyLivenessVerdict(ptyId)?.status === 'unverifiable') {
+      return { ready: false, blockedReason: null }
+    }
     const cached = this.providerVisibleStateByPtyId.get(ptyId)
     if (
       cached?.generation === this.getPtyLifecycleGeneration(ptyId) &&

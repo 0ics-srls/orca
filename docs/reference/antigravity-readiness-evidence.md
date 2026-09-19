@@ -1,5 +1,20 @@
 # Antigravity readiness: what the transcripts show
 
+## 2026-09-19: host contact and live prompt submission
+
+A regression marked an SSH terminal `unverifiable` after caching a ready screen.
+The wait incorrectly returned ready. Readiness now refuses that cached verdict
+while host contact is unverifiable, and the adopted-screen fallback rechecks
+liveness when an outstanding snapshot completes. Both cases pass runtime tests;
+this is simulated host loss, not a claim of real SSH validation. Reconnection
+snapshot freshness remains a separate validation task.
+
+In the hidden app, a real `terminal.send` with text plus Enter submitted a harmless
+prompt to installed agy. The rendered request failed with HTTP 401 and
+`ACCESS_TOKEN_TYPE_UNSUPPORTED`; the subsequent empty composer satisfied the
+readiness wait. The public RPC's guarded prompt route is limited to Claude/Codex,
+so this agy check proves ordinary input delivery, not guarded worker submission.
+
 ## 2026-09-19: ordinary wait and delivery integration
 
 The ordinary wait paths now consult the same current-screen classifier for
