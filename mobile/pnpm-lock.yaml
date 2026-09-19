@@ -10,15 +10,9 @@ overrides:
 
 patchedDependencies:
   '@xterm/xterm@6.1.0-beta.303': 3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163
-  expo-notifications@55.0.27:
-    hash: ce20843a3daad4185d7e8571788fa323ba4d11984936188790858650a61749c0
-    path: patches/expo-notifications@55.0.27.patch
-  react-native-webview@13.16.2:
-    hash: de6761dfa76a5491a23e49f1262566a8831cab26736a336fdffc5d4e7d05ff27
-    path: patches/react-native-webview@13.16.2.patch
-  react-native@0.83.10:
-    hash: 44876634a8efbb0f2c3f66cd4332be170ec821d1cbfc0264ac80680983e8513d
-    path: patches/react-native@0.83.10.patch
+  expo-notifications@55.0.27: ce20843a3daad4185d7e8571788fa323ba4d11984936188790858650a61749c0
+  react-native-webview@13.16.2: de6761dfa76a5491a23e49f1262566a8831cab26736a336fdffc5d4e7d05ff27
+  react-native@0.83.10: 44876634a8efbb0f2c3f66cd4332be170ec821d1cbfc0264ac80680983e8513d
 
 importers:
 
@@ -10519,13 +10513,13 @@ snapshots:
 
   '@xterm/addon-unicode11@0.10.0-beta.300(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))':
     dependencies:
-      '@xterm/xterm': 6.1.0-beta.303
+      '@xterm/xterm': 6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)
 
   '@xterm/addon-webgl@0.20.0-beta.299(@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163))':
     dependencies:
-      '@xterm/xterm': 6.1.0-beta.303
+      '@xterm/xterm': 6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)
 
-  '@xterm/xterm@6.1.0-beta.303': {}
+  '@xterm/xterm@6.1.0-beta.303(patch_hash=3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163)': {}
 
   abab@2.0.6: {}
 
