@@ -189,3 +189,54 @@ describe('diagnoseConnection on the other relay close codes', () => {
     )
   })
 })
+
+describe('diagnoseConnection ordering among relay failures', () => {
+  const relaySessionFailed = () =>
+    entry({
+      level: 'error',
+      code: 'relay-session-failed',
+      path: 'relay',
+      message: 'Relay: active relay session failed',
+      detail: 'Error: relay_outer_4408',
+      relayCloseCode: 4408
+    })
+  const relayConnected = () =>
+    entry({
+      level: 'success',
+      code: 'relay-connected',
+      path: 'relay',
+      message: 'Relay: runtime channel migrated to relay'
+    })
+  const directorRefused = () =>
+    entry({
+      level: 'error',
+      code: 'relay-dial-failed',
+      path: 'relay',
+      message: 'Relay: relay dial failed',
+      detail: 'RelayDirectorHttpError: relay director resolve failed (401)'
+    })
+
+  // A make-before-break replacement dial fails 4404, then the still-live session
+  // drops: the newer close is the incident, and it stays sendable.
+  it('never hides a newer relay session close behind an older verdict', () => {
+    const entries = [relayConnected(), relayDialFailed(4404), relaySessionFailed()]
+    expect(diagnose(entries).likelyCause).toBe('The active Relay session closed unexpectedly.')
+    expect(
+      getReportableConnectionIncidentId({ endpoint: ENDPOINT, state: 'reconnecting', entries })
+    ).toBe(entries[2]?.id)
+  })
+
+  it('never hides a newer director refusal behind an older verdict', () => {
+    expect(diagnose([appResumed(), relayDialFailed(4404), directorRefused()]).likelyCause).toBe(
+      'Relay rejected the saved resume credential.'
+    )
+  })
+
+  it('names a network change, not a resume, when that is the boundary', () => {
+    const networkChanged = () =>
+      entry({ level: 'info', code: 'network-changed', message: 'Network changed' })
+    expect(diagnose([relayDialFailed(4404), networkChanged(), lanOpening()]).likelyCause).toBe(
+      `Before the last network change: ${HOST_OFFLINE_CAUSE}`
+    )
+  })
+})

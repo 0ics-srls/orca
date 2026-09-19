@@ -35,13 +35,16 @@ export function diagnoseConnection(args: DiagnoseConnectionArgs): ConnectionDiag
   const failure = selected?.entry
   const evidence = failure ? diagnosticEvidence(failure) : ''
   const diagnosis = diagnoseFailure(args, failure, evidence)
-  if (!selected?.stale) {
+  if (!selected?.staleSince) {
     return diagnosis
   }
-  // Evidence from before the last resume is still the best account of a host
-  // that has not answered since; it is just not a current, sendable incident.
+  // Evidence from before the last resume or network change is still the best
+  // account of a host that has not answered since; it is just not a current,
+  // sendable incident.
+  const boundary =
+    selected.staleSince === 'network-changed' ? 'the last network change' : 'the app last resumed'
   return {
-    likelyCause: `Before the app last resumed: ${diagnosis.likelyCause}`,
+    likelyCause: `Before ${boundary}: ${diagnosis.likelyCause}`,
     nextStep: diagnosis.nextStep,
     reportability: 'none'
   }
@@ -146,7 +149,7 @@ function diagnoseFailure(
 
 export function getReportableConnectionIncidentId(args: DiagnoseConnectionArgs): string | null {
   const selected = selectDiagnosticFailure(args.entries)
-  if (selected?.stale !== false) {
+  if (!selected || selected.staleSince) {
     return null
   }
   return diagnoseFailure(args, selected.entry, diagnosticEvidence(selected.entry)).reportability ===
@@ -206,23 +209,28 @@ function relayDialFailure(failure: ConnectionLogEntry | undefined): ConnectionDi
 // never answers left the window empty and the report cause-less.
 function selectDiagnosticFailure(
   entries: readonly ConnectionLogEntry[]
-): { entry: ConnectionLogEntry; stale: boolean } | undefined {
+): { entry: ConnectionLogEntry; staleSince: ResumeBoundary | null } | undefined {
   const sessionStart = entries.findLastIndex(isSessionBoundary) + 1
   const sinceSession = entries.slice(sessionStart)
-  const resumeStart = sinceSession.findLastIndex(isResumeBoundary) + 1
-  const current = newestFailure(sinceSession.slice(resumeStart))
+  const boundaryIndex = sinceSession.findLastIndex(isResumeBoundary)
+  const current = newestFailure(sinceSession.slice(boundaryIndex + 1))
   if (current) {
-    return { entry: current, stale: false }
+    return { entry: current, staleSince: null }
   }
-  const stale = newestFailure(sinceSession.slice(0, resumeStart))
-  return stale ? { entry: stale, stale: true } : undefined
+  const stale = newestFailure(sinceSession.slice(0, boundaryIndex + 1))
+  const boundary = sinceSession[boundaryIndex]?.code
+  return stale && isResumeBoundaryCode(boundary)
+    ? { entry: stale, staleSince: boundary }
+    : undefined
 }
 
+// Relay-path evidence outranks a newer direct failure: off the LAN every direct
+// dial times out, which says nothing, while the relay names the desktop's state.
+// Among relay failures the newest wins, so a fresh session close or director
+// error is never hidden behind an older verdict.
 function newestFailure(entries: readonly ConnectionLogEntry[]): ConnectionLogEntry | undefined {
-  const newestFirst = entries.toReversed()
-  return (
-    newestFirst.find((entry) => isRelayDialVerdict(entry)) ?? newestFirst.find(isDiagnosticFailure)
-  )
+  const newestFirst = entries.toReversed().filter(isDiagnosticFailure)
+  return newestFirst.find((entry) => entry.path === 'relay') ?? newestFirst[0]
 }
 
 function isSessionBoundary(entry: ConnectionLogEntry): boolean {
@@ -234,16 +242,14 @@ function isSessionBoundary(entry: ConnectionLogEntry): boolean {
   )
 }
 
-function isResumeBoundary(entry: ConnectionLogEntry): boolean {
-  return entry.code === 'app-resumed' || entry.code === 'network-changed'
+type ResumeBoundary = 'app-resumed' | 'network-changed'
+
+function isResumeBoundaryCode(code: ConnectionLogEntry['code']): code is ResumeBoundary {
+  return code === 'app-resumed' || code === 'network-changed'
 }
 
-function isRelayDialVerdict(entry: ConnectionLogEntry): boolean {
-  return (
-    entry.code === 'relay-dial-failed' &&
-    entry.relayCloseCode != null &&
-    relayHostReachabilityForCloseCode(entry.relayCloseCode) !== 'connecting'
-  )
+function isResumeBoundary(entry: ConnectionLogEntry): boolean {
+  return isResumeBoundaryCode(entry.code)
 }
 
 function diagnosticEvidence(entry: ConnectionLogEntry): string {
