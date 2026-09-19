@@ -54,4 +54,26 @@ describe('Markdown table pipe preservation', () => {
       editor.destroy()
     }
   })
+
+  it('bounds padding when one table cell is much longer than its siblings', () => {
+    const long = 'x'.repeat(200)
+    const source = `| id | notes | kind |\n| --- | --- | --- |\n| 1 | - | a |\n| 2 | ${long} | b |\n| 3 | - | c |\n`
+    const codec = createRichMarkdownEditorCodec()
+    const editor = new Editor({
+      element: null,
+      extensions: createRichMarkdownExtensions({ codec }),
+      content: encodeRawMarkdownHtmlForRichEditor(source, codec),
+      contentType: 'markdown'
+    })
+    try {
+      const saved = editor.getMarkdown()
+      const shortRows = saved
+        .split('\n')
+        .filter((line) => line.startsWith('|') && !line.includes(long))
+      expect(Math.max(...shortRows.map((line) => line.length))).toBeLessThan(25)
+      expect(saved).toContain(long)
+    } finally {
+      editor.destroy()
+    }
+  })
 })
