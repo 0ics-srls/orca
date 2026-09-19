@@ -19,6 +19,7 @@ import { credentialFileHasContent } from '../integration-credential-file'
 import type { LinearWorkspace } from '../../shared/linear/workspace-types'
 
 let cachedTokens = new Map<string, string>()
+const MAX_LINEAR_WORKSPACE_CREDENTIAL_ENTRIES = 128
 // Why: decrypt failures are recorded per workspace so getStatus can explain
 // failing reads without re-touching the keychain on every status poll.
 const credentialErrors = new Map<string, string>()
@@ -30,7 +31,15 @@ export function getCachedToken(workspaceId: string): string | undefined {
 }
 
 export function cacheToken(workspaceId: string, token: string): void {
+  cachedTokens.delete(workspaceId)
   cachedTokens.set(workspaceId, token)
+  while (cachedTokens.size > MAX_LINEAR_WORKSPACE_CREDENTIAL_ENTRIES) {
+    const oldest = cachedTokens.keys().next().value
+    if (oldest === undefined) {
+      break
+    }
+    cachedTokens.delete(oldest)
+  }
 }
 
 export function forgetCachedToken(workspaceId: string): void {
@@ -44,7 +53,15 @@ export function resetCredentialCaches(): void {
 }
 
 export function recordCredentialError(workspaceId: string, message: string): void {
+  credentialErrors.delete(workspaceId)
   credentialErrors.set(workspaceId, message)
+  while (credentialErrors.size > MAX_LINEAR_WORKSPACE_CREDENTIAL_ENTRIES) {
+    const oldest = credentialErrors.keys().next().value
+    if (oldest === undefined) {
+      break
+    }
+    credentialErrors.delete(oldest)
+  }
 }
 
 export function clearCredentialError(workspaceId: string): void {
