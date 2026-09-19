@@ -493,6 +493,41 @@ describe('pane terminal output scheduler', () => {
     expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(dense)
   })
 
+  it('does not reserve pacing slots for the batches a budget-free flush drains', async () => {
+    vi.useFakeTimers()
+    const { flushTerminalOutput, writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const denseChunk = (count: number): string =>
+      Array.from({ length: count }, (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`).join('')
+
+    writeTerminalOutput(terminal, denseChunk(1_300), { foreground: false })
+    vi.advanceTimersByTime(50)
+    flushTerminalOutput(terminal)
+
+    // Release the paced batch the drain submitted; only the flush's own writes
+    // stay pending, modelling xterm not having parsed them yet.
+    parsed.shift()?.()
+    const pendingFromFlush = parsed.length
+    const writesFromFlush = terminal.write.mock.calls.length
+    writeTerminalOutput(terminal, denseChunk(1_300), { foreground: false })
+    for (let tick = 0; tick < 4; tick += 1) {
+      vi.advanceTimersByTime(50)
+      while (parsed.length > pendingFromFlush) {
+        parsed.pop()?.()
+      }
+    }
+
+    // Slots stranded by the flush would gate every batch after the first, which
+    // the front of the queue clears before it is classified dense.
+    expect(terminal.write.mock.calls.length - writesFromFlush).toBeGreaterThan(1)
+  })
+
   it('keeps pacing a dense entry when the flush carries a char budget', async () => {
     vi.useFakeTimers()
     const { flushTerminalOutput, queuedByTerminal, writeTerminalOutput } = await loadScheduler()

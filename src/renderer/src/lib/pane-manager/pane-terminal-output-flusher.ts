@@ -80,7 +80,9 @@ export function flushTerminalOutputImpl(
       debugState.flushWriteCount++
     }
     const ackCreditsParsed = registerTerminalOutputAckCredits(terminal, queuedWrite.ackCredits)
-    const denseSgrRelease = entry.denseSgr ? reserveDenseSgrBatch(terminal) : undefined
+    // Why not reserved on a full drain: this path ignores the pacing gate, so a reservation only strands the counter and blocks the terminal's next dense entry until xterm parses every batch.
+    const denseSgrRelease =
+      !explicitFullDrain && entry.denseSgr ? reserveDenseSgrBatch(terminal) : undefined
     armTerminalWriteStallWatch(terminal, {
       onCertifiedDead: () => discardTerminalOutput(terminal)
     })
