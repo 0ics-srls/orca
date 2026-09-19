@@ -334,9 +334,7 @@ function forEachEmbeddedHtmlFragment(
 function getHtmlTagEnd(content: string, startIndex: number): number | null {
   let index = startIndex + 1
 
-  if (content.charCodeAt(index) === 47) {
-    index++
-  }
+  index += content.charCodeAt(index) === 47 ? 1 : 0
 
   if (!isHtmlTagNameStart(content.charCodeAt(index))) {
     return null
@@ -361,11 +359,8 @@ function getHtmlTagEnd(content: string, startIndex: number): number | null {
   index++
   while (index < content.length) {
     const code = content.charCodeAt(index)
-    if (code === 60) {
-      return null
-    }
-    if (code === 62) {
-      return index + 1
+    if (code === 60 || code === 62) {
+      return code === 60 ? null : index + 1
     }
     index++
   }
