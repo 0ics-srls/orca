@@ -221,7 +221,7 @@ describe('OpenCode 2 setup and prompt ordering', () => {
     })
     await vi.waitFor(() => {
       const names = posts.map(({ body }) => payload(body).hook_event_name)
-      expect(names).toContain('SessionIdle')
+      expect(names.at(-1)).toBe('SessionIdle')
     })
     await cleanup?.()
   })
