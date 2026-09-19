@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as htmlValidation from './markdown-rich-html-validation'
+import * as roundTrip from './markdown-round-trip'
 import type { OpenFile } from '@/store/slices/editor'
 import { RICH_MARKDOWN_MAX_SIZE_BYTES } from '../../../../shared/constants'
 import type { GitStatusEntry } from '../../../../shared/git-status-types'
 import type { FileContent } from './editor-panel-content-types'
 import { getEditorPanelRenderModel } from './editor-panel-render-model'
+
+afterEach(() => vi.restoreAllMocks())
 
 function markdownFile(overrides: Partial<OpenFile> = {}): OpenFile {
   return {
@@ -65,6 +69,23 @@ function htmlFile(overrides: Partial<OpenFile> = {}): OpenFile {
 }
 
 describe('getEditorPanelRenderModel rich-mode fallback toggle', () => {
+  it('skips HTML validation round trips for source mode', () => {
+    const htmlValidationSpy = vi.spyOn(htmlValidation, 'getRichMarkdownHtmlValidationOutput')
+    const roundTripSpy = vi.spyOn(roundTrip, 'getRichMarkdownRoundTripOutput')
+
+    const model = renderModel({
+      markdownViewMode: { '/repo/README.md': 'source' },
+      fileContents: {
+        '/repo/README.md': textContent({ content: '<span>source-mode-only</span>\n' })
+      }
+    })
+
+    expect(model.mdViewMode).toBe('source')
+    expect(model.inlineMarkdownRenderState?.renderMode).toBe('source')
+    expect(htmlValidationSpy).not.toHaveBeenCalled()
+    expect(roundTripSpy).not.toHaveBeenCalled()
+  })
+
   it('omits Preview in Source view until a fault is recorded for this content, even though it would fault', () => {
     const model = renderModel({
       markdownViewMode: { '/repo/README.md': 'source' },
