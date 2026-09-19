@@ -22,25 +22,43 @@ ORCA_BACKGROUND_LAUNCH=1 node --expose-gc docs/audits/osc-link-retention/reprodu
 The script bundles the current collector, records its SHA-256, and compares the
 same installed xterm with and without collection. It uses real parsers and forced
 GC without opening a window. Every case performs 10,000 redraws, sampling every
-2,500; modes cover ordinary overwrite, erase-line, and alternate-screen redraws.
+2,500; modes cover ordinary overwrite, erase-line, alternate-screen redraws, and
+entering/exiting the alternate screen between redraws.
 
 ## Recorded result
 
-See [results.json](./results.json), captured on macOS with Node v26.6.0. Values
+See [results.json](./results.json), captured on macOS with Node v24.20.0. Values
 below are heap growth after GC, in decimal MB; these are isolated reproductions,
 not affected-host measurements.
 
-| Terminal | Before, across three modes | After, across three modes |
-| -------- | -------------------------: | ------------------------: |
-| Headless |             20.59–20.93 MB |              1.65–1.72 MB |
-| Renderer |             20.52–20.76 MB |              1.66–1.71 MB |
+| Terminal | Before, across four modes | After, across four modes |
+| -------- | ------------------------: | -----------------------: |
+| Headless |            20.54–20.93 MB |             1.66–1.74 MB |
+| Renderer |            20.51–20.77 MB |             1.65–1.73 MB |
 
 All baseline cases retained 10,000 entries/markers with only 24 rows. All fixed
-cases retained 785 entries/markers at the final sample. A sweep of a 5,024-row, 160-column buffer removed 1,024 obsolete entries in
+cases retained 785–794 entries/markers at the final sample. A sweep of a
+5,024-row, 160-column buffer removed 1,024 obsolete entries in
 roughly 6–14 ms for plain rows and 14–16 ms for link-dense rows in the refreshed
 run. At 50,024 rows, plain sweeps measured roughly 45–51 ms and link-dense sweeps
-roughly 263–325 ms. Sweep cost
-scales with configured buffer size; these are isolated samples, not latency bounds.
+roughly 263–325 ms. Sweep cost scales with configured buffer size; these are isolated samples, not latency bounds.
+
+## Mobile verification
+
+Install the mobile workspace from its own frozen lockfile before generating the
+WebView engine or refreshing its payload hash. It uses esbuild 0.25.4 and stock
+xterm; the desktop workspace uses esbuild 0.25.12 and patched xterm. A shared or
+symlinked dependency directory can generate different output while tests still
+appear to pass locally.
+
+```sh
+corepack pnpm@12.0.0 --dir mobile install --frozen-lockfile
+ORCA_BACKGROUND_LAUNCH=1 corepack pnpm@12.0.0 --dir mobile exec vitest run src/terminal/terminal-webview-osc-link-retirement.test.ts src/terminal/terminal-webview-engine.test.ts src/terminal/terminal-webview-payload-hash.test.ts
+```
+
+The clean mobile build produces a 731,870-character document with SHA-256
+`d1448c5931ba8d90c2c43080cb7f51a903d0d3493bc779497f9f65bff8a1c508`.
+The 13 focused WebView checks pass against that build.
 
 ## Fix and safeguards
 
