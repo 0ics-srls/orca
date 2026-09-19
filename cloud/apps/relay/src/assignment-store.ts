@@ -28,9 +28,11 @@ import {
   RELAY_REGIONS,
   RELAY_PROTOCOL_LIMITS,
   type RelayRegion,
+  relayHostCloseReasonFrom,
   type RegionCorrectionRequest,
   type RegionCorrectionResponse,
   type IdleRegionalRehomeRequest,
+  type RelayHostCloseReason,
 } from '@orca-cloud/relay-contract'
 import {
   cellAdmissionState,
@@ -126,6 +128,13 @@ export type RelayAssignment = AssignmentIdentity & {
   assignmentEpoch: number
   leaseExpiresAt: number
   region?: RelayRegion
+}
+
+// Only a read of the row can carry the reason a host was last absent. A grant returns the
+// placement it just made and never reads that column, so it is deliberately not this type: an
+// `undefined` there would read at a phone as "no cause" for a host that has one.
+export type ResolvedRelayAssignment = RelayAssignment & {
+  lastHostCloseReason: RelayHostCloseReason | null
 }
 
 export type RelayRegionCatalogEntry = {
@@ -1041,7 +1050,7 @@ export class RelayAssignmentStore {
     })
   }
 
-  async resolve(identity: AssignmentIdentity): Promise<RelayAssignment | null> {
+  async resolve(identity: AssignmentIdentity): Promise<ResolvedRelayAssignment | null> {
     const rows = await this.database.query(
       `SELECT assignment.*, cell.cell_url, region.region
        FROM relay_assignments assignment
@@ -1065,9 +1074,59 @@ export class RelayAssignmentStore {
           cellUrl: text(row, 'cell_url'),
           region: optionalRelayRegion(row, 'region') ?? RELAY_DEFAULT_REGION,
           assignmentEpoch: integer(row, 'assignment_epoch'),
-          leaseExpiresAt: integer(row, 'lease_expires_at')
+          leaseExpiresAt: integer(row, 'lease_expires_at'),
+          // Parsed, not trusted: the column is only ever written a known member, and reading it
+          // through the same guard means a hand-edited row still cannot reach a phone.
+          lastHostCloseReason: relayHostCloseReasonFrom(row['last_host_close_reason'])
         }
       : null
+  }
+
+  // Only a known member is ever written: the close reason arrives as free text from the host's
+  // socket, so anything unrecognised is dropped here rather than stored and replayed at a phone.
+  // The timestamp fences the write, which is what lets the caller fire it and forget it - a record
+  // that loses the race to a later one cannot overwrite it.
+  async recordHostCloseReason(
+    identity: AssignmentIdentity,
+    reason: unknown,
+    at: number
+  ): Promise<RelayHostCloseReason | null> {
+    const parsed = relayHostCloseReasonFrom(reason)
+    if (!parsed) return null
+    await this.database.query(
+      `UPDATE relay_assignments
+         SET last_host_close_reason = ?, last_host_close_reason_at = ?
+       WHERE user_id = ? AND relay_host_id = ?
+         AND (last_host_close_reason_at IS NULL OR last_host_close_reason_at < ?)`,
+      [parsed, at, identity.userId, identity.relayHostId, at]
+    )
+    return parsed
+  }
+
+  // A host that proved itself is not signed out, whatever it said last. Fenced on `provedAt` so a
+  // clear still in flight cannot erase a reason the same host recorded after this proof, and
+  // predicated on a reason being there at all so the common case writes no row version.
+  async clearHostCloseReason(identity: AssignmentIdentity, provedAt: number): Promise<void> {
+    await this.database.query(
+      `UPDATE relay_assignments
+         SET last_host_close_reason = NULL, last_host_close_reason_at = NULL
+       WHERE user_id = ? AND relay_host_id = ?
+         AND last_host_close_reason IS NOT NULL AND last_host_close_reason_at <= ?`,
+      [identity.userId, identity.relayHostId, provedAt]
+    )
+  }
+
+  // For the caller that has no assignment read to piggyback on. A cell reads the reason off
+  // `resolve`, which its admission check already ran. `SELECT *` for the same reason `resolve`
+  // uses one: a boot that deferred the column addition must read no reason, not raise 42703.
+  async readHostCloseReason(identity: AssignmentIdentity): Promise<RelayHostCloseReason | null> {
+    const row = (
+      await this.database.query(
+        `SELECT * FROM relay_assignments WHERE user_id = ? AND relay_host_id = ?`,
+        [identity.userId, identity.relayHostId]
+      )
+    )[0]
+    return row ? relayHostCloseReasonFrom(row['last_host_close_reason']) : null
   }
 
   async setCellEnabled(cellId: string, enabled: boolean): Promise<void> {
