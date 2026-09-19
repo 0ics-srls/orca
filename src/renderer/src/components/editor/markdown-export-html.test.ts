@@ -39,6 +39,9 @@ describe('buildMarkdownExportHtml', () => {
   it('lets headings before Mermaid diagrams stay on the page they occupy', () => {
     const html = buildMarkdownExportHtml({ title: 'Notes', renderedHtml: '<h3>Flow</h3>' })
     expect(html).toContain('h3:has(+ .mermaid-block)')
+    expect(html).toContain(
+      '.markdown-annotation-block:has(+ .markdown-annotation-block .mermaid-block) h3'
+    )
     expect(html).toContain('page-break-after: auto')
   })
 })
