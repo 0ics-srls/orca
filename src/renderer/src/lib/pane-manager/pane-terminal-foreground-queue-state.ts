@@ -31,7 +31,8 @@ export function createQueueEntry(
     foregroundCoalesceTimer: null,
     foregroundReleaseDeadlineAt: null,
     foregroundReleaseDeadlineFixed: false,
-    denseSgr: false
+    denseSgr: false,
+    denseSgrClassified: false
   }
 }
 

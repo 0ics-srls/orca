@@ -19,7 +19,8 @@ function createEntry(): QueueEntry {
     foregroundCoalesceTimer: null,
     foregroundReleaseDeadlineAt: null,
     foregroundReleaseDeadlineFixed: false,
-    denseSgr: false
+    denseSgr: false,
+    denseSgrClassified: false
   }
 }
 

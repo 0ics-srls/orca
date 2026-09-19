@@ -368,6 +368,75 @@ describe('pane terminal output scheduler', () => {
     expect(written.join('')).toBe(input)
   })
 
+  it('classifies dense SGR split across sub-batch deliveries', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const input = Array.from(
+      { length: 1_200 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    for (let offset = 0; offset < input.length; offset += 1024) {
+      writeTerminalOutput(terminal, input.slice(offset, offset + 1024), {
+        foreground: false
+      })
+    }
+    vi.advanceTimersByTime(50)
+
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
+    while (parsed.length > 0) {
+      parsed.shift()?.()
+      vi.advanceTimersByTime(0)
+    }
+
+    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(input)
+    expect(terminal.write.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('ignores a stale dense parse release after the terminal queue is discarded', async () => {
+    vi.useFakeTimers()
+    const { discardTerminalOutput, writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 1_200 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+    const staleRelease = parsed.shift()
+    expect(staleRelease).toBeDefined()
+
+    discardTerminalOutput(terminal)
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
+    expect(terminal.write).toHaveBeenCalledTimes(2)
+
+    staleRelease?.()
+    vi.advanceTimersByTime(0)
+    // The old callback must not release the replacement generation's batch.
+    expect(terminal.write).toHaveBeenCalledTimes(2)
+
+    parsed.shift()?.()
+    vi.advanceTimersByTime(0)
+    expect(terminal.write).toHaveBeenCalledTimes(3)
+  })
+
   it('keeps foreground bytes behind a dense batch retained by an explicit flush', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()

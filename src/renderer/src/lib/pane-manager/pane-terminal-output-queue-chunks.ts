@@ -199,6 +199,6 @@ export function enqueueChunk(
     ackCredit: options?.ackCredit
   })
   entry.queuedChars += data.length
-  markQueueEntryData(entry, data)
+  markQueueEntryData(entry)
   recordQueueDebugPressure()
 }
