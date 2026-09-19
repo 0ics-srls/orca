@@ -130,6 +130,7 @@ beforeEach(() => {
 afterEach(cleanup)
 
 async function typeQuery(text: string) {
+  // Imported here, not at the top: the hoisted mock factories close over `mockState` and `sessions`.
   const { default: AiVaultPanel } = await import('./AiVaultPanel')
   render(<AiVaultPanel />)
   if (text) {

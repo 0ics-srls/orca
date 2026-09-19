@@ -147,10 +147,11 @@ export function useAiVaultPanelSearch(
   const scope: ExecutionHostScope | null =
     executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ? ALL_EXECUTION_HOSTS_SCOPE : host
   const trimmed = query.trim()
-  const queried = trimmed.length > 0
-  const localConsent = executionHostScope === 'local' && !isWebClientLocation() && !policy.enabled
+  const hasQuery = trimmed.length > 0
+  const needsLocalConsent =
+    executionHostScope === 'local' && !isWebClientLocation() && !policy.enabled
   // Until indexing is on the box is still the legacy title filter, not index search.
-  const searching = queried && !localConsent
+  const searching = hasQuery && !needsLocalConsent
   // `within` is memoized by the caller; a fresh object per render would restart
   // the search on every render and never let one settle.
   const request = useMemo(
@@ -184,8 +185,8 @@ export function useAiVaultPanelSearch(
     sessions,
     searchHits,
     searching,
-    queried,
-    localConsent,
+    hasQuery,
+    needsLocalConsent,
     host,
     resetKey: JSON.stringify([scope, request])
   }

@@ -26,8 +26,8 @@ function panelSearch(overrides: Partial<PanelSearch> = {}): PanelSearch {
     sessions: [],
     searchHits: new Map(),
     searching: true,
-    queried: true,
-    localConsent: false,
+    hasQuery: true,
+    needsLocalConsent: false,
     host: null,
     resetKey: 'all',
     ...overrides
