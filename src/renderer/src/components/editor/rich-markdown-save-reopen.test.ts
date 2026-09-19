@@ -1,0 +1,81 @@
+import { Editor } from '@tiptap/core'
+import { describe, expect, it } from 'vitest'
+import { encodeRawMarkdownHtmlForRichEditor } from './raw-markdown-html'
+import { createRichMarkdownExtensions } from './rich-markdown-extensions'
+import { commitRichMarkdownSerialization } from './rich-markdown-serialization-commit'
+import { createRichMarkdownEditorCodec } from './rich-markdown-source-transport'
+
+function openDocument(source: string): Editor {
+  const codec = createRichMarkdownEditorCodec()
+  return new Editor({
+    element: null,
+    extensions: createRichMarkdownExtensions({ codec }),
+    content: encodeRawMarkdownHtmlForRichEditor(source, codec),
+    contentType: 'markdown'
+  })
+}
+
+function canonicalize(source: string): string {
+  const editor = openDocument(source)
+  try {
+    editor.state.doc.check()
+    return editor.getMarkdown()
+  } finally {
+    editor.destroy()
+  }
+}
+
+const examples = [
+  ['prose', '_emphasis_ and __strong__, 中文 한글 😀 café'],
+  ['code', '```js\nx && y; x < y; const price = "$5"\n```\n\n` a  b `'],
+  ['destinations', '[a](a\\\\b\\)) and [query](https://example.com/?a=1&b=2)'],
+  ['lists', '0. first\n1. second\n\n* [x] checked\n* [ ] unchecked'],
+  ['table', '| value | code |\n| :--- | ---: |\n| a \\| b | `a  b` |'],
+  ['details', '<details>\n<summary>Title</summary>\n\nNested **body**.\n\n</details>'],
+  ['escapes', 'cost \\$5, literal \\*stars\\*, a \\& b and &copy;'],
+  ['adjacent blocks', '~~~text\n```\n~~~\n\n> quoted\n\n---']
+] as const
+
+for (const [endingName, eol] of [
+  ['LF', '\n'],
+  ['CRLF', '\r\n'],
+  ['CR', '\r']
+] as const) {
+  for (const trailingNewline of [false, true]) {
+    describe(`${endingName}, final newline ${trailingNewline}`, () => {
+      it.each(examples)('preserves %s through edits, saves, and reopening', (_name, body) => {
+        let disk = `# Edit target 0\n\n${body}${trailingNewline ? '\n' : ''}`.replace(/\n/g, eol)
+        for (let revision = 0; revision < 3; revision += 1) {
+          const editor = openDocument(disk)
+          try {
+            const canonical = editor.getMarkdown()
+            const refs = {
+              originalSourceRef: { current: disk },
+              baseCanonicalRef: { current: canonical },
+              lastCommittedMarkdownRef: { current: disk }
+            }
+            expect(commitRichMarkdownSerialization(editor, refs, canonicalize).markdown).toBe(disk)
+            const previous = `Edit target ${revision}`
+            const replacement = `Edit target ${revision + 1}`
+            const heading = editor.state.doc.firstChild
+            expect(heading?.textContent).toBe(previous)
+            editor.view.dispatch(editor.state.tr.insertText(replacement, 1, 1 + previous.length))
+            editor.state.doc.check()
+            const editedCanonical = editor.getMarkdown()
+            const saved = commitRichMarkdownSerialization(editor, refs, canonicalize)
+            expect(saved.didSerialize).toBe(true)
+            expect(saved.markdown).toBe(disk.replace(previous, replacement))
+            expect(canonicalize(saved.markdown)).toBe(editedCanonical)
+            expect(refs.lastCommittedMarkdownRef.current).toBe(saved.markdown)
+            expect(commitRichMarkdownSerialization(editor, refs, canonicalize).markdown).toBe(
+              saved.markdown
+            )
+            disk = saved.markdown
+          } finally {
+            editor.destroy()
+          }
+        }
+      })
+    })
+  }
+}
