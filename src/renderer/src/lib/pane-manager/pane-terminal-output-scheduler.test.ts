@@ -518,6 +518,43 @@ describe('pane terminal output scheduler', () => {
     expect(queuedByTerminal.has(terminal)).toBe(true)
   })
 
+  it('releases the dense pacing slot when a parsed ack credit throws', async () => {
+    vi.useFakeTimers()
+    const { writeTerminalOutput } = await loadScheduler()
+    const terminal = createTerminal()
+    const parsed: (() => void)[] = []
+    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
+      if (callback) {
+        parsed.push(callback)
+      }
+    })
+    const dense = Array.from(
+      { length: 300 },
+      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
+    ).join('')
+
+    writeTerminalOutput(terminal, dense, {
+      foreground: false,
+      ackCredit: () => {
+        throw new Error('ack credit failed')
+      }
+    })
+    writeTerminalOutput(terminal, dense, { foreground: false })
+    vi.advanceTimersByTime(50)
+    expect(terminal.write).toHaveBeenCalledTimes(1)
+
+    parsed.shift()?.()
+    vi.advanceTimersByTime(0)
+
+    // A throwing credit must not skip the dense release, or inFlight stays
+    // pinned and the terminal never drains again.
+    expect(terminal.write).toHaveBeenCalledTimes(2)
+    expect(mocks.recordRendererCrashBreadcrumb).toHaveBeenCalledWith(
+      'terminal_write_completion_error',
+      expect.objectContaining({ context: 'parsed-ack-credits' })
+    )
+  })
+
   it('promotes large background backlogs to high-priority drains', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()

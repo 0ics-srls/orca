@@ -1,4 +1,5 @@
 import { writeForegroundTerminalChunk } from './pane-terminal-foreground-render-settle'
+import { runGuardedWriteCompletionStep } from './xterm-write-callback-guard'
 import { registerTerminalOutputAckCredits } from './pane-terminal-output-ack-credit'
 import {
   armTerminalWriteStallWatch,
@@ -132,8 +133,12 @@ export function flushTerminalOutputImpl(
     } catch {
       // Why: pre-write hooks/setup failed before xterm owned these bytes; cancel the watch, but consumed + abandoned chunks still credit delivery.
       cancelTerminalWriteStallWatch(terminal)
-      ackCreditsParsed?.()
-      denseSgrRelease?.()
+      if (ackCreditsParsed) {
+        runGuardedWriteCompletionStep('flush-abort-ack-credits', ackCreditsParsed)
+      }
+      if (denseSgrRelease) {
+        runGuardedWriteCompletionStep('flush-abort-dense-release', denseSgrRelease)
+      }
       fireQueuedAckCredits(entry)
       clearForegroundRelease(entry)
       recordQueueDebugPressure()

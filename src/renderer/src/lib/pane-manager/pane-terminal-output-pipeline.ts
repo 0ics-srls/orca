@@ -82,10 +82,19 @@ export function composeParsedCallback(
     try {
       onParsed?.()
     } finally {
-      ackCreditsParsed?.()
-      denseSgrRelease?.()
-      pacer?.()
-      settleTerminalWriteStallWatch(terminal)
+      // Why guarded per step: one throwing step would skip every later one, and a skipped dense release pins inFlight so the pane never drains again.
+      if (ackCreditsParsed) {
+        runGuardedWriteCompletionStep('parsed-ack-credits', ackCreditsParsed)
+      }
+      if (denseSgrRelease) {
+        runGuardedWriteCompletionStep('parsed-dense-release', denseSgrRelease)
+      }
+      if (pacer) {
+        runGuardedWriteCompletionStep('parsed-pacer', pacer)
+      }
+      runGuardedWriteCompletionStep('parsed-stall-settle', () =>
+        settleTerminalWriteStallWatch(terminal)
+      )
     }
   }
 }
@@ -98,8 +107,12 @@ export function composeWriteFailureCallback(
   return () => {
     try {
       // A rejected write still consumed the main-owned delivery window.
-      ackCreditsParsed?.()
-      denseSgrRelease?.()
+      if (ackCreditsParsed) {
+        runGuardedWriteCompletionStep('write-failure-ack-credits', ackCreditsParsed)
+      }
+      if (denseSgrRelease) {
+        runGuardedWriteCompletionStep('write-failure-dense-release', denseSgrRelease)
+      }
     } finally {
       // Why: a synchronous rejection proves undeliverability but nothing about parse progress; recover without extending replay guards.
       failTerminalWriteStallWatch(terminal)
@@ -179,8 +192,12 @@ export function writeQueuedChunk(entry: QueueEntry): 'foreground' | 'background'
   } catch {
     // Why: beforeWrite or write setup can fail before xterm owns the bytes; cancel the armed watch without claiming parser failure.
     cancelTerminalWriteStallWatch(entry.terminal)
-    ackCreditsParsed?.()
-    denseSgrRelease?.()
+    if (ackCreditsParsed) {
+      runGuardedWriteCompletionStep('drain-abort-ack-credits', ackCreditsParsed)
+    }
+    if (denseSgrRelease) {
+      runGuardedWriteCompletionStep('drain-abort-dense-release', denseSgrRelease)
+    }
     fireQueuedAckCredits(entry)
     entry.chunks.length = 0
     entry.chunkIndex = 0
