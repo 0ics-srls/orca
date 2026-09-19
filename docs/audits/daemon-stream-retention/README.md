@@ -24,11 +24,10 @@ Visible 64 KiB and 1 KiB producers should pause within the backlog budget and re
 
 The last 32 MiB retained another 33,596,928 queued payload bytes. The held queue plateaued at 32 MiB while the socket queue grew at 1.00127 bytes per produced ASCII byte. Resuming the reader drained both queues in 74 ms. Sampled RSS reached 1.38 GB with 64 KiB chunks; this includes string coalescing/slicing and GC effects.
 
-The original measurement's build command was:
+The original measurement used Node v26.6.0 on macOS; the current reproduction records its runtime and should be run on the supported Node 24 toolchain. The historical build command was:
 
 ```sh
-ORCA_BACKGROUND_LAUNCH=1 node_modules/.bin/esbuild src/main/daemon/daemon-stream-data-batcher.ts --bundle --platform=node --format=esm --outfile=notes/daemon-stream-retention/daemon-stream-data-batcher.mjs
-ORCA_BACKGROUND_LAUNCH=1 node notes/daemon-stream-retention/compare.mjs
+ORCA_BACKGROUND_LAUNCH=1 node docs/audits/daemon-stream-retention/reproduce.mjs
 ```
 
 This proves a current stalled-consumer retaining path. It does not attribute issue #19831's whole-system memory total to this path; that report lacks per-process measurements.
