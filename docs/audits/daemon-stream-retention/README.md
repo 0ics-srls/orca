@@ -10,7 +10,7 @@ The script bundles the current `DaemonStreamDataBatcher` with esbuild, then uses
 
 Visible 64 KiB and 1 KiB producers should pause within the backlog budget and resume after both queues drain. A hidden 1 KiB producer should keep running while the existing keep-tail policy bounds its held output. RSS includes allocator/GC timing; queue measurements are the direct evidence.
 
-`after.json` records the fixed run: the visible bulk producer paused after 2,686,976 characters with 131,300 socket bytes and 2,031,616 held characters; the visible small-write producer paused with 3,401,200 socket bytes. The hidden producer processed all 8 MiB with 131,300 socket bytes and 667,648 held characters. Every case resumed and drained both queues to zero.
+`after.json` records a historical fixed run under Node v26.6.0: the visible bulk producer paused after 2,686,976 characters with 131,300 socket bytes and 2,031,616 held characters; the visible small-write producer paused with 3,401,200 socket bytes. The hidden producer processed all 8 MiB with 131,300 socket bytes and 667,648 held characters. Every case resumed and drained both queues to zero.
 
 ## Preserved measurements before the fix
 

@@ -38,7 +38,7 @@ function nonSentinelWrites(streamSocket: { write: ReturnType<typeof vi.fn> }): P
 }
 
 describe('DaemonStreamDataBatcher', () => {
-  it.each(['', 'x'])('accounts held transformed entries with %i payload characters', (data) => {
+  it.each(['', 'x'])('accounts held transformed entries with %s payload data', (data) => {
     vi.useFakeTimers()
     let paused = false
     const { batcher, streamSocket } = createBatcher({

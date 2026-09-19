@@ -98,13 +98,21 @@ async function run(chunkSize, hidden) {
   }
 }
 
+const cases = [await run(64 * 1024, false), await run(1024, false), await run(1024, true)]
+if (!cases[0].stalled.producerPaused || !cases[1].stalled.producerPaused) {
+  throw new Error('Visible producer did not pause under the stalled-reader budget')
+}
+if (cases[2].stalled.producerPaused || cases[2].stalled.producedChars !== 8 * MiB) {
+  throw new Error('Droppable producer paused or failed to process the full reproduction input')
+}
+
 console.log(
   JSON.stringify(
     {
       node: process.version,
       platform: process.platform,
       bundleSha256: createHash('sha256').update(bundle).digest('hex'),
-      cases: [await run(64 * 1024, false), await run(1024, false), await run(1024, true)]
+      cases
     },
     null,
     2
