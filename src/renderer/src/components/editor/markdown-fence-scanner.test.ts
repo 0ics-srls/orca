@@ -32,7 +32,7 @@ describe('createMarkdownFenceTracker', () => {
     ['exact-length closer', '```\nbody\n```'],
     ['longer closer', '```\nbody\n`````'],
     ['closer with trailing whitespace', '```\nbody\n```  \t'],
-    ['indented closer', '```\nbody\n      ```'],
+    ['indented closer', '```\nbody\n   ```'],
     ['tilde closer', '~~~\nbody\n~~~']
   ])('closes on a %s', (_name, content) => {
     expect(insideFenceLines(content)).toEqual(['body'])
