@@ -37,11 +37,12 @@ function paddingPlaceholder(nodes: MarkdownNodeLike[]): string {
   return placeholder
 }
 
-export function maskCodeSpanPadding(
-  nodes: MarkdownNodeLike[],
-  placeholder = paddingPlaceholder(nodes)
-): MarkdownNodeLike[] {
-  return nodes.map((node) => {
+export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): {
+  nodes: MarkdownNodeLike[]
+  placeholder: string
+} {
+  const placeholder = paddingPlaceholder(nodes)
+  const masked = nodes.map((node) => {
     if (node?.type !== 'text' || !hasCodeMark(node)) {
       return node
     }
@@ -57,9 +58,10 @@ export function maskCodeSpanPadding(
       text: placeholder.repeat(leading.length) + body + placeholder.repeat(trailing.length)
     }
   })
+  return { nodes: masked, placeholder }
 }
 
-export function restoreCodeSpanPadding(markdown: string, placeholder = '\uE000'): string {
+export function restoreCodeSpanPadding(markdown: string, placeholder: string): string {
   return markdown.split(placeholder).join(' ')
 }
 
@@ -87,9 +89,11 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
       nodes: MarkdownNodeLike[],
       ...rest: unknown[]
     ) {
-      const placeholder = paddingPlaceholder(nodes ?? [])
-      const rendered = walk.call(this, maskCodeSpanPadding(nodes ?? [], placeholder), ...rest)
-      return typeof rendered === 'string' ? restoreCodeSpanPadding(rendered, placeholder) : rendered
+      const masked = maskCodeSpanPadding(nodes ?? [])
+      const rendered = walk.call(this, masked.nodes, ...rest)
+      return typeof rendered === 'string'
+        ? restoreCodeSpanPadding(rendered, masked.placeholder)
+        : rendered
     }
   }
 })
