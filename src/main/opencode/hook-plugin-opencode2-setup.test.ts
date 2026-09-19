@@ -18,6 +18,18 @@ import { _internals } from './hook-service'
 
 // Execute the generated module against legacy and current plugin contracts.
 describe('OpenCode 2 setup and prompt ordering', () => {
+  type PostBody = { payload?: unknown }
+
+  function record(value: unknown): Record<string, unknown> | undefined {
+    return typeof value === 'object' && value !== null
+      ? Object.fromEntries(Object.entries(value))
+      : undefined
+  }
+
+  function payload(body: PostBody): Record<string, unknown> {
+    return record(body.payload) ?? {}
+  }
+
   type PluginHooks = {
     event: (input: { event: unknown }) => Promise<void>
     dispose?: () => Promise<void>
@@ -132,9 +144,9 @@ describe('OpenCode 2 setup and prompt ordering', () => {
 
   it('maps permission, form, and text events through the live setup bridge', async () => {
     process.env.ORCA_PANE_KEY = 'tab-1:leaf-1'
-    const posts: { body: Record<string, unknown> }[] = []
+    const posts: { body: PostBody }[] = []
     globalThis.fetch = vi.fn(async (_input, init) => {
-      posts.push({ body: JSON.parse(String(init?.body)) })
+      posts.push({ body: record(JSON.parse(String(init?.body))) ?? {} })
       return new Response('{}', { status: 200 })
     })
     const module = await loadPluginModule(_internals.getOpenCode2PluginSource())
@@ -188,15 +200,11 @@ describe('OpenCode 2 setup and prompt ordering', () => {
       }
     })
     await vi.waitFor(() => {
-      const names = posts.map(
-        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
-      )
+      const names = posts.map(({ body }) => payload(body).hook_event_name)
       expect(names).toEqual(expect.arrayContaining(['PermissionRequest', 'MessagePart']))
     })
     await vi.waitFor(() => {
-      const names = posts.map(
-        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
-      )
+      const names = posts.map(({ body }) => payload(body).hook_event_name)
       expect(names).toContain('AskUserQuestion')
       expect(posts).toEqual(
         expect.arrayContaining([
@@ -212,9 +220,7 @@ describe('OpenCode 2 setup and prompt ordering', () => {
       )
     })
     await vi.waitFor(() => {
-      const names = posts.map(
-        ({ body }) => (body.payload as Record<string, unknown>)?.hook_event_name
-      )
+      const names = posts.map(({ body }) => payload(body).hook_event_name)
       expect(names).toContain('SessionIdle')
     })
     await cleanup?.()
