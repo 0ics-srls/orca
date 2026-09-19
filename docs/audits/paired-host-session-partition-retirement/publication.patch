@@ -1,18 +1,21 @@
+===================================================================
 --- a/src/main/agent-hooks/server.ts
 +++ b/src/main/agent-hooks/server.ts
-@@ -44,0 +45 @@
+@@ -44,0 +45,1 @@
 +    agentHookServer._resetCanonicalStatusForTests()
+===================================================================
 --- a/src/main/agent-hooks/server/server-ingest-structured.ts
 +++ b/src/main/agent-hooks/server/server-ingest-structured.ts
-@@ -2 +2,6 @@
+@@ -2,1 +2,1 @@
 -import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
 +import type { AgentStatusIpcPayload } from '../../../shared/agent-status-types'
-+import {
+@@ -3,0 +4,5 @@
 +  parseAgentStatusSubject,
 +  serializeAgentStatusSubject,
 +  type AgentStatusStructuredSessionSubject
 +} from '../../../shared/agent-status-subject'
-@@ -7,0 +13 @@
++import {
+@@ -7,0 +13,1 @@
 +import { structuredStatusLegacyEvent } from './server-structured-status-row'
 @@ -10,5 +15,0 @@
 -/**
@@ -39,7 +42,7 @@
 +    ) {
 +      throw new Error('Structured status does not match its trusted owner subject')
 +    }
-@@ -20 +33 @@
+@@ -20,1 +33,1 @@
 -      this.dropStructuredStatus(summary.sessionId)
 +      this.dropStructuredStatus(parsed)
 @@ -23,2 +36,7 @@
@@ -64,7 +67,7 @@
 +      structuredHost: summary.hostExecutionOwned ? 'owned' : 'held',
 +      ...(summary.providerSession ? { providerSession: summary.providerSession } : {}),
 +      state,
-@@ -35 +60,12 @@
+@@ -35,1 +60,12 @@
 -        : {})
 +        : {}),
 +      receivedAt: Math.max(Date.now(), priorStatus?.receivedAt ?? 0),
@@ -158,6 +161,7 @@
 -function structuredStatusPaneKey(sessionId: string): string {
 -  return structuredAgentSessionPaneKey(structuredAgentSessionTabId(sessionId), sessionId)
 -}
+===================================================================
 --- a/src/main/agent-hooks/server/server-lifecycle.ts
 +++ b/src/main/agent-hooks/server/server-lifecycle.ts
 @@ -119,2 +119,4 @@
@@ -167,22 +171,24 @@
 +            this.scheduleAssistantMessageRetry(source, aliasedBody, enriched)
 +            this.scheduleCodexSubagentPoll(source, aliasedBody, enriched)
 +          }
-@@ -214,0 +217 @@
+@@ -214,0 +217,1 @@
 +    this.resetCanonicalStatus()
+===================================================================
 --- a/src/main/agent-hooks/server/server-listeners.ts
 +++ b/src/main/agent-hooks/server/server-listeners.ts
-@@ -7 +7,4 @@
+@@ -7,1 +7,4 @@
 -import type { HookListenerState } from '../../../shared/agent-hook-listener/listener-state'
 +import {
 +  getLegacyStatusListingOrder,
 +  type HookListenerState
 +} from '../../../shared/agent-hook-listener/listener-state'
-@@ -17,0 +21,5 @@
+@@ -17,0 +21,2 @@
 +import { serializeAgentStatusSubject } from '../../../shared/agent-status-subject'
 +import { structuredStatusLegacyEvent } from './server-structured-status-row'
-+
+@@ -18,0 +24,3 @@
 +// Why: the listing counter starts at 1, so an unassigned row must sort last — never above every ordered row.
 +const UNORDERED_STATUS_ROW = Number.MAX_SAFE_INTEGER
++
 @@ -19,0 +28,41 @@
 +  protected emitEnrichedStatus(enriched: EnrichedAgentHookEventPayload): void {
 +    this.onAgentStatus?.(enriched)
@@ -225,15 +231,14 @@
 +    }
 +    return rows.sort((a, b) => a.order - b.order).map(({ entry }) => entry)
 +  }
-@@ -37,4 +86,3 @@
+@@ -37,1 +86,1 @@
 -    for (const payload of this.state.lastStatusByPaneKey.values()) {
--      try {
++    for (const payload of this.combinedStatusEntries()) {
+@@ -39,2 +88,1 @@
 -        // Why: cache always holds enriched payloads; the map's declared type is the bare shape only because the shared module never reads it.
 -        listener({ ...(payload as EnrichedAgentHookEventPayload), isReplay: true })
-+    for (const payload of this.combinedStatusEntries()) {
-+      try {
 +        listener({ ...payload, isReplay: true })
-@@ -156,3 +204 @@
+@@ -156,3 +204,1 @@
 -    return Array.from(this.state.lastStatusByPaneKey.values(), (entry) =>
 -      toAgentStatusIpcPayload(entry as EnrichedAgentHookEventPayload)
 -    )
@@ -259,16 +264,17 @@
 -      const enriched = entry as EnrichedAgentHookEventPayload
 +    for (const enriched of this.combinedStatusEntries()) {
 +      const paneKey = enriched.paneKey
-@@ -204 +261,2 @@
+@@ -204,1 +261,2 @@
 -          observedInCurrentRuntime: this.runtimeObservedStatusPaneKeys.has(paneKey)
 +          observedInCurrentRuntime:
 +            Boolean(enriched.structuredHost) || this.runtimeObservedStatusPaneKeys.has(paneKey)
+===================================================================
 --- a/src/main/agent-hooks/server/server-state.ts
 +++ b/src/main/agent-hooks/server/server-state.ts
-@@ -2 +2 @@
+@@ -2,1 +2,1 @@
 -import { randomBytes } from 'node:crypto'
 +import { randomBytes, randomUUID } from 'node:crypto'
-@@ -5,0 +6 @@
+@@ -5,0 +6,1 @@
 +  canAdmitLegacyAgentStatusEntry,
 @@ -23,0 +25,3 @@
 +import { createAgentStatusStore, type AgentStatusStore } from '../../../shared/agent-status-store'
@@ -307,15 +313,16 @@
 +    this.canonicalListingOrder.clear()
 +    this.canonicalSubjectsByPane.clear()
 +  }
-@@ -76 +112,4 @@
+@@ -76,1 +112,4 @@
 -  protected state: HookListenerState = createHookListenerState()
 +  protected state: HookListenerState = createHookListenerState({
 +    nextListingOrder: this.nextStatusListingOrder,
 +    isCanonicalPaneKey: (paneKey) => this.canonicalSubjectsByPane.has(paneKey)
 +  })
-@@ -172 +211 @@
+@@ -172,1 +211,1 @@
 -  ): EnrichedAgentHookEventPayload
 +  ): EnrichedAgentHookEventPayload | undefined
+===================================================================
 --- a/src/main/agent-hooks/server/server-status-inference.ts
 +++ b/src/main/agent-hooks/server/server-status-inference.ts
 @@ -113,0 +114,3 @@
@@ -326,32 +333,34 @@
 +    if (!inferred) {
 +      return false
 +    }
+===================================================================
 --- a/src/main/agent-hooks/server/server-status-retries.ts
 +++ b/src/main/agent-hooks/server/server-status-retries.ts
-@@ -80 +80,3 @@
+@@ -80,1 +80,3 @@
 -    this.scheduleCodexSubagentPoll(source, body, next)
 +    if (next) {
 +      this.scheduleCodexSubagentPoll(source, body, next)
 +    }
+===================================================================
 --- a/src/main/agent-hooks/server/server-status-update.ts
 +++ b/src/main/agent-hooks/server/server-status-update.ts
-@@ -32 +32,4 @@
+@@ -32,1 +32,4 @@
 -  ): EnrichedAgentHookEventPayload {
 +  ): EnrichedAgentHookEventPayload | undefined {
 +    if (!this.canWriteLegacyStatusRow(payload)) {
 +      return undefined
 +    }
-@@ -75 +78,3 @@
+@@ -75,1 +78,3 @@
 -      this.writeLegacyStatusRow(enriched)
 +      if (!this.writeLegacyStatusRow(enriched)) {
 +        return undefined
 +      }
-@@ -128 +133,3 @@
+@@ -128,1 +133,3 @@
 -        this.writeLegacyStatusRow(previous)
 +        if (!this.writeLegacyStatusRow(previous)) {
 +          return undefined
 +        }
-@@ -227 +234,3 @@
+@@ -227,1 +234,3 @@
 -    this.writeLegacyStatusRow(enriched)
 +    if (!this.writeLegacyStatusRow(enriched)) {
 +      return undefined
@@ -360,7 +369,7 @@
 +    if (!this.canWriteLegacyStatusRow(previous)) {
 +      return
 +    }
-@@ -269 +281,3 @@
+@@ -269,1 +281,3 @@
 -    this.writeLegacyStatusRow(refreshed)
 +    if (!this.writeLegacyStatusRow(refreshed)) {
 +      return
@@ -383,6 +392,7 @@
 -    admitLegacyAgentStatus(
 +  private writeLegacyStatusRow(entry: EnrichedAgentHookEventPayload): boolean {
 +    return admitLegacyAgentStatus(
+===================================================================
 --- /dev/null
 +++ b/src/main/agent-hooks/server/server-structured-status-row.ts
 @@ -0,0 +1,24 @@
@@ -410,178 +420,30 @@
 +    payload: pickParsedAgentStatusPayload(row)
 +  }
 +}
---- a/src/main/ipc/pty/pane/empty-terminal-tab-retirement-owner.ts
-+++ /dev/null
-@@ -1,27 +0,0 @@
--import { parsePaneKey } from '../../../../shared/stable-pane-id'
--import {
--  paneSpawnReservationsByOwnerKey,
--  pendingRuntimePaneCreatesByOwnerKey
--} from './spawn-reservation'
--import { stablePaneAdoptionsByOwnerKey } from './stable-owner'
--
--export function hasPendingTerminalTabOwner(tabId: string): boolean {
--  for (const owners of [
--    paneSpawnReservationsByOwnerKey,
--    pendingRuntimePaneCreatesByOwnerKey,
--    stablePaneAdoptionsByOwnerKey
--  ]) {
--    for (const ownerKey of owners.keys()) {
--      const identity: unknown = JSON.parse(ownerKey)
--      if (
--        Array.isArray(identity) &&
--        identity.length === 3 &&
--        typeof identity[2] === 'string' &&
--        parsePaneKey(identity[2])?.tabId === tabId
--      ) {
--        return true
--      }
--    }
--  }
--  return false
--}
---- a/src/main/ipc/session-empty-terminal-tab-retirement.ts
-+++ /dev/null
-@@ -1,106 +0,0 @@
--import type { Store } from '../persistence'
--import type { OrcaRuntimeService } from '../runtime/orca-runtime'
--import {
--  captureEmptyTerminalTabRetirement,
--  hasTerminalTabBindingOrHistory,
--  isEmptyTerminalTabRetirementRequest,
--  type EmptyTerminalTabRetirementResult
--} from '../../shared/empty-terminal-tab-retirement'
--import { closeTerminalTabInWorkspaceSession } from '../../shared/workspace-session-terminal-tab-close'
--import { advanceTerminalTopologyRevision } from '../runtime/workspace-session-terminal-membership-authority'
--import {
--  createRepoRowExecutionHostLookup,
--  resolveWorktreeExecutionHost
--} from '../../shared/worktree-execution-host-resolution'
--import { resolveFolderWorkspaceHost } from '../../shared/folder-workspace-execution-host'
--import { parseWorkspaceKey } from '../../shared/workspace-scope'
--import { parseExecutionHostId } from '../../shared/execution-host'
--import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
--import { hasPendingTerminalTabOwner } from './pty/pane/empty-terminal-tab-retirement-owner'
--
--function isLocalWorkspace(store: Store, worktreeId: string): boolean {
--  const scope = parseWorkspaceKey(worktreeId)
--  if (scope?.type === 'folder') {
--    const state = {
--      repos: store.getRepos(),
--      folderWorkspaces: store.getFolderWorkspaces(),
--      projectGroups: store.getProjectGroups()
--    }
--    const folder = state.folderWorkspaces.find((row) => row.id === scope.folderWorkspaceId)
--    if (
--      !folder ||
--      (folder.executionHostId != null &&
--        parseExecutionHostId(folder.executionHostId)?.kind !== 'local')
--    ) {
--      return false
--    }
--    return resolveFolderWorkspaceHost(state, scope.folderWorkspaceId).kind === 'local'
--  }
--  const resolved = resolveWorktreeExecutionHost(
--    createRepoRowExecutionHostLookup(store.getRepos()),
--    {
--      repoId: getRepoIdFromWorktreeId(scope?.type === 'worktree' ? scope.worktreeId : worktreeId)
--    }
--  )
--  return resolved.kind === 'resolved' && resolved.hostId === 'local'
--}
--
--export function retireEmptyTerminalTab(
--  store: Store,
--  runtime: Pick<OrcaRuntimeService, 'hasEmptyTerminalTabRetirementOwner'> | undefined,
--  input: unknown
--): EmptyTerminalTabRetirementResult {
--  if (!isEmptyTerminalTabRetirementRequest(input)) {
--    return { closed: false, reason: 'invalid-identity' }
--  }
--  const { worktreeId, tabId, createdAt, generation } = input
--  if (!isLocalWorkspace(store, worktreeId)) {
--    return { closed: false, reason: 'not-local' }
--  }
--  const session = store.getWorkspaceSession('local')
--  if ((session.terminalTopologyRevisionByRepoId?.[getRepoIdFromWorktreeId(worktreeId)] ?? 0) <= 0) {
--    return { closed: false, reason: 'renderer-owned-membership' }
--  }
--  const unifiedOwners = Object.values(session.unifiedTabs ?? {})
--    .flat()
--    .filter((row) => row.id === tabId || row.entityId === tabId)
--  if (unifiedOwners.some((row) => row.structuredSessionId || row.viewMode === 'chat')) {
--    return { closed: false, reason: 'structured-owner' }
--  }
--  const owners = Object.entries(session.tabsByWorktree).flatMap(([worktree, tabs]) =>
--    tabs.filter((row) => row.id === tabId).map((row) => ({ worktree, row }))
--  )
--  if (owners.length > 1 || (owners[0] && owners[0].worktree !== worktreeId)) {
--    return { closed: false, reason: 'different-owner' }
--  }
--  const current = captureEmptyTerminalTabRetirement(session, worktreeId, tabId)
--  if (
--    owners.length > 0 &&
--    (!current || current.createdAt !== createdAt || current.generation !== generation)
--  ) {
--    return { closed: false, reason: 'stale-terminal' }
--  }
--  if (
--    owners.length === 0 &&
--    (unifiedOwners.length > 0 || hasTerminalTabBindingOrHistory(session, tabId))
--  ) {
--    return { closed: false, reason: 'unrepresented-owner' }
--  }
--  if (!runtime) {
--    return { closed: false, reason: 'runtime-unavailable' }
--  }
--  if (
--    runtime.hasEmptyTerminalTabRetirementOwner(worktreeId, tabId) ||
--    hasPendingTerminalTabOwner(tabId)
--  ) {
--    return { closed: false, reason: 'runtime-owner' }
--  }
--  const closed = closeTerminalTabInWorkspaceSession(session, worktreeId, tabId)
--  if (closed.pinned || closed.ptyIdsToKill.length > 0) {
--    return { closed: false, reason: 'stale-terminal' }
--  }
--  // No await separates owner admission from the durable membership change.
--  store.setWorkspaceSession(advanceTerminalTopologyRevision(closed.session, worktreeId), 'local')
--  store.flushOrThrow()
--  return { closed: true }
--}
---- a/src/main/ipc/session.ts
-+++ b/src/main/ipc/session.ts
-@@ -3,2 +2,0 @@
--import type { OrcaRuntimeService } from '../runtime/orca-runtime'
--import { retireEmptyTerminalTab } from './session-empty-terminal-tab-retirement'
-@@ -11,5 +9 @@
--export function registerSessionHandlers(store: Store, runtime: OrcaRuntimeService): void {
--  ipcMain.handle('session:retire-empty-terminal-tab', (_event, args: unknown) => {
--    return retireEmptyTerminalTab(store, runtime, args)
--  })
--
-+export function registerSessionHandlers(store: Store): void {
+===================================================================
 --- a/src/main/ports/advertised-url-parsing.ts
 +++ b/src/main/ports/advertised-url-parsing.ts
-@@ -2 +1,0 @@
+@@ -2,1 +1,0 @@
 -import { ownRetainedString } from '../../shared/own-retained-string'
-@@ -49 +48 @@
+@@ -49,1 +48,1 @@
 -      this.raw = ownRetainedString(chunk.slice(-PER_PTY_BUFFER_LIMIT))
 +      this.raw = chunk.slice(-PER_PTY_BUFFER_LIMIT)
+===================================================================
 --- a/src/main/ports/advertised-url-watcher.ts
 +++ b/src/main/ports/advertised-url-watcher.ts
-@@ -23 +22,0 @@
+@@ -23,1 +22,0 @@
 -import { ownRetainedString } from '../../shared/own-retained-string'
-@@ -144,5 +143 @@
+@@ -144,5 +143,1 @@
 -      const combined = prior + chunk
 -      const merged =
 -        combined.length > PENDING_PRE_BIND_LIMIT
 -          ? ownRetainedString(combined.slice(-PENDING_PRE_BIND_LIMIT))
 -          : combined
 +      const merged = (prior + chunk).slice(-PENDING_PRE_BIND_LIMIT)
+===================================================================
 --- a/src/main/providers/working-directory-validation.ts
 +++ b/src/main/providers/working-directory-validation.ts
-@@ -165 +165,12 @@
+@@ -165,1 +165,12 @@
 -  return waitForWorkingDirectoryValidation(validation, cwd, signal)
 +  const shared = validation
 +  // The shared probe outlives this caller; keep it from surfacing as unhandled.
@@ -645,6 +507,7 @@
 -    observeWorkingDirectoryValidation(shared, holder)
 -  })
 -}
+===================================================================
 --- a/src/shared/agent-hook-listener/listener-state.ts
 +++ b/src/shared/agent-hook-listener/listener-state.ts
 @@ -121,0 +122,9 @@
@@ -657,6 +520,7 @@
 +  return legacyStatusAdapter(state).canAdmit(caller, mode, entry)
 +}
 +
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-child-work-alias.ts
 @@ -0,0 +1,214 @@
@@ -874,6 +738,7 @@
 +    agentChildWorkFencesEqual(left.fence, right.fence)
 +  )
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-child-work-binding.ts
 @@ -0,0 +1,56 @@
@@ -933,6 +798,7 @@
 +  })
 +  return parsed && serializeAgentChildWorkBindingKey(parsed) === value ? parsed : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-child-work-codec.ts
 @@ -0,0 +1,273 @@
@@ -1209,6 +1075,7 @@
 +  const parsed = parseAgentChildWorkInput(input)
 +  return parsed ? { ...parsed, revision: value.revision } : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-child-work.ts
 @@ -0,0 +1,88 @@
@@ -1300,6 +1167,7 @@
 +): boolean {
 +  return agentStatusSubjectsEqual(child.parent, parent)
 +}
+===================================================================
 --- a/src/shared/agent-status-legacy-adapter.ts
 +++ b/src/shared/agent-status-legacy-adapter.ts
 @@ -71,0 +72,5 @@
@@ -1313,28 +1181,30 @@
 +    entry.structuredHost === undefined &&
 +    !isCanonicalPaneKey(entry.paneKey) &&
 +    canAdmitLegacyAgentStatus(caller, mode)
-@@ -145,0 +155 @@
+@@ -145,0 +155,1 @@
 +    canAdmit,
-@@ -147 +157 @@
+@@ -147,1 +157,1 @@
 -      if (isCanonicalPaneKey(entry.paneKey) || !canAdmitLegacyAgentStatus(caller, mode)) {
 +      if (!canAdmit(caller, mode, entry)) {
-@@ -150 +160 @@
+@@ -150,1 +160,1 @@
 -      if (!listingOrderByPaneKey.has(entry.paneKey)) {
 +      if (!listingOrderByPaneKey.has(entry.paneKey) || admitOptions.moveToEnd) {
-@@ -184 +193,0 @@
+@@ -184,1 +193,0 @@
 -        const sourceOrder = listingOrderByPaneKey.get(key)
 @@ -193,2 +202,2 @@
 -        } else if (sourceOrder !== undefined) {
 -          listingOrderByPaneKey.set(movedKey, sourceOrder)
 +        } else {
 +          listingOrderByPaneKey.set(movedKey, nextListingOrder())
+===================================================================
 --- a/src/shared/agent-status-run-alias-index.ts
 +++ b/src/shared/agent-status-run-alias-index.ts
-@@ -10,0 +11 @@
+@@ -10,0 +11,1 @@
 +import { AGENT_STATUS_STORE_LIMITS } from './agent-status-store-contract'
-@@ -16 +17 @@
+@@ -16,1 +17,1 @@
 -const MAX_RUN_IDS_PER_ALIAS = 256
 +const MAX_RUN_IDS_PER_ALIAS = AGENT_STATUS_STORE_LIMITS.parents
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-byte-budget.ts
 @@ -0,0 +1,65 @@
@@ -1403,6 +1273,7 @@
 +  }
 +  return bytes <= AGENT_STATUS_STORE_LIMITS.serializedBytes
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-child-queries.ts
 @@ -0,0 +1,34 @@
@@ -1440,6 +1311,7 @@
 +  }
 +  return matches
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-codec.ts
 @@ -0,0 +1,284 @@
@@ -1727,6 +1599,7 @@
 +      }
 +    : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-contract.ts
 @@ -0,0 +1,62 @@
@@ -1792,6 +1665,7 @@
 +  facts: AgentStatusFactRecord[]
 +  tombstones: AgentStatusTombstoneRecord[]
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-fact-codec.ts
 @@ -0,0 +1,119 @@
@@ -1914,6 +1788,7 @@
 +  const parsed = parseAgentStatusFactIdentity({ subject, key })
 +  return parsed && serializeAgentStatusFactKey(parsed) === value ? parsed : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-mutation.ts
 @@ -0,0 +1,263 @@
@@ -2180,6 +2055,7 @@
 +  compactTombstones(next)
 +  return validateAgentStatusStoreState(next) ? next : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-parent.ts
 @@ -0,0 +1,117 @@
@@ -2300,6 +2176,7 @@
 +  const parent = parseAgentStatusParentInput(input)
 +  return parent ? { ...parent, revision: value.revision } : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-run-index.ts
 @@ -0,0 +1,31 @@
@@ -2334,6 +2211,7 @@
 +  }
 +  return index
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-state.ts
 @@ -0,0 +1,266 @@
@@ -2603,6 +2481,7 @@
 +  }
 +  return validateAgentStatusStoreState(state) ? state : null
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store-status-codec.ts
 @@ -0,0 +1,245 @@
@@ -2851,6 +2730,7 @@
 +  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Every required and optional field is rebuilt from its canonical parser above.
 +  return parsed as AgentStatusIpcPayload
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-store.ts
 @@ -0,0 +1,189 @@
@@ -3043,6 +2923,7 @@
 +  }
 +  return store
 +}
+===================================================================
 --- /dev/null
 +++ b/src/shared/agent-status-transport-envelope.ts
 @@ -0,0 +1,113 @@
@@ -3159,105 +3040,7 @@
 +    return null
 +  }
 +}
---- a/src/shared/empty-terminal-tab-retirement.ts
-+++ /dev/null
-@@ -1,96 +0,0 @@
--import type { WorkspaceSessionState } from './workspace-session-state-types'
--
--export type EmptyTerminalTabRetirementRequest = {
--  worktreeId: string
--  tabId: string
--  createdAt: number
--  generation: number
--}
--export type EmptyTerminalTabRetirementResult =
--  | { closed: true }
--  | {
--      closed: false
--      reason:
--        | 'invalid-identity'
--        | 'not-local'
--        | 'renderer-owned-membership'
--        | 'structured-owner'
--        | 'different-owner'
--        | 'stale-terminal'
--        | 'unrepresented-owner'
--        | 'runtime-owner'
--        | 'runtime-unavailable'
--    }
--
--type EmptyTerminalTabState = Pick<
--  WorkspaceSessionState,
--  | 'tabsByWorktree'
--  | 'terminalLayoutsByTabId'
--  | 'remoteSessionIdsByTabId'
--  | 'terminalPtyIncarnationsByPaneKey'
--  | 'sleepingAgentSessionsByPaneKey'
-->
--
--export function hasTerminalTabBindingOrHistory(
--  session: EmptyTerminalTabState,
--  tabId: string
--): boolean {
--  const layout = session.terminalLayoutsByTabId[tabId]
--  return Boolean(
--    layout?.root ||
--    layout?.activeLeafId ||
--    layout?.expandedLeafId ||
--    session.remoteSessionIdsByTabId?.[tabId] ||
--    [layout?.ptyIdsByLeafId, layout?.buffersByLeafId, layout?.scrollbackRefsByLeafId].some(
--      (map) => Object.keys(map ?? {}).length > 0
--    ) ||
--    Object.keys(session.terminalPtyIncarnationsByPaneKey ?? {}).some((key) =>
--      key.startsWith(`${tabId}:`)
--    ) ||
--    Object.entries(session.sleepingAgentSessionsByPaneKey ?? {}).some(
--      ([key, value]) => key.startsWith(`${tabId}:`) || value.tabId === tabId
--    )
--  )
--}
--
--export function captureEmptyTerminalTabRetirement(
--  session: EmptyTerminalTabState,
--  worktreeId: string,
--  tabId: string
--): EmptyTerminalTabRetirementRequest | undefined {
--  const tabs = Object.values(session.tabsByWorktree)
--    .flat()
--    .filter((tab) => tab.id === tabId)
--  const row = session.tabsByWorktree[worktreeId]?.find((tab) => tab.id === tabId)
--  if (
--    !row ||
--    tabs.length !== 1 ||
--    row.worktreeId !== worktreeId ||
--    row.ptyId ||
--    row.isPinned ||
--    row.viewMode === 'chat' ||
--    (row.generation ?? 0) !== 0 ||
--    hasTerminalTabBindingOrHistory(session, tabId)
--  ) {
--    return undefined
--  }
--  return { worktreeId, tabId, createdAt: row.createdAt, generation: 0 }
--}
--
--export function isEmptyTerminalTabRetirementRequest(
--  value: unknown
--): value is EmptyTerminalTabRetirementRequest {
--  return (
--    typeof value === 'object' &&
--    value !== null &&
--    'worktreeId' in value &&
--    typeof value.worktreeId === 'string' &&
--    'tabId' in value &&
--    typeof value.tabId === 'string' &&
--    'createdAt' in value &&
--    typeof value.createdAt === 'number' &&
--    Number.isFinite(value.createdAt) &&
--    'generation' in value &&
--    value.generation === 0
--  )
--}
+===================================================================
 --- a/src/shared/protocol-version.ts
 +++ b/src/shared/protocol-version.ts
 @@ -132,0 +133,5 @@
@@ -3283,41 +3066,41 @@
 + */
 +export const AGENT_LAUNCH_RUNTIME_CAPABILITY = 'agent.launch.v1' as const
 +
-@@ -242 +263,2 @@
+@@ -242,1 +263,2 @@
 -  AUTOMATION_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY
 +  AUTOMATION_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY,
 +  AGENT_LAUNCH_RUNTIME_CAPABILITY
-@@ -298,0 +321 @@
+@@ -298,0 +321,1 @@
 +  TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY,
-@@ -336 +359,2 @@
+@@ -336,1 +359,2 @@
 -  NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY
 +  NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY,
 +  AGENT_LAUNCH_RUNTIME_CAPABILITY
+===================================================================
 --- a/src/shared/runtime-rpc-call-queue.ts
 +++ b/src/shared/runtime-rpc-call-queue.ts
-@@ -33 +33 @@
+@@ -33,1 +33,1 @@
 -  foreground: (QueuedRuntimeCall<unknown> | undefined)[]
 +  foreground: QueuedRuntimeCall<unknown>[]
-@@ -35 +35 @@
+@@ -35,1 +35,1 @@
 -  background: (QueuedRuntimeCall<unknown> | undefined)[]
 +  background: QueuedRuntimeCall<unknown>[]
-@@ -205 +204,0 @@
+@@ -205,1 +204,0 @@
 -    queue.foreground[queue.foregroundHead] = undefined
-@@ -217 +215,0 @@
+@@ -217,1 +215,0 @@
 -    queue.background[queue.backgroundHead] = undefined
-@@ -228 +226,2 @@
+@@ -228,1 +226,2 @@
 -    // Head indexes avoid repeated shifts; compaction bounds the consumed prefix.
 +    // Why: large remote-runtime refresh bursts can queue many calls;
 +    // head indexes avoid O(n) shift costs while compaction releases closures.
+===================================================================
 --- a/src/shared/structured-agent-session-live-turn.ts
 +++ b/src/shared/structured-agent-session-live-turn.ts
-@@ -8 +8,2 @@
+@@ -8,1 +8,2 @@
 -  AgentJournalToolCallItem
 +  AgentJournalToolCallItem,
 +  AgentJournalTurnLifecycle
-@@ -21,0 +23,21 @@
-+}
-+
+@@ -23,0 +25,21 @@
 +/** The same verdict for reduced items a caller holds unordered, so a reader that already has them
 + *  need not render and sort a whole snapshot to ask. Sequence is the ordering key the render pass
 + *  sorts on, and ties resolve to the later-reduced item exactly as that stable sort would. */
@@ -3337,11 +3120,12 @@
 +    }
 +  }
 +  return newest?.state === 'running' ? newest.turnId : null
---- a/src/shared/tui-agent-launch-defaults.ts
-+++ b/src/shared/tui-agent-launch-defaults.ts
-@@ -23,0 +24,15 @@
 +}
 +
+===================================================================
+--- a/src/shared/tui-agent-launch-defaults.ts
++++ b/src/shared/tui-agent-launch-defaults.ts
+@@ -25,0 +26,15 @@
 +/**
 + * Whether the configured arguments carry this agent's permission-bypass flag.
 + *
@@ -3355,6 +3139,8 @@
 +): boolean {
 +  const bypassArg = YOLO_TUI_AGENT_ARGS[agent]
 +  return typeof value === 'string' && bypassArg !== undefined && argPattern(bypassArg).test(value)
++}
++
 @@ -95,0 +111,14 @@
 +/**
 + * Whether this agent's *resolved* launch arguments ask for a permission bypass.
@@ -3370,6 +3156,7 @@
 +  return tuiAgentArgsBypassPermissions(agent, resolveTuiAgentLaunchArgs(agent, configuredArgs))
 +}
 +
+===================================================================
 --- a/src/shared/windows-terminal-shell.ts
 +++ b/src/shared/windows-terminal-shell.ts
 @@ -56,0 +57,44 @@
@@ -3417,11 +3204,12 @@
 +export function listSupportedWindowsShellOverrides(): string[] {
 +  return [...WINDOWS_SHELL_OVERRIDE_CANONICAL_NAMES.keys()].sort()
 +}
+===================================================================
 --- a/src/shared/workspace-session-terminal-buffers.ts
 +++ b/src/shared/workspace-session-terminal-buffers.ts
-@@ -8 +7,0 @@
+@@ -8,1 +7,0 @@
 -import { ownRetainedString } from './own-retained-string'
-@@ -57,3 +56 @@
+@@ -57,3 +56,1 @@
 -  return ownRetainedString(
 -    clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text
 -  )

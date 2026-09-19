@@ -1,10 +1,11 @@
+===================================================================
 --- a/src/main/ipc/renderer-shutdown-checkpoint.ts
 +++ b/src/main/ipc/renderer-shutdown-checkpoint.ts
-@@ -0,0 +1 @@
+@@ -0,0 +1,1 @@
 +import { canCreateRendererSessionPartition } from './renderer-workspace-session-admission'
-@@ -49,0 +51 @@
+@@ -49,0 +51,1 @@
 +    let admissionOk = true
-@@ -52 +54,11 @@
+@@ -52,1 +54,11 @@
 -        store.stageWorkspaceSessionBeforeUnload(state, hostId)
 +        let admitted: boolean
 +        try {
@@ -24,6 +25,7 @@
 +      ? flushStagedStateWithDeadline(store).then((result) => ({ ok: result.ok && admissionOk }))
 +      : Promise.resolve({ ok: false })
 +    event.returnValue = { ok: ok && admissionOk }
+===================================================================
 --- /dev/null
 +++ b/src/main/ipc/renderer-workspace-session-admission.ts
 @@ -0,0 +1,18 @@
@@ -45,6 +47,7 @@
 +    (entry) => entry.id === parsed.environmentId
 +  )
 +}
+===================================================================
 --- a/src/main/ipc/runtime-environment-connectivity-handlers.ts
 +++ b/src/main/ipc/runtime-environment-connectivity-handlers.ts
 @@ -0,0 +1,2 @@
@@ -57,21 +60,22 @@
 +      if (!preserveMainNamespace) {
 +        store.removeRuntimeWorkspaceSessionPartition(hostId)
 +      }
+===================================================================
 --- a/src/main/ipc/session.ts
 +++ b/src/main/ipc/session.ts
-@@ -0,0 +1 @@
+@@ -0,0 +1,1 @@
 +import { canCreateRendererSessionPartition } from './renderer-workspace-session-admission'
-@@ -17 +18,3 @@
+@@ -23,1 +24,3 @@
 -    store.setWorkspaceSession(args, hostId)
-+    if (canCreateRendererSessionPartition(store, hostId)) {
++    if (isRendererSessionAdmitted(store, hostId)) {
 +      store.setWorkspaceSession(args, hostId)
 +    }
-@@ -21 +24,3 @@
+@@ -27,1 +30,3 @@
 -    store.patchWorkspaceSession(args, hostId)
-+    if (canCreateRendererSessionPartition(store, hostId)) {
++    if (isRendererSessionAdmitted(store, hostId)) {
 +      store.patchWorkspaceSession(args, hostId)
 +    }
-@@ -35 +40,11 @@
+@@ -41,1 +46,11 @@
 -    store.setWorkspaceSession(args, hostId)
 +    let admitted = false
 +    let admissionOk = true
@@ -84,16 +88,39 @@
 +    if (admitted) {
 +      store.setWorkspaceSession(args, hostId)
 +    }
-@@ -37 +52 @@
+@@ -43,1 +58,1 @@
 -    event.returnValue = true
 +    event.returnValue = admissionOk
+@@ -53,0 +69,9 @@
++
++function isRendererSessionAdmitted(store: Store, hostId?: string | null): boolean {
++  try {
++    return canCreateRendererSessionPartition(store, hostId)
++  } catch (error) {
++    console.error('[session] Failed to establish runtime session partition authority:', error)
++    return false
++  }
++}
+===================================================================
 --- a/src/main/persistence/loading-store/session-host-partitions.ts
 +++ b/src/main/persistence/loading-store/session-host-partitions.ts
-@@ -6,0 +7 @@
+@@ -6,0 +7,1 @@
 +  parseExecutionHostId,
-@@ -80,0 +82,17 @@
-+  }
-+
+@@ -14,1 +15,5 @@
+-import { readTerminalScrollbackSnapshotSync } from '../../terminal-scrollback-snapshots'
++import {
++  collectTerminalScrollbackSnapshotRefs,
++  deleteTerminalScrollbackSnapshotSync,
++  readTerminalScrollbackSnapshotSync
++} from '../../terminal-scrollback-snapshots'
+@@ -34,1 +39,5 @@
+-  'state' | 'terminalScrollbackSnapshotStorage'
++  | 'state'
++  | 'terminalScrollbackSnapshotStorage'
++  | 'flushOrThrow'
++  | 'writesFrozen'
++  | 'quitFlushStarted'
+@@ -82,0 +92,19 @@
 +  removeRuntimeWorkspaceSessionPartition(hostId: ExecutionHostId): boolean {
 +    if (
 +      parseExecutionHostId(hostId)?.kind !== 'runtime' ||
@@ -101,6 +128,7 @@
 +    ) {
 +      return false
 +    }
++    const prior = this.getWorkspaceSession(hostId)
 +    const partitions = {
 +      ...this[sessionHostPartitionOperationsContext].runtime.state.workspaceSessionsByHostId
 +    }
@@ -108,13 +136,53 @@
 +    this[sessionHostPartitionOperationsContext].runtime.state.workspaceSessionsByHostId = partitions
 +    invalidateLocalWorktreeMetadataPruneInputs()
 +    scheduleSave(this[sessionHostPartitionOperationsContext].scheduling)
++    releaseRemovedHostScrollbackSnapshots(this, prior)
 +    return true
++  }
++
+@@ -219,0 +248,34 @@
++
++function releaseRemovedHostScrollbackSnapshots(
++  owner: SessionHostPartitionOperations,
++  prior: WorkspaceSessionState
++): void {
++  const { runtime } = owner[sessionHostPartitionOperationsContext]
++  const refs = collectTerminalScrollbackSnapshotRefs(prior)
++  if (refs.size === 0 || runtime.writesFrozen || runtime.quitFlushStarted) {
++    return
++  }
++  for (const hostId of owner.getWorkspaceSessionHostIds()) {
++    for (const ref of collectTerminalScrollbackSnapshotRefs(owner.getWorkspaceSession(hostId))) {
++      refs.delete(ref)
++    }
++  }
++  if (refs.size === 0) {
++    return
++  }
++  try {
++    // Never remove files while the durable profile can still reference them.
++    runtime.flushOrThrow()
++  } catch (error) {
++    console.warn(
++      '[terminal-scrollback] Retaining removed host snapshots after save failure:',
++      error
++    )
++    return
++  }
++  // Legacy fallback files can still belong to another profile.
++  const storage = { ...runtime.terminalScrollbackSnapshotStorage, fallbackSnapshotRoot: null }
++  for (const ref of refs) {
++    deleteTerminalScrollbackSnapshotSync(ref, storage)
++  }
++}
+===================================================================
 --- a/src/main/runtime/runtime-legacy-worker-terminal-recovery-persistence.ts
 +++ b/src/main/runtime/runtime-legacy-worker-terminal-recovery-persistence.ts
 @@ -77,0 +78,3 @@
 +        if (store.getWorkspaceSessionHostIds?.().includes(hostId) === false) {
 +          continue
 +        }
+===================================================================
 --- /dev/null
 +++ b/src/main/runtime/runtime-workspace-session-namespace-custody.ts
 @@ -0,0 +1,58 @@
