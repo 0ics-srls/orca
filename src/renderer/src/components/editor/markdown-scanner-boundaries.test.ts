@@ -41,3 +41,23 @@ it.each(['```~~~', '      ```'])('matches the parser on the closer %j', (closer)
   expect(getMarkdownFenceRanges(source)).toEqual([[0, code.raw.length]])
   expect(stripMarkdownCode(source).includes('<div>after</div>')).toBe(closer === '```~~~')
 })
+
+it.each(['-', '--', '---'])('keeps multiline spans after a bare %s line', (divider) => {
+  const source = `Text\n${divider}\nA \`code\nspan\` here`
+  const spans: string[] = []
+  marked.walkTokens(marked.lexer(source), (token) => {
+    if (token.type === 'codespan') {
+      spans.push(token.raw)
+    }
+  })
+  expect(spans).toEqual(['`code\nspan`'])
+  expect(createMarkdownCodeSpanScanner(source).findSpanEnd(source.indexOf('`'))).toBe(
+    source.lastIndexOf('`') + 1
+  )
+})
+
+it.each(['| --- |', ':---'])('keeps table rows separate for %s', (delimiter) => {
+  const source = `| header |\n${delimiter}\n| \`code |\n| span\` |`
+  expect(marked.lexer(source)[0].type).toBe('table')
+  expect(createMarkdownCodeSpanScanner(source).findSpanEnd(source.indexOf('`'))).toBeNull()
+})
