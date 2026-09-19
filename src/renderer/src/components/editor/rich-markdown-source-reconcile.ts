@@ -133,25 +133,29 @@ function stripTrailingNewlines(lfText: string): string {
   return lfText.replace(/\n+$/, '')
 }
 
-function detectDominantEol(text: string): '\n' | '\r\n' {
+function detectDominantEol(text: string): '\n' | '\r\n' | '\r' {
   const totalLf = (text.match(/\n/g) ?? []).length
   const crlf = (text.match(/\r\n/g) ?? []).length
   const lfOnly = totalLf - crlf
+  const crOnly = (text.match(/\r/g) ?? []).length - crlf
+  if (crOnly > Math.max(lfOnly, crlf)) {
+    return '\r'
+  }
   return crlf > 0 && crlf >= lfOnly ? '\r\n' : '\n'
 }
 
 function toLf(text: string): string {
-  return text.replace(/\r\n/g, '\n')
+  return text.replace(/\r\n|\r/g, '\n')
 }
 
-function restoreEol(lfText: string, eol: '\n' | '\r\n'): string {
+function restoreEol(lfText: string, eol: '\n' | '\r\n' | '\r'): string {
   // lfText is pure LF, so a blind LF→CRLF replace produces no mixed endings.
-  return eol === '\r\n' ? lfText.replace(/\n/g, '\r\n') : lfText
+  return eol === '\n' ? lfText : lfText.replace(/\n/g, eol)
 }
 
 function normalizeForSafety(text: string): string {
   // Why: compare exactly (only CRLF-normalized) — a trailing `\n\n` empty paragraph is semantic, so a lenient trimEnd would mask the trailing-block drift branch 6 must catch.
-  return text.replace(/\r\n/g, '\n')
+  return text.replace(/\r\n|\r/g, '\n')
 }
 
 function getUtf8OffsetsAtCodeUnitIndices(

@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { encodeRawMarkdownHtmlForRichEditor } from './raw-markdown-html'
 import { createRichMarkdownExtensions } from './rich-markdown-extensions'
 import { commitRichMarkdownSerialization } from './rich-markdown-serialization-commit'
@@ -143,4 +143,48 @@ for (const eol of ['\n', '\r\n', '\r']) {
       })
     })
   }
+}
+
+for (const eol of ['\n', '\r\n', '\r']) {
+  it.each(['null', 'throw'])(
+    `recovers after a %s reconciliation failure with EOL ${JSON.stringify(eol)}`,
+    (failure) => {
+      const source = '# target\n\n_unchanged_\n'.replace(/\n/g, eol)
+      const editor = openDocument(source)
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        const refs = {
+          originalSourceRef: { current: source },
+          baseCanonicalRef: { current: editor.getMarkdown() },
+          lastCommittedMarkdownRef: { current: source }
+        }
+        editor.view.dispatch(editor.state.tr.insertText('changed', 1, 7))
+        const saved = commitRichMarkdownSerialization(editor, refs, () => {
+          if (failure === 'throw') {
+            throw new Error('Injected round-trip failure')
+          }
+          return null
+        })
+        expect(canonicalize(saved.markdown)).toBe(editor.getMarkdown())
+        expect(saved.markdown.endsWith(eol)).toBe(true)
+        expect(refs.lastCommittedMarkdownRef.current).toBe(saved.markdown)
+        const serialize = vi.spyOn(editor, 'getMarkdown').mockImplementationOnce(() => {
+          throw new Error('Injected editor teardown')
+        })
+        expect(commitRichMarkdownSerialization(editor, refs, canonicalize)).toEqual({
+          markdown: saved.markdown,
+          didSerialize: false
+        })
+        serialize.mockRestore()
+        editor.view.dispatch(editor.state.tr.insertText('recovered', 1, 8))
+        const recovered = commitRichMarkdownSerialization(editor, refs, canonicalize)
+        expect(recovered.didSerialize).toBe(true)
+        expect(canonicalize(recovered.markdown)).toBe(editor.getMarkdown())
+        expect(recovered.markdown).toContain('recovered')
+      } finally {
+        consoleError.mockRestore()
+        editor.destroy()
+      }
+    }
+  )
 }
