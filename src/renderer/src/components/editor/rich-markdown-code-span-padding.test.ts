@@ -23,20 +23,20 @@ function roundTrip(source: string): string {
 describe('maskCodeSpanPadding', () => {
   it('leaves a node without a code mark alone', () => {
     const nodes = [{ type: 'text', text: ' padded ', marks: [] }]
-    expect(maskCodeSpanPadding(nodes)).toEqual(nodes)
+    expect(maskCodeSpanPadding(nodes).nodes).toEqual(nodes)
   })
 
   it('leaves an unpadded code span alone', () => {
     const nodes = [{ type: 'text', text: 'code', marks: [{ type: 'code' }] }]
-    expect(maskCodeSpanPadding(nodes)).toEqual(nodes)
+    expect(maskCodeSpanPadding(nodes).nodes).toEqual(nodes)
   })
 
   it('round-trips the padding it masks', () => {
-    const [masked] = maskCodeSpanPadding([
+    const masked = maskCodeSpanPadding([
       { type: 'text', text: ' code ', marks: [{ type: 'code' }] }
     ])
-    expect(masked.text).not.toContain(' ')
-    expect(restoreCodeSpanPadding(masked.text ?? '')).toBe(' code ')
+    expect(masked.nodes[0]?.text).not.toContain(' ')
+    expect(restoreCodeSpanPadding(masked.nodes[0]?.text ?? '', masked.placeholder)).toBe(' code ')
   })
 })
 
