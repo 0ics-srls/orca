@@ -79,3 +79,68 @@ for (const [endingName, eol] of [
     })
   }
 }
+
+const editableExamples = [
+  ['emphasis', 'A **target** and _untouched_.'],
+  ['link label', '[target](https://example.com/?a=1&b=2)'],
+  ['inline code', '` target `'],
+  ['fenced code', '```ts\nconst target = 1\n```'],
+  ['ordered list', '0. target\n1. untouched'],
+  ['task item', '- [x] target\n- [ ] untouched'],
+  ['table cell', '| value | other |\n| --- | --- |\n| target | untouched |'],
+  ['details body', '<details>\n<summary>Title</summary>\n\n**target**\n\n</details>']
+] as const
+
+for (const eol of ['\n', '\r\n', '\r']) {
+  for (const trailingNewline of [false, true]) {
+    describe(`edits inside constructs, EOL ${JSON.stringify(eol)}, final newline ${trailingNewline}`, () => {
+      it.each(editableExamples)('reopens literal text edited inside %s', (_name, body) => {
+        let source = `${body}\n\nUnchanged tail.${trailingNewline ? '\n' : ''}`.replace(/\n/g, eol)
+        let previous = 'target'
+        for (const replacement of ['中文 😀', '**literal** &copy;', '[label](path) $5', 'final']) {
+          const editor = openDocument(source)
+          try {
+            const refs = {
+              originalSourceRef: { current: source },
+              baseCanonicalRef: { current: editor.getMarkdown() },
+              lastCommittedMarkdownRef: { current: source }
+            }
+            let position: number | undefined
+            editor.state.doc.descendants((node, offset) => {
+              const index = node.isTextblock ? node.textContent.indexOf(previous) : undefined
+              if (index !== undefined && index >= 0) {
+                position = offset + 1 + index
+              }
+            })
+            expect(position).toBeDefined()
+            if (position === undefined) {
+              throw new Error('missing edit target')
+            }
+            editor.view.dispatch(
+              editor.state.tr.insertText(replacement, position, position + previous.length)
+            )
+            const expectedText = editor.state.doc.textContent
+            const expectedMarkdown = editor.getMarkdown()
+            const saved = commitRichMarkdownSerialization(editor, refs, canonicalize)
+            const reopened = openDocument(saved.markdown)
+            try {
+              reopened.state.doc.check()
+              expect(reopened.state.doc.textContent).toBe(expectedText)
+              expect(reopened.getMarkdown()).toBe(expectedMarkdown)
+              expect(saved.markdown).toContain('Unchanged tail.')
+              expect(commitRichMarkdownSerialization(editor, refs, canonicalize).markdown).toBe(
+                saved.markdown
+              )
+            } finally {
+              reopened.destroy()
+            }
+            previous = replacement
+            source = saved.markdown
+          } finally {
+            editor.destroy()
+          }
+        }
+      })
+    })
+  }
+}
