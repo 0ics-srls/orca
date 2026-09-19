@@ -126,7 +126,7 @@ export function TabBarStaticCreateMenu({
               <DropdownMenuShortcut>{newSimulatorShortcut}</DropdownMenuShortcut>
             </DropdownMenuItem>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="z-[80]">
+          <TooltipContent side="right" sideOffset={8}>
             {translate(
               'auto.components.tab.bar.TabBar.aea43b5748',
               'Open the existing emulator tab.'

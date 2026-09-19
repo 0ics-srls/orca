@@ -34,6 +34,7 @@ function DialogOverlay({
       // Why: in dark mode the canvas is already near-black, so a flat 50% black
       // scrim disappears into the background. A deeper scrim + 2px backdrop
       // blur lifts the canvas behind the dialog without needing per-mode colors.
+      // Why: all overlays share z-50; portal mount order decides. Never escalate.
       className={cn(
         'fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0',
         className

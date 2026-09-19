@@ -57,6 +57,7 @@ export default function WorkspaceStatusAppearancePopover({
         align="end"
         side="left"
         sideOffset={8}
+        // Why: the board keeps this picker above its sheet-local surface.
         className="z-[80] w-72 p-2"
         data-workspace-status-appearance-popover=""
         onOpenAutoFocus={(event) => event.preventDefault()}

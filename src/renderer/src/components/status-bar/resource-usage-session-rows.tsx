@@ -225,11 +225,7 @@ export function WorktreeRow({
                       <Trash2 className="size-3" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    sideOffset={4}
-                    className="z-[70] max-w-[200px] text-pretty"
-                  >
+                  <TooltipContent side="top" sideOffset={4} className="max-w-[200px]">
                     {isMainWorktree
                       ? translate(
                           'auto.components.status.bar.ResourceUsageStatusSegment.946724a70a',

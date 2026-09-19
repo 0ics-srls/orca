@@ -106,6 +106,20 @@ Orca uses shadows sparingly. Three levels in practice:
 
 Don't add a fourth level. If something needs more emphasis than "floating," you're probably reaching for the focus `ring` instead.
 
+### Overlay z-order
+
+Every default-portalled overlay — modal (`Dialog`, `Sheet`, command palette) and non-modal (`Popover`, `DropdownMenu`, `ContextMenu`, `Select`, `HoverCard`) — sits on one `z-50` tier, and stacking follows portal mount order: whatever mounts last paints on top. A confirm opened from a popover covers it; a picker opened from a dialog covers that. Ranked tiers cannot express this, because the two directions need opposite orders — so don't reintroduce per-layer gaps (`z-[60]`/`z-[70]`) or per-instance escalations to clear a sibling overlay. Components using a custom portal container own that container's stacking context.
+
+Three deliberate exceptions to that shared tier:
+
+- `Tooltip` at `z-[90]` — `pointer-events-none`, so it never blocks anything and must stay readable over whatever it describes. Don't override it per instance outside the onboarding ladder.
+- Contextual tours at `z-[70]` — a `pointer-events-none` spotlight that has to be visible over the very surface it points at. Its `z-[75]` rings and `z-[80]` panel are scoped inside their own stacking context, so they claim no global level.
+- The onboarding flow at `z-[100]`, an inline full-screen overlay that portalled content cannot reach. Its surfaces climb a private `z-[110]`–`z-[150]` ladder, and the two preemptive prompts that must interrupt onboarding (`SshPassphraseDialog`, `link-routing-preference-dialog`) top it out at `!z-[140]`/`!z-[150]`.
+
+Separately, a few transient full-screen layers sit above everything by design — the recent-tab switcher, drag ghosts, and the sidebar-resize capture shim. They are momentary and mostly `pointer-events-none`, so they never participate in overlay stacking.
+
+Outside those cases, a value above `z-50` is a smell: it pins a surface above the shared tier, so anything opened _from_ it renders behind it. Any new one must name the surface it clears in a `Why` comment.
+
 ## Components
 
 Use the shadcn primitives in `src/renderer/src/components/ui/` before writing anything custom. The shadcn-style wrappers in this folder follow a consistent pattern:

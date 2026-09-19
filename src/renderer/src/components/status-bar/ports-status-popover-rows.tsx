@@ -59,7 +59,7 @@ function PortAction({
       <TooltipTrigger asChild>
         {disabled ? <span className="inline-flex">{button}</span> : button}
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={4} className="z-[70]">
+      <TooltipContent side="top" sideOffset={4}>
         {tooltipLabel}
       </TooltipContent>
     </Tooltip>

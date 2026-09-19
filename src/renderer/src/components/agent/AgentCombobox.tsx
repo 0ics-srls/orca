@@ -103,7 +103,7 @@ function AgentDefaultContextMenu({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="z-[70]">
+      <ContextMenuContent>
         <ContextMenuItem onSelect={onSetDefault} disabled={isDefault}>
           <Star className="size-3.5" />
           {isDefault
@@ -139,8 +139,6 @@ function renderItem({
     </CommandItem>
   )
   return (
-    // Why: z-[70] sits above PopoverContent's z-[60] so the right-click menu
-    // renders in front of the still-open combobox popover instead of behind it.
     <AgentDefaultContextMenu key={key} isDefault={isDefault} onSetDefault={onSetDefault}>
       {row}
     </AgentDefaultContextMenu>

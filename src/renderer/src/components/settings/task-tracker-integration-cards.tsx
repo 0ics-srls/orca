@@ -221,8 +221,6 @@ export function LinearIntegrationCard(): React.JSX.Element {
         onOpenChange={setDialogOpen}
         connectLabel="Add Linear access"
         onConnected={() => setTestResultByWorkspace({})}
-        overlayClassName="z-[110]"
-        contentClassName="z-[120]"
       />
     </IntegrationCardShell>
   )

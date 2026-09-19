@@ -147,9 +147,9 @@ export function UsagePercentageDisplayChangeNotice({
       ? createPortal(
           <div
             role="status"
-            // Why: dropdowns/context menus use z-[70]; this callout must sit
-            // under them so status-bar provider menus stay clickable.
-            className="status-bar-change-notice-card fixed z-[50] w-[320px] max-w-[calc(100vw-16px)] rounded-lg p-3.5"
+            // Why: stays on the shared z-50 tier so a status-bar menu opened over
+            // this callout still portals above it and stays clickable.
+            className="status-bar-change-notice-card fixed z-50 w-[320px] max-w-[calc(100vw-16px)] rounded-lg p-3.5"
             style={{
               bottom: anchorPosition.bottom,
               left: anchorPosition.left

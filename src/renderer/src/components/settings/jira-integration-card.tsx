@@ -249,8 +249,6 @@ export function JiraIntegrationCard(): React.JSX.Element {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onConnected={() => setTestResultBySite({})}
-        overlayClassName="z-[110]"
-        contentClassName="z-[120]"
       />
     </IntegrationCardShell>
   )

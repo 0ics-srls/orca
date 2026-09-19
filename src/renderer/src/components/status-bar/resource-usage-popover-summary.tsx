@@ -157,7 +157,7 @@ export function renderResourceUsageSummary({
               {formatCpu(totalCpu)}
             </span>
           </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={6} className="z-[70] max-w-xs">
+          <TooltipContent side="top" sideOffset={6} className="max-w-xs">
             {translate(
               'auto.components.status.bar.ResourceUsageStatusSegment.1fedf94eae',
               'Combined CPU load. Values above 100% mean more than one core is working at once.'
@@ -177,7 +177,7 @@ export function renderResourceUsageSummary({
               </span>
             </span>
           </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={6} className="z-[70] max-w-xs">
+          <TooltipContent side="top" sideOffset={6} className="max-w-xs">
             {memoryMetricCopy.description}
           </TooltipContent>
         </Tooltip>
@@ -199,7 +199,7 @@ export function renderResourceUsageSummary({
                   </span>
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6} className="z-[70] max-w-xs">
+              <TooltipContent side="top" sideOffset={6} className="max-w-xs">
                 {commitMetricCopy.description}
               </TooltipContent>
             </Tooltip>

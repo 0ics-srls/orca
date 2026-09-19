@@ -126,6 +126,8 @@ export function LinkRoutingPreferenceDialogProvider({
         open={activeRequest !== null}
         onOpenChange={(open) => !open && settleActiveRequest(false)}
       >
+        {/* Why: a terminal link can fire mid-onboarding, so this prompt must clear
+            the onboarding overlay (z-100) rather than the default dialog z-50. */}
         <DialogContent
           showCloseButton={false}
           overlayClassName="!z-[140]"
