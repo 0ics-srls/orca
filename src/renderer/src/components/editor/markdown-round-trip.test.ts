@@ -843,7 +843,7 @@ it('preserves code spacing inside a table across repeated saves', () => {
 })
 
 it('retains an unchanged raw destination while repairing nearby attributes', () => {
-  const source = '[a](b\\)c) and ![x](image.png "say \\"hi\\"")'
+  const source = '[a](a\\\\b\\)) and ![x](image.png "say \\"hi\\"")'
   expect(roundTripMarkdown(source)).toBe(source)
 })
 
