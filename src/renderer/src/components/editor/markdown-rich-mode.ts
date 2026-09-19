@@ -80,7 +80,7 @@ const UNSUPPORTED_PATTERNS: UnsupportedMatch[] = [
     // container nesting produces (e.g. `1) [x]:`); `[label]: ` also opens
     // ordinary prose, so `hasLinkReferenceDefinition` confirms a real
     // definition per CommonMark.
-    pattern: /^[ \t>*+\-\d.)]*\[[^\]]+\]:/m
+    pattern: /^[ \t>*+\-\d.)]*\[(?:\\.|[^\]\\\n])+\]:/m
   },
   {
     reason: 'footnotes',
@@ -196,7 +196,7 @@ function hasLinkReferenceDefinition(content: string): boolean {
   // Definitions inside transported HTML comments are comment text, not
   // Markdown definitions. Remove complete comments before the bounded probe.
   const commentStripped = content.replace(/<!--[\s\S]*?-->/g, '')
-  if (!/^[ \t>*+\-\d.)]*\[[^\]]+\]:/m.test(commentStripped)) {
+  if (!/^[ \t>*+\-\d.)]*\[(?:\\.|[^\]\\\n])+\]:/m.test(commentStripped)) {
     return false
   }
   if (commentStripped.length > 50_000) {
@@ -205,7 +205,7 @@ function hasLinkReferenceDefinition(content: string): boolean {
       .split(/\r?\n[ \t]*\r?\n/)
       .some(
         (block) =>
-          /^[ \t>*+\-\d.)]*\[[^\]]+\]:/m.test(block) &&
+          /^[ \t>*+\-\d.)]*\[(?:\\.|[^\]\\\n])+\]:/m.test(block) &&
           containsDefinitionNode(linkReferenceDefinitionProcessor.parse(block))
       )
   }

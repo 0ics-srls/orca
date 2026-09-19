@@ -40,8 +40,15 @@ function paddingPlaceholder(nodes: MarkdownNodeLike[]): string {
 export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): {
   nodes: MarkdownNodeLike[]
   placeholder: string
+  replacements: readonly (readonly [string, string])[]
 } {
   const placeholder = paddingPlaceholder(nodes)
+  const replacements: [string, string][] = []
+  const mask = (padding: string): string => {
+    const token = `${placeholder}${replacements.length}${placeholder}`
+    replacements.push([token, padding])
+    return token
+  }
   const masked = nodes.map((node) => {
     if (node?.type !== 'text' || !hasCodeMark(node)) {
       return node
@@ -55,14 +62,22 @@ export function maskCodeSpanPadding(nodes: MarkdownNodeLike[]): {
     const body = text.slice(leading.length, trailing ? text.length - trailing.length : text.length)
     return {
       ...node,
-      text: placeholder.repeat(leading.length) + body + placeholder.repeat(trailing.length)
+      text: (leading ? mask(leading) : '') + body + (trailing ? mask(trailing) : '')
     }
   })
-  return { nodes: masked, placeholder }
+  return { nodes: masked, placeholder, replacements }
 }
 
-export function restoreCodeSpanPadding(markdown: string, placeholder: string): string {
-  return markdown.split(placeholder).join(' ')
+export function restoreCodeSpanPadding(
+  markdown: string,
+  placeholder: string,
+  replacements: readonly (readonly [string, string])[]
+): string {
+  const padding = new Map(replacements)
+  return markdown.replace(
+    new RegExp(`${placeholder}\\d+${placeholder}`, 'g'),
+    (token) => padding.get(token) ?? token
+  )
 }
 
 /**
@@ -92,7 +107,7 @@ export const RichMarkdownCodeSpanPadding = Extension.create({
       const masked = maskCodeSpanPadding(nodes ?? [])
       const rendered = walk.call(this, masked.nodes, ...rest)
       return typeof rendered === 'string'
-        ? restoreCodeSpanPadding(rendered, masked.placeholder)
+        ? restoreCodeSpanPadding(rendered, masked.placeholder, masked.replacements)
         : rendered
     }
   }

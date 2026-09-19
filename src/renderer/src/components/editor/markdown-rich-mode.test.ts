@@ -244,6 +244,17 @@ describe('getMarkdownRichModeUnsupportedMessage', () => {
   })
 
   describe('reference-style link definitions', () => {
+    it('blocks a definition whose label contains an escaped closing bracket', () => {
+      expect(
+        getMarkdownRichModeUnsupportedMessage('[foo\\]]: https://example.com\n')
+      ).not.toBeNull()
+    })
+
+    it('blocks an escaped-bracket definition in an oversized document', () => {
+      const content = `${'a'.repeat(50_001)}\n\n[foo\\]]: https://example.com\n`
+      expect(getMarkdownRichModeUnsupportedMessage(content)).not.toBeNull()
+    })
+
     it('blocks a real link reference definition', () => {
       expect(getMarkdownRichModeUnsupportedMessage('[id]: https://example.com\n')).not.toBeNull()
     })
