@@ -14,7 +14,8 @@ describe('decideInitialAgentTabViewMode', () => {
         decideInitialAgentTabViewMode({
           experimentalNativeChat: true,
           openAgentTabsInChatByDefault: true,
-          agent
+          agent,
+          nativeChatTranscriptIsLocalReadable: true
         })
       ).toBe('chat')
     }
@@ -77,17 +78,20 @@ describe('decideInitialAgentTabViewMode', () => {
     ).toBe('chat')
   })
 
-  it('keeps Model-A SSH omp in the terminal view but opens it locally', () => {
-    const forConnection = (connectionId: string | null): Tab['viewMode'] =>
-      decideInitialAgentTabViewMode({
-        experimentalNativeChat: true,
-        openAgentTabsInChatByDefault: true,
-        agent: 'omp',
-        nativeChatTranscriptIsLocalReadable: isNativeChatTranscriptLocalReadable(connectionId)
-      })
-    expect(forConnection('ssh-target-1')).toBeUndefined()
-    expect(forConnection(null)).toBe('chat')
-  })
+  it.each(['omp', 'antigravity'] as const)(
+    'keeps Model-A SSH %s in the terminal view but opens it locally',
+    (agent) => {
+      const forConnection = (connectionId: string | null): Tab['viewMode'] =>
+        decideInitialAgentTabViewMode({
+          experimentalNativeChat: true,
+          openAgentTabsInChatByDefault: true,
+          agent,
+          nativeChatTranscriptIsLocalReadable: isNativeChatTranscriptLocalReadable(connectionId)
+        })
+      expect(forConnection('ssh-target-1')).toBeUndefined()
+      expect(forConnection(null)).toBe('chat')
+    }
+  )
 
   it('keeps Model-A SSH Grok in the terminal view', () => {
     expect(

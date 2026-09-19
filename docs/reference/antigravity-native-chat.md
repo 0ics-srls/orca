@@ -10,7 +10,10 @@ The execution host reads
 `.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`.
 A hook-reported transcript path takes precedence. Existing WSL exact-path and
 host-isolation rules apply; a missing guest transcript must not fall back to a
-native host's same-named conversation.
+native host's same-named conversation. Direct SSH panes stay in the terminal:
+that connection has no native-chat transcript transport, and its absolute file
+path must never be opened on the client. Paired runtimes remain eligible because
+their own host reads the transcript. Direct SSH chat support remains unfinished.
 
 The sanitized fixture in `src/main/native-chat/__fixtures__/antigravity/` records
 these observed shapes:
