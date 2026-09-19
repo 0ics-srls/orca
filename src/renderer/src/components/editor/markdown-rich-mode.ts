@@ -112,7 +112,8 @@ export function resolveMarkdownRichModeUnsupportedMessage(
 }
 
 export function getMarkdownRichModeUnsupportedReason(
-  content: string
+  content: string,
+  { validateHtmlRoundTrip = true }: { validateHtmlRoundTrip?: boolean } = {}
 ): MarkdownRichModeUnsupportedReason | null {
   // Why: front-matter is handled externally — stripped before the rich editor
   // sees the content and displayed as a read-only block. Only the body needs
@@ -145,6 +146,9 @@ export function getMarkdownRichModeUnsupportedReason(
   }
 
   if (hasHtml) {
+    if (!validateHtmlRoundTrip) {
+      return htmlMatcher!.reason
+    }
     // The source codec recognizes multiline code spans that the cheap scan can misclassify.
     const htmlOutput = getRichMarkdownHtmlValidationOutput(body)
     if (htmlOutput && preservesEmbeddedHtml(body, htmlOutput)) {
@@ -163,14 +167,16 @@ export function getMarkdownRichModeUnsupportedReason(
 
 export function getMarkdownRichModeEligibilityDecision({
   content,
-  sizeOverridden
+  sizeOverridden,
+  validateHtmlRoundTrip = true
 }: {
   content: string
   sizeOverridden: boolean
+  validateHtmlRoundTrip?: boolean
 }): MarkdownRichModeEligibilityDecision {
   return {
     exceedsSizeLimit: !sizeOverridden && exceedsMarkdownRichModeSizeLimit(content),
-    unsupportedReason: getMarkdownRichModeUnsupportedReason(content)
+    unsupportedReason: getMarkdownRichModeUnsupportedReason(content, { validateHtmlRoundTrip })
   }
 }
 
