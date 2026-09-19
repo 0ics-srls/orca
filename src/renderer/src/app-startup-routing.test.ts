@@ -19,6 +19,13 @@ const SESSION_PERSISTENCE_PATH = 'src/renderer/src/app-shell/use-app-session-per
 const PERSISTED_UI_WRITER_PATH = 'src/renderer/src/app-shell/use-persisted-ui-writer.ts'
 
 describe('renderer startup runtime routing', () => {
+  it('owns closed editor cleanup in the persistent app shell', () => {
+    expect(readSource(SHELL_SERVICES_PATH)).toContain('useClosedEditorTabCleanup()')
+    expect(readSource('src/renderer/src/components/editor/EditorPanel.tsx')).not.toContain(
+      'useClosedEditorTabCleanup'
+    )
+  })
+
   it('routes packaged terminal restore through the daemon adoption gate', () => {
     const source = readFileSync(
       join(process.cwd(), 'src/renderer/src/components/use-terminal-watcher-effects.ts'),

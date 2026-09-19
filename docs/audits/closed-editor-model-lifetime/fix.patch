@@ -1,27 +1,26 @@
+===================================================================
 --- a/src/renderer/src/app-shell/use-app-shell-services.ts
 +++ b/src/renderer/src/app-shell/use-app-shell-services.ts
-@@ -1,0 +2 @@
+@@ -1,0 +2,1 @@
 +import { useClosedEditorTabCleanup } from '../components/editor/useClosedEditorTabCleanup'
-@@ -32,0 +34 @@
+@@ -32,0 +34,1 @@
 +  useClosedEditorTabCleanup()
+===================================================================
 --- a/src/renderer/src/components/editor/EditorPanel.tsx
 +++ b/src/renderer/src/components/editor/EditorPanel.tsx
-@@ -15 +14,0 @@
+@@ -15,1 +14,0 @@
 -import { useClosedEditorTabCleanup } from './useClosedEditorTabCleanup'
-@@ -145 +143,0 @@
+@@ -145,1 +143,0 @@
 -  useClosedEditorTabCleanup(openFiles)
+===================================================================
 --- a/src/renderer/src/components/editor/closed-editor-tab-controller.ts
 +++ b/src/renderer/src/components/editor/closed-editor-tab-controller.ts
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,234 @@
 +import type { StoreApi } from 'zustand'
 +import type { editor } from 'monaco-editor'
 +import type { OpenFile } from '@/store/slices/editor'
 +import { editorModelRegistry } from '@/lib/editor-model-registry'
-+import {
-+  disposeClosedEditorTabs,
-+  disposeClosedEditorTabCaches,
-+  type ClosedEditorTab
-+} from './closed-editor-tab-disposal'
++import { disposeClosedEditorModels, type ClosedEditorTab } from './closed-editor-tab-disposal'
 +import type { MonacoModelRegistry, DisposableMonacoModel } from './diff-monaco-model-disposal'
 +
 +type EditorStore = Pick<StoreApi<{ openFiles: OpenFile[] }>, 'getState' | 'subscribe'>
@@ -106,6 +105,12 @@
 +
 +  const flush = (): void => {
 +    const currentRegistry = registry
++    if (!currentRegistry) {
++      if (candidateModels.size === 0) {
++        pendingFiles.clear()
++      }
++      return
++    }
 +    const flushGeneration = generation
 +    let checkedOpenFiles: OpenFile[] | null = null
 +    let openIds = new Set<string>()
@@ -135,10 +140,6 @@
 +      models: ReadonlySet<editor.ITextModel>
 +    ): void => {
 +      if (!currentRegistry) {
-+        disposeClosedEditorTabCaches(
-+          files,
-+          (file) => active && generation === flushGeneration && !stillOwned(file)
-+        )
 +        return
 +      }
 +      const fencedRegistry: MonacoModelRegistry = {
@@ -155,7 +156,7 @@
 +            [...models].filter((model) => currentRegistry.editor.getModel(model.uri) === model)
 +        }
 +      }
-+      disposeClosedEditorTabs(
++      disposeClosedEditorModels(
 +        fencedRegistry,
 +        files,
 +        retainAttachedModel,
@@ -168,8 +169,23 @@
 +    pendingFiles.clear()
 +    candidateModels.clear()
 +    disposeCaptured(files, models)
++    if (active && generation !== flushGeneration) {
++      for (const file of files) {
++        pendingFiles.set(ownerKey(file), file)
++      }
++      for (const model of models) {
++        if (!model.isDisposed()) {
++          candidateModels.add(model)
++        }
++      }
++      schedule()
++      return
++    }
 +
 +    for (const [model, retained] of retainedModels) {
++      if (!active || generation !== flushGeneration) {
++        return
++      }
 +      if (currentRegistry?.editor.getModel(model.uri) !== model) {
 +        releaseRetainedModel(model)
 +        continue
@@ -219,14 +235,11 @@
 +    }
 +  })
 +  const unsubscribeRegistry = bridge.subscribe(() => {
-+    const pendingCaches = [...pendingFiles.values()]
-+    clearPending()
++    // Registry notifications invalidate callbacks, not custody of captured models.
++    generation += 1
++    scheduled = false
 +    registry = bridge.get()
-+    previousFiles = store.getState().openFiles
-+    for (const file of pendingCaches) {
-+      pendingFiles.set(ownerKey(file), file)
-+    }
-+    if (pendingCaches.length > 0) {
++    if (pendingFiles.size > 0 || retainedModels.size > 0) {
 +      schedule()
 +    }
 +  })
@@ -237,21 +250,32 @@
 +    clearPending()
 +  }
 +}
+===================================================================
 --- a/src/renderer/src/components/editor/closed-editor-tab-disposal.ts
 +++ b/src/renderer/src/components/editor/closed-editor-tab-disposal.ts
-@@ -11 +11,2 @@
+@@ -11,1 +11,2 @@
 -  type MonacoModelRegistry
 +  type MonacoModelRegistry,
 +  type DisposableMonacoModel
-@@ -16,0 +18,2 @@
-+
+@@ -18,8 +19,4 @@
+-/**
+- * Releases the Monaco models and view-state cache entries owned by a batch of closed tabs.
+- *
+- * Why the batch shape: every prefix sweep here is a full scan of a shared registry or cache, so
+- * doing one per closed tab makes "close all"/worktree-switch quadratic in retained models. Takes
+- * the monaco namespace as an argument so it stays testable without importing `monaco-editor`.
+- */
+-export function disposeClosedEditorTabs(
 +export type ClosedEditorTab = Pick<OpenFile, 'id' | 'mode' | 'filePath'>
-@@ -27 +30,3 @@
++
++// One registry sweep avoids quadratic close-all work.
++export function disposeClosedEditorModels(
+@@ -27,1 +24,3 @@
 -  closedFiles: readonly OpenFile[]
 +  closedFiles: readonly ClosedEditorTab[],
 +  onAttachedModel?: (model: DisposableMonacoModel, file: ClosedEditorTab) => void,
 +  isStillClosed: (file: ClosedEditorTab) => boolean = () => true
-@@ -33 +38,41 @@
+@@ -33,1 +32,50 @@
 -  const diffModelPathPrefixes: string[] = []
 +  const diffFilesByPrefix = new Map<string, ClosedEditorTab>()
 +  for (const closedFile of closedFiles) {
@@ -287,6 +311,15 @@
 +      return file !== undefined && isStillClosed(file)
 +    }
 +  )
++}
++
++export function disposeClosedEditorTabs(
++  monacoRegistry: MonacoModelRegistry,
++  closedFiles: readonly ClosedEditorTab[],
++  onAttachedModel?: (model: DisposableMonacoModel, file: ClosedEditorTab) => void,
++  isStillClosed: (file: ClosedEditorTab) => boolean = () => true
++): void {
++  disposeClosedEditorModels(monacoRegistry, closedFiles, onAttachedModel, isStillClosed)
 +  disposeClosedEditorTabCaches(closedFiles, isStillClosed)
 +}
 +
@@ -294,22 +327,22 @@
 +  closedFiles: readonly ClosedEditorTab[],
 +  isStillClosed: (file: ClosedEditorTab) => boolean = () => true
 +): void {
-@@ -39,0 +85,3 @@
+@@ -39,0 +88,3 @@
 +    if (!isStillClosed(closedFile)) {
 +      continue
 +    }
-@@ -42,3 +89,0 @@
+@@ -42,3 +92,0 @@
 -        // Why: the edit model URI is constructed via monaco.Uri.parse(filePath)
 -        // to match @monaco-editor/react's `path` prop convention.
 -        monacoRegistry.editor.getModel(monacoRegistry.Uri.parse(closedFile.filePath))?.dispose()
-@@ -46 +90,0 @@
+@@ -46,1 +93,0 @@
 -        // Why: markdown and mermaid surfaces keep mode-scoped scroll positions.
-@@ -53 +96,0 @@
+@@ -53,1 +99,0 @@
 -        // Why: only 'edit' tabs ever get a PDF scroll key (see EditorContent).
-@@ -57,2 +99,0 @@
+@@ -57,2 +102,0 @@
 -        // Why: preview tabs own pane-scoped preview scroll cache entries even
 -        // though they do not retain Monaco models.
-@@ -62,6 +103 @@
+@@ -62,6 +106,1 @@
 -      case 'diff': {
 -        // Why: kept diff models are keyed by tab id, and fallback recovery can
 -        // append generation suffixes; closing the tab owns that whole namespace.
@@ -317,17 +350,18 @@
 -          getDiffViewerMonacoModelPathPrefixes(closedFile.id)
 -        diffModelPathPrefixes.push(originalModelPathPrefix, modifiedModelPathPrefix)
 +      case 'diff':
-@@ -73 +108,0 @@
+@@ -73,1 +111,0 @@
 -      }
-@@ -80,2 +114,0 @@
+@@ -80,2 +117,0 @@
 -
 -  disposeUnattachedMonacoModelsByPathPrefixes(monacoRegistry, diffModelPathPrefixes)
+===================================================================
 --- a/src/renderer/src/components/editor/diff-monaco-model-disposal.ts
 +++ b/src/renderer/src/components/editor/diff-monaco-model-disposal.ts
-@@ -15 +15 @@
+@@ -15,1 +15,1 @@
 -type DisposableMonacoModel = Pick<editor.ITextModel, 'dispose' | 'isAttachedToEditor'> & {
 +export type DisposableMonacoModel = Pick<editor.ITextModel, 'dispose' | 'isAttachedToEditor'> & {
-@@ -91 +91,3 @@
+@@ -91,1 +91,3 @@
 -  modelPathPrefixes: readonly string[]
 +  modelPathPrefixes: readonly string[],
 +  onAttachedModel?: (model: DisposableMonacoModel, prefix: string) => void,
@@ -347,21 +381,22 @@
 +      } else {
 +        model.dispose()
 +      }
-@@ -122 +128 @@
+@@ -122,1 +128,1 @@
 -function isOwnedByPathPrefix(
 +function findOwnedPathPrefix(
-@@ -126 +132 @@
+@@ -126,1 +132,1 @@
 -): boolean {
 +): string | undefined {
-@@ -128 +134 @@
+@@ -128,1 +134,1 @@
 -    return true
 +    return uriString
-@@ -140 +146 @@
+@@ -140,1 +146,1 @@
 -      return true
 +      return uriString.slice(0, boundary)
-@@ -144 +150 @@
+@@ -144,1 +150,1 @@
 -  return false
 +  return undefined
+===================================================================
 --- a/src/renderer/src/components/editor/useClosedEditorTabCleanup.ts
 +++ b/src/renderer/src/components/editor/useClosedEditorTabCleanup.ts
 @@ -1,4 +1,3 @@
@@ -391,6 +426,7 @@
 -  }, [openFiles])
 +export function useClosedEditorTabCleanup(): void {
 +  useEffect(() => attachClosedEditorTabCleanup(useAppStore), [])
+===================================================================
 --- a/src/renderer/src/lib/editor-model-registry.ts
 +++ b/src/renderer/src/lib/editor-model-registry.ts
 @@ -0,0 +1,38 @@
@@ -432,11 +468,16 @@
 +}
 +
 +export const editorModelRegistry = createEditorModelRegistry()
+===================================================================
 --- a/src/renderer/src/lib/monaco-setup.ts
 +++ b/src/renderer/src/lib/monaco-setup.ts
-@@ -1,0 +2 @@
+@@ -1,0 +2,1 @@
 +import { editorModelRegistry } from './editor-model-registry'
-@@ -94,0 +96,5 @@
+@@ -12,0 +14,1 @@
++import { registerShellMarkdownAliases } from './monaco-languages/register-shell-markdown-aliases'
+@@ -81,0 +84,1 @@
++registerShellMarkdownAliases(monaco)
+@@ -92,0 +96,5 @@
 +
 +const unregisterEditorModelRegistry = editorModelRegistry.register(monaco)
 +if (import.meta.hot) {

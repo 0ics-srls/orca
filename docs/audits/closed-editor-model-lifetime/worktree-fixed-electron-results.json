@@ -36,8 +36,8 @@
   "graph": "worktree",
   "sourceFence": {
     "sources": 1021,
-    "graphSha256": "e89fae0a61015446e8de9252fa47f1e8aeeb0044eec5da03fab083e437fa41bd",
-    "manifestSha256": "4ee4ae0901343e818ec4a396cc7bcaf11289b1ab7b58018e48ed5ae84778f884",
+    "graphSha256": "389b3a60b0ddc080a86e9569c371ac1d51db1e6845c8f6d65a1987d92e11cec9",
+    "manifestSha256": "c3f9b3b2e3c669a5565df1c73adb4a0b6468835f7ef5674e822032d08bf6459b",
     "scenarioSha256": "afc0b7e45e056d1f730ac58f266094471b58187646c91b4436b909544a3a4e29",
     "loaderSha256": "d5914770eb9db3c75b153b55d7f2f94415d3ab1850bc5b021be1165d104828be"
   },

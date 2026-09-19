@@ -135,14 +135,14 @@
     "src/renderer/src/components/editor/closed-editor-tab-controller.ts": {
       "worktreeBefore": null,
       "mainBefore": null,
-      "worktreeFixed": "dc72bdb2f483224cfa638e0893c1089c54544331e20cc8cd499f71a4dc5156e7",
-      "mainFixed": "dc72bdb2f483224cfa638e0893c1089c54544331e20cc8cd499f71a4dc5156e7"
+      "worktreeFixed": "39e47f958db77e9eeb93b58a9106953ee0b06bf615acaa945ec5990014838ffe",
+      "mainFixed": "39e47f958db77e9eeb93b58a9106953ee0b06bf615acaa945ec5990014838ffe"
     },
     "src/renderer/src/components/editor/closed-editor-tab-disposal.ts": {
       "worktreeBefore": "acb9143556f0defa281febb021d7348fa5a576e085dd89187b46636842ec14f3",
       "mainBefore": "acb9143556f0defa281febb021d7348fa5a576e085dd89187b46636842ec14f3",
-      "worktreeFixed": "5629ea319bdbc5f49551999fcace4c3d6550f40462832a5dff8def5fd9184cde",
-      "mainFixed": "5629ea319bdbc5f49551999fcace4c3d6550f40462832a5dff8def5fd9184cde"
+      "worktreeFixed": "297743a55b2b1f13ffd61984d0331befa41d51a15f70da2b8063543d0b30edee",
+      "mainFixed": "297743a55b2b1f13ffd61984d0331befa41d51a15f70da2b8063543d0b30edee"
     },
     "src/renderer/src/components/editor/diff-monaco-model-disposal.ts": {
       "worktreeBefore": "62f639d07c2053d966c1677f5f6f88acaf75e62cbd5d46c63996e52f48f572b3",
@@ -897,8 +897,8 @@
     "src/renderer/src/lib/monaco-setup.ts": {
       "worktreeBefore": "9150a96585fb426af4b7b978a8987be5b029bdf03d9d2e79f2429c6d47b441fa",
       "mainBefore": "1366b0e8e5ba13dcb2842a9a24024bf73aa8bcf654abdde17dff676caa6572d4",
-      "worktreeFixed": "2071dcbb3c870219921e0f9430a704a32596d4b24be04fec8df726350b7fe154",
-      "mainFixed": "c451980faf7956225e372b4a15dd2b4936eef1fc4a30cdb5de49799dfbd28ca9"
+      "worktreeFixed": "c451980faf7956225e372b4a15dd2b4936eef1fc4a30cdb5de49799dfbd28ca9",
+      "mainFixed": "1d7244836da3540bf0cf151c54b7f40a4e508a4e97e5f5dbc0bf501542918a58"
     },
     "src/renderer/src/lib/native-chat-telemetry.ts": {
       "worktreeBefore": "8e22e59b47ddef7b12628913fb02d16a57cd5c3fb8cea82ffa873ddd2fa12dd9",

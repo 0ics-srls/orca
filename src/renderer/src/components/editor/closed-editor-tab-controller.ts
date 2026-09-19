@@ -87,6 +87,12 @@ export function attachClosedEditorTabCleanup(
 
   const flush = (): void => {
     const currentRegistry = registry
+    if (!currentRegistry) {
+      if (candidateModels.size === 0) {
+        pendingFiles.clear()
+      }
+      return
+    }
     const flushGeneration = generation
     let checkedOpenFiles: OpenFile[] | null = null
     let openIds = new Set<string>()
@@ -145,8 +151,23 @@ export function attachClosedEditorTabCleanup(
     pendingFiles.clear()
     candidateModels.clear()
     disposeCaptured(files, models)
+    if (active && generation !== flushGeneration) {
+      for (const file of files) {
+        pendingFiles.set(ownerKey(file), file)
+      }
+      for (const model of models) {
+        if (!model.isDisposed()) {
+          candidateModels.add(model)
+        }
+      }
+      schedule()
+      return
+    }
 
     for (const [model, retained] of retainedModels) {
+      if (!active || generation !== flushGeneration) {
+        return
+      }
       if (currentRegistry?.editor.getModel(model.uri) !== model) {
         releaseRetainedModel(model)
         continue
@@ -196,14 +217,11 @@ export function attachClosedEditorTabCleanup(
     }
   })
   const unsubscribeRegistry = bridge.subscribe(() => {
-    const pendingCaches = [...pendingFiles.values()]
-    clearPending()
+    // Registry notifications invalidate callbacks, not custody of captured models.
+    generation += 1
+    scheduled = false
     registry = bridge.get()
-    previousFiles = store.getState().openFiles
-    for (const file of pendingCaches) {
-      pendingFiles.set(ownerKey(file), file)
-    }
-    if (pendingCaches.length > 0) {
+    if (pendingFiles.size > 0 || retainedModels.size > 0) {
       schedule()
     }
   })

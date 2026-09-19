@@ -37,7 +37,7 @@
   "sourceFence": {
     "sources": 1017,
     "graphSha256": "9b092ce86caf62164bc106a6ac8a382b9b487c5abbaadcfaedd371c3755a1a50",
-    "manifestSha256": "4ee4ae0901343e818ec4a396cc7bcaf11289b1ab7b58018e48ed5ae84778f884",
+    "manifestSha256": "c3f9b3b2e3c669a5565df1c73adb4a0b6468835f7ef5674e822032d08bf6459b",
     "scenarioSha256": "afc0b7e45e056d1f730ac58f266094471b58187646c91b4436b909544a3a4e29",
     "loaderSha256": "d5914770eb9db3c75b153b55d7f2f94415d3ab1850bc5b021be1165d104828be"
   },

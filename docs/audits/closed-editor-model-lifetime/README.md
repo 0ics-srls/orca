@@ -2,7 +2,7 @@
 
 Closing the final editor, or closing a file while every editor panel is hidden, can leave its Monaco text model registered for the renderer's remaining lifetime. The old cleanup hook lived in the conditionally mounted `EditorPanel`: it disappeared before observing the final close and missed closes while absent. `MonacoEditor` uses `keepCurrentModel`, so unmounting the widget does not provide the missing cleanup.
 
-The fix subscribes from the app shell and lazily receives the model registry from the existing `monaco-setup` load. It retires only closed tab owners. It preserves live same-URI editors, replacement model objects, generated diff namespaces, attached models until detachment, and caches written by a reopened owner during a disposal callback. Cold rich/preview/PDF caches are cleaned without loading Monaco. No tab, dirty draft, or retained live editor history is pruned.
+The fix subscribes from the app shell and lazily receives the model registry from the existing `monaco-setup` load. It retires only closed tab owners. It preserves live same-URI editors, replacement model objects, generated diff namespaces, attached models until detachment, and caches written by a reopened owner during a disposal callback. Existing scroll, selection, preview, and PDF caches retain their separate 20-entry LRU lifetime. No open tab, dirty draft, or live editor history is pruned. Closed-file undo follows Monaco's existing bounded policy; it is not unlimited (see below).
 
 ## Measured result
 
@@ -13,17 +13,21 @@ The fix subscribes from the app shell and lazily receives the model registry fro
 | Close while hidden, then open another editor | Old closed model remains; 2 models for 1 open file                     | Old model disposed; 1 model for 1 open file |
 | Normal terminal/editor switch                | Original open model preserved                                          | Same                                        |
 
-All four controls pass with their stated before/fixed expectations on both graphs and both runtimes: **32 comparative cases**, Node 26.6.0 and Electron 43.7.0 / Node 24.21.0. Reports are `worktree-*-results.json` and `main-*-results.json`. Contents use eight distinct fixture paths and 256 KiB of logical characters per model; this is a controlled amplification, not a field file-size measurement or heap-byte estimate.
+All four controls pass with their stated before/fixed expectations on both graphs and both runtimes: **32 comparative cases**, Node 24.20.0 and Electron 43.7.0 / Node 24.21.0. Reports are `worktree-*-results.json` and `main-*-results.json`. Contents use eight distinct fixture paths and 256 KiB of logical characters per model; this is a controlled amplification, not a field file-size measurement or heap-byte estimate.
 
 This explains a concrete renderer retention mechanism relevant to [#12845](https://github.com/stablyai/orca/issues/12845). The same conditional panel, hook placement, and `keepCurrentModel` chain exists in reported v1.4.170; `source-versions.json` records four historical source hashes and matching line numbers. That comparison is static, not an execution of the historical application. It does not establish which allocations caused #12845's reported heap, or the process and cause of [#19831](https://github.com/stablyai/orca/issues/19831).
 
 ## Ownership and regression coverage
 
-The 17 permanent cases in `closed-editor-model-{lifetime,reentrancy,registry,shell}.test.*` use actual installed Monaco text models and full test-store close actions. They cover final/hidden panel closure, live siblings and canonical shared URIs, model replacement, real attachment events and post-stack disposal, URI reopening, HMR successor registration, generated diff prefixes, reentrant model/cache ownership, cold caches, terminal subtree remount, and zero global registry enumeration for ordinary edit closes. Together with the three existing disposal/cache suites, **37 tests pass**. The fixture invokes Monaco's real model attachment/detachment ports; it does not create a native editor widget.
+The **27 permanent cases across five suites** in `closed-editor-model-{lifetime,reentrancy,registry,shell}.test.*` and `closed-editor-view-state-retention.test.ts` use actual installed Monaco models and store close actions. They cover final/hidden panel closure, live siblings and shared URIs, replacement model identities, attachment/detachment, reopening, registry removal/replacement, reentrant registry changes, diff prefixes, bounded caches, and ordinary edit closes without a global registry scan. Together with the three existing disposal/cache suites, **47 tests pass**. The fixture exercises Monaco's real attachment ports without creating a native editor widget.
 
-Independent review additionally exercised controller teardown, registry replacement, reentrant teardown/replacement, a 24-diff `closeAllFiles` batch, and live metadata updates: six cases in each runtime. Both retained event listeners were disposed once, old callback authority was cancelled, the 48-model diff batch enumerated the registry once, and 32 live metadata changes performed no global scan. These are recorded review results; the self-contained comparative runner here contains the four tabled controls.
+The startup routing suite now also guards the production app-shell hook placement: deleting that call fails the test. All **75 selected tests across nine suites pass**. Full Web typechecking currently reports one unrelated existing unused `NativeChatMessage` import in `NativeChatMessageList.windowing.test.tsx`; it reports no errors in the changed files.
 
-The controller remembers minimal closed-owner descriptors and exact model identities for the current microtask. Attached closed models retain those descriptors until detachment/disposal or owner teardown. This retained custody is intentional. It does not reconcile unrelated preexisting Monaco models or erase separate cache lifetimes without a closed-tab transition.
+Registry notifications cancel obsolete queued callbacks but preserve captured model identities and attached-model listeners. A temporary missing registry defers cleanup until registration returns; an interrupted disposal batch is retried. The identity fence prevents that retry from disposing a successor at the same URI. Controller teardown still cancels that controller's ownership and listeners; this audit does not claim to reconcile all preexisting models after an app-shell HMR remount.
+
+### Closed-file undo decision
+
+Keep Monaco's bounded closed-file undo store rather than retaining every edited model indefinitely, following the same design used by [VS Code's model service](https://github.com/microsoft/vscode/blob/main/src/vs/editor/common/services/modelService.ts). Installed Monaco keeps about 20 MiB of closed-file undo data. Tests confirm ordinary POSIX paths and `file:///C:/...` paths restore undo when reopened with matching contents. Large files (over 10 MiB of text in the fixture) and raw Windows `C:/...` paths do not. Those cases lose undo after close/reopen, including final/hidden tabs whose models previously leaked. Existing view-state caches remain intact within their 20-entry budget. This is a deliberate bounded-memory tradeoff, not zero user-visible risk.
 
 ## Source fences and independent main publication
 
@@ -38,9 +42,9 @@ The controller remembers minimal closed-owner descriptors and exact model identi
 
 The comparative test executes the actual legacy surface, old/new cleanup hook, disposal functions, store close action and model registry. It supplies controlled Panel/Shell ports and a fixture store to the hook. Actual app-shell placement, first lazy registration, conditional panel callers and `keepCurrentModel` wiring are source-fenced static checks; it does not render the entire application or exercise HMR through Vite itself. It opens no Electron window, starts no native editor widget, and measures no RSS, heap bytes, or incident allocation rate.
 
-## CI fixture correction
+## Review follow-up
 
-The first published head failed the separate anti-slop gate because the attachment fixture used `Reflect.get` and `Reflect.apply`. The fixture now checks Monaco's attachment port and calls it directly with the model as receiver. Product behavior and portable source graphs are unchanged. The correction passes 46 tests across seven selected lifetime/disposal/cache suites, the actual Web typecheck (`config/tsconfig.tc.web.json`), and anti-slop over all 13 published source files. The five general quality configurations also pass on the changed fixture. The portable MJS proof's existing boundary mocks are outside the CI anti-slop command's `src config tests mobile` scope.
+The registry-transition regression is covered by four new cases. The uninformative cold-registry fixture assertion was removed, and this audit's product patch, source hashes, loader controls, and all eight comparative reports were regenerated from the current sources. The audit directory is now explicitly allowed in `.gitignore`.
 
 ## Reproduce
 
