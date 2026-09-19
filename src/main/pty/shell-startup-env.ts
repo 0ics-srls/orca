@@ -193,6 +193,7 @@ function expandHome(value: string, home: string): string {
     .replace(/\$HOME(?![A-Za-z0-9_])/g, home)
 }
 
+export const SHELL_STARTUP_ENV_CACHE_MAX_ENTRIES = 256
 const cache = new Map<string, string | undefined>()
 
 /**
@@ -216,9 +217,8 @@ const cache = new Map<string, string | undefined>()
  *   seen when the assignment is also written in a config file.
  * - Windows is unsupported (PowerShell profile parsing is out of scope).
  *
- * Results are memoized per (name, home, shell, configHome) for the process
- * lifetime — shell startup files do not change mid-session in any practical
- * scenario, and PTY spawn is on the hot path.
+ * Results are memoized per (name, home, shell, configHome); a bounded recent
+ * window keeps SSH/WSL home churn from retaining every historical key.
  */
 export function readShellStartupEnvVar(
   name: string,
@@ -256,6 +256,13 @@ export function readShellStartupEnvVar(
   }
 
   cache.set(cacheKey, lastMatch)
+  while (cache.size > SHELL_STARTUP_ENV_CACHE_MAX_ENTRIES) {
+    const oldest = cache.keys().next()
+    if (oldest.done) {
+      break
+    }
+    cache.delete(oldest.value)
+  }
   return lastMatch
 }
 
