@@ -5,6 +5,7 @@ import {
   resetWebSessionCloseIntentForTests
 } from './web-session-close-intent'
 import {
+  MAX_WEB_SESSION_FOCUS_INTENTS,
   peekWebSessionFocusIntent,
   clearWebSessionFocusIntentIfMatches,
   recordWebSessionFocusIntent,
@@ -78,6 +79,26 @@ describe('web session intent ownership', () => {
     })
     expect(peekWebSessionFocusIntent(OWNER_A_REPAIRED, WORKTREE_ID)).toBeNull()
     expect(peekWebSessionFocusIntent(OWNER_B, WORKTREE_ID)).toBeNull()
+  })
+
+  it('bounds unresolved focus intent churn', () => {
+    for (let index = 0; index < MAX_WEB_SESSION_FOCUS_INTENTS + 4; index += 1) {
+      recordWebSessionFocusIntent(
+        { environmentId: `env-${index}`, pairingRevision: 1 },
+        WORKTREE_ID,
+        `host-tab-${index}`
+      )
+    }
+
+    expect(
+      peekWebSessionFocusIntent({ environmentId: 'env-0', pairingRevision: 1 }, WORKTREE_ID)
+    ).toBeNull()
+    expect(
+      peekWebSessionFocusIntent(
+        { environmentId: `env-${MAX_WEB_SESSION_FOCUS_INTENTS + 3}`, pairingRevision: 1 },
+        WORKTREE_ID
+      )
+    ).toEqual({ hostTabId: `host-tab-${MAX_WEB_SESSION_FOCUS_INTENTS + 3}` })
   })
 
   it('does not let an older failed create clear a newer focus intent', () => {
