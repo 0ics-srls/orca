@@ -2,7 +2,7 @@ import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import type { useAppStore } from '@/store'
 import { listTerminalPtyPaneOwners } from './terminal-pty-pane-owner'
-import { findTerminalTabRow } from './terminal-reveal-tab-adoption'
+import { findTerminalTabRow } from './terminal-tab-row-lookup'
 import type {
   LiveTerminalSurfaceOwner,
   LiveTerminalSurfaceOwnerIndex
@@ -117,15 +117,6 @@ function adoptHostOwnedSurface(
 }
 
 /**
- * Give every live workspace PTY the surface that already owns it, minting one
- * only for a PTY proven to have none.
- *
- * `surfaced` is whether any live PTY ends the sweep holding a surface. False means the
- * workspace has live agents but nothing the user can look at — the caller owes them a
- * seeded pane, because failing closed must not also fail silent. `declinedPtyIds` names
- * the live PTYs the sweep left without one, so a decline is diagnosable and not mute.
- */
-/**
  * Whether some pane in this renderer already shows the PTY. Ownership is tab-keyed, so a row
  * filed under any other worktree key still counts — a PTY already surfaced must not be adopted
  * twice. A layout whose row is gone surfaces nothing, so it counts for neither.
@@ -136,6 +127,15 @@ function isPtyAlreadySurfaced(store: LiveSurfaceAdoptionStore, ptyId: string): b
   )
 }
 
+/**
+ * Give every live workspace PTY the surface that already owns it, minting one
+ * only for a PTY proven to have none.
+ *
+ * `surfaced` is whether any live PTY ends the sweep holding a surface. False means the
+ * workspace has live agents but nothing the user can look at — the caller owes them a
+ * seeded pane, because failing closed must not also fail silent. `declinedPtyIds` names
+ * the live PTYs the sweep left without one, so a decline is diagnosable and not mute.
+ */
 export async function adoptLiveWorkspacePtySurfaces(
   getState: () => LiveSurfaceAdoptionStore,
   worktreeId: string,

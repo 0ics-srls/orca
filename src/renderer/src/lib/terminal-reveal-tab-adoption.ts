@@ -5,6 +5,7 @@ import {
   resolveTerminalPtyPaneOwnership,
   type TerminalPtyPaneOwnerState
 } from './terminal-pty-pane-owner'
+import { findTerminalTabRow } from './terminal-tab-row-lookup'
 
 export type TerminalRevealAdoptionState = TerminalPtyPaneOwnerState &
   Pick<AppState, 'tabsByWorktree'>
@@ -34,20 +35,6 @@ export function findTerminalTabIdBindingLeafId(
     }
   }
   return unboundCarrierTabId
-}
-
-/** Locate a tab row and the worktree key it is filed under, across every key. */
-export function findTerminalTabRow(
-  state: Pick<AppState, 'tabsByWorktree'>,
-  tabId: string
-): { tab: TerminalTab; worktreeId: string } | null {
-  for (const [worktreeId, tabs] of Object.entries(state.tabsByWorktree)) {
-    const tab = tabs.find((candidate) => candidate.id === tabId)
-    if (tab) {
-      return { tab, worktreeId }
-    }
-  }
-  return null
 }
 
 /**

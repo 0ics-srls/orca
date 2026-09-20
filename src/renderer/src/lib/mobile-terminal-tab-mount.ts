@@ -4,7 +4,7 @@ import {
   resolveTerminalPtyPaneOwnership,
   type TerminalPtyPaneOwnerState
 } from './terminal-pty-pane-owner'
-import { findTerminalTabRow } from './terminal-reveal-tab-adoption'
+import { findTerminalTabRow } from './terminal-tab-row-lookup'
 
 export type MobileTerminalTabMountState = TerminalPtyPaneOwnerState &
   Pick<AppState, 'tabsByWorktree'>
