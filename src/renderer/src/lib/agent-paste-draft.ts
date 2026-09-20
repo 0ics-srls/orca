@@ -36,11 +36,7 @@ export const BRACKETED_PASTE_BEGIN = BRACKETED_PASTE_START
 export { BRACKETED_PASTE_END }
 export const POST_PASTE_SUBMIT_DELAY_MS = 50
 
-// Why: "the tab has a PTY" and "the agent's composer accepts input" are separate
-// states with separate failure modes, so they get separate budgets. A PTY that
-// hasn't appeared in 8s means the launch itself failed — waiting the (longer)
-// composer budget on top would only delay that verdict. Keeping them distinct
-// also stops one slow step from spending the other's budget (STA-3367).
+// PTY binding and composer readiness have separate budgets (STA-3367).
 const PTY_SPAWN_TIMEOUT_MS = 8000
 
 export function getSettingsForAgentTabRuntimeOwner(
@@ -101,7 +97,11 @@ export async function pasteDraftWhenAgentReady(args: {
   const readinessTimeoutMs = resolveDraftPasteReadyTimeoutMs(agent, timeoutMs)
   const readiness = await waitForAgentDraftInputReadyOnTab({
     tabId,
-    spawnTimeoutMs: PTY_SPAWN_TIMEOUT_MS,
+    // Windows Antigravity launches can bind their PTY after the ordinary eight-second budget.
+    spawnTimeoutMs:
+      agent === 'antigravity'
+        ? Math.max(PTY_SPAWN_TIMEOUT_MS, readinessTimeoutMs)
+        : PTY_SPAWN_TIMEOUT_MS,
     readinessTimeoutMs,
     agent,
     readySignal,
