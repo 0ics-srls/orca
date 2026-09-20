@@ -15,12 +15,24 @@ type AmbiguousRefreshAttempt = {
 }
 
 const ambiguousRefreshAttempts = new Map<string, AmbiguousRefreshAttempt>()
+const expiredAmbiguousRefreshAttempts = new Map<string, AmbiguousRefreshAttempt>()
 
-function pruneAmbiguousRefreshAttempts(now: number): void {
+function pruneAmbiguousRefreshAttempts(now: number, preserveKey?: string): void {
   for (const [key, attempt] of ambiguousRefreshAttempts) {
+    if (key === preserveKey) {
+      continue
+    }
     if (now - attempt.attemptedAt >= AMBIGUOUS_REFRESH_REPLAY_DELAY_MS) {
       ambiguousRefreshAttempts.delete(key)
+      expiredAmbiguousRefreshAttempts.set(key, attempt)
     }
+  }
+  while (expiredAmbiguousRefreshAttempts.size > AMBIGUOUS_REFRESH_ATTEMPTS_MAX_ENTRIES) {
+    const oldest = expiredAmbiguousRefreshAttempts.keys().next()
+    if (oldest.done) {
+      return
+    }
+    expiredAmbiguousRefreshAttempts.delete(oldest.value)
   }
   while (ambiguousRefreshAttempts.size > AMBIGUOUS_REFRESH_ATTEMPTS_MAX_ENTRIES) {
     const oldest = ambiguousRefreshAttempts.keys().next()
@@ -45,6 +57,7 @@ export function recordAmbiguousRefreshAttempt(
 ): void {
   pruneAmbiguousRefreshAttempts(now)
   ambiguousRefreshAttempts.delete(key)
+  expiredAmbiguousRefreshAttempts.delete(key)
   ambiguousRefreshAttempts.set(key, { refreshToken, attemptedAt: now })
   pruneAmbiguousRefreshAttempts(now)
 }
@@ -53,10 +66,14 @@ export function recordAmbiguousRefreshAttempt(
 // is gone. Leaving the record would mislabel a later, unrelated 401.
 export function forgetAmbiguousRefreshAttempt(key: string): void {
   ambiguousRefreshAttempts.delete(key)
+  expiredAmbiguousRefreshAttempts.delete(key)
 }
 
 export function wasRefreshTokenAmbiguouslyAttempted(key: string, refreshToken: string): boolean {
-  return ambiguousRefreshAttempts.get(key)?.refreshToken === refreshToken
+  return (
+    ambiguousRefreshAttempts.get(key)?.refreshToken === refreshToken ||
+    expiredAmbiguousRefreshAttempts.get(key)?.refreshToken === refreshToken
+  )
 }
 
 export function blocksAmbiguousRefreshReplay(
@@ -64,11 +81,25 @@ export function blocksAmbiguousRefreshReplay(
   refreshToken: string,
   now = Date.now()
 ): boolean {
-  pruneAmbiguousRefreshAttempts(now)
   const attempt = ambiguousRefreshAttempts.get(key)
   if (!attempt || attempt.refreshToken !== refreshToken) {
+    pruneAmbiguousRefreshAttempts(now)
     return false
   }
+  if (now < attempt.attemptedAt) {
+    // A clock rollback must not resurrect an already-expired replay window.
+    ambiguousRefreshAttempts.delete(key)
+    return false
+  }
+  if (now - attempt.attemptedAt >= AMBIGUOUS_REFRESH_REPLAY_DELAY_MS) {
+    // Keep the evidence separate from the temporary block so a later 401 can
+    // still be classified as a possible replay after the window expires.
+    ambiguousRefreshAttempts.delete(key)
+    expiredAmbiguousRefreshAttempts.set(key, attempt)
+    pruneAmbiguousRefreshAttempts(now)
+    return false
+  }
+  pruneAmbiguousRefreshAttempts(now, key)
   // Why bounded rather than permanent: the token is only *possibly* spent. A
   // permanent block would sign out every desktop whose refresh merely timed out.
   return now - attempt.attemptedAt < AMBIGUOUS_REFRESH_REPLAY_DELAY_MS
