@@ -38,6 +38,10 @@ export function getEffectiveUpstreamStatusGenerationCountForTests(): number {
   return effectiveUpstreamStatusWriteGeneration.size
 }
 
+export function getEffectiveUpstreamStatusWriteGeneration(cacheKey: string): number {
+  return effectiveUpstreamStatusWriteGeneration.get(cacheKey) ?? evictedWriteGeneration
+}
+
 export function getEffectiveUpstreamStatusCacheKey(
   worktreePath: string,
   branchName: string,

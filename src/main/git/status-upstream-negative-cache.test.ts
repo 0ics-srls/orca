@@ -45,6 +45,11 @@ import {
   getEffectiveUpstreamStatusGenerationCountForTests,
   getStatus
 } from './status'
+import {
+  getEffectiveUpstreamStatusWriteGeneration,
+  readCachedEffectiveUpstreamStatus,
+  rememberEffectiveUpstreamStatus
+} from './source-control/effective-upstream-status-cache'
 
 describe('local upstream negative cache', () => {
   beforeEach(() => {
@@ -404,5 +409,24 @@ describe('local upstream negative cache', () => {
 
     expect(getEffectiveUpstreamStatusCacheCountForTests()).toBe(0)
     expect(getEffectiveUpstreamStatusGenerationCountForTests()).toBe(512)
+  })
+
+  it('continues caching new negatives after generation eviction', () => {
+    const now = Date.now()
+    for (let index = 0; index < 513; index += 1) {
+      rememberEffectiveUpstreamStatus(
+        `positive-${index}`,
+        { hasUpstream: true, ahead: 0, behind: 1 },
+        now,
+        true,
+        0
+      )
+    }
+    const cacheKey = 'new-negative'
+    const writeGeneration = getEffectiveUpstreamStatusWriteGeneration(cacheKey)
+    const status = { hasUpstream: false, ahead: 0, behind: 0 }
+    rememberEffectiveUpstreamStatus(cacheKey, status, now, true, writeGeneration)
+
+    expect(readCachedEffectiveUpstreamStatus(cacheKey, now)).toEqual(status)
   })
 })
