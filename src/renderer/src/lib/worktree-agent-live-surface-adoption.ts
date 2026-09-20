@@ -1,7 +1,7 @@
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import type { useAppStore } from '@/store'
-import { resolveTerminalTabPtyOwnership } from './terminal-tab-for-pty-id'
+import { resolveTerminalPtyPaneOwnership } from './terminal-pty-pane-owner'
 import type {
   LiveTerminalSurfaceOwner,
   LiveTerminalSurfaceOwnerIndex
@@ -130,10 +130,11 @@ export async function adoptLiveWorkspacePtySurfaces(
   livePtyIds: readonly string[],
   listSurfaceOwners: (worktreeId: string) => Promise<LiveTerminalSurfaceOwnerIndex | null>
 ): Promise<{ surfaced: boolean; declinedPtyIds: string[] }> {
-  // Why: ptyIdsByTabId holds only panes this renderer mounted, so a tab bound
-  // solely in tab.ptyId or the persisted layout used to read as unbound.
+  // Why: ptyIdsByTabId holds only panes this renderer mounted, so a tab bound solely in the
+  // persisted layout used to read as unbound — under any worktree key, since a PTY already
+  // surfaced elsewhere must not be adopted a second time.
   const unbound = livePtyIds.filter(
-    (ptyId) => resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind === 'none'
+    (ptyId) => resolveTerminalPtyPaneOwnership(getState(), ptyId).kind === 'none'
   )
   let surfaced = unbound.length < livePtyIds.length
   const declinedPtyIds: string[] = []
@@ -150,7 +151,7 @@ export async function adoptLiveWorkspacePtySurfaces(
   for (const ptyId of unbound) {
     // Why: a pane can mount while the census is in flight, so the pre-RPC
     // verdict is stale by the time it would authorize a mint.
-    if (resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind !== 'none') {
+    if (resolveTerminalPtyPaneOwnership(getState(), ptyId).kind !== 'none') {
       surfaced = true
       continue
     }

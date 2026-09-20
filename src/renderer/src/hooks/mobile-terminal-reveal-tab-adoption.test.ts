@@ -211,9 +211,10 @@ describe('mobile terminal reveal tab adoption', () => {
     })
   })
 
-  it('replies without an error when two recorded bindings both claim the pty', async () => {
-    // Ambiguity is unresolvable, so the reveal still creates a tab — but it must
-    // not reject, because the mobile focus path awaits it with no catch.
+  it('adopts the sole layout claimant now that the tab row is not an ownership tier', async () => {
+    // tab-stale-a holds the pty only through its row, which no longer binds anything, so
+    // tab-stale-b is the one claimant. The reply must still not reject: the mobile focus
+    // path awaits it with no catch.
     const storeState: HarnessStoreState = createHarnessStoreState({
       tabsByWorktree: {
         [WORKTREE_ID]: [
@@ -238,7 +239,7 @@ describe('mobile terminal reveal tab adoption', () => {
 
     expect(harness.replyTerminalCreate).toHaveBeenCalledWith({
       requestId: 'mobile-reveal',
-      tabId: 'tab-minted',
+      tabId: 'tab-stale-b',
       title: 'codex'
     })
   })
