@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { getSecretStore } from '../../shared/secret-store'
+import { writeCredentialFileAtomic } from '../integration-credential-file'
 import {
   parseAntigravityNativeCredential,
   type AntigravityNativeCredential
@@ -37,6 +40,10 @@ function accountId(contents: string): string {
 function summary(account: StoredAccount): AntigravityAccountSummary {
   const { credentials: _credentials, ...result } = account
   return result
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /** Owns account identity and switching; quota fetch failures never alter this state. */
@@ -124,6 +131,53 @@ export function createMemoryAntigravityAccountStore(
     read: () => accounts.map((account) => ({ ...account })),
     write: (next) => {
       accounts = next.map((account) => ({ ...account }))
+    }
+  }
+}
+
+function isStoredAccount(value: unknown): value is StoredAccount {
+  if (!isRecord(value)) {
+    return false
+  }
+  const account = value
+  return (
+    typeof account.id === 'string' &&
+    (typeof account.email === 'string' || account.email === null) &&
+    (typeof account.subject === 'string' || account.subject === null) &&
+    typeof account.authMethod === 'string' &&
+    typeof account.createdAt === 'number' &&
+    typeof account.updatedAt === 'number' &&
+    typeof account.credentials === 'string'
+  )
+}
+
+/** Persists the account vault through the OS keychain; plaintext fallback is refused. */
+export function createEncryptedAntigravityAccountStore(path: string): AntigravityAccountStore {
+  return {
+    read: () => {
+      if (!existsSync(path)) {
+        return []
+      }
+      const secretStore = getSecretStore()
+      if (!secretStore.isEncryptionAvailable()) {
+        throw new Error('The OS keychain is unavailable; Antigravity accounts were not read.')
+      }
+      try {
+        const value: unknown = JSON.parse(secretStore.decryptString(readFileSync(path)))
+        if (!Array.isArray(value) || !value.every(isStoredAccount)) {
+          throw new Error('invalid account store')
+        }
+        return value
+      } catch {
+        throw new Error('Antigravity accounts could not be decrypted.')
+      }
+    },
+    write: (accounts) => {
+      const secretStore = getSecretStore()
+      if (!secretStore.isEncryptionAvailable()) {
+        throw new Error('The OS keychain is unavailable; Antigravity accounts were not saved.')
+      }
+      writeCredentialFileAtomic(path, secretStore.encryptString(JSON.stringify(accounts)))
     }
   }
 }
