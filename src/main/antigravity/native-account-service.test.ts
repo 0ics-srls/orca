@@ -35,6 +35,17 @@ describe('AntigravityAccountService', () => {
     expect(state.activeAccountId).toBe(secondAccount.id.split('-').slice(0, 2).join('-'))
   })
 
+  it('reports a signed-in account before it is explicitly saved to the vault', async () => {
+    const active = backend(first)
+    const service = new AntigravityAccountService(createMemoryAntigravityAccountStore(), active)
+
+    const state = await service.listAccounts()
+
+    expect(state.accounts).toEqual([])
+    expect(state.activeAccountId).toBeNull()
+    expect(state.detectedAccount).toMatchObject({ authMethod: 'consumer' })
+  })
+
   it('switches the live native credential and verifies readback', async () => {
     const active = backend(first)
     const account = createSyntheticAntigravityAccount(second)

@@ -31,6 +31,7 @@ export type AntigravityCredentialBackend = {
 export type AntigravityAccountState = {
   accounts: AntigravityAccountSummary[]
   activeAccountId: string | null
+  detectedAccount: Pick<AntigravityAccountSummary, 'id' | 'email' | 'subject' | 'authMethod'> | null
 }
 
 function accountId(contents: string): string {
@@ -58,9 +59,24 @@ export class AntigravityAccountService {
 
   async listAccounts(): Promise<AntigravityAccountState> {
     const accounts = this.store.read()
-    const active = await this.knownActiveAccount(accounts)
+    const current = await this.credentialBackend.read()
+    const active = current
+      ? accounts.find((account) => account.id === accountId(current.contents))
+      : undefined
     this.activeAccountId = active?.id ?? null
-    return { accounts: accounts.map(summary), activeAccountId: this.activeAccountId }
+    return {
+      accounts: accounts.map(summary),
+      activeAccountId: this.activeAccountId,
+      detectedAccount:
+        current && !active
+          ? {
+              id: accountId(current.contents),
+              email: current.identity?.email ?? null,
+              subject: current.identity?.subject ?? null,
+              authMethod: current.authMethod
+            }
+          : null
+    }
   }
 
   async addCurrentAccount(): Promise<AntigravityAccountState> {
@@ -99,7 +115,7 @@ export class AntigravityAccountService {
       throw new Error('Antigravity account switching could not be verified.')
     }
     this.activeAccountId = id
-    return { accounts: accounts.map(summary), activeAccountId: id }
+    return { accounts: accounts.map(summary), activeAccountId: id, detectedAccount: null }
   }
 
   async removeAccount(id: string): Promise<AntigravityAccountState> {

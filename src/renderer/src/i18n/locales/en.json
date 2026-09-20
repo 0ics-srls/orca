@@ -6593,6 +6593,7 @@
           "antigravityQuotaWindows": "{{value0}} model windows available",
           "antigravityUnavailable": "Unavailable",
           "antigravitySignedIn": "Signed-in Antigravity account",
+          "antigravityDetected": "Detected on this computer; add it to enable switching",
           "antigravityActive": "Active",
           "antigravityUse": "Use",
           "antigravityRemove": "Remove",

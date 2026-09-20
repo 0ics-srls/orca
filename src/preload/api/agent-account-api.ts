@@ -68,6 +68,12 @@ export type AntigravityAccountState = {
     updatedAt: number
   }[]
   activeAccountId: string | null
+  detectedAccount: {
+    id: string
+    email: string | null
+    subject: string | null
+    authMethod: string
+  } | null
 }
 
 export type AntigravityAccountsApi = {
