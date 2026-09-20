@@ -24,7 +24,8 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
       previous.connectionId ||
       previous.payload.agentType !== 'antigravity' ||
       !baseline.terminalHandle ||
-      previous.terminalHandle !== baseline.terminalHandle ||
+      (previous.terminalHandle !== undefined &&
+        previous.terminalHandle !== baseline.terminalHandle) ||
       !expected ||
       !current ||
       current.authorityId !== expected.authorityId ||
@@ -62,7 +63,7 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
           tabId: previous.tabId,
           worktreeId: previous.worktreeId,
           connectionId: previous.connectionId,
-          terminalHandle: previous.terminalHandle,
+          terminalHandle: baseline.terminalHandle,
           providerSession: previous.providerSession,
           payload: {
             ...previous.payload,

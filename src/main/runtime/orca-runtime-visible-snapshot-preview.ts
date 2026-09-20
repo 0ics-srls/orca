@@ -23,11 +23,13 @@ export class OrcaRuntimeWithVisibleSnapshotPreview extends OrcaRuntimeWithCaptur
       if (!pty?.connected || pty.connectionId || !pty.paneKey) {
         return null
       }
-      return (
-        this.getAgentProviderSessionRowsForPaneFn?.(pty.paneKey)?.find(
-          (row) => row.providerSessionOnly !== true && row.agentType === 'antigravity'
-        ) ?? null
+      const terminalHandle = this.getAgentStatusTerminalHandleForPaneKey(pty.paneKey)
+      const row = this.getAgentProviderSessionRowsForPaneFn?.(pty.paneKey)?.find(
+        (candidate) =>
+          candidate.providerSessionOnly !== true && candidate.agentType === 'antigravity'
       )
+      // Native hooks identify the pane; the runtime owns its live terminal binding.
+      return row && terminalHandle ? { ...row, terminalHandle } : null
     },
     readScreen: (ptyId) => this.readVisibleTerminalState(ptyId),
     isCurrent: (ptyId, screen) =>

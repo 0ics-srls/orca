@@ -60,7 +60,6 @@ it('publishes the captured permission and cancellation to the canonical hook sto
   }
   wiring.statusStore.ingestTerminalStatus({
     paneKey,
-    terminalHandle: handle,
     payload: {
       state: 'working',
       agentType: 'antigravity',

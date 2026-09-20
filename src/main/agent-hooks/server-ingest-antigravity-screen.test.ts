@@ -124,3 +124,23 @@ describe('host-owned Antigravity screen permission', () => {
     expect(baseline(server).observation).toEqual(waiting.observation)
   })
 })
+
+it('accepts the runtime-attested binding absent from a native hook row', () => {
+  const server = new AgentHookServer()
+  server.ingestTerminalStatus({
+    paneKey: PANE,
+    payload: { state: 'working', agentType: 'antigravity', prompt: 'print marker' }
+  })
+  const row = baseline(server)
+  expect(row.terminalHandle).toBeUndefined()
+  expect(server.ingestAntigravityScreenPermission({ baseline: row, command: 'echo OK' })).toBe(
+    false
+  )
+  expect(
+    server.ingestAntigravityScreenPermission({
+      baseline: { ...row, terminalHandle: 'term-runtime' },
+      command: 'echo OK'
+    })
+  ).toBe(true)
+  expect(baseline(server)).toMatchObject({ state: 'waiting', terminalHandle: 'term-runtime' })
+})
