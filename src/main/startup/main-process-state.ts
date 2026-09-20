@@ -60,6 +60,7 @@ export const mainProcessState = {
   codexRuntimeHome: null as CodexRuntimeHomeService | null,
   codexSessionMigration: null as ReturnType<typeof createCodexSessionMigrationScheduler> | null,
   claudeAccounts: null as ClaudeAccountService | null,
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: startup fills this optional service before the main window is attached.
   antigravityAccounts: null as AntigravityAccountService | null,
   claudeRuntimeAuth: null as ClaudeRuntimeAuthService | null,
   runtime: null as OrcaRuntimeService | null,

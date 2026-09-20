@@ -59,6 +59,7 @@ import {
 } from './accounts-pane-provider-setting-sections'
 import { renderMiniMaxAccountsSection } from './accounts-pane-minimax-section'
 import { renderAccountsRemovalDialogs } from './accounts-pane-removal-dialogs'
+import { AntigravityAccountsSection } from './AntigravityAccountsSection'
 
 export { getAccountsPaneSearchEntries }
 
@@ -369,6 +370,7 @@ export function AccountsPane({
     matchesSettingsSearch(searchQuery, getAccountsGeminiSearchEntries())
       ? renderGeminiAccountsSection(model)
       : null,
+    !isRemoteAccountScope ? <AntigravityAccountsSection key="antigravity" /> : null,
     matchesSettingsSearch(searchQuery, getAccountsOpencodeSearchEntries())
       ? renderOpenCodeAccountsSection(model)
       : null,
