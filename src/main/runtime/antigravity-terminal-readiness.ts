@@ -46,12 +46,11 @@ function findAntigravityComposerIndex(normalized: string, requireHeader: boolean
     return null
   }
   const suffix = normalized.slice(composerEnd)
-  const currentScreen = normalized.slice(contentStart)
   // A trailing caret also appears on trust, sign-in, model, and onboarding menus. Those panes
   // must remain blocked until the menu is gone; only the latest AGY screen can establish readiness.
   if (
-    /do you trust|sign in|select a model|collect usage|choose a theme|press enter to continue|\b[12]\.\s/.test(
-      currentScreen
+    /do you trust|sign in|select a model|collect usage|choose a theme|press enter to continue/.test(
+      normalized.slice(contentStart)
     )
   ) {
     return null

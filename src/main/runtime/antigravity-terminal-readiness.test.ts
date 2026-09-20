@@ -11,6 +11,14 @@ describe('Antigravity terminal readiness', () => {
     expect(isKnownReadyPromptPreview(`${HEADER}\nlogo glyphs   custom provider\n>`)).toBe(true)
   })
 
+  it('accepts an idle screen after an agent response with a numbered list', () => {
+    expect(isKnownReadyPromptPreview(`${HEADER}\n1. First result\n2. Second result\n>`)).toBe(true)
+  })
+
+  it('refuses a model picker drawn after an older composer', () => {
+    expect(isKnownReadyPromptPreview(`${HEADER}\n>\nGemini 3.7 Flash (current)`)).toBe(false)
+  })
+
   it.each([
     'Signing in...',
     'Loading workspace...',
