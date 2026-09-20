@@ -22,6 +22,7 @@ import { FOREGROUND_GRID_DRIFT_CHECK_MIN_MS } from './foreground-output-budgets'
 import { TERMINAL_FOCUS_IN_SEQUENCE, TERMINAL_FOCUS_OUT_SEQUENCE } from './foreground-output-scan'
 import { isRemoteRuntimePtyId } from './paired-parked-terminal-restore'
 import { isCodexPaneStale } from './codex-pane-stale'
+import { installTerminalSelectionFitGuard } from '../terminal-selection-fit-guard'
 
 import type { ConnectPanePtySession } from './connect-pane-pty-session'
 
@@ -192,6 +193,9 @@ export function installPtyInputForward(session: ConnectPanePtySession): void {
     capturedTransport: session.transport,
     getCurrentTransport: () => session.deps.paneTransportsRef.current.get(session.pane.id)
   })
+  session.terminalSelectionFitGuard = installTerminalSelectionFitGuard(session.pane.terminal, () =>
+    session.scheduleForegroundGridDriftCheck(true)
+  )
 
   session.shouldSuppressDesktopPtyResize = (): boolean => {
     const currentPtyId = session.transport.getPtyId()
@@ -336,19 +340,23 @@ export function installPtyInputForward(session: ConnectPanePtySession): void {
       (session.pane.terminal.cols !== proposed.cols || session.pane.terminal.rows !== proposed.rows)
     )
   }
-  session.scheduleForegroundGridDriftCheck = (): void => {
+  session.scheduleForegroundGridDriftCheck = (force = false): void => {
     // Why: mobile-owned PTYs intentionally keep a non-desktop grid; drift
     // healing would refit xterm even if resize forwarding is later suppressed.
     if (
       session.disposed ||
       !session.deps.isVisibleRef.current ||
       session.shouldSuppressDesktopPtyResize() ||
-      session.pendingForegroundGridDriftCheckRaf !== null
+      session.pendingForegroundGridDriftCheckRaf !== null ||
+      (!force && session.terminalSelectionFitGuard?.isActive())
     ) {
       return
     }
     const now = performance.now()
-    if (now - session.lastForegroundGridDriftCheckAt < FOREGROUND_GRID_DRIFT_CHECK_MIN_MS) {
+    if (
+      !force &&
+      now - session.lastForegroundGridDriftCheckAt < FOREGROUND_GRID_DRIFT_CHECK_MIN_MS
+    ) {
       return
     }
     session.lastForegroundGridDriftCheckAt = now
@@ -358,6 +366,7 @@ export function installPtyInputForward(session: ConnectPanePtySession): void {
         session.disposed ||
         !session.deps.isVisibleRef.current ||
         session.shouldSuppressDesktopPtyResize() ||
+        session.terminalSelectionFitGuard?.isActive() ||
         !session.terminalGridDriftedFromFit()
       ) {
         return
