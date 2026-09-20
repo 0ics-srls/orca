@@ -83,11 +83,15 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
           if (shouldActivate) {
             activateTerminalInitiatedWorktree(store, ownerWorktreeId)
           }
-          const worktreeTabs = store.tabsByWorktree[worktreeId] ?? []
           const existingTab = adoptedRow?.tab
           const isSplitReveal = Boolean(ptyId && tabId && leafId && splitFromLeafId)
+          // Why: the split's target row can be filed under a worktree key other than the event's,
+          // so the adopted owner answers first and the hint resolves under the owner's key.
           const splitTargetTab = isSplitReveal
-            ? worktreeTabs.find((candidate) => candidate.id === tabId)
+            ? (existingTab ??
+              (store.tabsByWorktree[ownerWorktreeId] ?? []).find(
+                (candidate) => candidate.id === tabId
+              ))
             : undefined
           if (isSplitReveal && !splitTargetTab) {
             throw new Error(`Terminal tab ${tabId} not found`)

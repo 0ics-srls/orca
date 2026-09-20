@@ -3,17 +3,39 @@ import { isPtyDataHandlerShutdownPending, ptyDataHandlers } from './pty-shutdown
 
 type PtyDataHandler = NonNullable<ReturnType<typeof ptyDataHandlers.get>>
 
+/** The pane that installed each handler. Non-pane holders of the slot stay unmarked. */
+const paneOwnersByDataHandler = new WeakMap<PtyDataHandler, object>()
+
 /**
- * Report a second pane claiming a PTY's only data-handler slot.
+ * Take a PTY's only data-handler slot for a pane, reporting a second pane that takes it away.
  *
  * Why not fan the data out instead: two panes on one PTY is the STA-7961 bug, not a mode to
  * support — they also both forward their fit, so the PTY grid flips between two sizes. The one
  * legitimate overlap, a remount, runs through the pending-shutdown queue, which deliberately
  * leaves the outgoing handler in the map; that case is silent.
  */
-export function reportOverwrittenPtyDataHandler(ptyId: string, next: PtyDataHandler): void {
+export function claimPtyDataHandlerForPane(
+  ptyId: string,
+  handler: PtyDataHandler,
+  paneOwner: object
+): void {
+  reportOverwrittenPtyDataHandler(ptyId, handler, paneOwner)
+  paneOwnersByDataHandler.set(handler, paneOwner)
+}
+
+function reportOverwrittenPtyDataHandler(
+  ptyId: string,
+  next: PtyDataHandler,
+  paneOwner: object
+): void {
   const previous = ptyDataHandlers.get(ptyId)
   if (!previous || previous === next || isPtyDataHandlerShutdownPending(ptyId)) {
+    return
+  }
+  const previousOwner = paneOwnersByDataHandler.get(previous)
+  // Why: the eager pre-attach buffer and a transport's shutdown handler hold the slot on the way
+  // to this very pane — only a handler owned by ANOTHER pane means one PTY is mounted twice.
+  if (previousOwner === undefined || previousOwner === paneOwner) {
     return
   }
   console.warn('[pty] a second pane replaced the data handler for', ptyId)

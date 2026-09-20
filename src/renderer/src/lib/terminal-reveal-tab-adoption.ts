@@ -20,26 +20,33 @@ export type TerminalRevealTabRequest = {
 }
 
 /**
- * The tab whose layout already contains a leaf id. A leaf id names one pane for
- * its lifetime, and layouts are keyed by tab id alone, so this answer is
- * independent of which worktree list the owning row currently sits in.
+ * The tab whose layout owns a leaf id. A leaf id names one pane for its lifetime,
+ * and layouts are keyed by tab id alone, so this answer is independent of which
+ * worktree list the owning row currently sits in. A tab that binds the leaf to a
+ * PTY outranks one that merely carries it in its tree: the hydration self-heal
+ * leaves a losing single-leaf tab holding the id unbound, and that tab has no
+ * session to adopt. Within a tier the first tab found wins.
  */
 export function findTerminalTabIdBindingLeafId(
   state: Pick<AppState, 'terminalLayoutsByTabId'>,
   leafId: string
 ): string | null {
+  let rootOnlyTabId: string | null = null
   for (const [tabId, layout] of Object.entries(state.terminalLayoutsByTabId)) {
     if (layout === undefined) {
       continue
     }
-    if (layout.ptyIdsByLeafId !== undefined && leafId in layout.ptyIdsByLeafId) {
+    const inRoot = layout.root ? collectLeafIdsInOrder(layout.root).includes(leafId) : false
+    // Why the root test: detaching a pane can strand a binding whose leaf the tree no longer
+    // holds, and a stranded entry mounts nothing, so it must not outrank a layout that does.
+    if (layout.ptyIdsByLeafId?.[leafId] !== undefined && (inRoot || !layout.root)) {
       return tabId
     }
-    if (layout.root && collectLeafIdsInOrder(layout.root).includes(leafId)) {
-      return tabId
+    if (inRoot && rootOnlyTabId === null) {
+      rootOnlyTabId = tabId
     }
   }
-  return null
+  return rootOnlyTabId
 }
 
 /** Locate a tab row and the worktree key it is filed under, across every key. */
