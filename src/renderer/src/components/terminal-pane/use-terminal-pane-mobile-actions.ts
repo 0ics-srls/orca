@@ -113,15 +113,6 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
     [terminalShouldHandleMiddleClick]
   )
-  const getPrimarySelectionMiddleClickPane = useCallback(
-    (target: EventTarget | null) => {
-      const clickedPane = findTerminalPaneForMiddleClick(target)
-      return clickedPane && clickedPane.terminal.modes.mouseTrackingMode === 'none'
-        ? clickedPane
-        : null
-    },
-    [findTerminalPaneForMiddleClick]
-  )
   const handlePrimarySelectionMiddleMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>): void => {
       if (event.button !== 1 || !isPrimarySelectionEnabled()) {
@@ -131,10 +122,12 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
       if (!targetPane) {
         return
       }
-      // Why: block Chromium's native middle-click paste and arm the shared
-      // suppression window unconditionally; only the paste-to-PTY below is
-      // gated on tracking mode, since a tracking TUI still needs the click
-      // forwarded as a mouse report and must not have propagation stopped.
+      // Why: arm the shared suppression window unconditionally — it, not
+      // preventDefault, is what swallows Chromium's native follow-up paste
+      // (fired on mouseup, not mousedown; see usePrimarySelectionPaste.ts).
+      // Only the paste-to-PTY below is gated on tracking mode, since a
+      // tracking TUI still needs the click forwarded as a mouse report and
+      // must not have propagation stopped.
       event.preventDefault()
       armPrimarySelectionNativePasteSuppression()
       if (targetPane.terminal.modes.mouseTrackingMode !== 'none') {
@@ -263,7 +256,6 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
     restorePaneTerminalFit,
     restoreAllTerminalFits,
     terminalShouldHandleMiddleClick,
-    getPrimarySelectionMiddleClickPane,
     handlePrimarySelectionMiddleMouseDown,
     handlePrimarySelectionAuxClick,
     activatePaneTitleInteraction,

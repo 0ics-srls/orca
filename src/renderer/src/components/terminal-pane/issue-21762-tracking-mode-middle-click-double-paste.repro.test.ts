@@ -89,8 +89,9 @@ function buildController(pane: ManagedPane): TerminalPaneContextController {
 function fireMiddleMouseDown(
   handler: (event: React.MouseEvent<HTMLDivElement>) => void,
   target: EventTarget
-): { defaultPrevented: boolean } {
+): { defaultPrevented: boolean; propagationStopped: boolean } {
   let defaultPrevented = false
+  let propagationStopped = false
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: test-only stub; the handler only calls button/target/preventDefault/stopPropagation off the event.
   handler({
     button: 1,
@@ -98,9 +99,11 @@ function fireMiddleMouseDown(
     preventDefault: () => {
       defaultPrevented = true
     },
-    stopPropagation: () => {}
+    stopPropagation: () => {
+      propagationStopped = true
+    }
   } as unknown as React.MouseEvent<HTMLDivElement>)
-  return { defaultPrevented }
+  return { defaultPrevented, propagationStopped }
 }
 
 describe('issue 21762: middle-click native-paste suppression in mouse-tracking TUIs', () => {
@@ -113,7 +116,7 @@ describe('issue 21762: middle-click native-paste suppression in mouse-tracking T
     document.body.replaceChildren()
   })
 
-  it('arms native-paste suppression even when the pane is in mouse-tracking mode', () => {
+  it('arms native-paste suppression without stopping propagation when the pane is in mouse-tracking mode', () => {
     const pane = buildTrackedPane('sgr')
     const { result } = renderHook(() => useTerminalPaneMobileActions(buildController(pane)))
 
@@ -122,20 +125,27 @@ describe('issue 21762: middle-click native-paste suppression in mouse-tracking T
       pane.container
     )
 
-    // Chromium's native middle-click paste must be blocked regardless of tracking mode.
-    expect(outcome.defaultPrevented).toBe(true)
     // The #8993 suppression window must be armed so the native follow-up paste
     // doesn't reach xterm's helper textarea and duplicate the TUI's own paste.
     expect(armPrimarySelectionNativePasteSuppressionMock).toHaveBeenCalled()
+    // Propagation must NOT be stopped here — xterm's own mousedown listener
+    // (a descendant of this capture handler) still needs to see the event so
+    // the tracking TUI receives the click as a mouse report.
+    expect(outcome.propagationStopped).toBe(false)
+    expect(pane.terminal.focus).not.toHaveBeenCalled()
   })
 
-  it('still pastes directly to the PTY when the pane is not in mouse-tracking mode', () => {
+  it('stops propagation and pastes directly to the PTY when the pane is not in mouse-tracking mode', () => {
     const pane = buildTrackedPane('none')
     const { result } = renderHook(() => useTerminalPaneMobileActions(buildController(pane)))
 
-    fireMiddleMouseDown(result.current.handlePrimarySelectionMiddleMouseDown, pane.container)
+    const outcome = fireMiddleMouseDown(
+      result.current.handlePrimarySelectionMiddleMouseDown,
+      pane.container
+    )
 
     expect(armPrimarySelectionNativePasteSuppressionMock).toHaveBeenCalled()
+    expect(outcome.propagationStopped).toBe(true)
     expect(pane.terminal.focus).toHaveBeenCalled()
   })
 })
