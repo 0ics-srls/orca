@@ -2,6 +2,12 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import {
+  PRESSABLE_TAGS,
+  readAttribute,
+  spreadsProps,
+  type Read
+} from './pressable-control-source-reader'
 
 /**
  * A Back control the page serves is reachable by name or not at all. Inside the shell there is no
@@ -54,15 +60,10 @@ const PAGE_SERVED_SCREENS = [
 /** The rule reads whole trees, so a Back added beside a screen is ruled as well as the screen's. */
 const screenTree = (screen: string): string => screen.slice(0, screen.lastIndexOf('/'))
 
-const PRESSABLE_TAGS = new Set(['Pressable', 'TouchableOpacity'])
 /** `router.back()`, `goBack()`, `onBack()`; the leading class keeps `callback(` and `rollback(` out. */
 const BACK_CALL = /(?:^|[^A-Za-z0-9_$])(?:back|goBack|onBack)\s*\(/
 const BACK_HANDLER = /^(?:back|[A-Za-z0-9_$]*Back)$/
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/
-
-/** A spread hides the props this rule reads, so it answers "unknown" rather than "absent". */
-type Read = { known: true; value: string } | { known: false }
-const UNKNOWN: Read = { known: false }
 
 type BackControl = { path: string; line: number; role: Read; label: Read }
 
@@ -77,32 +78,6 @@ function componentFiles(tree: string): string[] {
     }
   }
   return found
-}
-
-function spreadsProps(element: ts.JsxOpeningLikeElement): boolean {
-  return element.attributes.properties.some((property) => ts.isJsxSpreadAttribute(property))
-}
-
-function readAttribute(element: ts.JsxOpeningLikeElement, name: string): Read {
-  if (spreadsProps(element)) {
-    return UNKNOWN
-  }
-  for (const property of element.attributes.properties) {
-    if (ts.isJsxAttribute(property) && property.name.getText() === name) {
-      const initializer = property.initializer
-      if (!initializer) {
-        return { known: true, value: '' }
-      }
-      if (ts.isStringLiteral(initializer)) {
-        return { known: true, value: initializer.text }
-      }
-      if (ts.isJsxExpression(initializer) && initializer.expression) {
-        return { known: true, value: initializer.expression.getText() }
-      }
-      return { known: true, value: initializer.getText() }
-    }
-  }
-  return { known: true, value: '' }
 }
 
 /** One hop: `onPress={requestBack}` is read through the declaration `requestBack` names here. */
@@ -224,6 +199,51 @@ describe('Back controls in the screens the page serves', () => {
   it('names every one of them in the app’s own wording for Back', () => {
     expect(
       CONTROLS.filter(
+        (control) => !control.label.known || !/^Back\b/.test(control.label.value)
+      ).map(describeControl)
+    ).toEqual([])
+  })
+})
+
+/**
+ * The trees a route not yet registered will bring under the rule, held to it before it does.
+ *
+ * `screenTree` takes a screen's directory, so registering the review route puts the whole of
+ * `src/components` under these two rules and the source-control route puts `src/source-control`.
+ * Fixing that in the PR that registers would make a route entry carry unrelated accessibility
+ * work; fixing it here means C4.4 adds two rows to the table above and nothing else moves.
+ *
+ * This describe is what the rows replace: once they are in `PAGE_SERVED_SCREENS`, `CONTROLS`
+ * covers these trees and the cases below become a second reading of the same thing.
+ *
+ * The modules, with their trees derived, for the reason the table above gives per screen: a tree
+ * holds more than one Back, so presence asserted over the tree lets one answer for another.
+ * `src/components` has two, and the review header's could have been renamed into a dismiss with
+ * `CustomKeyModal`'s standing in for it.
+ */
+const ARRIVING_SCREENS = [
+  'src/source-control/MobileSourceControlHeader.tsx',
+  'src/components/MobileDiffReviewHeader.tsx'
+]
+const ARRIVING_TREES = [...new Set(ARRIVING_SCREENS.map(screenTree))]
+const ARRIVING = ARRIVING_TREES.flatMap((tree) => backControlsUnder(tree))
+
+describe('Back controls in the trees a registered route will add', () => {
+  it('finds a control in each arriving screen, so the rules below cannot pass vacuously', () => {
+    expect(ARRIVING_SCREENS.filter((screen) => backControlsIn(screen).length === 0)).toEqual([])
+  })
+
+  it('gives every one of them the button role', () => {
+    expect(
+      ARRIVING.filter((control) => !control.role.known || control.role.value !== 'button').map(
+        describeControl
+      )
+    ).toEqual([])
+  })
+
+  it('names every one of them in the app’s own wording for Back', () => {
+    expect(
+      ARRIVING.filter(
         (control) => !control.label.known || !/^Back\b/.test(control.label.value)
       ).map(describeControl)
     ).toEqual([])
