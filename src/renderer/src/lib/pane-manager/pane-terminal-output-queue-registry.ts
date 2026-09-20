@@ -134,51 +134,6 @@ let useMessageChannelDrain = typeof MessageChannel !== 'undefined' && !isVitestE
 let drainChannel: MessageChannel | null = null
 // Why indirect: the drain loop lives downstream of this module, so it registers itself here rather than being imported back into the queue state it operates on.
 let runDrain: (() => void) | null = null
-type DenseSgrPacingState = {
-  generation: number
-  inFlight: number
-}
-
-const denseSgrPacingByTerminal = new WeakMap<TerminalOutputTarget, DenseSgrPacingState>()
-
-export function canDrainQueueEntry(entry: QueueEntry): boolean {
-  return !entry.denseSgr || (denseSgrPacingByTerminal.get(entry.terminal)?.inFlight ?? 0) === 0
-}
-
-export function reserveDenseSgrBatch(terminal: TerminalOutputTarget): () => void {
-  const state = denseSgrPacingByTerminal.get(terminal) ?? { generation: 0, inFlight: 0 }
-  denseSgrPacingByTerminal.set(terminal, state)
-  state.inFlight += 1
-  const generation = state.generation
-  let released = false
-  return () => {
-    if (released) {
-      return
-    }
-    released = true
-    const current = denseSgrPacingByTerminal.get(terminal)
-    // A disposed xterm can invoke an old callback after its queue is cleared
-    // and the same object is reused. Do not let that callback release a new
-    // generation's reservation.
-    if (!current || current.generation !== generation) {
-      return
-    }
-    current.inFlight = Math.max(0, current.inFlight - 1)
-    scheduleDrain(0)
-  }
-}
-
-export function clearDenseSgrPacing(terminal: TerminalOutputTarget): void {
-  const state = denseSgrPacingByTerminal.get(terminal)
-  if (state) {
-    state.generation += 1
-    state.inFlight = 0
-    return
-  }
-  // Retain a tombstone generation so a callback reserved before the first
-  // clear cannot match a reservation made after it.
-  denseSgrPacingByTerminal.set(terminal, { generation: 1, inFlight: 0 })
-}
 
 // Why re-classified per batch rather than latched at enqueue: density changes mid-stream — a plain banner ahead of a TUI would miss the pacing entirely, and a dense header ahead of a long plain tail would pin that tail at the dense budget, which is slower than no pacing at all.
 export function resolveQueueEntryChunkLimit(entry: QueueEntry): number {
@@ -316,7 +271,6 @@ export function discardTerminalOutput(terminal: TerminalOutputTarget): void {
   }
   discardInFlightTerminalOutputAckCredits(terminal)
   queuedByTerminal.delete(terminal)
-  clearDenseSgrPacing(terminal)
   discardForegroundRenderSettle(terminal)
   // Why: cancel the watch without masquerading as parse progress; replay guards use real completions to tell slow from wedged.
   cancelTerminalWriteStallWatch(terminal)

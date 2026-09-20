@@ -335,16 +335,10 @@ describe('pane terminal output scheduler', () => {
     expect(terminal.write).toHaveBeenCalledTimes(6)
   })
 
-  it('paces dense SGR output to one parser batch and preserves bytes', async () => {
+  it('splits dense SGR output into 4 KiB parser batches and preserves bytes', async () => {
     vi.useFakeTimers()
-    const { writeTerminalOutput } = await loadScheduler()
+    const { queuedByTerminal, writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const input = Array.from(
       { length: 1_200 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
@@ -352,32 +346,22 @@ describe('pane terminal output scheduler', () => {
 
     writeTerminalOutput(terminal, input, { foreground: false })
     vi.advanceTimersByTime(50)
-
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-    expect(parsed).toHaveLength(1)
-    const written: string[] = [terminal.write.mock.calls[0]?.[0] ?? '']
-    while (parsed.length > 0) {
-      parsed.shift()?.()
-      vi.advanceTimersByTime(0)
-      const next = terminal.write.mock.calls[written.length]?.[0]
-      if (next !== undefined) {
-        written.push(next)
-      }
+    while (queuedByTerminal.has(terminal)) {
+      vi.advanceTimersByTime(16)
     }
 
+    const written = terminal.write.mock.calls.map(([data]) => data)
+    expect(written.length).toBeGreaterThan(1)
+    for (const data of written) {
+      expect(data.length).toBeLessThanOrEqual(4 * 1024)
+    }
     expect(written.join('')).toBe(input)
   })
 
   it('classifies dense SGR split across sub-batch deliveries', async () => {
     vi.useFakeTimers()
-    const { writeTerminalOutput } = await loadScheduler()
+    const { queuedByTerminal, writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const input = Array.from(
       { length: 1_200 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
@@ -390,179 +374,40 @@ describe('pane terminal output scheduler', () => {
     }
     vi.advanceTimersByTime(50)
 
-    expect(terminal.write).toHaveBeenCalledTimes(1)
     expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
-    while (parsed.length > 0) {
-      parsed.shift()?.()
-      vi.advanceTimersByTime(0)
+    while (queuedByTerminal.has(terminal)) {
+      vi.advanceTimersByTime(16)
     }
 
     expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(input)
     expect(terminal.write.mock.calls.length).toBeGreaterThan(1)
   })
 
-  it('ignores a stale dense parse release after the terminal queue is discarded', async () => {
-    vi.useFakeTimers()
-    const { discardTerminalOutput, writeTerminalOutput } = await loadScheduler()
-    const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
-    const dense = Array.from(
-      { length: 1_200 },
-      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
-    ).join('')
-
-    writeTerminalOutput(terminal, dense, { foreground: false })
-    vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-    const staleRelease = parsed.shift()
-    expect(staleRelease).toBeDefined()
-
-    discardTerminalOutput(terminal)
-    writeTerminalOutput(terminal, dense, { foreground: false })
-    vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(2)
-
-    staleRelease?.()
-    vi.advanceTimersByTime(0)
-    // The old callback must not release the replacement generation's batch.
-    expect(terminal.write).toHaveBeenCalledTimes(2)
-
-    parsed.shift()?.()
-    vi.advanceTimersByTime(0)
-    expect(terminal.write).toHaveBeenCalledTimes(3)
-  })
-
-  it('keeps foreground bytes behind a dense batch retained by an explicit flush', async () => {
+  it('keeps foreground bytes behind dense output still queued after a drain', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const dense = Array.from(
-      { length: 600 },
+      { length: 1_300 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
     ).join('')
-    const input = dense.slice(0, 4 * 1024 + 256)
 
-    writeTerminalOutput(terminal, input, { foreground: false })
+    writeTerminalOutput(terminal, dense, { foreground: false })
     vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
+    // One background tick submits MAX_WRITES_PER_DRAIN batches; the rest stays queued.
+    expect(terminal.write).toHaveBeenCalledTimes(2)
     writeTerminalOutput(terminal, 'echo', { foreground: true })
 
-    // The foreground write's budget-free flush submits the retained dense tail first.
-    expect(terminal.write.mock.calls.map(([data]) => data)).toEqual([
-      input.slice(0, 4 * 1024),
-      input.slice(4 * 1024),
-      'echo'
-    ])
+    // The foreground write's flush submits the queued dense tail first.
+    const written = terminal.write.mock.calls.map(([data]) => data)
+    expect(written.at(-1)).toBe('echo')
+    expect(written.join('')).toBe(`${dense}echo`)
   })
 
-  it('drains a dense entry completely when the flush carries no char budget', async () => {
+  it('guards a throwing parsed ack credit so the terminal keeps draining', async () => {
     vi.useFakeTimers()
-    const { flushTerminalOutput, queuedByTerminal, writeTerminalOutput } = await loadScheduler()
+    const { queuedByTerminal, writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
-    const dense = Array.from(
-      { length: 1_300 },
-      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
-    ).join('')
-
-    writeTerminalOutput(terminal, dense, { foreground: false })
-    vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-
-    // The replay/shutdown-capture callers write straight to xterm next, so the
-    // flush must leave nothing queued behind the batch still in flight.
-    flushTerminalOutput(terminal)
-
-    expect(queuedByTerminal.has(terminal)).toBe(false)
-    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(dense)
-  })
-
-  it('does not reserve pacing slots for the batches a budget-free flush drains', async () => {
-    vi.useFakeTimers()
-    const { flushTerminalOutput, writeTerminalOutput } = await loadScheduler()
-    const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
-    const denseChunk = (count: number): string =>
-      Array.from({ length: count }, (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`).join('')
-
-    writeTerminalOutput(terminal, denseChunk(1_300), { foreground: false })
-    vi.advanceTimersByTime(50)
-    flushTerminalOutput(terminal)
-
-    // Release the paced batch the drain submitted; only the flush's own writes
-    // stay pending, modelling xterm not having parsed them yet.
-    parsed.shift()?.()
-    const pendingFromFlush = parsed.length
-    const writesFromFlush = terminal.write.mock.calls.length
-    writeTerminalOutput(terminal, denseChunk(1_300), { foreground: false })
-    for (let tick = 0; tick < 4; tick += 1) {
-      vi.advanceTimersByTime(50)
-      while (parsed.length > pendingFromFlush) {
-        parsed.pop()?.()
-      }
-    }
-
-    // Slots stranded by the flush would gate every batch after the first, which
-    // the front of the queue clears before it is classified dense.
-    expect(terminal.write.mock.calls.length - writesFromFlush).toBeGreaterThan(1)
-  })
-
-  it('keeps pacing a dense entry when the flush carries a char budget', async () => {
-    vi.useFakeTimers()
-    const { flushTerminalOutput, queuedByTerminal, writeTerminalOutput } = await loadScheduler()
-    const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
-    const dense = Array.from(
-      { length: 1_300 },
-      (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
-    ).join('')
-
-    writeTerminalOutput(terminal, dense, { foreground: false })
-    vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-
-    flushTerminalOutput(terminal, { maxChars: 64 * 1024 })
-
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-    expect(queuedByTerminal.has(terminal)).toBe(true)
-  })
-
-  it('releases the dense pacing slot when a parsed ack credit throws', async () => {
-    vi.useFakeTimers()
-    const { writeTerminalOutput } = await loadScheduler()
-    const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const dense = Array.from(
       { length: 300 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
@@ -576,25 +421,21 @@ describe('pane terminal output scheduler', () => {
     })
     writeTerminalOutput(terminal, dense, { foreground: false })
     vi.advanceTimersByTime(50)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
+    while (queuedByTerminal.has(terminal)) {
+      vi.advanceTimersByTime(16)
+    }
 
-    parsed.shift()?.()
-    vi.advanceTimersByTime(0)
-
-    // A throwing credit must not skip the dense release, or inFlight stays
-    // pinned and the terminal never drains again.
-    expect(terminal.write).toHaveBeenCalledTimes(2)
+    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(`${dense}${dense}`)
     expect(mocks.recordRendererCrashBreadcrumb).toHaveBeenCalledWith(
       'terminal_write_completion_error',
       expect.objectContaining({ context: 'parsed-ack-credits' })
     )
   })
 
-  it('starts pacing once a plain banner gives way to dense output', async () => {
+  it('shrinks the batch once a plain banner gives way to dense output', async () => {
     vi.useFakeTimers()
     const { writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    terminal.write.mockImplementation(() => {})
     const banner = 'banner\r\n'.repeat(640)
     const dense = Array.from(
       { length: 2_000 },
@@ -607,21 +448,15 @@ describe('pane terminal output scheduler', () => {
 
     const written = terminal.write.mock.calls.map(([data]) => data)
     expect(written[0]).toHaveLength(16 * 1024)
-    // Once the dense body reaches the front the budget must drop, or this is
-    // the 128 KiB parser burst the pacing exists to bound.
+    // Once the dense body reaches the front the batch must shrink, or this is
+    // the 128 KiB parser burst the split exists to bound.
     expect(written[1]).toHaveLength(4 * 1024)
   })
 
-  it('stops pacing once a dense header gives way to a plain tail', async () => {
+  it('restores the full batch once a dense header gives way to a plain tail', async () => {
     vi.useFakeTimers()
-    const { writeTerminalOutput } = await loadScheduler()
+    const { queuedByTerminal, writeTerminalOutput } = await loadScheduler()
     const terminal = createTerminal()
-    const parsed: (() => void)[] = []
-    terminal.write.mockImplementation((_data: string, callback?: () => void) => {
-      if (callback) {
-        parsed.push(callback)
-      }
-    })
     const dense = Array.from(
       { length: 500 },
       (_, index) => `\x1b[${30 + (index % 8)}mX\x1b[0m`
@@ -631,21 +466,16 @@ describe('pane terminal output scheduler', () => {
     writeTerminalOutput(terminal, dense, { foreground: false })
     writeTerminalOutput(terminal, tail, { foreground: false })
     vi.advanceTimersByTime(50)
-    expect(terminal.write.mock.calls[0]?.[0]).toHaveLength(4 * 1024)
-    expect(terminal.write).toHaveBeenCalledTimes(1)
-
-    parsed.shift()?.()
-    vi.advanceTimersByTime(0)
-
-    // A latched verdict would pin the plain tail at 4 KiB per parse
-    // round-trip, which is slower than not pacing at all.
-    expect(terminal.write.mock.calls[1]?.[0]).toHaveLength(16 * 1024)
-
-    while (parsed.length > 0 || terminal.write.mock.calls.length < 2) {
-      parsed.shift()?.()
+    while (queuedByTerminal.has(terminal)) {
       vi.advanceTimersByTime(16)
     }
-    expect(terminal.write.mock.calls.map(([data]) => data).join('')).toBe(`${dense}${tail}`)
+
+    const written = terminal.write.mock.calls.map(([data]) => data)
+    expect(written[0]).toHaveLength(4 * 1024)
+    // A latched verdict would pin the plain tail at 4 KiB per batch, which is
+    // slower than not splitting at all.
+    expect(written[1]).toHaveLength(16 * 1024)
+    expect(written.join('')).toBe(`${dense}${tail}`)
   })
 
   it('writes a latency-sensitive foreground redraw whole, even when it is dense', async () => {

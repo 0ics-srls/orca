@@ -16,7 +16,6 @@ import {
   discardTerminalOutput,
   fireQueuedAckCredits,
   queuedByTerminal,
-  reserveDenseSgrBatch,
   resolveQueueEntryChunkLimit,
   scheduleDrain,
   type QueueEntry,
@@ -73,20 +72,16 @@ export function composeParsedCallback(
   terminal: TerminalOutputTarget,
   onParsed: TerminalOutputParsedCallback | undefined,
   ackCreditsParsed: (() => void) | undefined,
-  pacer: (() => void) | undefined,
-  denseSgrRelease: (() => void) | undefined = undefined
+  pacer: (() => void) | undefined
 ): TerminalOutputParsedCallback {
   // Why always non-undefined: the callback doubles as the pipeline-health settle signal — with none, the stall watch could never settle, forcing a probe round-trip per healthy idle pane.
   return () => {
     try {
       onParsed?.()
     } finally {
-      // Why guarded per step: one throwing step would skip every later one, and a skipped dense release pins inFlight so the pane never drains again.
+      // Why guarded per step: one throwing step would skip every later one.
       if (ackCreditsParsed) {
         runGuardedWriteCompletionStep('parsed-ack-credits', ackCreditsParsed)
-      }
-      if (denseSgrRelease) {
-        runGuardedWriteCompletionStep('parsed-dense-release', denseSgrRelease)
       }
       if (pacer) {
         runGuardedWriteCompletionStep('parsed-pacer', pacer)
@@ -100,17 +95,13 @@ export function composeParsedCallback(
 
 export function composeWriteFailureCallback(
   terminal: TerminalOutputTarget,
-  ackCreditsParsed: (() => void) | undefined,
-  denseSgrRelease: (() => void) | undefined = undefined
+  ackCreditsParsed: (() => void) | undefined
 ): () => void {
   return () => {
     try {
       // A rejected write still consumed the main-owned delivery window.
       if (ackCreditsParsed) {
         runGuardedWriteCompletionStep('write-failure-ack-credits', ackCreditsParsed)
-      }
-      if (denseSgrRelease) {
-        runGuardedWriteCompletionStep('write-failure-dense-release', denseSgrRelease)
       }
     } finally {
       // Why: a synchronous rejection proves undeliverability but nothing about parse progress; recover without extending replay guards.
@@ -131,7 +122,6 @@ export function writeQueuedChunk(entry: QueueEntry): 'foreground' | 'background'
     return null
   }
   const pacer = entry.highPriority ? makeParseClockPacer() : undefined
-  const denseSgrRelease = entry.denseSgr ? reserveDenseSgrBatch(entry.terminal) : undefined
   const ackCreditsParsed = registerTerminalOutputAckCredits(entry.terminal, queuedWrite.ackCredits)
   // Why armed BEFORE the write: a wedged WriteBuffer (issue #2836) or disposed xterm (6.1.0-beta.287) never runs the parsed callback, so the watch must be live first to catch it.
   armTerminalWriteStallWatch(entry.terminal, {
@@ -153,27 +143,16 @@ export function writeQueuedChunk(entry: QueueEntry): 'foreground' | 'background'
               entry.terminal,
               queuedWrite.onParsed,
               ackCreditsParsed,
-              pacer,
-              denseSgrRelease
+              pacer
             ),
-            onWriteFailure: composeWriteFailureCallback(
-              entry.terminal,
-              ackCreditsParsed,
-              denseSgrRelease
-            )
+            onWriteFailure: composeWriteFailureCallback(entry.terminal, ackCreditsParsed)
           }
         )
       : writeBackgroundTerminalChunk(
           entry.terminal,
           queuedWrite.data,
-          composeParsedCallback(
-            entry.terminal,
-            queuedWrite.onParsed,
-            ackCreditsParsed,
-            pacer,
-            denseSgrRelease
-          ),
-          composeWriteFailureCallback(entry.terminal, ackCreditsParsed, denseSgrRelease)
+          composeParsedCallback(entry.terminal, queuedWrite.onParsed, ackCreditsParsed, pacer),
+          composeWriteFailureCallback(entry.terminal, ackCreditsParsed)
         )
     if (!writeAccepted) {
       // Why: the failure callback credited the submitted chunk; credit and abandon the detached tail so the drain can't retry a certified-dead xterm.
@@ -190,9 +169,6 @@ export function writeQueuedChunk(entry: QueueEntry): 'foreground' | 'background'
     cancelTerminalWriteStallWatch(entry.terminal)
     if (ackCreditsParsed) {
       runGuardedWriteCompletionStep('drain-abort-ack-credits', ackCreditsParsed)
-    }
-    if (denseSgrRelease) {
-      runGuardedWriteCompletionStep('drain-abort-dense-release', denseSgrRelease)
     }
     fireQueuedAckCredits(entry)
     entry.chunks.length = 0

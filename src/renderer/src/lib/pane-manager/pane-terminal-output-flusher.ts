@@ -22,15 +22,12 @@ import {
 import { discardDetachedQueueEntry, hasQueuedChunks } from './pane-terminal-output-queue-backlog'
 import { clearForegroundRelease, isEntryDrainable } from './pane-terminal-foreground-queue-state'
 import {
-  BACKGROUND_CHUNK_CHARS,
-  canDrainQueueEntry,
   discardTerminalOutput,
   fireQueuedAckCredits,
   queuedByTerminal,
   requestRegisteredTerminalBacklogRecovery,
   resolveQueueEntryChunkLimit,
   scheduleDrain,
-  reserveDenseSgrBatch,
   type TerminalOutputTarget
 } from './pane-terminal-output-queue-registry'
 
@@ -43,8 +40,6 @@ export function flushTerminalOutputImpl(
   if (!entry) {
     return
   }
-  // Why: a budget-free flush is an ordering barrier (replay paint, shutdown capture, parse settle) whose caller writes straight to xterm next, so it must submit every queued byte; only budgeted callers tolerate dense pacing.
-  const explicitFullDrain = options?.maxChars === undefined
   queuedByTerminal.delete(terminal)
   if (isTerminalWritePipelineCertifiedDead(terminal)) {
     discardDetachedQueueEntry(entry)
@@ -53,11 +48,6 @@ export function flushTerminalOutputImpl(
   }
   if (!isEntryDrainable(entry)) {
     queuedByTerminal.set(terminal, entry)
-    return
-  }
-  if (!explicitFullDrain && !canDrainQueueEntry(entry)) {
-    queuedByTerminal.set(terminal, entry)
-    scheduleDrain(0)
     return
   }
   if (entry.backgroundBacklogDropped && requestRegisteredTerminalBacklogRecovery(terminal)) {
@@ -72,17 +62,13 @@ export function flushTerminalOutputImpl(
   }
 
   let flushedChars = 0
-  const chunkLimit = resolveQueueEntryChunkLimit(entry)
-  let queuedWrite = takeQueuedChunk(entry, explicitFullDrain ? BACKGROUND_CHUNK_CHARS : chunkLimit)
+  let queuedWrite = takeQueuedChunk(entry, resolveQueueEntryChunkLimit(entry))
   while (queuedWrite) {
     flushedChars += queuedWrite.data.length
     if (debugEnabled) {
       debugState.flushWriteCount++
     }
     const ackCreditsParsed = registerTerminalOutputAckCredits(terminal, queuedWrite.ackCredits)
-    // Why not reserved on a full drain: this path ignores the pacing gate, so a reservation only strands the counter and blocks the terminal's next dense entry until xterm parses every batch.
-    const denseSgrRelease =
-      !explicitFullDrain && entry.denseSgr ? reserveDenseSgrBatch(terminal) : undefined
     armTerminalWriteStallWatch(terminal, {
       onCertifiedDead: () => discardTerminalOutput(terminal)
     })
@@ -102,27 +88,16 @@ export function flushTerminalOutputImpl(
                 terminal,
                 queuedWrite.onParsed,
                 ackCreditsParsed,
-                undefined,
-                denseSgrRelease
+                undefined
               ),
-              onWriteFailure: composeWriteFailureCallback(
-                terminal,
-                ackCreditsParsed,
-                denseSgrRelease
-              )
+              onWriteFailure: composeWriteFailureCallback(terminal, ackCreditsParsed)
             }
           )
         : writeBackgroundTerminalChunk(
             terminal,
             queuedWrite.data,
-            composeParsedCallback(
-              terminal,
-              queuedWrite.onParsed,
-              ackCreditsParsed,
-              undefined,
-              denseSgrRelease
-            ),
-            composeWriteFailureCallback(terminal, ackCreditsParsed, denseSgrRelease)
+            composeParsedCallback(terminal, queuedWrite.onParsed, ackCreditsParsed, undefined),
+            composeWriteFailureCallback(terminal, ackCreditsParsed)
           )
       if (!writeAccepted) {
         fireQueuedAckCredits(entry)
@@ -136,9 +111,6 @@ export function flushTerminalOutputImpl(
       if (ackCreditsParsed) {
         runGuardedWriteCompletionStep('flush-abort-ack-credits', ackCreditsParsed)
       }
-      if (denseSgrRelease) {
-        runGuardedWriteCompletionStep('flush-abort-dense-release', denseSgrRelease)
-      }
       fireQueuedAckCredits(entry)
       clearForegroundRelease(entry)
       recordQueueDebugPressure()
@@ -147,10 +119,7 @@ export function flushTerminalOutputImpl(
     if (options?.maxChars !== undefined && flushedChars >= options.maxChars) {
       break
     }
-    if (!explicitFullDrain && entry.denseSgr) {
-      break
-    }
-    queuedWrite = takeQueuedChunk(entry, BACKGROUND_CHUNK_CHARS)
+    queuedWrite = takeQueuedChunk(entry, resolveQueueEntryChunkLimit(entry))
   }
   if (hasQueuedChunks(entry)) {
     entry.highPriority = true
