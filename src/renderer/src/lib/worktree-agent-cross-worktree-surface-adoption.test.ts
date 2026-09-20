@@ -21,9 +21,9 @@ function boundLayout(): TerminalLayoutSnapshot {
   }
 }
 
-function row(worktreeId: string): TerminalTab {
+function row(worktreeId: string, id = 'tab-live'): TerminalTab {
   return {
-    id: 'tab-live',
+    id,
     ptyId: null,
     worktreeId,
     title: 'Codex',
@@ -36,14 +36,14 @@ function row(worktreeId: string): TerminalTab {
 
 function store(tabsByWorktree: Record<string, TerminalTab[]>): LiveSurfaceAdoptionStore {
   return {
-    createTab: vi.fn(() => ({ id: 'tab-minted' })),
+    createTab: vi.fn(() => row(WORKTREE_ID, 'tab-minted')),
     ptyIdsByTabId: {},
     setTabLayout: vi.fn(),
     tabsByWorktree,
     terminalLayoutsByTabId: { 'tab-live': boundLayout() },
     updateTabPtyId: vi.fn(),
     replaceTerminalLayoutPanePtyId: vi.fn()
-  } as unknown as LiveSurfaceAdoptionStore
+  }
 }
 
 describe('live pty surface adoption across worktree keys', () => {

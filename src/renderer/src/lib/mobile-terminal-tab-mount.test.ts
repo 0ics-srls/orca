@@ -1,7 +1,7 @@
 // Ownership itself is worktree-agnostic; this planner is where the worktree scope lives, because
 // it mounts the tab under the requested worktree and a row filed elsewhere cannot be mounted there.
 import { describe, expect, it, vi } from 'vitest'
-import type { AppState } from '@/store/types'
+import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import {
   planMobileTerminalTabMount,
   type MobileTerminalTabMountState
@@ -9,24 +9,28 @@ import {
 
 /** `tabCount` rows in `wt`, each with its own single-leaf layout bound to `wt@@<index>`. */
 function state(tabCount = 1): MobileTerminalTabMountState {
-  const indices = Array.from({ length: tabCount }, (_, index) => index)
-  return {
-    tabsByWorktree: {
-      wt: indices.map((index) => ({ id: `tab-${index}`, ptyId: null }))
-    } as unknown as AppState['tabsByWorktree'],
-    terminalLayoutsByTabId: Object.fromEntries(
-      indices.map((index) => [
-        `tab-${index}`,
-        {
-          root: { type: 'leaf', leafId: `leaf-${index}` },
-          activeLeafId: `leaf-${index}`,
-          expandedLeafId: null,
-          ptyIdsByLeafId: { [`leaf-${index}`]: `wt@@${index}` }
-        }
-      ])
-    ) as unknown as AppState['terminalLayoutsByTabId'],
-    ptyIdsByTabId: {}
+  const tabs: TerminalTab[] = []
+  const terminalLayoutsByTabId: Record<string, TerminalLayoutSnapshot> = {}
+  for (let index = 0; index < tabCount; index += 1) {
+    const leafId = `leaf-${index}`
+    tabs.push({
+      id: `tab-${index}`,
+      ptyId: null,
+      worktreeId: 'wt',
+      title: 'Terminal',
+      customTitle: null,
+      color: null,
+      sortOrder: index,
+      createdAt: index
+    })
+    terminalLayoutsByTabId[`tab-${index}`] = {
+      root: { type: 'leaf', leafId },
+      activeLeafId: leafId,
+      expandedLeafId: null,
+      ptyIdsByLeafId: { [leafId]: `wt@@${index}` }
+    }
   }
+  return { tabsByWorktree: { wt: tabs }, terminalLayoutsByTabId, ptyIdsByTabId: {} }
 }
 
 describe('planMobileTerminalTabMount', () => {

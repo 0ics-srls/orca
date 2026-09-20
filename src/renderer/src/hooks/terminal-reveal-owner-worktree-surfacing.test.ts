@@ -84,11 +84,12 @@ describe('a reveal surfaces its owner under the owner’s worktree key', () => {
 
     revealOwnedPane(harness, 'background')
 
-    const mountEvents = harness.dispatchEvent.mock.calls
-      .map(([event]) => event as CustomEvent<{ worktreeId: string; tabIds?: string[] }>)
-      .filter((event) => event.type === BACKGROUND_MOUNT_TERMINAL_WORKTREE_EVENT)
-    expect(mountEvents.map((event) => event.detail)).toEqual([
-      { worktreeId: OWNER_WORKTREE_ID, tabIds: ['tab-a'] }
-    ])
+    const mountDetails = harness.dispatchEvent.mock.calls.flatMap((call: unknown[]) => {
+      const event = call[0]
+      return event instanceof CustomEvent && event.type === BACKGROUND_MOUNT_TERMINAL_WORKTREE_EVENT
+        ? [event.detail]
+        : []
+    })
+    expect(mountDetails).toEqual([{ worktreeId: OWNER_WORKTREE_ID, tabIds: ['tab-a'] }])
   })
 })
