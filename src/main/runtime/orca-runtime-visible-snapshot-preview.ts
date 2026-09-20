@@ -1,4 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import { AntigravityScreenPermissionPublisher } from './antigravity-screen-permission-publisher'
 import { OrcaRuntimeWithCaptureProviderTerminalBuffer } from './orca-runtime-capture-provider-terminal-buffer'
 import type { RuntimeTerminalProjection } from './orca-runtime-core'
 import { buildPreview } from './terminal-tail-state'
@@ -16,6 +17,29 @@ import {
 import { withTimeout } from './runtime-async-boundaries'
 
 export class OrcaRuntimeWithVisibleSnapshotPreview extends OrcaRuntimeWithCaptureProviderTerminalBuffer {
+  protected readonly antigravityScreenPermissions = new AntigravityScreenPermissionPublisher({
+    baseline: (ptyId) => {
+      const pty = this.ptysById.get(ptyId)
+      if (!pty?.connected || pty.connectionId || !pty.paneKey) {
+        return null
+      }
+      return (
+        this.getAgentProviderSessionRowsForPaneFn?.(pty.paneKey)?.find(
+          (row) => row.providerSessionOnly !== true && row.agentType === 'antigravity'
+        ) ?? null
+      )
+    },
+    readScreen: (ptyId) => this.readVisibleTerminalState(ptyId),
+    isCurrent: (ptyId, screen) =>
+      this.ptysById.get(ptyId)?.connected === true &&
+      this.getPtyLivenessVerdict(ptyId)?.status !== 'unverifiable' &&
+      screen.generation === this.getPtyLifecycleGeneration(ptyId) &&
+      screen.sequence >= this.getPtyOutputSequence(ptyId) &&
+      (!screen.headlessWriteChain ||
+        screen.headlessWriteChain === this.headlessTerminals.get(ptyId)?.writeChain),
+    publish: (event) => this.onTerminalScreenPermission?.(event) ?? false
+  })
+
   protected getTerminalScreenReadiness(
     ptyId: string | null | undefined,
     retainedText: string

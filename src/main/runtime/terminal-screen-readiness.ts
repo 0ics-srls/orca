@@ -1,3 +1,4 @@
+import { isAntigravityCommandApprovalScreen } from './antigravity-command-approval-screen'
 import {
   detectTerminalWaitBlockedReason,
   isKnownReadyPromptPreview
@@ -47,6 +48,10 @@ export function classifyTerminalScreenReadiness(screen: {
   const ready = isKnownReadyTerminalScreen(screen)
   return {
     ready,
-    blockedReason: ready ? null : detectTerminalWaitBlockedReason(screen.tail.join('\n'))
+    blockedReason: ready
+      ? null
+      : isAntigravityCommandApprovalScreen(screen.tail)
+        ? 'agent-approval-prompt'
+        : detectTerminalWaitBlockedReason(screen.tail.join('\n'))
   }
 }
