@@ -77,25 +77,24 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
             )
             throw new Error(`terminal_reveal_owner_row_missing: tab ${adoption.tabId}`)
           }
+          const isSplitReveal = Boolean(ptyId && tabId && leafId && splitFromLeafId)
+          // Why: a split of a NEW pty has no owner to adopt, and its target row can sit under a
+          // worktree key other than the event's, so the hint is resolved across every row.
+          const splitTargetRow =
+            isSplitReveal && tabId !== undefined
+              ? (adoptedRow ?? findTerminalTabRow(store, tabId))
+              : null
+          if (isSplitReveal && !splitTargetRow) {
+            throw new Error(`Terminal tab ${tabId} not found`)
+          }
           // Why: a layout outlives its row's membership in any one worktree list,
           // so the owner's key, not the event's, is the one to surface (STA-7961).
-          const ownerWorktreeId = adoptedRow?.worktreeId ?? worktreeId
+          const ownerWorktreeId = adoptedRow?.worktreeId ?? splitTargetRow?.worktreeId ?? worktreeId
           if (shouldActivate) {
             activateTerminalInitiatedWorktree(store, ownerWorktreeId)
           }
           const existingTab = adoptedRow?.tab
-          const isSplitReveal = Boolean(ptyId && tabId && leafId && splitFromLeafId)
-          // Why: the split's target row can be filed under a worktree key other than the event's,
-          // so the adopted owner answers first and the hint resolves under the owner's key.
-          const splitTargetTab = isSplitReveal
-            ? (existingTab ??
-              (store.tabsByWorktree[ownerWorktreeId] ?? []).find(
-                (candidate) => candidate.id === tabId
-              ))
-            : undefined
-          if (isSplitReveal && !splitTargetTab) {
-            throw new Error(`Terminal tab ${tabId} not found`)
-          }
+          const splitTargetTab = splitTargetRow?.tab
           const reusedTab = existingTab ?? splitTargetTab
           if (ptyId && !reusedTab) {
             // Why: the next field report needs to say which binding was missing

@@ -3,8 +3,15 @@ import { isPtyDataHandlerShutdownPending, ptyDataHandlers } from './pty-shutdown
 
 type PtyDataHandler = NonNullable<ReturnType<typeof ptyDataHandlers.get>>
 
+/** One token per pane session; compared by identity, never by content. */
+export type PtyDataHandlerPaneOwner = { readonly kind: 'pty-data-handler-pane-owner' }
+
+export function createPtyDataHandlerPaneOwner(): PtyDataHandlerPaneOwner {
+  return { kind: 'pty-data-handler-pane-owner' }
+}
+
 /** The pane that installed each handler. Non-pane holders of the slot stay unmarked. */
-const paneOwnersByDataHandler = new WeakMap<PtyDataHandler, object>()
+const paneOwnersByDataHandler = new WeakMap<PtyDataHandler, PtyDataHandlerPaneOwner>()
 
 /**
  * Take a PTY's only data-handler slot for a pane, reporting a second pane that takes it away.
@@ -17,7 +24,7 @@ const paneOwnersByDataHandler = new WeakMap<PtyDataHandler, object>()
 export function claimPtyDataHandlerForPane(
   ptyId: string,
   handler: PtyDataHandler,
-  paneOwner: object
+  paneOwner: PtyDataHandlerPaneOwner
 ): void {
   reportOverwrittenPtyDataHandler(ptyId, handler, paneOwner)
   paneOwnersByDataHandler.set(handler, paneOwner)
@@ -26,7 +33,7 @@ export function claimPtyDataHandlerForPane(
 function reportOverwrittenPtyDataHandler(
   ptyId: string,
   next: PtyDataHandler,
-  paneOwner: object
+  paneOwner: PtyDataHandlerPaneOwner
 ): void {
   const previous = ptyDataHandlers.get(ptyId)
   if (!previous || previous === next || isPtyDataHandlerShutdownPending(ptyId)) {
