@@ -90,7 +90,11 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
     },
     []
   )
-  const getPrimarySelectionMiddleClickPane = useCallback(
+  // Why: any terminal pane target must arm native-paste suppression, even one
+  // in mouse-tracking mode where the TUI (not Orca) owns the click and performs
+  // its own PRIMARY paste from the forwarded mouse report — otherwise
+  // Chromium's unsuppressed native paste lands on top of it (#21762).
+  const findTerminalPaneForMiddleClick = useCallback(
     (target: EventTarget | null) => {
       if (!terminalShouldHandleMiddleClick(target)) {
         return null
@@ -99,30 +103,45 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
       if (!manager) {
         return null
       }
-      const clickedPane =
+      return (
         manager.getPanes().find((pane) => pane.container.contains(target as Node)) ??
         manager.getActivePane() ??
-        manager.getPanes()[0]
-      if (!clickedPane || clickedPane.terminal.modes.mouseTrackingMode !== 'none') {
-        return null
-      }
-      return clickedPane
+        manager.getPanes()[0] ??
+        null
+      )
     },
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
     [terminalShouldHandleMiddleClick]
+  )
+  const getPrimarySelectionMiddleClickPane = useCallback(
+    (target: EventTarget | null) => {
+      const clickedPane = findTerminalPaneForMiddleClick(target)
+      return clickedPane && clickedPane.terminal.modes.mouseTrackingMode === 'none'
+        ? clickedPane
+        : null
+    },
+    [findTerminalPaneForMiddleClick]
   )
   const handlePrimarySelectionMiddleMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>): void => {
       if (event.button !== 1 || !isPrimarySelectionEnabled()) {
         return
       }
-      const clickedPane = getPrimarySelectionMiddleClickPane(event.target)
-      if (!clickedPane) {
+      const targetPane = findTerminalPaneForMiddleClick(event.target)
+      if (!targetPane) {
         return
       }
+      // Why: block Chromium's native middle-click paste and arm the shared
+      // suppression window unconditionally; only the paste-to-PTY below is
+      // gated on tracking mode, since a tracking TUI still needs the click
+      // forwarded as a mouse report and must not have propagation stopped.
       event.preventDefault()
-      event.stopPropagation()
       armPrimarySelectionNativePasteSuppression()
+      if (targetPane.terminal.modes.mouseTrackingMode !== 'none') {
+        return
+      }
+      const clickedPane = targetPane
+      event.stopPropagation()
       clickedPane.terminal.focus()
       void readPrimarySelectionText().then(async (text) => {
         if (!text) {
@@ -185,21 +204,24 @@ export function useTerminalPaneMobileActions(controller: TerminalPaneContextCont
       })
     },
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
-    [getPrimarySelectionMiddleClickPane, tabId, worktreeId]
+    [findTerminalPaneForMiddleClick, tabId, worktreeId]
   )
   const handlePrimarySelectionAuxClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>): void => {
-      if (
-        event.button === 1 &&
-        isPrimarySelectionEnabled() &&
-        getPrimarySelectionMiddleClickPane(event.target)
-      ) {
-        event.preventDefault()
+      if (event.button !== 1 || !isPrimarySelectionEnabled()) {
+        return
+      }
+      const targetPane = findTerminalPaneForMiddleClick(event.target)
+      if (!targetPane) {
+        return
+      }
+      event.preventDefault()
+      armPrimarySelectionNativePasteSuppression()
+      if (targetPane.terminal.modes.mouseTrackingMode === 'none') {
         event.stopPropagation()
-        armPrimarySelectionNativePasteSuppression()
       }
     },
-    [getPrimarySelectionMiddleClickPane]
+    [findTerminalPaneForMiddleClick]
   )
   const activatePaneTitleInteraction = useCallback((paneId: number): void => {
     managerRef.current?.setActivePane(paneId, { focus: false })
