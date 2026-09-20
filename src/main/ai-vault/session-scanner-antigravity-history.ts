@@ -32,13 +32,15 @@ export async function readLocalAntigravityHistory(path: string): Promise<string 
 async function readAntigravityCacheHistory(historyPath: string): Promise<string | null> {
   const cliRoot = dirname(historyPath)
   try {
-    const [metadataText, projectsText] = await Promise.all([
+    const [metadataText, projectsText, lastConversationsText] = await Promise.all([
       wslGatedReadFile(join(cliRoot, 'cache', 'conversation_metadata.json'), 'utf-8', 'scan'),
-      wslGatedReadFile(join(cliRoot, 'cache', 'projects.json'), 'utf-8', 'scan')
+      readOptionalCacheFile(join(cliRoot, 'cache', 'projects.json')),
+      readOptionalCacheFile(join(cliRoot, 'cache', 'last_conversations.json'))
     ])
     const metadata = JSON.parse(metadataText)
-    const projects = JSON.parse(projectsText)
-    if (!isRecord(metadata) || !isRecord(projects)) {
+    const projects = projectsText ? JSON.parse(projectsText) : null
+    const lastConversations = lastConversationsText ? JSON.parse(lastConversationsText) : null
+    if (!isRecord(metadata)) {
       return null
     }
     const conversations = isRecord(metadata.conversations) ? metadata.conversations : null
@@ -46,9 +48,25 @@ async function readAntigravityCacheHistory(historyPath: string): Promise<string 
       return null
     }
     const projectPaths = new Map<string, string>()
-    for (const [workspace, projectId] of Object.entries(projects)) {
-      if (typeof projectId === 'string' && workspace.trim()) {
-        projectPaths.set(projectId, workspace)
+    if (isRecord(projects)) {
+      for (const [key, value] of Object.entries(projects)) {
+        if (typeof value !== 'string' || !key.trim()) {
+          continue
+        }
+        // agy has emitted both { workspace: projectId } and { projectId: workspace }.
+        if (key.includes('/') || key.includes('\\')) {
+          projectPaths.set(value, key)
+        } else if (value.includes('/') || value.includes('\\')) {
+          projectPaths.set(key, value)
+        }
+      }
+    }
+    const conversationPaths = new Map<string, string>()
+    if (isRecord(lastConversations)) {
+      for (const [workspace, conversationId] of Object.entries(lastConversations)) {
+        if (typeof conversationId === 'string' && workspace.trim()) {
+          conversationPaths.set(conversationId, workspace)
+        }
       }
     }
     const rows: string[] = []
@@ -58,7 +76,7 @@ async function readAntigravityCacheHistory(historyPath: string): Promise<string 
       }
       const summary = value.summary
       const projectId = typeof summary.ProjectID === 'string' ? summary.ProjectID : ''
-      const workspace = projectPaths.get(projectId)
+      const workspace = projectPaths.get(projectId) ?? conversationPaths.get(conversationId)
       const updatedAt = typeof summary.UpdatedAt === 'string' ? summary.UpdatedAt : ''
       if (!workspace || !conversationId || !Number.isFinite(Date.parse(updatedAt))) {
         continue
@@ -66,6 +84,17 @@ async function readAntigravityCacheHistory(historyPath: string): Promise<string 
       rows.push(JSON.stringify({ conversationId, timestamp: updatedAt, workspace }))
     }
     return rows.length > 0 ? `${rows.join('\n')}\n` : null
+  } catch (error) {
+    if (error instanceof WslTranscriptFsError) {
+      throw error
+    }
+    return null
+  }
+}
+
+async function readOptionalCacheFile(path: string): Promise<string | null> {
+  try {
+    return await wslGatedReadFile(path, 'utf-8', 'scan')
   } catch (error) {
     if (error instanceof WslTranscriptFsError) {
       throw error
