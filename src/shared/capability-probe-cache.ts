@@ -134,7 +134,7 @@ export class CapabilityProbeCache<TCapability> {
       // overwrite that stronger signal.
       const outcome = this.retryAfterByCapability.has(capability) ? 'unsupported' : 'supported'
       if (outcome === 'supported') {
-        this.supportedCapabilities.add(capability)
+        this.rememberSupported(capability)
       }
       settleProbe?.(outcome)
       return result
