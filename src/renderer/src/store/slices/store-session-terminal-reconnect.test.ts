@@ -383,8 +383,14 @@ describe('reconnectPersistedTerminals', () => {
     const s = store.getState()
     // Why: deferred reattach doesn't call spawn — connectPanePty handles it
     expect((mockApi.pty as Record<string, unknown>).spawn).not.toHaveBeenCalled()
-    // Why: reconnect restores the tab-level ptyId so getWorktreeStatus() shows active (green dot) before the terminal mounts.
-    expect(s.tabsByWorktree[wt1][0].ptyId).toBe('daemon-session-B')
+    // Why: reconnect restores the tab-level ptyId so getWorktreeStatus() shows active (green dot)
+    // before the terminal mounts. The layout is the binding, so the anchor is the active leaf's
+    // session, not whichever pane the persisted row happened to name.
+    const activeLeafId = s.terminalLayoutsByTabId['tab1'].activeLeafId
+    expect(s.tabsByWorktree[wt1][0].ptyId).toBe(
+      s.terminalLayoutsByTabId['tab1'].ptyIdsByLeafId?.[activeLeafId!]
+    )
+    expect(s.tabsByWorktree[wt1][0].ptyId).toBe('daemon-session-A')
     // ptyIdsByLeafId preserved for connectPanePty; legacy pane:* leaves reminted to durable UUID leaves at hydration.
     const layout = s.terminalLayoutsByTabId['tab1']
     const bindings = layout.ptyIdsByLeafId ?? {}

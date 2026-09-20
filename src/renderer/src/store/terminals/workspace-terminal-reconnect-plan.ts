@@ -1,7 +1,9 @@
 import type { Repo } from '../../../../shared/repo-types'
+import type { TerminalLayoutSnapshot } from '../../../../shared/terminal-tab-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
 import { buildByIdIndex, buildWorktreeByIdIndex } from '../slices/worktree-by-id-index'
+import { resolvePrimaryLayoutPtyId } from './terminal-pty-identities'
 
 export type WorkspaceTerminalReconnectPlan = {
   pendingReconnectPtyIdByTabId: Record<string, string>
@@ -10,6 +12,7 @@ export type WorkspaceTerminalReconnectPlan = {
 }
 
 export function buildWorkspaceTerminalReconnectPlan({
+  layoutsByTabId,
   reconnectPtyIdByRetainedTabId,
   releasedPtyIdsByTabId,
   repos,
@@ -18,6 +21,7 @@ export function buildWorkspaceTerminalReconnectPlan({
   validWorktreeIds,
   worktreesByRepo
 }: {
+  layoutsByTabId: Record<string, TerminalLayoutSnapshot>
   reconnectPtyIdByRetainedTabId: ReadonlyMap<string, string>
   releasedPtyIdsByTabId: ReadonlyMap<string, ReadonlySet<string>>
   repos: readonly Repo[]
@@ -59,12 +63,18 @@ export function buildWorkspaceTerminalReconnectPlan({
       continue
     }
     for (const tab of session.tabsByWorktree[worktreeId] ?? []) {
+      // Why: the layout is the binding, so a row whose layout surrendered its PTY has nothing to
+      // reattach. A layout with no bindings map at all predates leaf bindings; only that shape
+      // still answers from the row.
+      const layout = layoutsByTabId[tab.id]
+      const reconnectPtyId =
+        layout?.ptyIdsByLeafId === undefined ? tab.ptyId : resolvePrimaryLayoutPtyId(layout)
       if (
-        tab.ptyId &&
+        reconnectPtyId &&
         validTabIds.has(tab.id) &&
-        !releasedPtyIdsByTabId.get(tab.id)?.has(tab.ptyId)
+        !releasedPtyIdsByTabId.get(tab.id)?.has(reconnectPtyId)
       ) {
-        pendingReconnectPtyIdByTabId[tab.id] = tab.ptyId
+        pendingReconnectPtyIdByTabId[tab.id] = reconnectPtyId
       }
     }
   }

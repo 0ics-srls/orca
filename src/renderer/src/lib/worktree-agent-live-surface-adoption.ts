@@ -1,7 +1,8 @@
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import type { useAppStore } from '@/store'
-import { resolveTerminalPtyPaneOwnership } from './terminal-pty-pane-owner'
+import { listTerminalPtyPaneOwners } from './terminal-pty-pane-owner'
+import { findTerminalTabRow } from './terminal-reveal-tab-adoption'
 import type {
   LiveTerminalSurfaceOwner,
   LiveTerminalSurfaceOwnerIndex
@@ -124,18 +125,24 @@ function adoptHostOwnedSurface(
  * seeded pane, because failing closed must not also fail silent. `declinedPtyIds` names
  * the live PTYs the sweep left without one, so a decline is diagnosable and not mute.
  */
+/**
+ * Whether some pane in this renderer already shows the PTY. Ownership is tab-keyed, so a row
+ * filed under any other worktree key still counts — a PTY already surfaced must not be adopted
+ * twice. A layout whose row is gone surfaces nothing, so it counts for neither.
+ */
+function isPtyAlreadySurfaced(store: LiveSurfaceAdoptionStore, ptyId: string): boolean {
+  return listTerminalPtyPaneOwners(store, ptyId).some(
+    (owner) => findTerminalTabRow(store, owner.tabId) !== null
+  )
+}
+
 export async function adoptLiveWorkspacePtySurfaces(
   getState: () => LiveSurfaceAdoptionStore,
   worktreeId: string,
   livePtyIds: readonly string[],
   listSurfaceOwners: (worktreeId: string) => Promise<LiveTerminalSurfaceOwnerIndex | null>
 ): Promise<{ surfaced: boolean; declinedPtyIds: string[] }> {
-  // Why: ptyIdsByTabId holds only panes this renderer mounted, so a tab bound solely in the
-  // persisted layout used to read as unbound — under any worktree key, since a PTY already
-  // surfaced elsewhere must not be adopted a second time.
-  const unbound = livePtyIds.filter(
-    (ptyId) => resolveTerminalPtyPaneOwnership(getState(), ptyId).kind === 'none'
-  )
+  const unbound = livePtyIds.filter((ptyId) => !isPtyAlreadySurfaced(getState(), ptyId))
   let surfaced = unbound.length < livePtyIds.length
   const declinedPtyIds: string[] = []
   if (unbound.length === 0) {
@@ -151,7 +158,7 @@ export async function adoptLiveWorkspacePtySurfaces(
   for (const ptyId of unbound) {
     // Why: a pane can mount while the census is in flight, so the pre-RPC
     // verdict is stale by the time it would authorize a mint.
-    if (resolveTerminalPtyPaneOwnership(getState(), ptyId).kind !== 'none') {
+    if (isPtyAlreadySurfaced(getState(), ptyId)) {
       surfaced = true
       continue
     }

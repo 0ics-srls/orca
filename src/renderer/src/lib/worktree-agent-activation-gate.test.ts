@@ -554,7 +554,9 @@ describe('worktree agent activation gate', () => {
     expect(deps.listSurfaceOwners).not.toHaveBeenCalled()
   })
 
-  it('does not mint a second surface for a PTY recorded only on the tab row', async () => {
+  it('lets the execution host decide for a PTY recorded only on the tab row', async () => {
+    // The row is no longer an ownership tier, so it is not evidence of a surface. Only the host
+    // can prove a live PTY has none, and an authoritative empty census says exactly that.
     const livePtyId = `${WORKTREE_ID}@@live-agent`
     const { deps, createTab } = testDeps({ sessions: [listed(livePtyId)] })
     const store = deps.getState()
@@ -563,7 +565,13 @@ describe('worktree agent activation gate', () => {
 
     await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('adopted')
 
-    expect(createTab).not.toHaveBeenCalled()
+    expect(deps.listSurfaceOwners).toHaveBeenCalled()
+    expect(createTab).toHaveBeenCalledWith(
+      WORKTREE_ID,
+      undefined,
+      undefined,
+      expect.objectContaining({ initialPtyId: livePtyId })
+    )
   })
 
   it('restores the host-owned surface when the renderer projection lost every binding', async () => {
