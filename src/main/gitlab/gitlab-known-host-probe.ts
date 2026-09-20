@@ -164,6 +164,11 @@ export async function getGlabKnownHosts(
   const { key, cacheKey } = knownHostsCacheContext(connectionId, localGitOptions)
   const cached = knownHostsCacheByExecutionContext.get(cacheKey)?.hosts
   if (cached) {
+    const entry = knownHostsCacheByExecutionContext.get(cacheKey)
+    if (entry) {
+      knownHostsCacheByExecutionContext.delete(cacheKey)
+      knownHostsCacheByExecutionContext.set(cacheKey, entry)
+    }
     return cached
   }
   // Why: only join a probe still young enough to answer, so a wedged one cannot

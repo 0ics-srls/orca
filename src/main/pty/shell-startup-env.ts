@@ -236,8 +236,12 @@ export function readShellStartupEnvVar(
   }
 
   const cacheKey = `${name}\0${home}\0${shell ?? ''}\0${configHome ?? ''}`
+  const cached = cache.get(cacheKey)
   if (cache.has(cacheKey)) {
-    return cache.get(cacheKey)
+    // Keep frequently used homes warm when historical homes churn.
+    cache.delete(cacheKey)
+    cache.set(cacheKey, cached)
+    return cached
   }
 
   let lastMatch: string | undefined

@@ -27,7 +27,12 @@ let cachedWorkspaceFile: LinearWorkspaceFile | null = null
 let workspaceFileLoadedFromDisk = false
 
 export function getCachedToken(workspaceId: string): string | undefined {
-  return cachedTokens.get(workspaceId)
+  const token = cachedTokens.get(workspaceId)
+  if (token !== undefined) {
+    cachedTokens.delete(workspaceId)
+    cachedTokens.set(workspaceId, token)
+  }
+  return token
 }
 
 export function cacheToken(workspaceId: string, token: string): void {
@@ -69,7 +74,12 @@ export function clearCredentialError(workspaceId: string): void {
 }
 
 export function getCredentialError(workspaceId: string): string | undefined {
-  return credentialErrors.get(workspaceId)
+  const error = credentialErrors.get(workspaceId)
+  if (error !== undefined) {
+    credentialErrors.delete(workspaceId)
+    credentialErrors.set(workspaceId, error)
+  }
+  return error
 }
 
 export function resetWorkspaceFileCacheToEmpty(): void {
