@@ -60,10 +60,18 @@ export function AntigravityAccountsSection({
       <div className="space-y-2">
         {quota && (
           <p className="text-xs text-muted-foreground">
-            Quota:{' '}
+            {translate('auto.components.settings.AccountsPane.antigravityQuota', 'Quota:')}{' '}
             {quota.status === 'ok'
-              ? `${quota.buckets?.length ?? 0} model windows available`
-              : (quota.error ?? 'Unavailable')}
+              ? translate(
+                  'auto.components.settings.AccountsPane.antigravityQuotaWindows',
+                  '{{value0}} model windows available',
+                  { value0: quota.buckets?.length ?? 0 }
+                )
+              : (quota.error ??
+                translate(
+                  'auto.components.settings.AccountsPane.antigravityUnavailable',
+                  'Unavailable'
+                ))}
           </p>
         )}
         {state.accounts.map((account) => (
@@ -74,10 +82,17 @@ export function AntigravityAccountsSection({
           >
             <div className="min-w-0">
               <p className="truncate text-sm">
-                {account.email ?? account.subject ?? 'Signed-in Antigravity account'}
+                {account.email ??
+                  account.subject ??
+                  translate(
+                    'auto.components.settings.AccountsPane.antigravitySignedIn',
+                    'Signed-in Antigravity account'
+                  )}
               </p>
               <p className="text-xs text-muted-foreground">
-                {state.activeAccountId === account.id ? 'Active' : account.authMethod}
+                {state.activeAccountId === account.id
+                  ? translate('auto.components.settings.AccountsPane.antigravityActive', 'Active')
+                  : account.authMethod}
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -90,7 +105,7 @@ export function AntigravityAccountsSection({
                     void run(() => window.api.antigravityAccounts.select({ accountId: account.id }))
                   }
                 >
-                  Use
+                  {translate('auto.components.settings.AccountsPane.antigravityUse', 'Use')}
                 </Button>
               )}
               {state.activeAccountId !== account.id && (
@@ -102,7 +117,7 @@ export function AntigravityAccountsSection({
                     void run(() => window.api.antigravityAccounts.remove({ accountId: account.id }))
                   }
                 >
-                  Remove
+                  {translate('auto.components.settings.AccountsPane.antigravityRemove', 'Remove')}
                 </Button>
               )}
             </div>
@@ -114,7 +129,10 @@ export function AntigravityAccountsSection({
           disabled={busy}
           onClick={() => void run(() => window.api.antigravityAccounts.add())}
         >
-          Add current agy account
+          {translate(
+            'auto.components.settings.AccountsPane.antigravityAddCurrent',
+            'Add current agy account'
+          )}
         </Button>
       </div>
     </section>
