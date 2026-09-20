@@ -15,6 +15,7 @@ import {
   hasPreHandlerPtyExit
 } from './pty-pre-handler-buffer'
 import type { createPtyOutputProcessor } from './pty-output-processor'
+import { reportOverwrittenPtyDataHandler } from './pty-data-handler-overwrite-breadcrumb'
 import type { IpcPtyTransportOptions, PtyTransport } from './pty-transport-types'
 
 type PtyCallbacks = Parameters<PtyTransport['connect']>[0]['callbacks']
@@ -124,6 +125,7 @@ export function createIpcPtySessionHandlers({
       }
     }
     ptyReplayHandlers.set(id, replay)
+    reportOverwrittenPtyDataHandler(id, data)
     ptyDataHandlers.set(id, data)
     ptyWriteUnavailableHandlers.set(id, writeUnavailable)
     ownedDataHandlers.set(id, { data, replay, writeUnavailable })

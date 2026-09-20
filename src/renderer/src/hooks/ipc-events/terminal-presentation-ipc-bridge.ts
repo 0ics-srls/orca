@@ -1,7 +1,10 @@
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
 import { hasRegisteredRuntimeTerminalTab } from '@/runtime/sync-runtime-graph'
 import { planMobileTerminalTabMount } from '@/lib/mobile-terminal-tab-mount'
-import { resolveTerminalTabPtyOwnership } from '@/lib/terminal-tab-for-pty-id'
+import {
+  findTerminalTabRow,
+  resolveTerminalRevealTabAdoption
+} from '@/lib/terminal-reveal-tab-adoption'
 import { SPLIT_TERMINAL_PANE_EVENT } from '@/constants/terminal'
 import type { SplitTerminalPaneDetail } from '@/constants/terminal'
 import { singlePaneLayoutSnapshot } from '@/store/slices/terminal-helpers'
@@ -54,24 +57,34 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
           })
           const shouldActivate = terminalPresentation === 'focused'
           const shouldSurfaceOwner = terminalPresentation !== 'background' && surfaceOwner !== false
-          if (shouldActivate) {
-            activateTerminalInitiatedWorktree(store, worktreeId)
-          }
-          const worktreeTabs = store.tabsByWorktree[worktreeId] ?? []
           // Why: a split pane revealed from mobile is only bound in the persisted
           // layout until its pane mounts; missing it minted a duplicate tab (#10486).
-          const ownership = ptyId
-            ? resolveTerminalTabPtyOwnership(
-                store,
+          const adoption = ptyId
+            ? resolveTerminalRevealTabAdoption(store, {
                 worktreeId,
                 ptyId,
-                tabId !== undefined ? { preferTabId: tabId } : {}
-              )
-            : { kind: 'none' as const }
-          const existingTab =
-            ownership.kind === 'owned'
-              ? worktreeTabs.find((candidate) => candidate.id === ownership.tabId)
-              : undefined
+                ...(leafId !== undefined ? { leafId } : {}),
+                ...(tabId !== undefined ? { hintTabId: tabId } : {})
+              })
+            : ({ kind: 'mint', verdict: 'none' } as const)
+          const adoptedRow =
+            adoption.kind === 'adopt' ? findTerminalTabRow(store, adoption.tabId) : null
+          if (adoption.kind === 'adopt' && adoptedRow === null) {
+            // Why: the owner's row is gone, so there is no pane to activate, and
+            // minting one would re-bind a leaf id its orphan layout still holds.
+            console.warn(
+              `[onCreateTerminal] rowless-owner ${adoption.tabId} for ptyId ${ptyId}; reveal failed`
+            )
+            throw new Error(`terminal_reveal_owner_row_missing: tab ${adoption.tabId}`)
+          }
+          // Why: a layout outlives its row's membership in any one worktree list,
+          // so the owner's key, not the event's, is the one to surface (STA-7961).
+          const ownerWorktreeId = adoptedRow?.worktreeId ?? worktreeId
+          if (shouldActivate) {
+            activateTerminalInitiatedWorktree(store, ownerWorktreeId)
+          }
+          const worktreeTabs = store.tabsByWorktree[worktreeId] ?? []
+          const existingTab = adoptedRow?.tab
           const isSplitReveal = Boolean(ptyId && tabId && leafId && splitFromLeafId)
           const splitTargetTab = isSplitReveal
             ? worktreeTabs.find((candidate) => candidate.id === tabId)
@@ -80,7 +93,16 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
             throw new Error(`Terminal tab ${tabId} not found`)
           }
           const reusedTab = existingTab ?? splitTargetTab
-          const tab =
+          if (ptyId && !reusedTab) {
+            // Why: the next field report needs to say which binding was missing
+            // when a reveal minted a second tab for an existing session.
+            const verdict = adoption.kind === 'mint' ? adoption.verdict : adoption.kind
+            console.warn(
+              `[onCreateTerminal] minting a tab for ptyId ${ptyId} (ownership ${verdict});` +
+                ` tabId hint ${tabId ?? 'none'}, leafId ${leafId ?? 'none'}`
+            )
+          }
+          const tab: { id: string; title?: string } =
             reusedTab ??
             (ptyId
               ? store.createTab(worktreeId, undefined, undefined, {
@@ -130,8 +152,8 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
             store.setActiveTab(tab.id)
           }
           if (shouldSurfaceOwner) {
-            store.revealWorktreeInSidebar(worktreeId)
-            focusTerminalInitiatedTab(tab.id, leafId, worktreeId)
+            store.revealWorktreeInSidebar(ownerWorktreeId)
+            focusTerminalInitiatedTab(tab.id, leafId, ownerWorktreeId)
           }
           // Why: only stamp the runtime title on fresh tabs; reused tabs may have a user customTitle it would overwrite on focus.
           if (title && !reusedTab) {
@@ -172,7 +194,7 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
                 new CustomEvent<SplitTerminalPaneDetail>(SPLIT_TERMINAL_PANE_EVENT, {
                   detail: {
                     tabId: tab.id,
-                    worktreeId,
+                    worktreeId: ownerWorktreeId,
                     paneRuntimeId: -1,
                     direction: splitDirection ?? 'horizontal',
                     sourceLeafId: splitFromLeafId,
@@ -212,14 +234,17 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
             })
           }
           if (ptyId && terminalPresentation === 'background') {
-            requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [tab.id] })
+            requestBackgroundTerminalWorktreeMount({
+              worktreeId: ownerWorktreeId,
+              tabIds: [tab.id]
+            })
           }
           if (requestId) {
             // Why: attest the actual binding; recovery callers compare it with their expected identity.
             const identity =
               ptyId && tabId && leafId
                 ? verifyTerminalRevealIdentity(useAppStore.getState(), {
-                    worktreeId,
+                    worktreeId: ownerWorktreeId,
                     tabId: tab.id,
                     leafId,
                     ptyId
