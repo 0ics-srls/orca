@@ -42,4 +42,22 @@ describe('SSH Git provider registry', () => {
 
     expect(_getSshGitProviderGenerationCacheSize()).toBeLessThanOrEqual(512)
   })
+
+  it('does not reuse a generation after the target leaves both bounded maps', () => {
+    registerSshGitProvider(connectionId, {} as never)
+    const provider = getSshGitProvider(connectionId)
+    if (!provider) {
+      throw new Error('test provider was not registered')
+    }
+    const beforeChurn = getSshGitProviderGeneration(connectionId)
+    for (let index = 0; index < 1_100; index += 1) {
+      const id = `churn-${index}`
+      registerSshGitProvider(id, provider)
+      unregisterSshGitProvider(id)
+    }
+    unregisterSshGitProvider(connectionId)
+    registerSshGitProvider(connectionId, {} as never)
+
+    expect(getSshGitProviderGeneration(connectionId)).toBeGreaterThan(beforeChurn)
+  })
 })

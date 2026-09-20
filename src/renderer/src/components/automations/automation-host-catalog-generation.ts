@@ -64,8 +64,8 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
   const generationByAuthorityKey = new Map<string, number>()
   const fingerprintByAuthorityKey = new Map<string, string>()
   const ownerKeyByStableKey = new Map<string, string>()
-  const evictedAuthorityKeys = new Set<string>()
-  let generationFloor = 0
+  let generationSequence = 0
+  let evictedGeneration = 0
 
   const trimAuthorityGenerations = (): void => {
     while (generationByAuthorityKey.size > AUTOMATION_AUTHORITY_GENERATION_MAX_ENTRIES) {
@@ -74,17 +74,9 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
         break
       }
       const key = oldest.value
+      evictedGeneration = Math.max(evictedGeneration, generationByAuthorityKey.get(key) ?? 0)
       generationByAuthorityKey.delete(key)
       fingerprintByAuthorityKey.delete(key)
-      evictedAuthorityKeys.delete(key)
-      evictedAuthorityKeys.add(key)
-    }
-    while (evictedAuthorityKeys.size > AUTOMATION_AUTHORITY_GENERATION_MAX_ENTRIES) {
-      const oldest = evictedAuthorityKeys.keys().next()
-      if (oldest.done) {
-        break
-      }
-      evictedAuthorityKeys.delete(oldest.value)
     }
   }
 
@@ -115,15 +107,7 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
 
   const advance = (authorityKey: string, fingerprint: string): void => {
     fingerprintByAuthorityKey.set(authorityKey, fingerprint)
-    const previous = generationByAuthorityKey.get(authorityKey)
-    const next =
-      previous !== undefined
-        ? previous + 1
-        : evictedAuthorityKeys.has(authorityKey)
-          ? generationFloor + 1
-          : 1
-    generationFloor = next
-    evictedAuthorityKeys.delete(authorityKey)
+    const next = ++generationSequence
     generationByAuthorityKey.set(authorityKey, next)
     trimAuthorityGenerations()
   }
@@ -132,10 +116,7 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
     get: (authority) => {
       const key = automationAuthorityCatalogKey(authority)
       const generation = generationByAuthorityKey.get(key)
-      if (generation !== undefined) {
-        return generation
-      }
-      return evictedAuthorityKeys.has(key) ? generationFloor + 1 : 0
+      return generation ?? evictedGeneration
     },
     sync: (catalog) => {
       const reincarnatedStableKeys = reincarnations(catalog)
@@ -160,8 +141,8 @@ export function createAutomationCatalogGenerationRegistry(): AutomationCatalogGe
       generationByAuthorityKey.clear()
       fingerprintByAuthorityKey.clear()
       ownerKeyByStableKey.clear()
-      evictedAuthorityKeys.clear()
-      generationFloor = 0
+      generationSequence = 0
+      evictedGeneration = 0
     }
   }
 }

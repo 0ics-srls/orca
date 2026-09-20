@@ -37,14 +37,12 @@ describe('Git capability execution-host state', () => {
 
   it('bounds local capability entries during WSL distro churn', () => {
     const first = getLocalGitCapabilityCache({ wslDistro: 'first-distro' })
-    first.rememberUnsupported('worktree-list-path-format')
+    first.rememberUnsupported('worktree-list-z')
     for (let index = 0; index < 132; index += 1) {
       getLocalGitCapabilityCache({ wslDistro: `distro-${index}` })
     }
     expect(
-      getLocalGitCapabilityCache({ wslDistro: 'first-distro' }).shouldTry(
-        'worktree-list-path-format'
-      )
+      getLocalGitCapabilityCache({ wslDistro: 'first-distro' }).shouldTry('worktree-list-z')
     ).toBe(true)
   })
 

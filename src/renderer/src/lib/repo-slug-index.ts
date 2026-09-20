@@ -44,15 +44,21 @@ const MAX_SLUG_RESOLUTION_GENERATIONS = 1024
 // generation on every invalidation and commit a result only if the generation
 // it started with is still current.
 const slugResolutionGeneration = new Map<string, number>()
+let slugResolutionGenerationSequence = 0
+let evictedSlugResolutionGeneration = 0
 
 function invalidateSlugResolution(cacheKey: string): void {
   slugResolutionInFlight.delete(cacheKey)
-  slugResolutionGeneration.set(cacheKey, (slugResolutionGeneration.get(cacheKey) ?? 0) + 1)
+  slugResolutionGeneration.set(cacheKey, ++slugResolutionGenerationSequence)
   while (slugResolutionGeneration.size > MAX_SLUG_RESOLUTION_GENERATIONS) {
     const oldest = slugResolutionGeneration.keys().next()
     if (oldest.done) {
       return
     }
+    evictedSlugResolutionGeneration = Math.max(
+      evictedSlugResolutionGeneration,
+      slugResolutionGeneration.get(oldest.value) ?? 0
+    )
     slugResolutionGeneration.delete(oldest.value)
   }
 }
@@ -92,12 +98,15 @@ async function resolveRepoSlug(
   if (inFlight) {
     return inFlight
   }
-  const generation = slugResolutionGeneration.get(cacheKey) ?? 0
+  const generation = slugResolutionGeneration.get(cacheKey) ?? evictedSlugResolutionGeneration
   const resolution = (async () => {
     // Why: only write the resolved value if this key wasn't invalidated
     // mid-flight; otherwise a stale slug would repopulate the cache.
     const commit = (value: string | null): string | null => {
-      if ((slugResolutionGeneration.get(cacheKey) ?? 0) === generation) {
+      if (
+        slugResolutionInFlight.get(cacheKey) === resolution &&
+        (slugResolutionGeneration.get(cacheKey) ?? evictedSlugResolutionGeneration) === generation
+      ) {
         rememberRepoSlug(cacheKey, value)
       }
       return value

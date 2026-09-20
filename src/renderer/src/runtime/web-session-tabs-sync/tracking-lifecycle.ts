@@ -50,19 +50,11 @@ import {
 } from './tracking'
 
 const MAX_SESSION_TABS_TRACKING_GENERATIONS = 512
-const evictedSessionTabsTrackingEnvironments = new Set<string>()
-let sessionTabsTrackingGenerationFloor = 0
+let sessionTabsTrackingGenerationSequence = 0
+let evictedSessionTabsTrackingGeneration = 0
 
 function advanceSessionTabsTrackingGeneration(environmentId: string): void {
-  const previous = sessionTabsTrackingGenerationByEnvironment.get(environmentId)
-  const next =
-    previous !== undefined
-      ? previous + 1
-      : evictedSessionTabsTrackingEnvironments.has(environmentId)
-        ? sessionTabsTrackingGenerationFloor + 1
-        : 1
-  sessionTabsTrackingGenerationFloor = Math.max(sessionTabsTrackingGenerationFloor, next)
-  evictedSessionTabsTrackingEnvironments.delete(environmentId)
+  const next = ++sessionTabsTrackingGenerationSequence
   sessionTabsTrackingGenerationByEnvironment.set(environmentId, next)
   while (sessionTabsTrackingGenerationByEnvironment.size > MAX_SESSION_TABS_TRACKING_GENERATIONS) {
     const oldest = sessionTabsTrackingGenerationByEnvironment.keys().next()
@@ -70,15 +62,11 @@ function advanceSessionTabsTrackingGeneration(environmentId: string): void {
       break
     }
     const oldestEnvironmentId = oldest.value
+    evictedSessionTabsTrackingGeneration = Math.max(
+      evictedSessionTabsTrackingGeneration,
+      sessionTabsTrackingGenerationByEnvironment.get(oldestEnvironmentId) ?? 0
+    )
     sessionTabsTrackingGenerationByEnvironment.delete(oldestEnvironmentId)
-    evictedSessionTabsTrackingEnvironments.add(oldestEnvironmentId)
-  }
-  while (evictedSessionTabsTrackingEnvironments.size > MAX_SESSION_TABS_TRACKING_GENERATIONS) {
-    const oldest = evictedSessionTabsTrackingEnvironments.values().next()
-    if (oldest.done) {
-      break
-    }
-    evictedSessionTabsTrackingEnvironments.delete(oldest.value)
   }
 }
 
@@ -131,8 +119,8 @@ export function resetWebSessionTabsSnapshotFreshnessForTests(): void {
   hostSessionTabMappingKeysByEnvironmentAndWorktree.clear()
   hostWorkingClientBoundaryByPaneKey.clear()
   sessionTabsTrackingGenerationByEnvironment.clear()
-  evictedSessionTabsTrackingEnvironments.clear()
-  sessionTabsTrackingGenerationFloor = 0
+  sessionTabsTrackingGenerationSequence = 0
+  evictedSessionTabsTrackingGeneration = 0
   resetWebSessionBrowserPlacementsForTests()
 }
 
@@ -257,8 +245,5 @@ export function clearWebSessionTabsTrackingForEnvironment(environmentId: string)
 
 export function getWebSessionTabsTrackingGeneration(environmentId: string): number {
   const key = environmentId.trim()
-  return (
-    sessionTabsTrackingGenerationByEnvironment.get(key) ??
-    (evictedSessionTabsTrackingEnvironments.has(key) ? sessionTabsTrackingGenerationFloor + 1 : 0)
-  )
+  return sessionTabsTrackingGenerationByEnvironment.get(key) ?? evictedSessionTabsTrackingGeneration
 }

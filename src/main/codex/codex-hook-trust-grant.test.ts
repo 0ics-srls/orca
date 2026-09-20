@@ -73,7 +73,7 @@ function managedEntry(eventLabel: CodexTrustEntry['eventLabel']): CodexTrustEntr
 function buildPlan(
   entries: CodexTrustEntry[],
   host: CodexManagedTrustGrantPlan['host'] = { kind: 'native' }
-): CodexManagedTrustPlan {
+): CodexManagedTrustGrantPlan {
   return {
     runtimeHomePath: runtimeHomeDir,
     tomlPath: join(runtimeHomeDir, 'config.toml'),
