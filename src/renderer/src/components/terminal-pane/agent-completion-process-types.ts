@@ -35,6 +35,5 @@ export type ProcessMonitorOptions = {
   establishAgentEvidence: () => void
   clearAgentRunEvidence: () => void
   hasPendingHookDone: () => boolean
-  hasPendingCodexAttention: () => boolean
   dispatchCompletion: CompletionDispatch
 }

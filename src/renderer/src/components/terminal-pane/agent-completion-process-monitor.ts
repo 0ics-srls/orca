@@ -18,7 +18,6 @@ export function createAgentCompletionProcessMonitor({
   establishAgentEvidence,
   clearAgentRunEvidence,
   hasPendingHookDone,
-  hasPendingCodexAttention,
   dispatchCompletion
 }: ProcessMonitorOptions) {
   const remoteInspection: RemoteInspectionState = {
@@ -139,7 +138,6 @@ export function createAgentCompletionProcessMonitor({
                 identityScope,
                 clearAgentRunEvidence,
                 hasPendingHookDone,
-                hasPendingCodexAttention,
                 scheduleNextPoll,
                 handleRecognizedProcess,
                 dispatchCompletion,

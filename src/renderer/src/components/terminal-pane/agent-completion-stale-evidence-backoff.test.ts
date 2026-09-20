@@ -99,7 +99,6 @@ function inspect(result: RuntimeTerminalProcessInspection, roundTripMs = 20): Pr
     identityScope: {} as never,
     clearAgentRunEvidence: vi.fn(),
     hasPendingHookDone: () => false,
-    hasPendingCodexAttention: () => false,
     scheduleNextPoll: vi.fn(),
     handleRecognizedProcess: vi.fn(),
     dispatchCompletion: vi.fn(),

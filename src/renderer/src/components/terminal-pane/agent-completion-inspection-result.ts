@@ -33,7 +33,6 @@ export function handleAgentCompletionInspectionResult(args: {
   identityScope: AgentCompletionIdentityScope
   clearAgentRunEvidence: () => void
   hasPendingHookDone: () => boolean
-  hasPendingCodexAttention: () => boolean
   scheduleNextPoll: () => void
   handleRecognizedProcess: (process: RecognizedAgentProcess) => void
   dispatchCompletion: CompletionDispatch
@@ -47,7 +46,6 @@ export function handleAgentCompletionInspectionResult(args: {
     identityScope,
     clearAgentRunEvidence,
     hasPendingHookDone,
-    hasPendingCodexAttention,
     scheduleNextPoll,
     handleRecognizedProcess,
     dispatchCompletion,
@@ -136,7 +134,7 @@ export function handleAgentCompletionInspectionResult(args: {
     handleRecognizedProcess(recognized)
     return true
   }
-  if (hasPendingHookDone() || hasPendingCodexAttention()) {
+  if (hasPendingHookDone()) {
     scheduleNextPoll()
     return false
   }
