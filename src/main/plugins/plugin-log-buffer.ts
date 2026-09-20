@@ -10,6 +10,10 @@ export class PluginLogBuffer {
     return this.logs.get(pluginKey)?.lines ?? []
   }
 
+  get size(): number {
+    return this.logs.size
+  }
+
   capture(pluginKey: string): (level: PluginLogLine['level'], line: string) => void {
     const token = this.ensure(pluginKey).token
     return (level, line) => {

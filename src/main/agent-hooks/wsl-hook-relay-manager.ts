@@ -30,6 +30,8 @@ import {
   recordManagedWslCodexHome,
   wslRuntimeHomePathsEqual
 } from '../codex/managed-wsl-codex-home-registry'
+import { resolveWslHookDefaultDistro } from './wsl-hook-default-distro'
+import { resumeStoppedWslHookRelays } from './wsl-hook-relay-resume'
 
 type DistroState = {
   /** Original casing for wsl.exe argv and breadcrumbs; map keys are lowercased. */
@@ -130,18 +132,11 @@ export class WslHookRelayManager {
   /** Restarts what a hooks-off teardown stopped. Skips distros the user has since shut
    *  down: `wsl -d` BOOTS a stopped distro, and nothing in it is waiting on status. */
   resumeStoppedRelays(): void {
-    const distros = [...this.stoppedByHooksOff]
-    this.stoppedByHooksOff.clear()
-    for (const [distro, codexHomePath] of distros) {
-      void this.deps
-        .isDistroRunning(distro)
-        .then((running) => {
-          if (running) {
-            this.ensureForDistro(distro, codexHomePath)
-          }
-        })
-        .catch(() => undefined)
-    }
+    resumeStoppedWslHookRelays(
+      this.stoppedByHooksOff,
+      this.deps.isDistroRunning,
+      (distro, codexHomePath) => this.ensureForDistro(distro, codexHomePath)
+    )
   }
 
   private async ensureInternal(
@@ -338,15 +333,10 @@ export class WslHookRelayManager {
   }
 
   private async resolveDefaultDistro(): Promise<string | null> {
-    if (this.defaultDistro) {
-      return this.defaultDistro
-    }
-    try {
-      const distros = await this.deps.listDistros()
-      this.defaultDistro = distros[0] ?? null
-    } catch {
-      this.defaultDistro = null
-    }
+    this.defaultDistro = await resolveWslHookDefaultDistro(
+      this.defaultDistro,
+      this.deps.listDistros
+    )
     return this.defaultDistro
   }
 }

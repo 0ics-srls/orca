@@ -22,12 +22,11 @@ import {
   bumpLocalWorktreeScanGeneration,
   retireLocalWorktreeScanGeneration
 } from '../../local-worktree-scan-generation'
-import type { PersistedState } from '../../../shared/persisted-state-types'
-import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 
 import type { StoreRuntimeState } from './store-runtime-state'
 import type { WriteSchedulingOperations } from './write-scheduling'
 import { scheduleSave } from './write-scheduling'
+import { pruneDeregisteredRepoUiResidue } from './repo-lifecycle-ui-residue'
 type RepoLifecycleOperationsRuntime = Pick<
   StoreRuntimeState,
   | 'gitUsernameCache'
@@ -241,26 +240,6 @@ export function pruneMobileClientTabSelections(
     if (Object.keys(selectionsByWorktree).length === 0) {
       delete owner[repoLifecycleOperationsContext].runtime.state
         .mobileClientTabSelectionsByDeviceId?.[clientNavigationId]
-    }
-  }
-}
-
-function pruneDeregisteredRepoUiResidue(
-  ui: PersistedState['ui'],
-  orphanRepoIds: ReadonlySet<string>
-): void {
-  const isOrphanWorktree = (worktreeId: string): boolean =>
-    orphanRepoIds.has(getRepoIdFromWorktreeId(worktreeId))
-  if (ui.lastActiveRepoId && orphanRepoIds.has(ui.lastActiveRepoId)) {
-    ui.lastActiveRepoId = null
-  }
-  if (ui.lastActiveWorktreeId && isOrphanWorktree(ui.lastActiveWorktreeId)) {
-    ui.lastActiveWorktreeId = null
-  }
-  ui.filterRepoIds = ui.filterRepoIds?.filter((repoId) => !orphanRepoIds.has(repoId)) ?? []
-  for (const worktreeId of Object.keys(ui.showDotfilesByWorktree ?? {})) {
-    if (isOrphanWorktree(worktreeId)) {
-      delete ui.showDotfilesByWorktree?.[worktreeId]
     }
   }
 }
