@@ -23,14 +23,12 @@ test('copying a rich selection preserves Markdown formatting', async ({ orcaPage
     await openMarkdownFixture(orcaPage, context, filePath)
     const editor = await waitForRichMarkdownEditor(orcaPage)
     await expect(editor.locator('strong')).toHaveText('bold')
-    await editor.locator('p').selectText()
     await expect
-      .poll(() => orcaPage.evaluate(() => window.getSelection()?.toString()))
+      .poll(async () => {
+        await editor.locator('p').selectText()
+        return orcaPage.evaluate(() => window.getSelection()?.toString())
+      })
       .toBe('A bold paragraph with a link.')
-    await testInfo.attach('formatted-selection', {
-      body: await orcaPage.screenshot({ path: testInfo.outputPath('formatted-selection.png') }),
-      contentType: 'image/png'
-    })
     const copied = await editor.evaluate((element) => {
       // Keep this check isolated from the user's system clipboard.
       const clipboardData = new DataTransfer()
@@ -44,11 +42,17 @@ test('copying a rich selection preserves Markdown formatting', async ({ orcaPage
     expect(copied.text).not.toContain('# Copy formatting')
     expect(copied.html).toContain('<strong>bold</strong>')
     await expect(editor.locator('p')).toHaveText('A bold paragraph with a link.')
+    await testInfo.attach('formatted-selection', {
+      body: await orcaPage.screenshot({ path: testInfo.outputPath('formatted-selection.png') }),
+      contentType: 'image/png'
+    })
     await testInfo.attach('copied-markdown', { body: copied.text, contentType: 'text/markdown' })
 
-    await editor.selectText()
     await expect
-      .poll(() => orcaPage.evaluate(() => window.getSelection()?.toString()))
+      .poll(async () => {
+        await editor.selectText()
+        return orcaPage.evaluate(() => window.getSelection()?.toString())
+      })
       .toContain('Copy formatting')
     const copiedBlocks = await editor.evaluate((element) => {
       const clipboardData = new DataTransfer()
