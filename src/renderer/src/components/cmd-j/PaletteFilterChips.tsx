@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { X } from 'lucide-react'
+import { ListFilter, X } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import type { PaletteFilterModel } from './palette-filter-options'
 import {
@@ -48,7 +48,9 @@ export default function PaletteFilterChips({
     // Why: the scope is seeded from the sidebar, not chosen here, so it reads as metadata
     // rather than as pills offering to undo an action the user never took.
     <div className="mx-3 mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-      <span className="shrink-0">
+      {/* Why: a fixed anchor the eye can find at one filter, where a bare muted line vanishes. */}
+      <ListFilter className="size-3 shrink-0" aria-hidden="true" />
+      <span className="sr-only">
         {translate('worktreeJumpPalette.filter.scopedTo', 'Scoped to')}
       </span>
       {/* Why: horizontal scroll keeps every chip reachable without a hard +N dead-end. */}
@@ -70,7 +72,7 @@ export default function PaletteFilterChips({
                   value0: chip.label
                 }
               )}
-              className="group flex h-5 max-w-[140px] shrink-0 items-center gap-1 rounded-sm px-0.5 transition-colors hover:text-foreground focus-visible:text-foreground"
+              className="group flex h-5 max-w-[140px] shrink-0 items-center gap-1 rounded-sm px-1 text-foreground transition-colors hover:bg-accent focus-visible:bg-accent"
             >
               <span className="truncate">{chip.label}</span>
               {/* Space stays reserved so revealing the dismiss does not shift the row. */}
