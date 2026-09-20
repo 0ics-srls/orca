@@ -4,6 +4,10 @@
 import { describe, expect, it } from 'vitest'
 import { collectLeafIdsInOrder } from '@/components/terminal-pane/layout-serialization'
 import {
+  resolveTerminalRevealTabAdoption,
+  type TerminalRevealAdoptionState
+} from '@/lib/terminal-reveal-tab-adoption'
+import {
   createHarnessStoreState,
   loadIpcEventsHarness,
   type HarnessStoreState
@@ -51,6 +55,40 @@ describe('split reveal whose target tab is filed under another worktree key', ()
     const layout = storeState.terminalLayoutsByTabId['tab-a']
     expect(collectLeafIdsInOrder(layout.root ?? null)).toEqual(['leaf-a', 'leaf-split'])
     expect(layout.ptyIdsByLeafId).toMatchObject({ 'leaf-split': 'pty-split' })
+  })
+
+  it('adopts the hinted parent as the owner of a brand-new split pty', () => {
+    // Why this is asserted on its own: it is what lets the split path reuse the adopted row
+    // instead of looking the hint up a second time.
+    const state: TerminalRevealAdoptionState = {
+      tabsByWorktree: {
+        [OWNER_WORKTREE_ID]: [
+          {
+            id: 'tab-a',
+            ptyId: null,
+            worktreeId: OWNER_WORKTREE_ID,
+            title: 'Terminal 1',
+            customTitle: null,
+            color: null,
+            sortOrder: 0,
+            createdAt: 1
+          }
+        ]
+      },
+      terminalLayoutsByTabId: {
+        'tab-a': {
+          root: { type: 'leaf', leafId: 'leaf-a' },
+          activeLeafId: 'leaf-a',
+          expandedLeafId: null,
+          ptyIdsByLeafId: { 'leaf-a': 'pty-a' }
+        }
+      },
+      ptyIdsByTabId: {}
+    }
+
+    expect(
+      resolveTerminalRevealTabAdoption(state, { ptyId: 'pty-split', hintTabId: 'tab-a' })
+    ).toEqual({ kind: 'adopt', tabId: 'tab-a', via: 'pty-owner' })
   })
 
   it('still fails a split reveal whose parent row exists under no worktree key', async () => {

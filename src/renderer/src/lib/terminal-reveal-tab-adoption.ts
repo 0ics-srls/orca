@@ -128,12 +128,10 @@ export function resolveTerminalRevealTarget(
   const isSplitReveal = Boolean(
     request.ptyId && request.tabId && request.leafId && request.splitFromLeafId
   )
-  // Why: a split of a new PTY has no owner to adopt, and its parent row can sit under another key.
-  const splitTargetRow =
-    isSplitReveal && request.tabId !== undefined ? findTerminalTabRow(state, request.tabId) : null
-  if (isSplitReveal && !adoptedRow && !splitTargetRow) {
+  // Why no lookup of its own: the hinted parent is adopted as the pty's owner across every
+  // worktree key, so a split never needs one — a null row here means the hint names no row at all.
+  if (isSplitReveal && !adoptedRow) {
     throw new Error(`Terminal tab ${request.tabId} not found`)
   }
-  const ownerRow = adoptedRow ?? splitTargetRow
-  return { tab: ownerRow?.tab, ownerWorktreeId: ownerRow?.worktreeId ?? request.worktreeId }
+  return { tab: adoptedRow?.tab, ownerWorktreeId: adoptedRow?.worktreeId ?? request.worktreeId }
 }
