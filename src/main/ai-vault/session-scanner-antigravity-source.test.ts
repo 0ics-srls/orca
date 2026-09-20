@@ -86,6 +86,37 @@ describe('Antigravity AI Vault discovery', () => {
     )
   })
 
+  it('preserves Windows-style workspace paths from the project index', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-ide-windows-cache-'))
+    tempRoots.push(root)
+    const cliRoot = join(root, '.gemini', 'antigravity-cli')
+    await mkdir(join(cliRoot, 'cache'), { recursive: true })
+    const conversationId = 'cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa'
+    const workspace = 'C:\\Users\\Ada\\agy-project'
+    await writeFile(
+      join(cliRoot, 'cache', 'conversation_metadata.json'),
+      JSON.stringify({
+        conversations: {
+          [conversationId]: {
+            summary: {
+              ID: conversationId,
+              UpdatedAt: '2026-07-15T11:39:10.000Z',
+              ProjectID: 'project-windows'
+            }
+          }
+        }
+      })
+    )
+    await writeFile(
+      join(cliRoot, 'cache', 'projects.json'),
+      JSON.stringify({ [workspace]: 'project-windows' })
+    )
+
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      `"workspace":"${workspace.replaceAll('\\', '\\\\')}"`
+    )
+  })
+
   it('discovers canonical transcripts from WSL homes without indexing sibling artifacts', async () => {
     const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-wsl-'))
     tempRoots.push(root)
