@@ -4,8 +4,13 @@ import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import { GeminiIcon } from '../status-bar/icons'
 import type { AntigravityAccountState } from '../../../../preload/api/agent-account-api'
+import type { ProviderRateLimits } from '../../../../shared/rate-limit-types'
 
-export function AntigravityAccountsSection(): React.JSX.Element {
+export function AntigravityAccountsSection({
+  quota
+}: {
+  quota: ProviderRateLimits | null
+}): React.JSX.Element {
   const [state, setState] = useState<AntigravityAccountState>({
     accounts: [],
     activeAccountId: null
@@ -53,6 +58,14 @@ export function AntigravityAccountsSection(): React.JSX.Element {
         </p>
       </div>
       <div className="space-y-2">
+        {quota && (
+          <p className="text-xs text-muted-foreground">
+            Quota:{' '}
+            {quota.status === 'ok'
+              ? `${quota.buckets?.length ?? 0} model windows available`
+              : (quota.error ?? 'Unavailable')}
+          </p>
+        )}
         {state.accounts.map((account) => (
           <div
             key={account.id}
