@@ -37,17 +37,23 @@ export function installTerminalSelectionFitGuard(
     active = false
   }
 
-  terminalElement?.addEventListener('mousedown', handleMouseDown, true)
-  ownerDocument?.addEventListener('mouseup', handleMouseUp, true)
-  ownerWindow?.addEventListener('blur', clear)
+  if (terminalElement && typeof terminalElement.addEventListener === 'function') {
+    terminalElement.addEventListener('mousedown', handleMouseDown, true)
+  }
+  if (ownerDocument && typeof ownerDocument.addEventListener === 'function') {
+    ownerDocument.addEventListener('mouseup', handleMouseUp, true)
+  }
+  if (ownerWindow && typeof ownerWindow.addEventListener === 'function') {
+    ownerWindow.addEventListener('blur', clear)
+  }
 
   return {
     isActive: () => active,
     dispose: () => {
       clear()
-      terminalElement?.removeEventListener('mousedown', handleMouseDown, true)
-      ownerDocument?.removeEventListener('mouseup', handleMouseUp, true)
-      ownerWindow?.removeEventListener('blur', clear)
+      terminalElement?.removeEventListener?.('mousedown', handleMouseDown, true)
+      ownerDocument?.removeEventListener?.('mouseup', handleMouseUp, true)
+      ownerWindow?.removeEventListener?.('blur', clear)
     }
   }
 }
