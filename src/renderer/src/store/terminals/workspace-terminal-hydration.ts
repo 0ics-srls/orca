@@ -115,7 +115,7 @@ export function createWorkspaceTerminalHydrationActions(
         const tabById = buildByIdIndex(allTabs)
         // Why the layout plan first: it is what heals a duplicated leaf or pty binding, and the
         // reconnect plan below reads the healed layout to decide what a row may reattach to.
-        const { layoutsByTabId } = buildWorkspaceTerminalLayoutPlan({
+        const layoutsByTabId = buildWorkspaceTerminalLayoutPlan({
           ownershipTransfersByTabId,
           ownershipTransferTabIds,
           releasedPtyIdsByTabId,

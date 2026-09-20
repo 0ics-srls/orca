@@ -81,7 +81,7 @@ function planFor(session: WorkspaceSessionState) {
 
 describe('workspace terminal layout hydration (STA-7961)', () => {
   it('binds a persisted leaf id to exactly one tab', () => {
-    const { layoutsByTabId } = planFor(duplicateLeafSession())
+    const layoutsByTabId = planFor(duplicateLeafSession())
 
     const tabsBindingSharedLeaf = Object.entries(layoutsByTabId)
       .filter(([, layout]) => SHARED_LEAF_ID in (layout.ptyIdsByLeafId ?? {}))
@@ -90,7 +90,7 @@ describe('workspace terminal layout hydration (STA-7961)', () => {
   })
 
   it('hands the shared pty to exactly one tab', () => {
-    const { layoutsByTabId } = planFor(duplicateLeafSession())
+    const layoutsByTabId = planFor(duplicateLeafSession())
 
     const tabsBindingSharedPty = Object.entries(layoutsByTabId)
       .filter(([, layout]) => Object.values(layout.ptyIdsByLeafId ?? {}).includes(SHARED_PTY_ID))
@@ -99,7 +99,7 @@ describe('workspace terminal layout hydration (STA-7961)', () => {
   })
 
   it('keeps both layouts, and the loser keeps its pane', () => {
-    const { layoutsByTabId } = planFor(duplicateLeafSession())
+    const layoutsByTabId = planFor(duplicateLeafSession())
 
     expect(Object.keys(layoutsByTabId).sort()).toEqual([SINGLE_TAB_ID, SPLIT_TAB_ID].sort())
     expect(layoutsByTabId[SINGLE_TAB_ID]?.root).toEqual({

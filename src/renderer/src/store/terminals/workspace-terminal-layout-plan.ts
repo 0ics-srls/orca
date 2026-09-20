@@ -13,10 +13,6 @@ import {
   resolveDuplicateTerminalLayoutBindings
 } from './workspace-terminal-layout-duplicate-bindings'
 
-export type WorkspaceTerminalLayoutPlan = {
-  layoutsByTabId: Record<string, TerminalLayoutSnapshot>
-}
-
 export function buildWorkspaceTerminalLayoutPlan({
   ownershipTransfersByTabId,
   ownershipTransferTabIds,
@@ -31,7 +27,7 @@ export function buildWorkspaceTerminalLayoutPlan({
   session: WorkspaceSessionState
   tabById: ReadonlyMap<string, TerminalTab>
   validTabIds: ReadonlySet<string>
-}): WorkspaceTerminalLayoutPlan {
+}): Record<string, TerminalLayoutSnapshot> {
   const layoutsByTabId = Object.fromEntries(
     Object.entries(session.terminalLayoutsByTabId)
       .filter(([tabId]) => validTabIds.has(tabId))
@@ -65,11 +61,9 @@ export function buildWorkspaceTerminalLayoutPlan({
   )
   // Why after per-tab normalization: a duplicated leaf or pty id is only visible once every
   // layout has been normalized and had its canonical-row releases applied.
-  return {
-    layoutsByTabId: resolveDuplicateTerminalLayoutBindings({
-      canonicalTabIds: readCanonicalTerminalTabIds(session),
-      layoutsByTabId,
-      tabById
-    })
-  }
+  return resolveDuplicateTerminalLayoutBindings({
+    canonicalTabIds: readCanonicalTerminalTabIds(session),
+    layoutsByTabId,
+    tabById
+  })
 }
