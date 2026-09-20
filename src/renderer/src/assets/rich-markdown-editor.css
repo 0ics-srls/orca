@@ -1002,7 +1002,10 @@
 .rich-markdown-editor pre {
   padding: 14px 18px;
   border-radius: 8px;
-  overflow-x: auto;
+  /* Rich editing favors readable lines; source mode keeps the raw text scrollable. */
+  overflow-x: hidden;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere;
   line-height: 1.55;
   background: transparent;
 }
