@@ -2,7 +2,10 @@ import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
 import type { AntigravityScreenPermissionObservation } from '../agent-hooks/server/server-ingest-antigravity-screen'
 import type { RuntimeVisibleTerminalState } from './runtime-terminal-state-records'
 import { isAntigravityCommandApprovalScreen } from './antigravity-command-approval-screen'
-import { isKnownReadyTerminalScreen } from './terminal-screen-readiness'
+import {
+  isAntigravityWorkingTerminalScreen,
+  isKnownReadyTerminalScreen
+} from './terminal-screen-readiness'
 
 type Dependencies = {
   baseline(ptyId: string): AgentStatusIpcPayload | null
@@ -57,8 +60,10 @@ export class AntigravityScreenPermissionPublisher {
               this.deps.publish({ baseline, command })
             }
           }
+        } else if (isAntigravityWorkingTerminalScreen(screen.lines)) {
+          this.deps.publish({ baseline, command: null, clearedState: 'working' })
         } else if (isKnownReadyTerminalScreen({ tail: screen.lines, draft: screen.draft })) {
-          this.deps.publish({ baseline, command: null })
+          this.deps.publish({ baseline, command: null, clearedState: 'done' })
         }
       } catch {
         // An unreadable screen is not evidence that a permission prompt disappeared.

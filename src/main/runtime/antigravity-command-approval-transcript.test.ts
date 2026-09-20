@@ -43,7 +43,11 @@ describe('captured native Windows Antigravity command approval', () => {
   )
 })
 
-it('publishes the captured permission and cancellation to the canonical hook store', async () => {
+it.each([
+  ['antigravity-windows-command-cancelled', 'done'],
+  ['antigravity-busy-mid-turn', 'working'],
+  ['antigravity-windows-approved-command-running', 'working']
+] as const)('publishes permission then the captured %s state', async (capture, state) => {
   const wiring = makeAgentStatusStoreWiring()
   const { runtime, handle } = await createTranscriptPane(
     {
@@ -81,13 +85,8 @@ it('publishes the captured permission and cancellation to the canonical hook sto
   expect(wiring.statusStore.getStatusSnapshot()[0].interactivePrompt).toContain(
     'ORCA_PERMISSION_CAPTURE_OK'
   )
-  const cancelled = readFileSync(
-    join(__dirname, '__fixtures__/antigravity-windows-command-cancelled.txt'),
-    'utf8'
-  )
+  const cancelled = readFileSync(join(__dirname, `__fixtures__/${capture}.txt`), 'utf8')
   runtime.onPtyData(TRANSCRIPT_PANE_PTY_ID, cancelled, Date.now())
-  await vi.waitFor(() =>
-    expect(wiring.statusStore.getStatusSnapshot()[0]).toMatchObject({ state: 'done' })
-  )
+  await vi.waitFor(() => expect(wiring.statusStore.getStatusSnapshot()[0]).toMatchObject({ state }))
   expect(wiring.statusStore.getStatusSnapshot()[0].interactivePrompt).toBeUndefined()
 })

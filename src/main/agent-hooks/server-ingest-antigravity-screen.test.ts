@@ -48,7 +48,11 @@ describe('host-owned Antigravity screen permission', () => {
     })
     expect(listener).toHaveBeenCalledTimes(1)
     expect(
-      server.ingestAntigravityScreenPermission({ baseline: baseline(server), command: null })
+      server.ingestAntigravityScreenPermission({
+        baseline: baseline(server),
+        command: null,
+        clearedState: 'done'
+      })
     ).toBe(true)
     expect(baseline(server)).toMatchObject({ state: 'done', prompt: 'print marker' })
     expect(baseline(server).interactivePrompt).toBeUndefined()
@@ -110,7 +114,11 @@ describe('host-owned Antigravity screen permission', () => {
       }
     })
     expect(
-      server.ingestAntigravityScreenPermission({ baseline: baseline(server), command: null })
+      server.ingestAntigravityScreenPermission({
+        baseline: baseline(server),
+        command: null,
+        clearedState: 'done'
+      })
     ).toBe(false)
     expect(baseline(server).state).toBe('waiting')
   })

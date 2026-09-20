@@ -55,3 +55,21 @@ export function classifyTerminalScreenReadiness(screen: {
         : detectTerminalWaitBlockedReason(screen.tail.join('\n'))
   }
 }
+
+/** Captured foreground generation and Windows background-task layouts. */
+export function isAntigravityWorkingTerminalScreen(tail: readonly string[]): boolean {
+  const rows = tail.map((row) => row.trim()).filter(Boolean)
+  const footer = rows.at(-1) ?? ''
+  const composerAt = (offset: number): boolean =>
+    ANTIGRAVITY_FRAME.test(rows.at(offset) ?? '') &&
+    ANTIGRAVITY_EMPTY_COMPOSERS.has(rows.at(offset - 1) ?? '') &&
+    ANTIGRAVITY_FRAME.test(rows.at(offset - 2) ?? '')
+  return (
+    (footer.startsWith('esc to cancel') && composerAt(-2)) ||
+    (footer.startsWith('? for shortcuts') &&
+      /· [1-9]\d* task\(s\) · \/tasks$/.test(footer) &&
+      ANTIGRAVITY_FRAME.test(rows.at(-2) ?? '') &&
+      /^● \[\d{2}:\d{2}:\d{2}\] .+ running$/.test(rows.at(-3) ?? '') &&
+      composerAt(-4))
+  )
+}

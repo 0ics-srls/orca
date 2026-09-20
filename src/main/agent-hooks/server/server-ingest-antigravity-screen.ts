@@ -4,8 +4,7 @@ import { AgentHookServerIngestNormalization } from './server-ingest-normalizatio
 
 export type AntigravityScreenPermissionObservation = {
   baseline: Pick<AgentStatusIpcPayload, 'paneKey' | 'terminalHandle' | 'observation'>
-  command: string | null
-}
+} & ({ command: string } | { command: null; clearedState: 'working' | 'done' })
 
 const SCREEN_APPROVAL_PREFIX = '{"approval":{"source":"antigravity-screen",'
 
@@ -55,7 +54,7 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
     if (interactivePrompt === previous.payload.interactivePrompt) {
       return true
     }
-    // An empty composer confirms idle even when cancelling approval emits no Stop hook.
+    // Only a positively identified working or idle screen can clear our approval.
     return (
       this.applyNormalizedStatus(
         {
@@ -67,7 +66,7 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
           providerSession: previous.providerSession,
           payload: {
             ...previous.payload,
-            state: command === null ? 'done' : 'waiting',
+            state: request.command === null ? request.clearedState : 'waiting',
             ...(command === null ? { toolName: undefined, toolInput: undefined } : {}),
             interactivePrompt
           }

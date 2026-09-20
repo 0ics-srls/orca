@@ -77,6 +77,28 @@ describe('Antigravity screen publication scheduling', () => {
     expect(publish).not.toHaveBeenCalled()
   })
 
+  it.each([
+    null,
+    {
+      lines: ['tool output without a recognized composer'],
+      generation: 1,
+      sequence: 1,
+      isAlternateScreen: false
+    }
+  ])('does not clear permission from a missing or unrecognized screen: %s', async (screen) => {
+    const readScreen = vi.fn(async () => screen)
+    const publish = vi.fn(() => true)
+    const publisher = new AntigravityScreenPermissionPublisher({
+      baseline: () => ({ ...baseline, state: 'waiting' }),
+      readScreen,
+      isCurrent: () => true,
+      publish
+    })
+    publisher.schedule('pty')
+    await vi.waitFor(() => expect(readScreen).toHaveBeenCalled())
+    expect(publish).not.toHaveBeenCalled()
+  })
+
   it('does not interpret another provider or a direct SSH mirror', async () => {
     const readScreen = vi.fn(async () => approval)
     const publisher = new AntigravityScreenPermissionPublisher({
