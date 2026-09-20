@@ -88,9 +88,13 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     const ownership = resolveTerminalPtyPaneOwnership(s, PTY_ID)
     expect(ownership.kind).toBe('ambiguous')
     // Why ordered: persistence order must not decide which claimant the reveal adopts.
-    expect(ownership.kind === 'ambiguous' && ownership.owners.map((o) => o.tabId)).toEqual([
-      'tab-a',
-      'tab-b'
+    // Why the tiers too: the reveal names every claimant in its warning, and a hinted tab id
+    // is not a claimant — only real holders may ever reach that list.
+    expect(
+      ownership.kind === 'ambiguous' && ownership.owners.map((o) => [o.tabId, o.tier])
+    ).toEqual([
+      ['tab-a', 'recorded'],
+      ['tab-b', 'recorded']
     ])
   })
 
@@ -126,9 +130,11 @@ describe('resolveTerminalPtyPaneOwnership', () => {
   })
 
   it('falls back to the pre-minted tab id when nothing records the pty (#10486)', () => {
+    // Why its own tier: nothing recorded this, so a reader must be able to tell a binding
+    // from the tab id the PTY's env was stamped with at spawn.
     expect(
       resolveTerminalPtyPaneOwnership(state({}), PTY_ID, { preferTabId: 'tab-hinted' })
-    ).toEqual({ kind: 'owned', owner: { tabId: 'tab-hinted', leafId: null, tier: 'recorded' } })
+    ).toEqual({ kind: 'owned', owner: { tabId: 'tab-hinted', leafId: null, tier: 'hinted' } })
   })
 
   it('owns a pty whose only holder is filed under a foreign worktree key', () => {

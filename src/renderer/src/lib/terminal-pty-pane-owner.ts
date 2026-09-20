@@ -6,9 +6,10 @@ export type TerminalPtyPaneOwnerState = Pick<AppState, 'terminalLayoutsByTabId' 
 
 export type TerminalPtyPaneOwner = {
   tabId: string
-  /** The leaf the layout binds; null when only the live map proves the mount. */
+  /** The leaf the layout binds; null when nothing but the live map or the hint names the tab. */
   leafId: string | null
-  tier: 'mounted' | 'recorded'
+  /** `hinted` is the PTY's baked-in tab id standing in for a binding nothing has written yet. */
+  tier: 'mounted' | 'recorded' | 'hinted'
 }
 
 export type TerminalPtyPaneOwnership =
@@ -88,6 +89,6 @@ export function resolveTerminalPtyPaneOwnership(
   // Why: nothing records the PTY yet, so the tab it was minted against is the only thing left
   // that keeps paneKey hook attribution intact (#10486).
   return options.preferTabId !== undefined
-    ? { kind: 'owned', owner: { tabId: options.preferTabId, leafId: null, tier: 'recorded' } }
+    ? { kind: 'owned', owner: { tabId: options.preferTabId, leafId: null, tier: 'hinted' } }
     : { kind: 'none' }
 }
