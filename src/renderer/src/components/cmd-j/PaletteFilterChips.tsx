@@ -45,32 +45,47 @@ export default function PaletteFilterChips({
   }
 
   return (
-    <div className="mx-3 mt-2 flex items-center gap-1.5">
+    // Why: the scope is seeded from the sidebar, not chosen here, so it reads as metadata
+    // rather than as pills offering to undo an action the user never took.
+    <div className="mx-3 mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="shrink-0">
+        {translate('worktreeJumpPalette.filter.scopedTo', 'Scoped to')}
+      </span>
       {/* Why: horizontal scroll keeps every chip reachable without a hard +N dead-end. */}
-      <div className="scrollbar-sleek flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-        {chips.map((chip) => (
-          <button
-            key={`${chip.field}:${chip.id}`}
-            type="button"
-            onClick={() => onFilterChange(togglePaletteFilterValue(filter, chip.field, chip.id))}
-            aria-label={translate(
-              'worktreeJumpPalette.filter.removeChip',
-              'Remove filter {{value0}}',
-              {
-                value0: chip.label
-              }
-            )}
-            className="flex h-6 max-w-[140px] shrink-0 items-center gap-1 rounded-full border border-primary/35 bg-primary/12 px-2 text-[11px] text-foreground transition-colors hover:bg-primary/20"
-          >
-            <span className="truncate">{chip.label}</span>
-            <X className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-          </button>
+      <div className="scrollbar-sleek flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {chips.map((chip, index) => (
+          <React.Fragment key={`${chip.field}:${chip.id}`}>
+            {index > 0 ? (
+              <span className="shrink-0 opacity-50" aria-hidden="true">
+                ·
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onFilterChange(togglePaletteFilterValue(filter, chip.field, chip.id))}
+              aria-label={translate(
+                'worktreeJumpPalette.filter.removeChip',
+                'Remove filter {{value0}}',
+                {
+                  value0: chip.label
+                }
+              )}
+              className="group flex h-5 max-w-[140px] shrink-0 items-center gap-1 rounded-sm px-0.5 transition-colors hover:text-foreground focus-visible:text-foreground"
+            >
+              <span className="truncate">{chip.label}</span>
+              {/* Space stays reserved so revealing the dismiss does not shift the row. */}
+              <X
+                className="size-2.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70"
+                aria-hidden="true"
+              />
+            </button>
+          </React.Fragment>
         ))}
       </div>
       <button
         type="button"
         onClick={() => onFilterChange(EMPTY_PALETTE_FILTER)}
-        className="ml-1 shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="ml-1 shrink-0 rounded-md px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
       >
         {translate('worktreeJumpPalette.filter.clearAll', 'Clear all')}
       </button>
