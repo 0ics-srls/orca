@@ -574,6 +574,26 @@ describe('worktree agent activation gate', () => {
     )
   })
 
+  it('never mints for a pty bound in a layout, whatever the host census says', async () => {
+    // The negative twin of the row-only case above. The mint path exists only for a PTY with no
+    // pane at all; a layout binding outranks an empty census, or an authoritative "no surfaces"
+    // answer would fork every restored agent onto a second empty pane (#13060's failure class).
+    const livePtyId = `${WORKTREE_ID}@@live-agent`
+    const { deps, createTab } = testDeps({
+      sessions: [listed(livePtyId)],
+      surfaceOwners: new Map()
+    })
+    seedExistingSurface(deps.getState(), {
+      tabId: 'tab-live',
+      leafId: LIVE_LEAF_ID,
+      boundPtyId: livePtyId
+    })
+
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('adopted')
+
+    expect(createTab).not.toHaveBeenCalled()
+  })
+
   it('restores the host-owned surface when the renderer projection lost every binding', async () => {
     const livePtyId = `${WORKTREE_ID}@@live-agent`
     const { deps, createTab } = testDeps({
