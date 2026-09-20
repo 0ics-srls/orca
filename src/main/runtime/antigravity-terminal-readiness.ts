@@ -13,6 +13,24 @@ export function isAntigravityReadyPromptSnapshot(text: string): boolean {
   return findAntigravityComposerIndex(text.toLowerCase(), false) !== null
 }
 
+function isModelRow(line: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed === '>' || trimmed.includes('antigravity cli')) {
+    return false
+  }
+  if (
+    trimmed.includes('@') ||
+    trimmed.includes('antigravity business') ||
+    trimmed.includes('for shortcuts') ||
+    trimmed.startsWith('~/') ||
+    trimmed.startsWith('/') ||
+    /^[a-z]:\\/i.test(trimmed)
+  ) {
+    return false
+  }
+  return true
+}
+
 function findAntigravityComposerIndex(normalized: string, requireHeader: boolean): number | null {
   const headerIndex = normalized.lastIndexOf('antigravity cli')
   const contentStart = headerIndex === -1 ? 0 : headerIndex
@@ -22,10 +40,13 @@ function findAntigravityComposerIndex(normalized: string, requireHeader: boolean
 
   let offset = 0
   let composerStart: number | null = null
-  let composerEnd = 0
-  for (const line of normalized.split('\n')) {
+  let workspaceBeforeComposer = false
+  let modelBeforeComposer = false
+  let modelAfterComposer = false
+  while (offset <= normalized.length) {
     const lineStart = offset
-    const lineEnd = offset + line.length
+    const newlineIndex = normalized.indexOf('\n', lineStart)
+    const lineEnd = newlineIndex === -1 ? normalized.length : newlineIndex
     let trimmedStart = lineStart
     let trimmedEnd = lineEnd
     while (trimmedStart < trimmedEnd && isTerminalWaitWhitespace(normalized, trimmedStart)) {
@@ -37,15 +58,27 @@ function findAntigravityComposerIndex(normalized: string, requireHeader: boolean
     if (trimmedStart >= contentStart && trimmedEnd - trimmedStart === 1) {
       if (normalized.charCodeAt(trimmedStart) === 62) {
         composerStart = trimmedStart
-        composerEnd = trimmedEnd
+        modelAfterComposer = false
+      }
+    } else if (trimmedStart >= contentStart) {
+      const value = normalized.slice(trimmedStart, trimmedEnd)
+      const isWorkspace =
+        value.startsWith('~/') || value.startsWith('/') || /^[a-z]:\\/i.test(value)
+      if (composerStart === null) {
+        workspaceBeforeComposer ||= isWorkspace
+        modelBeforeComposer ||= isModelRow(value)
+      } else {
+        modelAfterComposer ||= isModelRow(value)
       }
     }
     offset = lineEnd + 1
+    if (newlineIndex === -1) {
+      break
+    }
   }
   if (composerStart === null) {
     return null
   }
-  const suffix = normalized.slice(composerEnd)
   // A trailing caret also appears on trust, sign-in, model, and onboarding menus. Those panes
   // must remain blocked until the menu is gone; only the latest AGY screen can establish readiness.
   if (
@@ -55,9 +88,10 @@ function findAntigravityComposerIndex(normalized: string, requireHeader: boolean
   ) {
     return null
   }
-  return suffix.trim().length === 0 || /resume with -c|agy --conversation/i.test(suffix)
-    ? composerStart
-    : null
+  if (!workspaceBeforeComposer) {
+    return modelAfterComposer ? null : composerStart
+  }
+  return modelBeforeComposer || modelAfterComposer ? composerStart : null
 }
 
 export function hasAntigravityTerminalHeader(text: string): boolean {
