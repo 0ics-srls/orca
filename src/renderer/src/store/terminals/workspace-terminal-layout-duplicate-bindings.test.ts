@@ -11,6 +11,7 @@ const SINGLE_TAB = 'tab-single'
 const SHARED_LEAF = '10cb5648-8a54-41c0-a6a4-ef0028d93599'
 const OTHER_LEAF = 'df8913c9-fd8a-420a-a7d6-17daf0ed30f0'
 const ELSEWHERE_LEAF = '96cdf7ea-9c83-4ba5-a41b-c425955e6606'
+const CARRIER_LEAF = 'b7f0e2a1-4c6d-4f8a-9b2e-5d3c1a0f7e64'
 const SHARED_PTY = 'wt-1@@shared'
 
 function tab(id: string, sortOrder: number, createdAt = 1_000 + sortOrder): TerminalTab {
@@ -188,19 +189,58 @@ describe('resolveDuplicateTerminalLayoutBindings', () => {
   })
 
   it('ignores a binding whose pane already left the tree', () => {
-    const ghost: TerminalLayoutSnapshot = {
-      root: null,
-      activeLeafId: null,
+    // A rooted layout whose map still names a leaf its tree dropped: the binding reattaches
+    // nothing, so it must not outrank the pane that still mounts the pty.
+    const stranded: TerminalLayoutSnapshot = {
+      root: { type: 'leaf', leafId: CARRIER_LEAF },
+      activeLeafId: CARRIER_LEAF,
       expandedLeafId: null,
       ptyIdsByLeafId: { [ELSEWHERE_LEAF]: SHARED_PTY }
     }
-    const healed = heal({ [SINGLE_TAB]: ghost, [SPLIT_TAB]: splitLayout() }, [
+    const healed = heal({ [SINGLE_TAB]: stranded, [SPLIT_TAB]: splitLayout() }, [
       tab(SINGLE_TAB, 0),
       tab(SPLIT_TAB, 1)
     ])
 
-    // The ghost reattaches nothing, so it must not outrank the pane that still mounts the pty.
     expect(healed[SPLIT_TAB]!.ptyIdsByLeafId?.[SHARED_LEAF]).toBe(SHARED_PTY)
+    expect(healed[SINGLE_TAB]).toBe(stranded)
+  })
+
+  it('heals a rootless layout, which binds its sole pane off-tree', () => {
+    // Ownership resolution counts these bindings, so the self-heal has to as well, or a
+    // duplicate the resolver can see is one hydration can never repair.
+    const rootless: TerminalLayoutSnapshot = {
+      root: null,
+      activeLeafId: SHARED_LEAF,
+      expandedLeafId: null,
+      ptyIdsByLeafId: { [SHARED_LEAF]: SHARED_PTY }
+    }
+    const healed = heal({ [SPLIT_TAB]: splitLayout(), [SINGLE_TAB]: rootless }, [
+      tab(SPLIT_TAB, 0),
+      tab(SINGLE_TAB, 1)
+    ])
+
+    expect(healed[SPLIT_TAB]!.ptyIdsByLeafId?.[SHARED_LEAF]).toBe(SHARED_PTY)
+    expect(healed[SINGLE_TAB]!.ptyIdsByLeafId).toEqual({})
+    expect(healed[SINGLE_TAB]!.root).toBeNull()
+  })
+
+  it('refuses a rootless layout a second, never-pruned binding it cannot prove', () => {
+    // Only the sole off-tree pane, or the one activeLeafId names, proves a rootless claim.
+    // Claiming the rest would evict the row that really owns the pty, which is #13098.
+    const overreaching: TerminalLayoutSnapshot = {
+      root: null,
+      activeLeafId: ELSEWHERE_LEAF,
+      expandedLeafId: null,
+      ptyIdsByLeafId: { [ELSEWHERE_LEAF]: 'wt-1@@own', [SHARED_LEAF]: SHARED_PTY }
+    }
+    const healed = heal({ [SINGLE_TAB]: overreaching, [SPLIT_TAB]: splitLayout() }, [
+      tab(SINGLE_TAB, 0),
+      tab(SPLIT_TAB, 1)
+    ])
+
+    expect(healed[SPLIT_TAB]!.ptyIdsByLeafId?.[SHARED_LEAF]).toBe(SHARED_PTY)
+    expect(healed[SINGLE_TAB]).toBe(overreaching)
   })
 
   it('returns the same object when no tab collides', () => {

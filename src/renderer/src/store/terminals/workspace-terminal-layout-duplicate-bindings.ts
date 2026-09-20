@@ -1,10 +1,8 @@
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
 import { detachTerminalLayoutLeaf } from '@/components/terminal-pane/terminal-layout-leaf-detach'
-import {
-  collectLeafIdsInOrder,
-  resolvePtyBoundActiveLeafId
-} from '@/components/terminal-pane/terminal-layout-leaf-ids'
+import { resolvePtyBoundActiveLeafId } from '@/components/terminal-pane/terminal-layout-leaf-ids'
+import { collectClaimableLeafIds } from '@/components/terminal-pane/terminal-layout-leaf-claims'
 
 type TerminalLayoutOwnerRanking = {
   canonicalTabIds: ReadonlySet<string>
@@ -47,18 +45,19 @@ function compareOwnerTabIds(a: string, b: string, ranking: TerminalLayoutOwnerRa
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-/** Leaf ids this layout claims as pane identities. A binding off the tree reattaches nothing. */
+// Why the claimable set and not the owned one: a winner here takes a binding away from a loser,
+// and a rootless layout's never-pruned map would evict the row that really owns it (#13098).
 function collectHeldLeafIds(layout: TerminalLayoutSnapshot): string[] {
-  return [...new Set(collectLeafIdsInOrder(layout.root))]
+  return [...collectClaimableLeafIds(layout)]
 }
 
-/** PTY ids this layout can actually reattach: bound to a leaf its own tree still mounts (#13098). */
-function collectMountedPtyIds(layout: TerminalLayoutSnapshot): string[] {
-  const leafIdsInTree = new Set(collectLeafIdsInOrder(layout.root))
+/** PTY ids this layout may claim, bound to a leaf it proves it holds. */
+function collectClaimablePtyIds(layout: TerminalLayoutSnapshot): string[] {
+  const claimableLeafIds = collectClaimableLeafIds(layout)
   return [
     ...new Set(
       Object.entries(layout.ptyIdsByLeafId ?? {})
-        .filter(([leafId]) => leafIdsInTree.has(leafId))
+        .filter(([leafId]) => claimableLeafIds.has(leafId))
         .map(([, ptyId]) => ptyId)
     )
   ]
@@ -156,7 +155,7 @@ export function resolveDuplicateTerminalLayoutBindings(args: {
   return resolveDuplicateHolders(
     resolveDuplicateHolders(args.layoutsByTabId, ranking, collectHeldLeafIds, surrenderLeafId),
     ranking,
-    collectMountedPtyIds,
+    collectClaimablePtyIds,
     unbindPtyId
   )
 }

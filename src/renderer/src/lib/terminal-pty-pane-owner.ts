@@ -1,4 +1,4 @@
-import { collectLeafIdsInOrder } from '@/components/terminal-pane/terminal-layout-leaf-ids'
+import { collectOwnedLeafIds } from '@/components/terminal-pane/terminal-layout-leaf-claims'
 import type { AppState } from '@/store/types'
 
 /** No `tabsByWorktree`: ownership is tab-keyed, so no worktree key participates. */
@@ -21,12 +21,7 @@ export type TerminalPtyPaneOwnerOptions = {
   preferTabId?: string
 }
 
-/**
- * The leaf a tab's layout binds to `ptyId`, or null.
- *
- * A binding whose leaf has left the tree reattaches nothing, so it must not outrank a live
- * pane (#13098). Rootless layouts bind their sole pane off-tree and keep counting.
- */
+/** The leaf a tab's layout binds to `ptyId`, or null when no leaf it owns holds that binding. */
 function findLayoutBoundLeafId(
   state: TerminalPtyPaneOwnerState,
   tabId: string,
@@ -36,9 +31,9 @@ function findLayoutBoundLeafId(
   if (!layout?.ptyIdsByLeafId) {
     return null
   }
-  const leafIdsInTree = layout.root ? new Set(collectLeafIdsInOrder(layout.root)) : null
+  const ownedLeafIds = collectOwnedLeafIds(layout)
   for (const [leafId, boundPtyId] of Object.entries(layout.ptyIdsByLeafId)) {
-    if (boundPtyId === ptyId && (!leafIdsInTree || leafIdsInTree.has(leafId))) {
+    if (boundPtyId === ptyId && ownedLeafIds.has(leafId)) {
       return leafId
     }
   }
