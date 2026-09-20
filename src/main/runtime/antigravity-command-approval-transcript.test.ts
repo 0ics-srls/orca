@@ -87,7 +87,7 @@ it('publishes the captured permission and cancellation to the canonical hook sto
   )
   runtime.onPtyData(TRANSCRIPT_PANE_PTY_ID, cancelled, Date.now())
   await vi.waitFor(() =>
-    expect(wiring.statusStore.getStatusSnapshot()[0]).toMatchObject({ state: 'working' })
+    expect(wiring.statusStore.getStatusSnapshot()[0]).toMatchObject({ state: 'done' })
   )
   expect(wiring.statusStore.getStatusSnapshot()[0].interactivePrompt).toBeUndefined()
 })

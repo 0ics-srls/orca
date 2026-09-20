@@ -55,7 +55,7 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
     if (interactivePrompt === previous.payload.interactivePrompt) {
       return true
     }
-    // A cleared dialog proves only that permission ended; completion still comes from the provider.
+    // An empty composer confirms idle even when cancelling approval emits no Stop hook.
     return (
       this.applyNormalizedStatus(
         {
@@ -67,7 +67,8 @@ export abstract class AgentHookServerIngestAntigravityScreen extends AgentHookSe
           providerSession: previous.providerSession,
           payload: {
             ...previous.payload,
-            state: command === null ? 'working' : 'waiting',
+            state: command === null ? 'done' : 'waiting',
+            ...(command === null ? { toolName: undefined, toolInput: undefined } : {}),
             interactivePrompt
           }
         },
