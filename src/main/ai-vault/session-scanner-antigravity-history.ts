@@ -1,6 +1,7 @@
 import type { AiVaultSession } from '../../shared/ai-vault-types'
 import { wslGatedReadFile } from '../native-chat/wsl-transcript-fs-access'
 import { WslTranscriptFsError } from '../native-chat/wsl-transcript-fs-gate'
+import { dirname, join } from 'node:path'
 import { normalizeTitleText, parseJsonObject, timestampMs } from './session-scanner-values'
 
 const HISTORY_MATCH_WINDOW_MS = 2_000
@@ -14,13 +15,67 @@ const HISTORY_MATCH_WINDOW_MS = 2_000
  */
 export async function readLocalAntigravityHistory(path: string): Promise<string | null> {
   try {
-    return await wslGatedReadFile(path, 'utf-8', 'scan')
+    const history = await wslGatedReadFile(path, 'utf-8', 'scan')
+    return history
+  } catch (error) {
+    if (error instanceof WslTranscriptFsError) {
+      throw error
+    }
+    return readAntigravityCacheHistory(path)
+  }
+}
+
+/**
+ * Newer agy builds keep IDE conversation metadata in cache instead of history.jsonl.
+ * Join only IDs, timestamps, and project paths; conversation databases remain opaque.
+ */
+async function readAntigravityCacheHistory(historyPath: string): Promise<string | null> {
+  const cliRoot = dirname(historyPath)
+  try {
+    const [metadataText, projectsText] = await Promise.all([
+      wslGatedReadFile(join(cliRoot, 'cache', 'conversation_metadata.json'), 'utf-8', 'scan'),
+      wslGatedReadFile(join(cliRoot, 'cache', 'projects.json'), 'utf-8', 'scan')
+    ])
+    const metadata = JSON.parse(metadataText)
+    const projects = JSON.parse(projectsText)
+    if (!isRecord(metadata) || !isRecord(projects)) {
+      return null
+    }
+    const conversations = isRecord(metadata.conversations) ? metadata.conversations : null
+    if (!conversations) {
+      return null
+    }
+    const projectPaths = new Map<string, string>()
+    for (const [workspace, projectId] of Object.entries(projects)) {
+      if (typeof projectId === 'string' && workspace.trim()) {
+        projectPaths.set(projectId, workspace)
+      }
+    }
+    const rows: string[] = []
+    for (const [conversationId, value] of Object.entries(conversations)) {
+      if (!isRecord(value) || !isRecord(value.summary)) {
+        continue
+      }
+      const summary = value.summary
+      const projectId = typeof summary.ProjectID === 'string' ? summary.ProjectID : ''
+      const workspace = projectPaths.get(projectId)
+      const updatedAt = typeof summary.UpdatedAt === 'string' ? summary.UpdatedAt : ''
+      if (!workspace || !conversationId || !Number.isFinite(Date.parse(updatedAt))) {
+        continue
+      }
+      rows.push(JSON.stringify({ conversationId, timestamp: updatedAt, workspace }))
+    }
+    return rows.length > 0 ? `${rows.join('\n')}\n` : null
   } catch (error) {
     if (error instanceof WslTranscriptFsError) {
       throw error
     }
     return null
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 type AntigravityHistoryEntry = {
