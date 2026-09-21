@@ -1,16 +1,21 @@
+/** Presets the History depth menu offers; Show more steps past them 250 at a time. */
 export const AI_VAULT_SESSION_LIMITS = [250, 500, 1000, 'unlimited'] as const
+export const AI_VAULT_SESSION_LIMIT_STEP = 250
 
-export type AiVaultSessionLimit = (typeof AI_VAULT_SESSION_LIMITS)[number]
+export type AiVaultSessionLimit = number | 'unlimited'
 
 export const DEFAULT_AI_VAULT_SESSION_LIMIT: AiVaultSessionLimit = 250
 
 export function normalizeAiVaultSessionLimit(value: unknown): AiVaultSessionLimit {
-  return AI_VAULT_SESSION_LIMITS.includes(value as AiVaultSessionLimit)
-    ? (value as AiVaultSessionLimit)
+  if (value === 'unlimited') {
+    return value
+  }
+  return typeof value === 'number' && value > 0 && value % AI_VAULT_SESSION_LIMIT_STEP === 0
+    ? value
     : DEFAULT_AI_VAULT_SESSION_LIMIT
 }
 
-/** The next History depth step, or null once the scan is already unlimited. */
-export function nextAiVaultSessionLimit(limit: AiVaultSessionLimit): AiVaultSessionLimit | null {
-  return AI_VAULT_SESSION_LIMITS[AI_VAULT_SESSION_LIMITS.indexOf(limit) + 1] ?? null
+/** The next History depth, or null once the scan is already unlimited. */
+export function nextAiVaultSessionLimit(limit: AiVaultSessionLimit): number | null {
+  return limit === 'unlimited' ? null : limit + AI_VAULT_SESSION_LIMIT_STEP
 }

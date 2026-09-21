@@ -408,6 +408,7 @@ export default function AiVaultPanel(): React.JSX.Element {
         {!searching && (
           <AiVaultShowMoreSessionsRow
             loaded={sessions.length}
+            loading={loading}
             sessionLimit={sessionLimit}
             onSessionLimitChange={setSessionLimit}
           />
