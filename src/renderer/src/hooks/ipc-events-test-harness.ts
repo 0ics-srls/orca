@@ -9,12 +9,14 @@ import type { ClientHostedBrowserRowsEvent } from '../../../shared/client-hosted
 // Re-exported so a suite needs one import for the harness and the store surface it seeds.
 export {
   createHarnessStoreState,
-  createStoreWithOwnerFiledElsewhere,
-  OWNER_ELSEWHERE_EVENT_WORKTREE_ID,
-  OWNER_ELSEWHERE_OWNER_WORKTREE_ID,
   type HarnessStoreState,
   type HarnessTab
 } from './ipc-events-harness-store-state'
+export {
+  createStoreWithOwnerFiledElsewhere,
+  OWNER_ELSEWHERE_EVENT_WORKTREE_ID,
+  OWNER_ELSEWHERE_OWNER_WORKTREE_ID
+} from './terminal-reveal-test-fixtures'
 
 export type CreateTerminalRequest = {
   requestId?: string
