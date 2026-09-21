@@ -38,15 +38,21 @@ describe('daemon folder access mismatch evidence', () => {
     expect(getDaemonFolderAccessMismatch(DAEMON)?.cwdClass).toBe('desktop')
   })
 
-  it('clears when the same daemon later reads a cwd successfully', () => {
+  it('clears when the same daemon later reads a cwd of the same folder class', () => {
     recordDaemonFolderAccessMismatch(DAEMON, DOCUMENTS)
-    clearDaemonFolderAccessMismatch(DAEMON)
+    clearDaemonFolderAccessMismatch(DAEMON, '/Users/alice/Documents/other-repo')
     expect(getDaemonFolderAccessMismatch(DAEMON)).toBeNull()
+  })
+
+  it('keeps the evidence when the same daemon reads a folder of another class', () => {
+    recordDaemonFolderAccessMismatch(DAEMON, DOCUMENTS)
+    clearDaemonFolderAccessMismatch(DAEMON, '/Users/alice/code/repo')
+    expect(getDaemonFolderAccessMismatch(DAEMON)).not.toBeNull()
   })
 
   it('ignores a clear from a different daemon', () => {
     recordDaemonFolderAccessMismatch(DAEMON, DOCUMENTS)
-    clearDaemonFolderAccessMismatch(RESTARTED)
+    clearDaemonFolderAccessMismatch(RESTARTED, DOCUMENTS)
     expect(getDaemonFolderAccessMismatch(DAEMON)).not.toBeNull()
   })
 

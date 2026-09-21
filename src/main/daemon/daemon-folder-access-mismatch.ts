@@ -52,9 +52,19 @@ export function recordDaemonFolderAccessMismatch(
   }
 }
 
-/** A later spawn this daemon could read retires its own evidence; other daemons keep theirs. */
-export function clearDaemonFolderAccessMismatch(identity: DaemonEndpointIdentity | null): void {
-  if (identity && stored?.daemonKey === daemonKeyOf(identity)) {
+/**
+ * A later spawn this daemon could read retires its own evidence, but only for the same folder
+ * class: TCC denies Documents as a whole, so a readable `~/code` says nothing about it.
+ */
+export function clearDaemonFolderAccessMismatch(
+  identity: DaemonEndpointIdentity | null,
+  cwd: string
+): void {
+  if (
+    identity &&
+    stored?.daemonKey === daemonKeyOf(identity) &&
+    stored.cwdClass === classifyDaemonPtyCwd(cwd, homedir())
+  ) {
     stored = null
   }
 }

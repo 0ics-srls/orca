@@ -106,12 +106,15 @@ export function reportDaemonPtyCwdVerdict(args: {
   daemonIdentity: DaemonEndpointIdentity | null
 }): void {
   try {
-    if (args.cwdReadableByDaemon === true) {
-      clearDaemonFolderAccessMismatch(args.daemonIdentity)
+    const { cwd } = args
+    if (!cwd) {
       return
     }
-    const { cwd } = args
-    if (!cwd || !hasDaemonPtyCwdDenialDiverged(cwd, args.cwdReadableByDaemon)) {
+    if (args.cwdReadableByDaemon === true) {
+      clearDaemonFolderAccessMismatch(args.daemonIdentity, cwd)
+      return
+    }
+    if (!hasDaemonPtyCwdDenialDiverged(cwd, args.cwdReadableByDaemon)) {
       return
     }
     trackDaemonPtyCwdDenied(cwd, args.pidPath)
