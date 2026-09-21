@@ -27,6 +27,7 @@ type OpenCodeSessionUsageRow = {
   tokens_output: number
   tokens_reasoning: number
   tokens_cache_read: number
+  tokens_cache_write: number
 }
 
 function getProjectJoin(db: Database.Database): string {
@@ -61,6 +62,17 @@ function canReadSessionUsageRows(db: Database.Database): boolean {
   )
 }
 
+function getSessionCacheWriteSelect(db: Database.Database): string {
+  return columnExists(db, 'session', 'tokens_cache_write') ? 's.tokens_cache_write' : '0'
+}
+
+function getSessionTokenTotalExpression(db: Database.Database): string {
+  const cacheWrite = columnExists(db, 'session', 'tokens_cache_write')
+    ? ' + tokens_cache_write'
+    : ''
+  return `tokens_input + tokens_output + tokens_reasoning + tokens_cache_read${cacheWrite}`
+}
+
 function getSessionUsageRowCount(db: Database.Database): number {
   if (!canReadSessionUsageRows(db)) {
     return 0
@@ -69,7 +81,7 @@ function getSessionUsageRowCount(db: Database.Database): number {
     .prepare(
       `SELECT COUNT(*) AS count
        FROM session
-       WHERE tokens_input + tokens_output + tokens_reasoning + tokens_cache_read > 0`
+       WHERE ${getSessionTokenTotalExpression(db)} > 0`
     )
     .get() as { count?: number } | undefined
   return row?.count ?? 0
@@ -78,14 +90,17 @@ function getSessionUsageRowCount(db: Database.Database): number {
 function selectSessionUsageRows(db: Database.Database): OpenCodeUsageRow[] {
   const projectJoin = getProjectJoin(db)
   const sessionModelSelect = getSessionModelSelect(db)
+  const cacheWriteSelect = getSessionCacheWriteSelect(db)
+  const tokenTotalExpression = getSessionTokenTotalExpression(db)
   const rows = db
     .prepare(
       `SELECT s.id, s.id AS session_id, s.time_created, s.time_updated,
               s.directory, s.title, p.worktree, ${sessionModelSelect},
-              s.cost, s.tokens_input, s.tokens_output, s.tokens_reasoning, s.tokens_cache_read
+              s.cost, s.tokens_input, s.tokens_output, s.tokens_reasoning, s.tokens_cache_read,
+              ${cacheWriteSelect} AS tokens_cache_write
        FROM session s
        ${projectJoin}
-       WHERE s.tokens_input + s.tokens_output + s.tokens_reasoning + s.tokens_cache_read > 0
+       WHERE ${tokenTotalExpression.replaceAll('tokens_', 's.tokens_')} > 0
        ORDER BY s.time_created, s.id`
     )
     .all() as OpenCodeSessionUsageRow[]
@@ -105,10 +120,15 @@ function selectSessionUsageRows(db: Database.Database): OpenCodeUsageRow[] {
         input: row.tokens_input,
         output: row.tokens_output,
         reasoning: row.tokens_reasoning,
-        total: row.tokens_input + row.tokens_output + row.tokens_reasoning,
+        total:
+          row.tokens_input +
+          row.tokens_output +
+          row.tokens_reasoning +
+          row.tokens_cache_read +
+          row.tokens_cache_write,
         cache: {
           read: row.tokens_cache_read,
-          write: 0
+          write: row.tokens_cache_write
         }
       }
     })
