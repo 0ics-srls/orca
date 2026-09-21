@@ -104,6 +104,20 @@ describe('NativeChatResumeStatusSegment', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
+  it('retries a transient host startup read before hiding a durable offer', async () => {
+    rpc
+      .mockRejectedValueOnce(new Error('host-starting'))
+      .mockResolvedValue({ sessions: candidates })
+    await mount()
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 125)))
+
+    expect(screen.getByRole('button', { name: '2 chats available to resume' })).toBeTruthy()
+    expect(rpc.mock.calls.map((call) => call[1])).toEqual([
+      'agentSession.restartResumable',
+      'agentSession.restartResumable'
+    ])
+  })
+
   it('hides when the feature is disabled or the host offers nothing', async () => {
     rpc.mockResolvedValue({ sessions: candidates })
     useAppStore.setState({

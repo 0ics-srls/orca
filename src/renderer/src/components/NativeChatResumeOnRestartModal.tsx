@@ -34,8 +34,8 @@ import {
  * The "don't ask again" box removes the PROMPT, never a safety check — an opted-in launch calls
  * the same RPC, which re-derives the same predicate and staggers the same way.
  *
- * Closing is a SNOOZE, so looking around before deciding cannot cost the recovery. Dismiss all is
- * the only path that spends the offer.
+ * Closing is a SNOOZE, so looking around before deciding cannot remove the recovery. Dismiss all is
+ * the explicit path that deletes the durable records.
  */
 
 export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
@@ -197,9 +197,9 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           </span>
         </label>
 
-        {/* Two controls: one spends the offer, one acts on it. Closing snoozes, so it needs none. */}
+        {/* Two controls: one deletes the offer, one acts on it. Closing snoozes, so it needs none. */}
         <DialogFooter className="sm:justify-between">
-          {/* Quiet, not destructive: opening a chat still reattaches it. */}
+          {/* Quiet, explicit cleanup of the durable records. */}
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => void dismissAll()}>
             {translate('auto.components.NativeChatResumeOnRestartModal.dismissAll', 'Dismiss all')}
           </Button>

@@ -105,7 +105,8 @@ it('keeps next-launch preference out of the current resume action', async () => 
   await act(async () =>
     action.resolve({
       resumed: [{ sessionId: 'a', outcome: 'resumed' }],
-      continued: [{ sessionId: 'a', outcome: 'continued' }]
+      continued: [{ sessionId: 'a', outcome: 'continued' }],
+      sessions: []
     })
   )
   expect(rpc).toHaveBeenCalledTimes(2)
@@ -139,7 +140,9 @@ it('snoozes to the status-bar offer when the dialog is closed', async () => {
 
 it('fully dismisses the offer only through Dismiss all', async () => {
   rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : { dismissed: 2 }
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : { dismissed: 2, sessions: [] }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => button('Dismiss all').click())
@@ -189,7 +192,8 @@ it('never re-offers a resumed chat when the status entry reopens the dialog', as
     remaining = remaining.filter((candidate) => candidate.sessionId !== 'a')
     return {
       resumed: [{ sessionId: 'a', outcome: 'resumed' }],
-      continued: [{ sessionId: 'a', outcome: 'continued' }]
+      continued: [{ sessionId: 'a', outcome: 'continued' }],
+      sessions: remaining
     }
   })
   await act(async () =>
@@ -222,7 +226,8 @@ it('settles the offer for the chats a resume reattached', async () => {
       ? { sessions: offered }
       : {
           resumed: [{ sessionId: 'a', outcome: 'resumed' }],
-          continued: [{ sessionId: 'a', outcome: 'continued' }]
+          continued: [{ sessionId: 'a', outcome: 'continued' }],
+          sessions: [offered[1]!]
         }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
@@ -246,7 +251,8 @@ it('resumes and continues once when the launch begins opted in', async () => {
       ? { sessions: offered }
       : {
           resumed: offered.map(({ sessionId }) => ({ sessionId, outcome: 'resumed' })),
-          continued: offered.map(({ sessionId }) => ({ sessionId, outcome: 'continued' }))
+          continued: offered.map(({ sessionId }) => ({ sessionId, outcome: 'continued' })),
+          sessions: []
         }
   )
   await act(async () =>
@@ -290,7 +296,11 @@ it('reports refused and newly ineligible chats on an opted-in launch', async () 
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable'
       ? { sessions: offered }
-      : { resumed: [], continued: [{ sessionId: 'a', outcome: 'refused' }] }
+      : {
+          resumed: [],
+          continued: [{ sessionId: 'a', outcome: 'refused' }],
+          sessions: offered
+        }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   expect(toast).toHaveBeenCalledWith(
@@ -306,7 +316,8 @@ it('dispatches the selected action while a future preference save is still pendi
       ? { sessions: offered }
       : {
           resumed: [{ sessionId: 'a', outcome: 'resumed' }],
-          continued: [{ sessionId: 'a', outcome: 'continued' }]
+          continued: [{ sessionId: 'a', outcome: 'continued' }],
+          sessions: []
         }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
@@ -329,7 +340,8 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
         ? { sessions: offered }
         : {
             continued:
-              outcome === 'missing' ? [] : offered.map(({ sessionId }) => ({ sessionId, outcome }))
+              outcome === 'missing' ? [] : offered.map(({ sessionId }) => ({ sessionId, outcome })),
+            sessions: offered
           }
     )
     await act(async () => root.render(<NativeChatResumeOnRestartModal />))
@@ -350,7 +362,7 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
 // message may well have gone out, and the offer must not shrink over chats nothing confirmed.
 it('reports an unreadable resume response as an unconfirmed delivery', async () => {
   rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : {}
+    method === 'agentSession.restartResumable' ? { sessions: offered } : { sessions: offered }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => button('Resume 2 chats').click())
@@ -369,7 +381,12 @@ it('reports a lost resume response without retrying the action', async () => {
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => button('Resume 2 chats').click())
   expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
-  expect(rpc).toHaveBeenCalledTimes(2)
+  // A lost action response is followed by a read-only reconciliation, never a retry.
+  expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+    ['agentSession.restartResumable', undefined],
+    ['agentSession.restartContinue', { sessionIds: ['a', 'b'] }],
+    ['agentSession.restartResumable', undefined]
+  ])
   expect(document.querySelector('[role="dialog"]')).toBeNull()
 })
 
@@ -381,7 +398,8 @@ it('keeps an unconfirmed delivery visible when another chat was refused', async 
           continued: [
             { sessionId: 'a', outcome: 'unknown' },
             { sessionId: 'b', outcome: 'refused' }
-          ]
+          ],
+          sessions: offered
         }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))

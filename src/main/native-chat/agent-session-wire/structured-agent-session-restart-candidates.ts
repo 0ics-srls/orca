@@ -1,8 +1,8 @@
 // Which of a set of markers the predicate would still act on, read off the host's own live journals.
 //
-// A different question from the claim's: the claim decides which markers are still OWED, this
-// decides which of those describe work a resume may touch. The offer, the click and the teardown
-// write-back all ask it, each with a different lease expectation.
+// A different question from storage: the durable record decides which markers are still present;
+// this decides which of those describe work a resume may touch. The offer, the click and the
+// teardown write-back all ask it, each with a different lease expectation.
 //
 // The per-session journal snapshot is cached for the length of one call: the predicate asks the
 // same session for its items four times, and a snapshot that moved between those reads would let

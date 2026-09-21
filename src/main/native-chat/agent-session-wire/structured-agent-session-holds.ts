@@ -23,8 +23,6 @@ export type StructuredAgentSessionHoldsDeps = {
   hasProviderChild: (sessionId: string) => boolean
   isTurnActive: (sessionId: string) => boolean
   evict: (sessionId: string) => Promise<void>
-  /** A resume-capable hold now HAS a provider child. Bookkeeping only — see the call site. */
-  onResumeCapableAcquisition?: (sessionId: string) => void
   onError?: (input: { sessionId: string; error: unknown }) => void
   graceMs?: number
 }
@@ -81,13 +79,6 @@ export class StructuredAgentSessionHolds {
         }
         throw error
       }
-    }
-    // Announced only once the child exists, and never allowed to undo the hold that made it: a
-    // surface that re-acquired the provider has recovered the session whatever the bookkeeping does.
-    try {
-      this.deps.onResumeCapableAcquisition?.(sessionId)
-    } catch (error) {
-      this.deps.onError?.({ sessionId, error })
     }
   }
 

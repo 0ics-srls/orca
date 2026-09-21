@@ -12,8 +12,8 @@ import {
 // then the only surface left carrying it, so it is always rendered rather than gated by
 // `statusBarItems`.
 
-/** Re-reads the host before opening: a chat recovered by simply being opened is already gone from
- *  the offer, and reopening on a cached count would offer it back and earn a refusal. */
+/** Re-reads the host before opening so the dialog always reflects the current durable offer. Opening
+ *  the chat itself is read-only and does not retire the offer. */
 async function reopenOffer(): Promise<void> {
   const offered = await refreshNativeChatRestartOffer()
   if (offered.length > 0) {

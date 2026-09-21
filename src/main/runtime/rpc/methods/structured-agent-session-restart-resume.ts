@@ -29,7 +29,11 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     params: RestartResumableParams,
     handler: async (_params, ctx) => {
       await ensureStructuredHostInstalled(ctx)
-      return { dismissed: await requireStructuredHost(ctx).restartResume.dismiss() }
+      const host = requireStructuredHost(ctx)
+      const dismissed = await host.restartResume.dismiss()
+      // clearAll is the authoritative mutation: it removes pending and in-flight records, so a
+      // second read would only add a new failure point after the user's explicit dismissal.
+      return { dismissed, sessions: [] }
     }
   }),
   defineMethod({

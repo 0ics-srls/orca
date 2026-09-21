@@ -14,8 +14,8 @@ import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-
  * Which interrupted chats the host is still offering to resume, and every action that moves that.
  *
  * The offer is the HOST's answer, shared by the dialog and the status bar rather than held by
- * whichever rendered first: the host retires an offer for reasons no renderer can see — simply
- * reopening a chat re-acquires its provider at the same cursor. So every action asks it again.
+ * whichever rendered first. Opening a chat is intentionally read-only; only an explicit action
+ * changes the durable offer.
  *
  * What stays on this side is the user's own facts: the snooze, and the preference that decides
  * whether the launch asks at all.
@@ -36,6 +36,7 @@ const EMPTY: NativeChatRestartOffer = { candidates: [], listedAt: 0 }
 let offer: NativeChatRestartOffer = EMPTY
 let launch: Promise<void> | undefined
 const listeners = new Set<() => void>()
+const LAUNCH_READ_RETRY_DELAYS_MS = [100, 250, 500] as const
 
 /** The snapshot object is replaced HERE and nowhere else — never during a render — so every
  *  `useSyncExternalStore` reader sees the same reference until a host answer or a user action
@@ -61,45 +62,41 @@ function subscribe(listener: () => void): () => void {
 /**
  * Re-reads the host's answer.
  *
- * Called before the dialog is reopened, so a count can never name a chat the host would now refuse
- * — and a chat already recovered by being opened is gone from the list rather than offered again.
+ * Called before the dialog is reopened, so a count can never name a chat the host would now refuse.
  */
-export async function refreshNativeChatRestartOffer(): Promise<readonly ResumeCandidate[]> {
+type HostOfferRead = {
+  candidates: readonly ResumeCandidate[]
+  available: boolean
+}
+
+async function readNativeChatRestartOffer(): Promise<HostOfferRead> {
   try {
     const offered = await callStructuredAgentSession<{ sessions: ResumeCandidate[] }>(
       LOCAL,
       'agentSession.restartResumable'
     )
+    if (!Array.isArray(offered.sessions)) {
+      throw new Error('agent_session_restart_offer_invalid')
+    }
     publish({ candidates: offered.sessions, listedAt: Date.now() })
-    return offered.sessions
+    return { candidates: offered.sessions, available: true }
   } catch {
-    // A host that cannot answer says nothing new. The last answer it did give is still actionable:
-    // every action re-derives the predicate on the host regardless of what is sent.
-    return offer.candidates
+    // A failed read is not an answer. Hide the last snapshot so a modal can never present a
+    // candidate the host has not confirmed; the durable record remains and a later refresh can
+    // restore it.
+    publish({ candidates: [], listedAt: Date.now() })
+    return { candidates: [], available: false }
   }
 }
 
-/** Drops the chats the host reports it has settled, leaving the ones it did not. */
-function settle(sessionIds: readonly string[]): void {
-  const settled = new Set(sessionIds)
-  const remaining = offer.candidates.filter((candidate) => !settled.has(candidate.sessionId))
-  if (remaining.length === offer.candidates.length) {
-    return
-  }
-  publish({ ...offer, candidates: remaining })
-}
-
-/** The offer was abandoned outright; the host has already spent the markers. */
-function clear(): void {
-  if (offer.candidates.length === 0) {
-    return
-  }
-  publish({ ...offer, candidates: [] })
+export async function refreshNativeChatRestartOffer(): Promise<readonly ResumeCandidate[]> {
+  return (await readNativeChatRestartOffer()).candidates
 }
 
 /**
- * Reattach the offered chats, ask each agent to carry on, then shrink the offer by what the host
- * says it spent — otherwise the status bar keeps counting chats already handed back.
+ * Reattach the offered chats, ask each agent to carry on, then replace the offer with the host's
+ * authoritative remaining list. This keeps the modal and status bar synchronized after every
+ * action, even when the dialog's snapshot became stale while it was open.
  *
  * `sessionIds` is the dialog's selection. An opted-in launch names nothing, so the host acts on
  * whatever it still offers rather than on a list this side captured a moment earlier, and passes
@@ -114,28 +111,43 @@ export async function continueNativeChatRestartOffer(
 ): Promise<void> {
   try {
     const result = await callStructuredAgentSession<{
-      /** Which chats the host reattached, and so which claims it spent. */
+      /** Which chats the host reattached. */
       resumed?: { sessionId: string }[]
       continued: RestartContinuationOutcome[]
+      sessions?: ResumeCandidate[]
     }>(LOCAL, 'agentSession.restartContinue', sessionIds ? { sessionIds } : {})
     announceRestartResults(reported, result.continued)
-    settle((result.resumed ?? []).map((entry) => entry.sessionId))
+    if (Array.isArray(result.sessions)) {
+      publish({ candidates: result.sessions, listedAt: Date.now() })
+    } else {
+      await refreshNativeChatRestartOffer()
+    }
   } catch {
+    await refreshNativeChatRestartOffer()
     announceRestartUnconfirmed(reported.length)
   }
 }
 
 /**
- * Turning the offer down for good, which is the only path that spends the markers.
+ * Turning the offer down for good, which explicitly deletes the pending durable records.
  *
- * Nothing is lost: opening a chat takes a resume-capable hold, which re-acquires the provider at
- * the same cursor. A write the host never confirmed leaves the offer standing and says so.
+ * A failed write or unreachable host leaves the durable record untouched; a later read can restore
+ * the offer after the host is available again.
  */
 export async function dismissNativeChatRestartOffer(): Promise<void> {
   try {
-    await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {})
-    clear()
+    const result = await callStructuredAgentSession<{ sessions?: ResumeCandidate[] }>(
+      LOCAL,
+      'agentSession.restartResumableDismiss',
+      {}
+    )
+    if (Array.isArray(result.sessions)) {
+      publish({ candidates: result.sessions, listedAt: Date.now() })
+    } else {
+      await refreshNativeChatRestartOffer()
+    }
   } catch {
+    await refreshNativeChatRestartOffer()
     announceRestartDismissUnconfirmed()
   }
 }
@@ -145,7 +157,7 @@ export async function dismissNativeChatRestartOffer(): Promise<void> {
  * resume without asking.
  *
  * "Resume automatically" runs the identical call the button runs — reattach AND ask each agent to
- * carry on — because reattaching on its own is what opening the chat already does.
+ * carry on. Opening a chat remains a separate, read-only inspection action.
  *
  * Runs once however many surfaces mount, so the count and the dialog describe the same answer and
  * an opted-in launch cannot dispatch twice.
@@ -153,7 +165,17 @@ export async function dismissNativeChatRestartOffer(): Promise<void> {
 async function loadLaunchOffer(): Promise<void> {
   // The preference belongs to this launch's request; later saves cannot dispatch another.
   const autoResume = useAppStore.getState().settings?.nativeChatResumeWorkOnRestart === true
-  const offered = await refreshNativeChatRestartOffer()
+  let read = await readNativeChatRestartOffer()
+  // Host startup can race the renderer. Retry only failed reads, never a confirmed empty result,
+  // so a transient startup gap does not strand a durable offer or add steady-state polling.
+  for (const delay of LAUNCH_READ_RETRY_DELAYS_MS) {
+    if (read.available) {
+      break
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, delay))
+    read = await readNativeChatRestartOffer()
+  }
+  const offered = read.candidates
   if (offered.length === 0) {
     return
   }
