@@ -23,7 +23,11 @@ type MobileHomeHostListProps = {
   hostStates: Record<string, ConnectionState>
   hostStatusByHostId: Record<
     string,
-    { hostPlatform: NodeJS.Platform | null; machineName: string | null }
+    {
+      hostPlatform: NodeJS.Platform | null
+      machineName: string | null
+      descriptorFresh: boolean
+    }
   >
   isWideLayout: boolean
   stats: HomeStatsSummary | null
@@ -125,6 +129,17 @@ const MobileHomeHostRow = memo(function MobileHomeHostRow(props: MobileHomeHostR
     <MobileHostCard
       host={item}
       hostPlatform={props.hostStatusByHostId[item.id]?.hostPlatform}
+      machineName={
+        props.hostStatusByHostId[item.id]?.descriptorFresh
+          ? props.hostStatusByHostId[item.id]?.machineName
+          : (item.machineName ?? null)
+      }
+      machinePlatform={
+        props.hostStatusByHostId[item.id]?.descriptorFresh
+          ? props.hostStatusByHostId[item.id]?.hostPlatform
+          : (item.machinePlatform ?? null)
+      }
+      descriptorFresh={props.hostStatusByHostId[item.id]?.descriptorFresh === true}
       credentialStatus={item.credentialStatus}
       state={state}
       verdict={verdict}

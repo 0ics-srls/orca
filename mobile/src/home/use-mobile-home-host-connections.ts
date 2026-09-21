@@ -8,6 +8,7 @@ import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, HostCatalogEntry, HostProfile } from '../transport/types'
 import { useAllHostClients } from '../transport/use-all-host-clients'
 import { hostStatusProbe, readHostStatusGates } from '../transport/host-status-probe-operations'
+import { updateHostMachineDescriptor } from '../transport/host-store'
 import {
   fetchHomeHostWorktreeInfo,
   type HostWorktreeInfoSetter
@@ -35,6 +36,7 @@ type Setters = {
 export type HomeHostStatus = {
   hostPlatform: NodeJS.Platform | null
   machineName: string | null
+  descriptorFresh: boolean
 }
 
 async function fetchHomeHostStatus(
@@ -57,9 +59,15 @@ async function fetchHomeHostStatus(
       ...previous,
       [entry.hostId]: {
         hostPlatform: status.hostPlatform ?? null,
-        machineName: status.machineName ?? null
+        machineName: status.machineName ?? null,
+        descriptorFresh: true
       }
     }))
+    void updateHostMachineDescriptor(entry.hostId, {
+      machineName: status.machineName ?? null,
+      machinePlatform: status.hostPlatform ?? null,
+      seenAt: Date.now()
+    }).catch(() => {})
   } catch {
     // Keep the last readable platform when a reconnect status read fails.
   }
@@ -79,6 +87,14 @@ function wireMobileHomeHostSubscriptions(
   const wireState = (state: ConnectionState): void => {
     const reconnected = refetchGate.observe(state)
     if (state === 'connected') {
+      setHostStatus((previous) => {
+        const current = previous[entry.hostId]
+        return current && !current.descriptorFresh
+          ? previous
+          : current
+            ? { ...previous, [entry.hostId]: { ...current, descriptorFresh: false } }
+            : previous
+      })
       unsubscribeNotifications ??= subscribeToDesktopNotifications(entry.client, entry.hostId)
       unsubscribeAccounts ??= entry.client.subscribe('accounts.subscribe', null, (payload) => {
         if (!payload || typeof payload !== 'object') {
@@ -113,6 +129,12 @@ function wireMobileHomeHostSubscriptions(
       }
       return
     }
+    setHostStatus((previous) => {
+      const current = previous[entry.hostId]
+      return current
+        ? { ...previous, [entry.hostId]: { ...current, descriptorFresh: false } }
+        : previous
+    })
     unsubscribeNotifications?.()
     unsubscribeNotifications = null
     unsubscribeAccounts?.()

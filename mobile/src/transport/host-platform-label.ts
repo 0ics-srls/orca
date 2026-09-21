@@ -1,19 +1,5 @@
-import type { NODE_PLATFORM_NAMES } from './mobile-runtime-host-platform'
-
-const PLATFORM_LABELS: Record<(typeof NODE_PLATFORM_NAMES)[number], string> = {
-  aix: 'AIX',
-  android: 'Android',
-  cygwin: 'Cygwin',
-  darwin: 'macOS',
-  freebsd: 'FreeBSD',
-  haiku: 'Haiku',
-  linux: 'Linux',
-  netbsd: 'NetBSD',
-  openbsd: 'OpenBSD',
-  sunos: 'Solaris',
-  win32: 'Windows'
-}
+import { hostPlatformDisplayName } from '../../../src/shared/host-platform-label'
 
 export function hostPlatformLabel(platform: NodeJS.Platform | null | undefined): string | null {
-  return platform ? PLATFORM_LABELS[platform] : null
+  return hostPlatformDisplayName(platform)
 }

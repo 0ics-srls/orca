@@ -31,6 +31,7 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
     floatingWorkspaceEnabled,
     forceReconnectHost,
     hostId,
+    hostDisplay,
     hostPlatform,
     lastConnectedAt,
     onHideSidebar,
@@ -66,12 +67,17 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
                 <View style={styles.hostIdentityLine}>
                   <StatusDot state={connState} verdict={headerVerdict} />
                   <Text style={styles.hostNameText} numberOfLines={1}>
-                    {state.hostName || 'Host'}
+                    {hostDisplay.primaryLabel}
                   </Text>
                 </View>
-                {hostPlatformLabel(hostPlatform) ? (
+                {hostDisplay.showDescriptor ? (
                   <Text style={styles.hostPlatformText} numberOfLines={1}>
-                    {hostPlatformLabel(hostPlatform)}
+                    {`${hostDisplay.descriptorFresh ? '' : 'Last known · '}${[
+                      hostPlatformLabel(hostPlatform ?? state.machinePlatform),
+                      hostDisplay.descriptorName
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}`}
                   </Text>
                 ) : null}
               </View>
