@@ -11,10 +11,9 @@ import {
   getPairedDeviceIdsByEnvironment
 } from '../../workspace-creator-visibility'
 import {
-  EMPTY_STRUCTURED_CHAT_WORKTREE_IDS,
   getVisibleWorktreeBrowserActivityTabs,
   getVisibleWorktreeTerminalActivityTabs,
-  getWorktreeIdsWithStructuredChat
+  getStructuredChatWorktreeIds
 } from '../../visible-worktree-activity-inputs'
 import type { SortBy } from '../../smart-sort'
 import type { SidebarWorktreeFilters } from './use-filters'
@@ -73,9 +72,7 @@ export function useVisibleSidebarWorktrees(args: {
     !showSleepingWorkspaces ? getVisibleWorktreeBrowserActivityTabs(s.browserTabsByWorktree) : null
   )
   const worktreeIdsWithStructuredChat = useAppStore((s) =>
-    showSleepingWorkspaces
-      ? EMPTY_STRUCTURED_CHAT_WORKTREE_IDS
-      : getWorktreeIdsWithStructuredChat(s.unifiedTabsByWorktree)
+    getStructuredChatWorktreeIds(showSleepingWorkspaces, s.unifiedTabsByWorktree)
   )
 
   const recomputedVisibleWorktrees = useMemo(() => {

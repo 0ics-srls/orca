@@ -65,3 +65,12 @@ export function getWorktreeIdsWithStructuredChat(
   structuredChatWorktreeIds.set(unifiedTabsByWorktree, worktreeIds)
   return worktreeIds
 }
+
+export function getStructuredChatWorktreeIds(
+  showSleepingWorkspaces: boolean,
+  unifiedTabsByWorktree: Record<string, Tab[]> | null | undefined
+): ReadonlySet<string> {
+  return showSleepingWorkspaces
+    ? EMPTY_STRUCTURED_CHAT_WORKTREE_IDS
+    : getWorktreeIdsWithStructuredChat(unifiedTabsByWorktree)
+}
