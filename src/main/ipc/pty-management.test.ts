@@ -7,16 +7,18 @@ const {
   getDaemonProviderMock,
   restartDaemonMock,
   getCurrentDaemonMacTccAttributionHealthMock,
-  getDaemonFolderAccessMismatchMock
+  getDaemonFolderAccessMismatchMock,
+  refreshDaemonFolderAccessProbeMock
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
   getDaemonProviderMock: vi.fn(),
   restartDaemonMock: vi.fn(),
   getCurrentDaemonMacTccAttributionHealthMock: vi.fn(async () => 'unknown'),
-  getDaemonFolderAccessMismatchMock: vi.fn<() => { daemonScope: string; cwdClass: string } | null>(
-    () => null
-  )
+  getDaemonFolderAccessMismatchMock: vi.fn<
+    () => { daemonScope: string; cwdClass: string; restartWillHelp: boolean | null } | null
+  >(() => null),
+  refreshDaemonFolderAccessProbeMock: vi.fn(async () => {})
 }))
 
 vi.mock('electron', () => ({
@@ -24,7 +26,8 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../daemon/daemon-folder-access-mismatch', () => ({
-  getDaemonFolderAccessMismatch: getDaemonFolderAccessMismatchMock
+  getDaemonFolderAccessMismatch: getDaemonFolderAccessMismatchMock,
+  refreshDaemonFolderAccessProbe: refreshDaemonFolderAccessProbeMock
 }))
 
 vi.mock('../daemon/daemon-init', () => ({
@@ -176,6 +179,7 @@ describe('pty:management IPC handlers', () => {
     getCurrentDaemonMacTccAttributionHealthMock.mockReset()
     getCurrentDaemonMacTccAttributionHealthMock.mockResolvedValue('unknown')
     getDaemonFolderAccessMismatchMock.mockReset().mockReturnValue(null)
+    refreshDaemonFolderAccessProbeMock.mockReset().mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -495,7 +499,11 @@ describe('pty:management IPC handlers', () => {
   describe('macTccAttribution', () => {
     type AttributionResult = {
       health: string
-      folderAccessMismatch: { daemonScope: string; cwdClass: string } | null
+      folderAccessMismatch: {
+        daemonScope: string
+        cwdClass: string
+        restartWillHelp: boolean | null
+      } | null
     }
 
     async function readAttribution(): Promise<AttributionResult> {
@@ -529,14 +537,16 @@ describe('pty:management IPC handlers', () => {
       getDaemonProviderMock.mockReturnValue(await makeRouter(current, [makeAdapter(4, [])]))
       getDaemonFolderAccessMismatchMock.mockReturnValue({
         daemonScope: 'abc123def4567890',
-        cwdClass: 'documents'
+        cwdClass: 'documents',
+        restartWillHelp: true
       })
 
       const result = await readAttribution()
 
       expect(result.folderAccessMismatch).toEqual({
         daemonScope: 'abc123def4567890',
-        cwdClass: 'documents'
+        cwdClass: 'documents',
+        restartWillHelp: true
       })
       // Why: evidence belongs to the daemon spawning terminals now, never a legacy adapter's.
       expect(getDaemonFolderAccessMismatchMock).toHaveBeenCalledWith({
@@ -545,6 +555,56 @@ describe('pty:management IPC handlers', () => {
         launchNonce: 'n1'
       })
       expect(current.getDaemonIdentity).toHaveBeenCalled()
+    })
+
+    function evidence(restartWillHelp: boolean | null): {
+      daemonScope: string
+      cwdClass: string
+      restartWillHelp: boolean | null
+    } {
+      return { daemonScope: 'abc123def4567890', cwdClass: 'documents', restartWillHelp }
+    }
+
+    // Why re-probe on the poll: the fix dialog's first step completes in System Settings, and
+    // this is the only moment anything can notice that it landed.
+    it.each([[false], [null]])(
+      're-probes and re-reads while restartWillHelp is %s',
+      async (initial) => {
+        getDaemonFolderAccessMismatchMock
+          .mockReturnValueOnce(evidence(initial))
+          .mockReturnValue(evidence(true))
+
+        const result = await readAttribution()
+
+        expect(refreshDaemonFolderAccessProbeMock).toHaveBeenCalledTimes(1)
+        expect(result.folderAccessMismatch?.restartWillHelp).toBe(true)
+      }
+    )
+
+    it('does not re-probe once restartWillHelp is true', async () => {
+      getDaemonFolderAccessMismatchMock.mockReturnValue(evidence(true))
+
+      await readAttribution()
+
+      expect(refreshDaemonFolderAccessProbeMock).not.toHaveBeenCalled()
+    })
+
+    it('does not re-probe when there is no evidence at all', async () => {
+      getDaemonFolderAccessMismatchMock.mockReturnValue(null)
+
+      await readAttribution()
+
+      expect(refreshDaemonFolderAccessProbeMock).not.toHaveBeenCalled()
+    })
+
+    it('fails open to unknown when the refresh throws', async () => {
+      getDaemonFolderAccessMismatchMock.mockReturnValue(evidence(false))
+      refreshDaemonFolderAccessProbeMock.mockRejectedValue(new Error('probe exploded'))
+
+      const result = await readAttribution()
+
+      expect(result.health).toBe('unknown')
+      expect(result.folderAccessMismatch).toBeNull()
     })
 
     it('reads a null identity when no daemon provider exists', async () => {

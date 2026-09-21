@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type {
-  PtyManagementDaemonCwdClass,
   PtyManagementFolderAccessMismatch,
   PtyManagementMacTccAttributionHealth
 } from '../../../preload/api-types'
@@ -13,41 +12,21 @@ import { translate } from '@/i18n/i18n'
 import { track } from '@/lib/telemetry'
 import { resolveUiLocale } from '@/i18n/supported-languages'
 import { MANAGE_SESSIONS_SECTION_ID } from '@/components/settings/TerminalTccAttributionNotice'
+import { macFolderAccessFolderName } from '@/components/shared/mac-folder-access-folder-name'
+import {
+  FOLDER_ACCESS_MISMATCH_NOTICE_ID,
+  useMacFolderAccessFixStore
+} from '@/store/mac-folder-access-fix'
 
 const SEVERED_TCC_NOTICE_ID = 'mac-tcc-attribution-severed'
-const FOLDER_ACCESS_MISMATCH_NOTICE_ID = 'mac-daemon-folder-access-mismatch'
-
-function folderAccessFolderName(cwdClass: PtyManagementDaemonCwdClass): string {
-  switch (cwdClass) {
-    case 'documents':
-      return translate(
-        'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDocuments',
-        'Documents folder'
-      )
-    case 'desktop':
-      return translate(
-        'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDesktop',
-        'Desktop folder'
-      )
-    case 'downloads':
-      return translate(
-        'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDownloads',
-        'Downloads folder'
-      )
-    case 'other-home':
-    case 'outside-home':
-      return translate(
-        'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessWorkspace',
-        'a workspace folder'
-      )
-  }
-}
 
 /** Surface the existing restart remedy when daemon TCC attribution is severed or a folder is denied. */
 export function useMacTccAttributionSeveredNotice(): void {
   const openSettingsPage = useAppStore((s) => s.openSettingsPage)
   const openSettingsTarget = useAppStore((s) => s.openSettingsTarget)
   const setSettingsSearchQuery = useAppStore((s) => s.setSettingsSearchQuery)
+  const openFix = useMacFolderAccessFixStore((s) => s.openFix)
+  const observeMismatch = useMacFolderAccessFixStore((s) => s.observeMismatch)
   const uiLanguage = useAppStore((s) => s.settings?.uiLanguage ?? null)
   const pluginLanguagePacks = usePluginLanguagePackStore((s) => s.packs)
   const pluginLanguagePacksLoaded = usePluginLanguagePackStore((s) => s.loaded)
@@ -132,6 +111,8 @@ export function useMacTccAttributionSeveredNotice(): void {
     }
 
     const applyFolderAccessNotice = (mismatch: PtyManagementFolderAccessMismatch | null): void => {
+      // Why unconditionally: an open dialog's first step completes only when a later poll says so.
+      observeMismatch(mismatch)
       if (!mismatch) {
         if (visibleFolderScope.current) {
           visibleFolderScope.current = null
@@ -147,32 +128,30 @@ export function useMacTccAttributionSeveredNotice(): void {
       toast.warning(
         translate(
           'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessTitle',
-          'Orca’s terminal service can’t read your {{folder}}.',
-          { folder: folderAccessFolderName(mismatch.cwdClass) }
+          'Terminals can’t read your {{folder}}',
+          { folder: macFolderAccessFolderName(mismatch.cwdClass) }
         ),
         {
           id: FOLDER_ACCESS_MISMATCH_NOTICE_ID,
-          description: translate(
-            'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDescription',
-            'Terminals opened there fail with “Operation not permitted” even though Orca itself can read it. Restart the daemon from Manage Sessions; this closes all running Orca terminals and agents. If it still fails afterwards, re-allow the folder for Orca in System Settings → Privacy & Security → Files and Folders.'
-          ),
           duration: Infinity,
           action: {
             label: translate(
-              'auto.hooks.useMacTccAttributionSeveredNotice.openManageSessions',
-              'Open Manage Sessions'
+              'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessFix',
+              'Fix…'
             ),
             onClick: () => {
-              visibleFolderScope.current = null
               track('daemon_folder_access_notice', {
-                action: 'open_manage_sessions',
+                action: 'fix_opened',
                 cwd_class: mismatch.cwdClass
               })
-              openManageSessions()
+              openFix(mismatch)
             }
           },
           cancel: {
-            label: translate('auto.hooks.useMacTccAttributionSeveredNotice.dismiss', 'Dismiss'),
+            label: translate(
+              'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessNotNow',
+              'Not now'
+            ),
             onClick: () => {
               visibleFolderScope.current = null
               track('daemon_folder_access_notice', {
@@ -207,5 +186,12 @@ export function useMacTccAttributionSeveredNotice(): void {
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [localeReady, openSettingsPage, openSettingsTarget, setSettingsSearchQuery])
+  }, [
+    localeReady,
+    observeMismatch,
+    openFix,
+    openSettingsPage,
+    openSettingsTarget,
+    setSettingsSearchQuery
+  ])
 }

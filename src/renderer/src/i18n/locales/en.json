@@ -1171,12 +1171,9 @@
         "description": "Running Orca terminals are hosted by a daemon started by a previous Orca installation. macOS may not apply Orca’s Accessibility, Automation, or protected-file permissions to them. Restart the daemon from Manage Sessions to restore access. This will close all running Orca terminals.",
         "openManageSessions": "Open Manage Sessions",
         "dismiss": "Dismiss",
-        "folderAccessDocuments": "Documents folder",
-        "folderAccessDesktop": "Desktop folder",
-        "folderAccessDownloads": "Downloads folder",
-        "folderAccessWorkspace": "a workspace folder",
-        "folderAccessTitle": "Orca’s terminal service can’t read your {{folder}}.",
-        "folderAccessDescription": "Terminals opened there fail with “Operation not permitted” even though Orca itself can read it. Restart the daemon from Manage Sessions; this closes all running Orca terminals and agents. If it still fails afterwards, re-allow the folder for Orca in System Settings → Privacy & Security → Files and Folders."
+        "folderAccessTitle": "Terminals can’t read your {{folder}}",
+        "folderAccessFix": "Fix…",
+        "folderAccessNotNow": "Not now"
       },
       "ipc": {
         "events": {
@@ -6398,6 +6395,25 @@
           "d9657ac204": "Terminal session shutdown requested.",
           "e8f25bd903": "Couldn’t finish terminal cleanup.",
           "a702d4196e": "This closes every terminal tab across all workspaces and requests shutdown for its current terminal sessions. Any unsaved terminal work is lost. The daemon itself keeps running, and new terminals can be opened immediately. This can't be undone."
+        },
+        "MacFolderAccessFixDialog": {
+          "stepAllow": "Allow Orca under Files and Folders",
+          "openSystemSettings": "Open System Settings",
+          "stepRestart": "Restart Orca’s terminal service",
+          "restartConsequence": "Open terminals and agents will restart.",
+          "restarting": "Restarting…",
+          "restart": "Restart",
+          "restartFailed": "Restart failed. Try again from Settings → Terminal → Manage Sessions.",
+          "title": "Fix access to your {{folder}}",
+          "lead": "macOS is blocking Orca’s terminal service from this folder.",
+          "done": "Done. Terminals opened in your {{folder}} can read it now.",
+          "close": "Close"
+        },
+        "macFolderAccessFolderName": {
+          "documents": "Documents folder",
+          "desktop": "Desktop folder",
+          "downloads": "Downloads folder",
+          "workspace": "workspace folder"
         }
       },
       "setup": {

@@ -78,10 +78,19 @@ export const daemonPtyCwdDeniedSchema = z
   .strict()
 
 // Why: STA-7948 — `daemon_pty_cwd_denied` counts the failure; this counts how often a user is
-// actually told about it and what they do next, so the notice can be read against that denominator.
+// actually told about it, what they do next, and whether the restart they were offered worked, so
+// the notice can be read against that denominator.
 export const daemonFolderAccessNoticeSchema = z
   .object({
-    action: z.enum(['shown', 'dismissed', 'open_manage_sessions']),
+    action: z.enum([
+      'shown',
+      'fix_opened',
+      'settings_opened',
+      'restart_clicked',
+      'dismissed',
+      'restart_outcome_fixed',
+      'restart_outcome_still_denied'
+    ]),
     cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES)
   })
   .strict()

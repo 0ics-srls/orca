@@ -4,8 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { toast } from 'sonner'
 import { MacosTccPromptNoticeHost } from './MacosTccPromptNoticeHost'
+import { useMacFolderAccessFixStore } from '@/store/mac-folder-access-fix'
 
-type FolderAccessMismatch = { daemonScope: string; cwdClass: string } | null
+type FolderAccessMismatch = {
+  daemonScope: string
+  cwdClass: string
+  restartWillHelp: boolean | null
+} | null
 type AttributionResult = {
   health: 'intact' | 'severed' | 'unknown'
   folderAccessMismatch: FolderAccessMismatch
@@ -217,14 +222,23 @@ describe('useMacTccAttributionSeveredNotice', () => {
 })
 
 describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
-  const SCOPE_A = { daemonScope: 'aaaa111122223333', cwdClass: 'documents' }
-  const SCOPE_B = { daemonScope: 'bbbb444455556666', cwdClass: 'desktop' }
+  const SCOPE_A = {
+    daemonScope: 'aaaa111122223333',
+    cwdClass: 'documents',
+    restartWillHelp: true
+  }
+  const SCOPE_B = {
+    daemonScope: 'bbbb444455556666',
+    cwdClass: 'desktop',
+    restartWillHelp: false
+  }
 
   type ToastOptions = {
     id?: string
     description?: string
-    action?: { onClick?: () => void }
-    cancel?: { onClick?: () => void }
+    duration?: number
+    action?: { label?: string; onClick?: () => void }
+    cancel?: { label?: string; onClick?: () => void }
   }
 
   function folderNoticeCalls(): { title: string; options: ToastOptions }[] {
@@ -248,6 +262,7 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     platform.value = 'darwin'
     vi.mocked(toast.warning).mockReset()
     vi.mocked(toast.dismiss).mockReset()
+    useMacFolderAccessFixStore.setState({ open: false, mismatch: null })
     Object.defineProperty(window, 'api', {
       configurable: true,
       value: {
@@ -269,7 +284,7 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     expect(folderNoticeCalls()).toHaveLength(0)
   })
 
-  it('names the denied folder and offers the Manage Sessions remedy', async () => {
+  it('names the denied folder and says nothing more', async () => {
     macTccAttribution.mockResolvedValue({ health: 'intact', folderAccessMismatch: SCOPE_A })
     render(<MacosTccPromptNoticeHost />)
     await waitFor(() => {
@@ -277,35 +292,93 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     })
 
     const notice = folderNoticeCalls()[0]
-    expect(notice.title).toMatch(/can’t read your Documents folder/i)
-    expect(String(notice.options.description)).toMatch(/Operation not permitted/i)
-    expect(String(notice.options.description)).toMatch(/Privacy & Security/i)
+    expect(notice.title).toMatch(/Terminals can’t read your Documents folder/i)
+    // The dialog carries the explanation now; the toast is a title and two buttons.
+    expect(notice.options.description).toBeUndefined()
+    expect(notice.options.duration).toBe(Infinity)
+    expect(notice.options.action?.label).toBe('Fix…')
+    expect(notice.options.cancel?.label).toBe('Not now')
+  })
 
-    notice.options.action?.onClick?.()
-    expect(setSettingsSearchQuery).toHaveBeenCalledWith('')
-    expect(openSettingsTarget).toHaveBeenCalledWith({
-      pane: 'terminal',
-      repoId: null,
-      sectionId: 'terminal-manage-sessions'
+  it('opens the fix dialog rather than Manage Sessions', async () => {
+    macTccAttribution.mockResolvedValue({ health: 'intact', folderAccessMismatch: SCOPE_A })
+    render(<MacosTccPromptNoticeHost />)
+    await waitFor(() => {
+      expect(folderNoticeCalls()).toHaveLength(1)
     })
-    expect(openSettingsPage).toHaveBeenCalled()
+
+    act(() => {
+      folderNoticeCalls()[0].options.action?.onClick?.()
+    })
+
+    expect(useMacFolderAccessFixStore.getState().open).toBe(true)
+    expect(useMacFolderAccessFixStore.getState().mismatch).toEqual(SCOPE_A)
+    expect(openSettingsPage).not.toHaveBeenCalled()
     expect(trackTelemetry).toHaveBeenCalledWith('daemon_folder_access_notice', {
-      action: 'open_manage_sessions',
+      action: 'fix_opened',
       cwd_class: 'documents'
     })
+  })
+
+  it('carries a later poll’s verdict into the open dialog', async () => {
+    macTccAttribution.mockResolvedValueOnce({ health: 'intact', folderAccessMismatch: SCOPE_A })
+    render(<MacosTccPromptNoticeHost />)
+    await waitFor(() => {
+      expect(folderNoticeCalls()).toHaveLength(1)
+    })
+    act(() => {
+      folderNoticeCalls()[0].options.action?.onClick?.()
+    })
+    macTccAttribution.mockResolvedValue({
+      health: 'intact',
+      folderAccessMismatch: { ...SCOPE_A, restartWillHelp: false }
+    })
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    await waitFor(() => {
+      expect(useMacFolderAccessFixStore.getState().mismatch?.restartWillHelp).toBe(false)
+    })
+  })
+
+  it('leaves the open dialog pointed at its own daemon when another is denied', async () => {
+    macTccAttribution.mockResolvedValueOnce({ health: 'intact', folderAccessMismatch: SCOPE_A })
+    render(<MacosTccPromptNoticeHost />)
+    await waitFor(() => {
+      expect(folderNoticeCalls()).toHaveLength(1)
+    })
+    act(() => {
+      folderNoticeCalls()[0].options.action?.onClick?.()
+    })
+    macTccAttribution.mockResolvedValue({ health: 'intact', folderAccessMismatch: SCOPE_B })
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => {
+      expect(macTccAttribution).toHaveBeenCalledTimes(2)
+    })
+
+    expect(useMacFolderAccessFixStore.getState().mismatch).toEqual(SCOPE_A)
   })
 
   it('substitutes the folder word for each protected class', async () => {
     for (const [cwdClass, expected] of [
       ['desktop', 'Desktop folder'],
       ['downloads', 'Downloads folder'],
-      ['other-home', 'a workspace folder'],
-      ['outside-home', 'a workspace folder']
+      ['other-home', 'workspace folder'],
+      ['outside-home', 'workspace folder']
     ]) {
       vi.mocked(toast.warning).mockReset()
       macTccAttribution.mockResolvedValue({
         health: 'intact',
-        folderAccessMismatch: { daemonScope: `scope-${cwdClass}`, cwdClass }
+        folderAccessMismatch: {
+          daemonScope: `scope-${cwdClass}`,
+          cwdClass,
+          restartWillHelp: true
+        }
       })
       render(<MacosTccPromptNoticeHost />)
       await waitFor(() => {

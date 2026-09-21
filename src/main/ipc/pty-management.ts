@@ -10,6 +10,7 @@ import {
 import { getCurrentDaemonAdapter } from '../daemon/daemon-provider-routing'
 import {
   getDaemonFolderAccessMismatch,
+  refreshDaemonFolderAccessProbe,
   type DaemonFolderAccessMismatchNotice
 } from '../daemon/daemon-folder-access-mismatch'
 import type { MacDaemonTccAttributionHealth } from '../daemon/daemon-tcc-attribution'
@@ -81,10 +82,15 @@ export function registerDaemonManagementHandlers(): void {
     }> => {
       try {
         const health = await getCurrentDaemonMacTccAttributionHealth()
-        return {
-          health,
-          folderAccessMismatch: getDaemonFolderAccessMismatch(readCurrentDaemonIdentity())
+        const identity = readCurrentDaemonIdentity()
+        const mismatch = getDaemonFolderAccessMismatch(identity)
+        // Why re-probe on the poll: the fix dialog's first step completes in System Settings, and
+        // returning to Orca is the only moment anything can notice. A settled `true` is final.
+        if (mismatch && mismatch.restartWillHelp !== true) {
+          await refreshDaemonFolderAccessProbe(identity)
+          return { health, folderAccessMismatch: getDaemonFolderAccessMismatch(identity) }
         }
+        return { health, folderAccessMismatch: mismatch }
       } catch {
         return { health: 'unknown', folderAccessMismatch: null }
       }

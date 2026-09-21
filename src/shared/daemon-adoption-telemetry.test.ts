@@ -98,7 +98,15 @@ describe('daemon_folder_access_notice schema', () => {
   const shown = { action: 'shown', cwd_class: 'documents' }
 
   it('accepts each action against a protected folder class', () => {
-    for (const action of ['shown', 'dismissed', 'open_manage_sessions']) {
+    for (const action of [
+      'shown',
+      'fix_opened',
+      'settings_opened',
+      'restart_clicked',
+      'dismissed',
+      'restart_outcome_fixed',
+      'restart_outcome_still_denied'
+    ]) {
       expect(eventSchemas.daemon_folder_access_notice.safeParse({ ...shown, action }).success).toBe(
         true
       )
@@ -113,7 +121,7 @@ describe('daemon_folder_access_notice schema', () => {
 
   it('rejects an unknown action, an unknown class, and any extra field', () => {
     for (const bad of [
-      { action: 'restart_clicked' },
+      { action: 'open_manage_sessions' },
       { cwd_class: 'Documents' },
       { daemon_scope: 'aaaa111122223333' },
       { cwd: '/Users/alice/Documents' }

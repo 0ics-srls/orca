@@ -1,0 +1,223 @@
+// @vitest-environment happy-dom
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
+
+const { trackTelemetry, restart, openSettings } = vi.hoisted(() => ({
+  trackTelemetry: vi.fn(),
+  restart: vi.fn(async () => ({ success: true })),
+  openSettings: vi.fn(async () => {})
+}))
+
+vi.mock('sonner', () => ({ toast: { dismiss: vi.fn() } }))
+vi.mock('@/lib/telemetry', () => ({ track: trackTelemetry }))
+vi.mock('@/i18n/i18n', () => ({
+  translate: (_key: string, fallback: string, options?: Record<string, string>) =>
+    fallback.replace(/\{\{(\w+)\}\}/g, (match, name: string) => options?.[name] ?? match)
+}))
+
+import { MacFolderAccessFixDialog } from './MacFolderAccessFixDialog'
+import { useMacFolderAccessFixStore } from '@/store/mac-folder-access-fix'
+
+function openWith(restartWillHelp: boolean | null): void {
+  useMacFolderAccessFixStore.setState({
+    open: true,
+    mismatch: { daemonScope: 'aaaa111122223333', cwdClass: 'documents', restartWillHelp }
+  })
+}
+
+function restartButton(): HTMLElement {
+  return screen.getByRole('button', { name: /^Restart/ })
+}
+
+/** Scoped to the footer: DialogContent's own dismiss X carries the same accessible name. */
+function footerCloseButton(): HTMLElement {
+  const footer = screen.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
+  if (!(footer instanceof HTMLElement)) {
+    throw new Error('dialog footer did not render')
+  }
+  return within(footer).getByRole('button', { name: 'Close' })
+}
+
+beforeEach(() => {
+  trackTelemetry.mockReset()
+  restart.mockReset().mockResolvedValue({ success: true })
+  openSettings.mockReset().mockResolvedValue(undefined)
+  vi.mocked(toast.dismiss).mockReset()
+  useMacFolderAccessFixStore.setState({ open: false, mismatch: null })
+  Object.defineProperty(window, 'api', {
+    configurable: true,
+    value: {
+      pty: { management: { restart } },
+      developerPermissions: { openSettings }
+    }
+  })
+})
+
+afterEach(() => {
+  cleanup()
+})
+
+describe('MacFolderAccessFixDialog', () => {
+  it('renders nothing until the toast raises it', () => {
+    render(<MacFolderAccessFixDialog />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('names the denied folder and leads with the cause', () => {
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    expect(screen.getByText('Fix access to your Documents folder')).toBeTruthy()
+    expect(
+      screen.getByText('macOS is blocking Orca’s terminal service from this folder.')
+    ).toBeTruthy()
+    expect(screen.getByText('Open terminals and agents will restart.')).toBeTruthy()
+  })
+
+  // restartWillHelp === true means a daemon forked now could already read the folder.
+  it('hides step one and enables Restart when the grant is already in place', () => {
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    expect(screen.queryByRole('button', { name: 'Open System Settings' })).toBeNull()
+    expect(restartButton().hasAttribute('disabled')).toBe(false)
+  })
+
+  it('opens step one and blocks Restart when Orca itself is denied', () => {
+    openWith(false)
+    render(<MacFolderAccessFixDialog />)
+
+    expect(screen.getByRole('button', { name: 'Open System Settings' })).toBeTruthy()
+    expect(restartButton().hasAttribute('disabled')).toBe(true)
+  })
+
+  // An unanswered probe must not accuse the user of a missing grant, but the pane stays reachable.
+  it('keeps both steps available when the probe could not answer', () => {
+    openWith(null)
+    render(<MacFolderAccessFixDialog />)
+
+    expect(screen.getByRole('button', { name: 'Open System Settings' })).toBeTruthy()
+    expect(restartButton().hasAttribute('disabled')).toBe(false)
+  })
+
+  it('flips step one to done when a later poll reports the grant landed', async () => {
+    openWith(false)
+    render(<MacFolderAccessFixDialog />)
+    expect(restartButton().hasAttribute('disabled')).toBe(true)
+
+    act(() => {
+      useMacFolderAccessFixStore.getState().observeMismatch({
+        daemonScope: 'aaaa111122223333',
+        cwdClass: 'documents',
+        restartWillHelp: true
+      })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Open System Settings' })).toBeNull()
+    })
+    expect(restartButton().hasAttribute('disabled')).toBe(false)
+  })
+
+  it('opens the Files and Folders pane through the permission opener', async () => {
+    openWith(false)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open System Settings' }))
+
+    expect(openSettings).toHaveBeenCalledWith({ id: 'files-and-folders' })
+    expect(trackTelemetry).toHaveBeenCalledWith('daemon_folder_access_notice', {
+      action: 'settings_opened',
+      cwd_class: 'documents'
+    })
+  })
+
+  it('restarts the terminal service without a second confirmation', async () => {
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(restartButton())
+
+    expect(restart).toHaveBeenCalledTimes(1)
+    expect(trackTelemetry).toHaveBeenCalledWith('daemon_folder_access_notice', {
+      action: 'restart_clicked',
+      cwd_class: 'documents'
+    })
+  })
+
+  it('shows a busy state while the restart runs', async () => {
+    let release: (value: { success: boolean }) => void = () => {}
+    restart.mockReturnValue(
+      new Promise<{ success: boolean }>((resolve) => {
+        release = resolve
+      })
+    )
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(restartButton())
+
+    expect(screen.getByRole('button', { name: /Restarting/ }).hasAttribute('disabled')).toBe(true)
+    await act(async () => {
+      release({ success: true })
+    })
+  })
+
+  it('replaces the steps with a done line and takes the toast down', async () => {
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(restartButton())
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Done. Terminals opened in your Documents folder can read it now.')
+      ).toBeTruthy()
+    })
+    expect(screen.queryByRole('button', { name: /^Restart/ })).toBeNull()
+    expect(toast.dismiss).toHaveBeenCalledWith('mac-daemon-folder-access-mismatch')
+  })
+
+  it('reports a refused restart inline and leaves the button usable', async () => {
+    restart.mockResolvedValue({ success: false })
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(restartButton())
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Restart failed. Try again from Settings → Terminal → Manage Sessions.')
+      ).toBeTruthy()
+    })
+    expect(restartButton().hasAttribute('disabled')).toBe(false)
+    expect(toast.dismiss).not.toHaveBeenCalled()
+  })
+
+  it('reports a rejected restart the same way', async () => {
+    restart.mockRejectedValue(new Error('ipc gone'))
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(restartButton())
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Restart failed. Try again from Settings → Terminal → Manage Sessions.')
+      ).toBeTruthy()
+    })
+    expect(restartButton().hasAttribute('disabled')).toBe(false)
+  })
+
+  it('closes on Close', async () => {
+    openWith(true)
+    render(<MacFolderAccessFixDialog />)
+
+    await userEvent.click(footerCloseButton())
+
+    expect(useMacFolderAccessFixStore.getState().open).toBe(false)
+  })
+})
