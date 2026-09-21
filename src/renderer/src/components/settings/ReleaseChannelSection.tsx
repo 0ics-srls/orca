@@ -358,6 +358,13 @@ export function ReleaseChannelSection(): React.JSX.Element {
           </Button>
         </div>
 
+        <p className="text-xs text-muted-foreground">
+          {translate(
+            'auto.components.settings.ReleaseChannelSection.cacheHint',
+            'Build lists are cached for 5 minutes. Refresh to check for new builds.'
+          )}
+        </p>
+
         {loadError ? (
           <p className="text-xs text-destructive">{loadError}</p>
         ) : needsManualInstall && selectedBuild ? (
