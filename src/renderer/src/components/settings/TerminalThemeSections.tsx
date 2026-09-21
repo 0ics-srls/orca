@@ -252,6 +252,7 @@ export function TerminalThemeCatalogSection({
                   onQueryChange={setThemeSearch}
                   onSelectTheme={(theme) => {
                     rememberTerminalThemeTarget(target)
+                    // A selected theme must replace overrides or they mask the picker.
                     const hasColorOverrides =
                       Object.keys(settings.terminalColorOverrides ?? {}).length > 0
                     updateSettings(
