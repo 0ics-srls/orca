@@ -130,8 +130,11 @@ macOS is blocking Orca's terminal service from this folder.
 
 **Recovery and clearing.** Evidence is keyed by daemon identity plus folder class; the dialog is
 derived from the store and renders only while the latest verdict's scope equals the scope the
-user opened, so evidence that moves or clears unmounts it (a null verdict also clears `openScope`,
-so the same scope returning later starts its remedy afresh). A restart replaces the identity,
+user opened; any verdict for another scope or for no scope clears `openScope`, so evidence that
+moves or clears unmounts it and the same scope returning later never reopens the dialog on its
+own. A null verdict, from the poll or from the reset's re-probe, retires the toast from inside the
+store's `applyVerdict`, so no caller has to remember to. Busy labels read each button's own state;
+the combined busy only disables. A restart replaces the identity,
 so the next poll returns `null` and the toast is dismissed. If the replacement daemon is also
 denied, the next spawn re-records, the toast returns, and the dialog reopens with step 1 unchecked.
 
