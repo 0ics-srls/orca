@@ -10,6 +10,7 @@ export type HostStatusGates = {
   hostCapabilities: string[]
   floatingWorkspaceEnabled: boolean
   desktopAppVersion: string | null
+  hostPlatform: NodeJS.Platform | null
   compatVerdict: CompatVerdict
   /** The two protocol numbers the status carried, for callers that evaluate a compat window this
    *  hook does not own — the mobile web bundle's. Kept as the reply's own fields rather than a
@@ -80,6 +81,7 @@ export function useHostStatusGates(args: {
             hostCapabilities: [],
             floatingWorkspaceEnabled: false,
             desktopAppVersion: null,
+            hostPlatform: null,
             compatVerdict: { kind: 'ok' },
             hostProtocolWindow: EMPTY_HOST_PROTOCOL_WINDOW,
             statusReadable: false
@@ -98,6 +100,7 @@ export function useHostStatusGates(args: {
           hostCapabilities: status.capabilities ?? [],
           floatingWorkspaceEnabled: status.floatingWorkspaceEnabled === true,
           desktopAppVersion,
+          hostPlatform: status.hostPlatform ?? null,
           compatVerdict: verdict,
           hostProtocolWindow: {
             protocolVersion: status.protocolVersion,
@@ -121,6 +124,7 @@ export function useHostStatusGates(args: {
             hostCapabilities: [],
             floatingWorkspaceEnabled: false,
             desktopAppVersion: null,
+            hostPlatform: null,
             compatVerdict: { kind: 'ok' },
             hostProtocolWindow: EMPTY_HOST_PROTOCOL_WINDOW,
             statusReadable: false
@@ -140,6 +144,7 @@ export function useHostStatusGates(args: {
       hostCapabilities: EMPTY_HOST_CAPABILITIES,
       floatingWorkspaceEnabled: false,
       desktopAppVersion: null,
+      hostPlatform: null,
       compatVerdict: { kind: 'ok' },
       hostProtocolWindow: EMPTY_HOST_PROTOCOL_WINDOW,
       statusPending: connState === 'connected' && client !== null,
@@ -150,6 +155,7 @@ export function useHostStatusGates(args: {
     hostCapabilities: proven.hostCapabilities,
     floatingWorkspaceEnabled: proven.floatingWorkspaceEnabled,
     desktopAppVersion: proven.desktopAppVersion,
+    hostPlatform: proven.hostPlatform,
     compatVerdict: proven.compatVerdict,
     hostProtocolWindow: proven.hostProtocolWindow,
     statusReadable: proven.statusReadable,

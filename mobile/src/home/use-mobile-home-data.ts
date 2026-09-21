@@ -179,6 +179,7 @@ export function useMobileHomeData() {
     connectedHosts,
     hostCatalog,
     hostConnections,
+    hostStatusByHostId: connections.hostStatusByHostId,
     primaryHost,
     primaryTaskProviders,
     resumeCard,

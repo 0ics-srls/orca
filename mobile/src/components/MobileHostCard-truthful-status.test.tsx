@@ -51,12 +51,14 @@ describe('MobileHostCard', () => {
       verdict?: ConnectionVerdict
       path?: MobileConnectionPath
       credentialStatus?: HostCredentialStatus
+      hostPlatform?: 'darwin' | 'win32' | 'linux' | null
     }
   ): Promise<string[]> {
     await act(async () => {
       renderer = create(
         createElement(MobileHostCard, {
           host,
+          hostPlatform: overrides?.hostPlatform,
           state: overrides?.state ?? 'connected',
           verdict: overrides?.verdict ?? verdict,
           path: overrides?.path ?? 'lan',
@@ -75,6 +77,13 @@ describe('MobileHostCard', () => {
 
   it('renders the counts the host proved', async () => {
     expect(await renderCard(loaded)).toContain('12 worktrees · 2 active')
+  })
+
+  it('renders the host platform beneath its personal label', async () => {
+    const lines = await renderCard(undefined, { hostPlatform: 'darwin' })
+
+    expect(lines).toContain('Studio')
+    expect(lines).toContain('macOS')
   })
 
   it('keeps rendering the last proven counts after a failed refresh', async () => {

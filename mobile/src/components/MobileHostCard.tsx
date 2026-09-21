@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ConnectionVerdict } from '../transport/connection-health'
 import { verdictDisplayLabel } from '../transport/connection-health'
 import { mobileConnectionPathLabel } from '../transport/mobile-connection-path-label'
+import { hostPlatformLabel } from '../transport/host-platform-label'
 import type { MobileConnectionPath } from '../transport/stable-logical-rpc-client'
 import type { ConnectionState, HostCatalogEntry, HostProfile } from '../transport/types'
 import { colors, radii, spacing } from '../theme/mobile-theme'
@@ -15,6 +16,7 @@ export function MobileHostCard(props: {
   state: ConnectionState
   verdict: ConnectionVerdict
   path: MobileConnectionPath
+  hostPlatform?: NodeJS.Platform | null
   // Why: the card owns the fresh/stale/unavailable wording so no caller can re-gate the counts
   // away (STA-3123 shipped that bug once already).
   worktreeInfo?: HostWorktreeInfo
@@ -38,6 +40,7 @@ export function MobileHostCard(props: {
       ? { kind: 'warning', label: statusLabel }
       : props.verdict
   const worktreeSummary = homeHostWorktreeSummary(props.worktreeInfo)
+  const platformLabel = hostPlatformLabel(props.hostPlatform)
   const connectionPathLabel =
     !credentialMissing && !credentialUnavailable && connected
       ? mobileConnectionPathLabel(props.path)
@@ -56,6 +59,7 @@ export function MobileHostCard(props: {
     credentialHint === null && 'detail' in props.verdict ? (props.verdict.detail ?? null) : null
   const accessibilityLabel = [
     `Open ${props.host.name}`,
+    platformLabel,
     statusLabel,
     connectionPathLabel?.replace(' · ', ' via '),
     connected ? worktreeSummary?.replace(' · ', ', ') : null,
@@ -85,6 +89,11 @@ export function MobileHostCard(props: {
           >
             {props.host.name}
           </Text>
+          {platformLabel ? (
+            <Text style={styles.platformText} numberOfLines={1}>
+              {platformLabel}
+            </Text>
+          ) : null}
           <View style={styles.meta}>
             <StatusDot state={props.state} verdict={statusVerdict} />
             <Text
@@ -164,6 +173,7 @@ const styles = StyleSheet.create({
   },
   main: { flex: 1, minWidth: 0, marginRight: spacing.sm },
   name: { color: colors.textPrimary, fontSize: 15, fontWeight: '600', lineHeight: 20 },
+  platformText: { color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, minWidth: 0 },
   metaText: { flex: 1, fontSize: 12, color: colors.textSecondary },
   worktreeMetaText: {

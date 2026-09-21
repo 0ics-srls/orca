@@ -36,16 +36,25 @@ export const hostScreenPrimaryStyles = StyleSheet.create({
   },
   hostIdentity: {
     flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+    marginRight: spacing.md
+  },
+  hostIdentityLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 0,
-    marginRight: spacing.md
+    minWidth: 0
   },
   hostNameText: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary
+  },
+  hostPlatformText: {
+    marginLeft: spacing.lg + spacing.xs,
+    fontSize: typography.metaSize,
+    color: colors.textSecondary
   },
   reconnectButton: {
     paddingVertical: 4,
