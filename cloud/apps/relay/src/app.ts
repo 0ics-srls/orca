@@ -1615,9 +1615,13 @@ const AdminAdmissionSelectorApplySchema = z
     expectedGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     expectedMembershipSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     membership: AdmissionSelectorMembershipSchema,
-    // Optional so an older caller reaches an updated director unchanged, and an
-    // updated caller reaching an older director is simply ignored: either way
-    // the cell goes unmarked and its hosts stay pinned, today's behaviour.
+    // Optional, so an older caller reaching an updated director is unchanged:
+    // the cell goes unmarked and its hosts stay pinned, today's behaviour. The
+    // other direction is NOT ignored — the schema below is .strict(), so an
+    // updated caller reaching an older director is a 400. That fails closed,
+    // before the isolate step sets MUTATION_STARTED and before anything is
+    // written, but it is a deploy ordering constraint: the director ships
+    // first, then any workflow run that uses the updated script.
     rollIsolatedCells: z.array(CellIdSchema).max(256).optional()
   })
   .strict()

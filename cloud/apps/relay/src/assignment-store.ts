@@ -399,6 +399,14 @@ const STRANDED_RECENT_ACTIVITY_MS = 15 * 60_000
 // posture, where the cell still serves the hosts it already has, so it is
 // deliberately not an isolation signal here.
 const ROLL_ISOLATED_ADMISSION: CellAdmissionState = 'migration-only'
+// Why the stamp expires: a roll isolates and restores one cell inside ~15
+// minutes, so a stamp older than this is not a roll in progress. It is a failed
+// or stalled wave whose failsafe re-isolated a possibly healthy cell and is
+// waiting on an operator, or a director rollback whose restore wrote 'general'
+// without the clause that clears the stamp, leaving an orphan that the next
+// park would reactivate. Both want the same answer, and it is the pre-existing
+// one: keep the pin and let the host retry its own cell.
+const ROLL_ISOLATION_STAMP_MAX_AGE_MS = 2 * 60 * 60_000
 const REGION_PREFERENCE_RETENTION_MS = 30 * 24 * 60 * 60_000
 const REGIONAL_REHOME_UNREGISTERED_REFRESH_MS = 5 * 60_000
 const REGIONAL_REHOME_MAX_REFRESH_MS = 24 * 60 * 60_000
@@ -806,6 +814,7 @@ export class RelayAssignmentStore {
           transaction,
           identity,
           existing,
+          now,
           undefined,
           pinnedAdmission
         )
@@ -979,7 +988,13 @@ export class RelayAssignmentStore {
         if (
           !strandedReassignment &&
           currentIsLive &&
-          (await this.incumbentCellIsolatedForRoll(transaction, identity, existing, admission))
+          (await this.incumbentCellIsolatedForRoll(
+            transaction,
+            identity,
+            existing,
+            now,
+            admission
+          ))
         ) {
           isolatedTarget =
             (await this.leastLoadedCell(transaction, lockedCells, current.region, 'require')) ??
@@ -7439,6 +7454,9 @@ export class RelayAssignmentStore {
     database: RelayDatabase,
     identity: AssignmentIdentity,
     existing: SqlRow,
+    // The caller's clock, not a second this.now(): one assign reasons about one
+    // instant, and the stamp's age decides whether a host moves.
+    now: number,
     // Placement has already read the whole table; sticky has not, and a single
     // pinned cell does not justify a second fleet-wide read.
     admission?: ReadonlyMap<string, CellAdmissionState>,
@@ -7454,6 +7472,7 @@ export class RelayAssignmentStore {
     if (pinned?.state !== ROLL_ISOLATED_ADMISSION || pinned.rollIsolatedAt === undefined) {
       return false
     }
+    if (now - pinned.rollIsolatedAt >= ROLL_ISOLATION_STAMP_MAX_AGE_MS) return false
     if (integer(existing, 'migration_leases') > 0) return false
     // A migration owns this assignment's epoch on both sides, and its durable
     // row outlives the 15-minute lease that the counter above tracks, so the

@@ -327,6 +327,32 @@ describe('re-placing a host off a cell isolated for a roll', () => {
     })
   })
 
+  it.each([
+    { label: 'just inside the bound', age: 2 * 60 * 60_000 - 1, moves: true },
+    { label: 'just outside the bound', age: 2 * 60 * 60_000 + 1, moves: false }
+  ])('treats a stamp $label as $moves', async ({ age, moves }) => {
+    // Why the bound exists: a roll isolates and restores inside ~15 minutes, so
+    // an older stamp is a failed wave waiting on an operator, or an orphan left
+    // by a director rollback whose restore predates the clearing clause. Both
+    // mean a possibly healthy cell, and the safe answer is the pre-existing one.
+    const { store, heartbeat, isolateForRoll, setNow } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await isolateForRoll(first.cellId)
+
+    const later = START_MS + age
+    setNow(later)
+    for (const cell of CELLS) await heartbeat(cell, later)
+    const grant = await store.assign(IDENTITY, 'us-central1')
+
+    if (moves) {
+      expect(grant.cellId).not.toBe(first.cellId)
+      expect(grant.assignmentEpoch).toBe(first.assignmentEpoch + 1)
+    } else {
+      expect(grant.cellId).toBe(first.cellId)
+      expect(grant.assignmentEpoch).toBe(first.assignmentEpoch)
+    }
+  })
+
   it('stops re-placing once restore clears the stamp', async () => {
     const { store, isolateForRoll, restore, rollIsolatedAt } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')

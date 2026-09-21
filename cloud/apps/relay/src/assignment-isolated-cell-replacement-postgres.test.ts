@@ -238,6 +238,24 @@ describePostgres('PostgreSQL re-placement off a cell isolated for a roll', () =>
     expect(await rollIsolatedAt(ISOLATED.id)).toBeNull()
   }, 30_000)
 
+  it('ignores a stamp older than the roll it is supposed to describe', async () => {
+    // A failed wave keeps its stamp on purpose and can sit for hours; past the
+    // bound the cell stops shedding hosts one dial at a time.
+    await resetFleet()
+    const identity = hostIdentity(902)
+    const first = await stores[0]!.assign(identity, 'us-central1')
+    await applySelector({ [ISOLATED.id]: 'migration-only' }, [ISOLATED.id])
+    await databases[0]!.query(
+      `UPDATE relay_cell_admission SET roll_isolated_at = ? WHERE cell_id = ?`,
+      [NOW - (2 * 60 * 60_000 + 1), ISOLATED.id]
+    )
+
+    expect(await stores[0]!.assign(identity, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  }, 30_000)
+
   it('re-places every host off an isolated cell without leaking a reservation', async () => {
     await resetFleet()
     const identities = Array.from({ length: HOST_COUNT }, (_, index) => hostIdentity(index))
