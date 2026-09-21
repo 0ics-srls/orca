@@ -663,6 +663,39 @@ describe('orchestration.send group addresses', () => {
     })
   })
 
+  it('can retry a group after the host learns the pane identity', async () => {
+    const sender = makeSummary('term_coord', { agentIdentity: 'claude' })
+    let terminals: RuntimeTerminalSummary[] = [sender, makeSummary('term_ag')]
+    setupWithTerminals(terminals)
+    const dispatch = dispatchWorker('term_ag')
+    vi.mocked(runtime.listTerminals).mockImplementation(async () => ({
+      terminals,
+      totalCount: terminals.length,
+      truncated: false
+    }))
+
+    // A pane that has not reported its identity must not receive an agent-group message,
+    // and the failed lookup must not leave an orphaned mailbox row.
+    await expect(
+      call('orchestration.send', {
+        from: 'term_coord',
+        to: '@antigravity',
+        subject: 'before ready'
+      })
+    ).rejects.toMatchObject({ code: 'terminal_not_found' })
+    expect(db.getInbox(100)).toHaveLength(0)
+
+    terminals = [sender, makeSummary('term_ag', { agentIdentity: 'antigravity' })]
+    const result = (await call('orchestration.send', {
+      from: 'term_coord',
+      to: '@antigravity',
+      subject: 'after ready'
+    })) as GroupReceipt
+
+    expect(result.messages).toMatchObject([{ to_handle: `dispatch:${dispatch}` }])
+    expect(db.getUnreadMessages(`dispatch:${dispatch}`)).toHaveLength(1)
+  })
+
   // The defect: a typo and a correctly addressed live pane both resolved to zero handles and
   // produced the same sentence, so the sender could not tell a misspelling from an empty group.
   it('separates an unrecognised group name from a recognised group with no members', async () => {
