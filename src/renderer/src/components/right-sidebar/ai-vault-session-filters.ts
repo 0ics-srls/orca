@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
 import { translate } from '@/i18n/i18n'
-import type { AiVaultSession, AiVaultGroup } from '../../../../shared/ai-vault-types'
+import type {
+  AiVaultGroup,
+  AiVaultSearchSort,
+  AiVaultSession
+} from '../../../../shared/ai-vault-types'
 import {
   filterAiVaultSessions,
   groupAiVaultSessions,
@@ -39,8 +43,9 @@ export function useAiVaultPanelSessions(
     activeProjectKey,
     sessionProjectById,
     projectLabelByKey,
-    hideEmptySessions
-  }: AiVaultSessionFilterState
+    hideEmptySessions,
+    searchSort
+  }: AiVaultSessionFilterState & { searchSort: AiVaultSearchSort }
 ) {
   const filteredSessions = useMemo(
     () =>
@@ -79,12 +84,15 @@ export function useAiVaultPanelSessions(
           : [
               {
                 key: 'search-results',
-                label: translate('sessionSearch.panel.rankedResults', 'Best matches'),
+                label:
+                  searchSort === 'newest'
+                    ? translate('sessionSearch.panel.newestResults', 'Newest')
+                    : translate('sessionSearch.panel.rankedResults', 'Best matches'),
                 sessions: [...filteredSessions]
               }
             ]
         : groupAiVaultSessions(filteredSessions, group, { sessionProjectById, projectLabelByKey }),
-    [searching, filteredSessions, group, projectLabelByKey, sessionProjectById]
+    [searching, searchSort, filteredSessions, group, projectLabelByKey, sessionProjectById]
   )
   return { filteredSessions, groups }
 }

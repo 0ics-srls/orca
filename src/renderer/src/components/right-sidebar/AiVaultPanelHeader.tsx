@@ -107,7 +107,14 @@ export function AiVaultPanelHeader({
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
             {searching ? (
-              translate('sessionSearch.panel.indexedHistory', 'Indexed history · best matches')
+              searchSort === 'newest' ? (
+                translate(
+                  'sessionSearch.panel.indexedHistoryNewest',
+                  'Indexed history · newest first'
+                )
+              ) : (
+                translate('sessionSearch.panel.indexedHistory', 'Indexed history · best matches')
+              )
             ) : hasScanResult ? (
               <>
                 <span className="@max-[300px]/ai-vault:hidden">

@@ -18003,9 +18003,11 @@
   "sessionSearch": {
     "panel": {
       "rankedResults": "Best matches",
+      "newestResults": "Newest",
       "noMatches": "No matching sessions in the indexed history. Try another query or scope.",
       "loadMore": "Load more matches",
       "indexedHistory": "Indexed history · best matches",
+      "indexedHistoryNewest": "Indexed history · newest first",
       "hostsSkipped": "Not searched: {{value0}}",
       "sortRelevance": "Most relevant",
       "sortNewest": "Newest",
