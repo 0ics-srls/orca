@@ -24,7 +24,11 @@ export function configureTerminalPerfDiagnostics(): void {
     }, unthrottle)
     testInfo.annotations.push({
       type: 'perf-diagnostic-window',
-      description: JSON.stringify({ windows, visibility })
+      description: JSON.stringify({
+        windows,
+        visibility,
+        renderer: process.env.ORCA_PERF_DIAGNOSTIC_RENDERER ?? 'current'
+      })
     })
   })
 }
