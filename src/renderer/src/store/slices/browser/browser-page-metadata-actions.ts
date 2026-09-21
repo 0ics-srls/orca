@@ -122,8 +122,8 @@ export function createBrowserPageMetadataActions(
       set((s) => {
         const existing = s.browserAnnotationsByPageId[pageId] ?? []
         // Immutable note identity preserves edits and additions made during delivery.
-        const delivered = deliveredAnnotations && new Set(deliveredAnnotations)
-        const remaining = delivered ? existing.filter((note) => !delivered.has(note)) : []
+        const delivered = new Set(deliveredAnnotations)
+        const remaining = existing.filter((note) => !delivered.has(note))
         if (remaining.length === existing.length) {
           return s
         }

@@ -101,7 +101,7 @@ export function useBrowserPageAnnotationSend({
     clearTimeout(annotationCopyTimerRef.current)
     setBrowserAnnotationsCopied(false)
     recordFeatureInteraction('browser-annotations')
-    clearBrowserPageAnnotations(browserTabId)
+    clearBrowserPageAnnotations(browserTabId, browserAnnotationsRef.current)
   }, [browserTabId, clearBrowserPageAnnotations, recordFeatureInteraction])
 
   const handleAnnotationSendOpenChange = useCallback(

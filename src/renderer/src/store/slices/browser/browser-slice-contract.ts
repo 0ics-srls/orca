@@ -191,9 +191,11 @@ export type BrowserSlice = {
     patch: { comment: string; intent: BrowserAnnotationIntent }
   ) => void
   deleteBrowserPageAnnotation: (pageId: string, annotationId: string) => void
+  // Passing annotations subtracts by object identity, so only stored note objects match and notes
+  // edited or added since survive.
   clearBrowserPageAnnotations: (
     pageId: string,
-    deliveredAnnotations?: readonly BrowserPageAnnotation[]
+    deliveredAnnotations: readonly BrowserPageAnnotation[]
   ) => void
   hydrateBrowserSession: (
     session: WorkspaceSessionState,
