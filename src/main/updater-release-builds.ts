@@ -43,23 +43,30 @@ function isRateLimited(res: Response): boolean {
 }
 
 /**
- * Only a spent primary bucket may trip the shared gh breaker. GitHub also sends
- * `x-ratelimit-remaining: 0` on some secondary 403/429s, and those carry Retry-After —
- * blocking every core gh command until the primary reset would be far wider than the
- * limit GitHub actually applied.
+ * Only a spent primary bucket may trip the shared gh breaker or be retried at once.
+ * GitHub also sends `x-ratelimit-remaining: 0` on some secondary 403/429s, and those
+ * carry Retry-After: blocking every core gh command until the primary reset would be
+ * far wider than the limit GitHub actually applied, and Retry-After forbids any retry
+ * before it elapses — an immediate unauthenticated one included, since GitHub may ban
+ * an integration that keeps calling while throttled.
  */
 function isPrimaryRateLimited(res: Response): boolean {
   return res.headers.get('x-ratelimit-remaining') === '0' && !res.headers.has('retry-after')
 }
 
-/** Primary limits carry the reset epoch; secondary limits carry Retry-After as seconds or an HTTP date. */
+/**
+ * Retry-After wins when GitHub sends it: it is the bounded wait the server actually
+ * asked for, while `x-ratelimit-reset` describes the primary window and can be an hour
+ * out — quoting that for a 90-second secondary throttle overstates the wait to the user.
+ * Retry-After arrives as seconds or an HTTP date; the reset epoch is the fallback.
+ */
 export function rateLimitResetAtMs(headers: Headers, nowMs: number): number | null {
-  const resetEpochSeconds = Number(headers.get('x-ratelimit-reset'))
-  if (resetEpochSeconds > 0) {
-    return resetEpochSeconds * 1000
-  }
   const retryAfterMs = parseRelayRetryAfterMs(headers.get('retry-after'), RETRY_AFTER_MAX_MS, nowMs)
-  return retryAfterMs === null ? null : nowMs + retryAfterMs
+  if (retryAfterMs !== null) {
+    return nowMs + retryAfterMs
+  }
+  const resetEpochSeconds = Number(headers.get('x-ratelimit-reset'))
+  return resetEpochSeconds > 0 ? resetEpochSeconds * 1000 : null
 }
 
 export function describeRateLimitReset(resetAtMs: number | null, nowMs: number): string {
@@ -174,9 +181,12 @@ export async function listReleaseBuilds(
   const repo = getReleaseRepoForChannel(channel)
   // Why: while the gh breaker has the token's core bucket marked spent, an
   // authenticated request is a guaranteed 403 — go straight to the per-IP bucket.
-  const tokenBucketBlocked = getGhRateLimitBlockedUntilMs('core') !== null
-  const token = tokenBucketBlocked ? null : await resolveReleaseApiToken()
-  let signedIn = tokenBucketBlocked || token !== null
+  const credential = await resolveReleaseApiToken()
+  const tokenBucketBlocked =
+    credential !== null &&
+    getGhRateLimitBlockedUntilMs('core', Date.now(), credential.rateLimitScope) !== null
+  const token = tokenBucketBlocked ? null : (credential?.token ?? null)
+  let signedIn = credential !== null
   let res = await fetchReleases(repo, token)
   if (token && res.status === 401) {
     // Why: a revoked or expired keyring token answers 401, and the unauthenticated
@@ -184,13 +194,12 @@ export async function listReleaseBuilds(
     rejectReleaseApiToken()
     signedIn = false
     res = await fetchReleases(repo, null)
-  } else if (token && isRateLimited(res)) {
-    // Why: the token's bucket and the per-IP bucket are separate, so the other one
-    // may still have quota. Tell the breaker first — only for a primary limit — so gh
-    // calls fail fast until the reset.
-    const resetAtMs = isPrimaryRateLimited(res) ? rateLimitResetAtMs(res.headers, Date.now()) : null
-    if (resetAtMs !== null) {
-      recordGhPrimaryRateLimit('core', resetAtMs)
+  } else if (token && isRateLimited(res) && isPrimaryRateLimited(res)) {
+    // Why: the token's bucket and the per-IP bucket are separate, so the other one may
+    // still have quota. Tell the breaker first so gh calls fail fast until the reset.
+    const resetAtMs = rateLimitResetAtMs(res.headers, Date.now())
+    if (resetAtMs !== null && credential) {
+      recordGhPrimaryRateLimit('core', resetAtMs, credential.rateLimitScope)
     }
     res = await fetchReleases(repo, null)
   }

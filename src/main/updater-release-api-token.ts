@@ -1,4 +1,4 @@
-import { ghExecFileAsync } from './git/runner'
+import { ghExecFileWithScopeAsync } from './git/runner'
 
 /**
  * The github.com token the release picker attaches to its api.github.com calls.
@@ -21,35 +21,49 @@ const TOKEN_RESOLVE_TIMEOUT_MS = 5_000
 // slower for exactly the users who can never get a token.
 const TOKEN_TTL_MS = 5 * 60_000
 
-type TokenCacheEntry = { token: string | null; expiresAt: number }
+export type ReleaseApiToken = { token: string; rateLimitScope: string }
+type TokenCacheEntry = { token: ReleaseApiToken | null; expiresAt: number }
 
 let cached: TokenCacheEntry | null = null
-let inFlight: Promise<string | null> | null = null
+let inFlight: Promise<ReleaseApiToken | null> | null = null
+// Why: a rejection must beat a read that was already in flight when it landed.
+let generation = 0
 
-async function readGhToken(): Promise<string | null> {
+async function readGhToken(): Promise<ReleaseApiToken | null> {
   try {
     // Why no retry: a hung keyring would otherwise hold the picker through the
     // runner's backoff, and unauthenticated is an acceptable fallback anyway.
-    const { stdout } = await ghExecFileAsync(['auth', 'token', '--hostname', 'github.com'], {
-      timeout: TOKEN_RESOLVE_TIMEOUT_MS,
-      idempotent: false
-    })
+    const { stdout, rateLimitScope } = await ghExecFileWithScopeAsync(
+      ['auth', 'token', '--hostname', 'github.com'],
+      {
+        timeout: TOKEN_RESOLVE_TIMEOUT_MS,
+        idempotent: false
+      }
+    )
     const token = stdout.replace(/\r?\n/g, '').trim()
-    return token || null
+    return token ? { token, rateLimitScope } : null
   } catch {
     return null
   }
 }
 
-export async function resolveReleaseApiToken(now: number = Date.now()): Promise<string | null> {
+export async function resolveReleaseApiToken(
+  now: number = Date.now()
+): Promise<ReleaseApiToken | null> {
   if (cached && cached.expiresAt > now) {
     return cached.token
   }
   if (inFlight) {
     return inFlight
   }
+  const readGeneration = generation
   inFlight = readGhToken()
     .then((token) => {
+      // Why: a rejection during this read refused the same keyring entry this read
+      // returns, so caching or handing it back would resurrect the rejected token.
+      if (generation !== readGeneration) {
+        return null
+      }
       cached = { token, expiresAt: now + TOKEN_TTL_MS }
       return token
     })
@@ -61,11 +75,13 @@ export async function resolveReleaseApiToken(now: number = Date.now()): Promise<
 
 /** GitHub rejected the token: go unauthenticated for a TTL instead of re-reading the same stale keyring entry on every load. */
 export function rejectReleaseApiToken(now: number = Date.now()): void {
+  generation += 1
   cached = { token: null, expiresAt: now + TOKEN_TTL_MS }
 }
 
 /** @internal — test-only */
 export function _resetReleaseApiTokenCache(): void {
+  generation += 1
   cached = null
   inFlight = null
 }

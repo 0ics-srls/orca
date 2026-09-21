@@ -4,16 +4,21 @@ const fetchMock = vi.fn()
 vi.mock('electron', () => ({ net: { fetch: (...args: unknown[]) => fetchMock(...args) } }))
 
 const tokenMock = vi.fn<() => Promise<string | null>>()
+let tokenScope = 'native:github.com'
 const rejectTokenMock = vi.fn()
 vi.mock('./updater-release-api-token', () => ({
-  resolveReleaseApiToken: () => tokenMock(),
+  resolveReleaseApiToken: async () => {
+    const token = await tokenMock()
+    return token === null ? null : { token, rateLimitScope: tokenScope }
+  },
   rejectReleaseApiToken: () => rejectTokenMock()
 }))
 
-const blockedUntilMock = vi.fn<() => number | null>()
+const blockedUntilMock = vi.fn<(bucket: string, now: number, scope: string) => number | null>()
 const recordRateLimitMock = vi.fn()
 vi.mock('./git/gh-rate-limit-breaker', () => ({
-  getGhRateLimitBlockedUntilMs: () => blockedUntilMock(),
+  getGhRateLimitBlockedUntilMs: (...args: Parameters<typeof blockedUntilMock>) =>
+    blockedUntilMock(...args),
   recordGhPrimaryRateLimit: (...args: unknown[]) => recordRateLimitMock(...args)
 }))
 
@@ -58,6 +63,7 @@ const release = (tag: string, extra: Record<string, unknown> = {}) => ({
 
 describe('listReleaseBuilds', () => {
   beforeEach(() => {
+    tokenScope = 'native:github.com'
     fetchMock.mockReset()
     rejectTokenMock.mockReset()
     recordRateLimitMock.mockReset()
@@ -308,54 +314,99 @@ describe('listReleaseBuilds', () => {
       listReleaseBuilds('stable', 'darwin').then((builds) => builds.map((build) => build.version))
     ).resolves.toEqual(['1.4.159'])
 
-    expect(recordRateLimitMock).toHaveBeenCalledWith('core', 1_800_000_600_000)
+    expect(recordRateLimitMock).toHaveBeenCalledWith('core', 1_800_000_600_000, 'native:github.com')
     expect(rejectTokenMock).not.toHaveBeenCalled()
     expect(requestHeaders(1)).toEqual({ Accept: 'application/vnd.github+json' })
   })
 
   // Why: GitHub attaches `x-ratelimit-remaining: 0` to some secondary limits too, and
-  // those carry Retry-After. Tripping the primary breaker on one would block every
-  // unrelated core gh command until the hourly reset over a short abuse-throttle.
-  it('does not trip the gh breaker for a secondary limit carrying retry-after', async () => {
-    tokenMock.mockResolvedValue('gho_abc')
-    fetchMock
-      .mockResolvedValueOnce(
-        jsonResponse(null, {
-          ok: false,
-          status: 403,
-          headers: {
-            'x-ratelimit-remaining': '0',
-            'x-ratelimit-reset': '1800000600',
-            'retry-after': '60'
-          }
-        })
-      )
-      .mockResolvedValueOnce(jsonResponse([release('v1.4.159')]))
-
-    await expect(
-      listReleaseBuilds('stable', 'darwin').then((builds) => builds.map((build) => build.version))
-    ).resolves.toEqual(['1.4.159'])
-
-    expect(recordRateLimitMock).not.toHaveBeenCalled()
-    expect(requestHeaders(1)).toEqual({ Accept: 'application/vnd.github+json' })
-  })
-
-  it('skips the token while the gh breaker has the core bucket blocked', async () => {
-    blockedUntilMock.mockReturnValue(Date.now() + 60_000)
+  // those carry Retry-After, which bars any retry before it elapses — the per-IP one
+  // included. Tripping the primary breaker would also block every unrelated core gh
+  // command until the hourly reset over a short abuse-throttle.
+  it('reports a secondary limit carrying retry-after without retrying or tripping the breaker', async () => {
+    const nowMs = 1_800_000_000_000
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs)
     tokenMock.mockResolvedValue('gho_abc')
     fetchMock.mockResolvedValue(
-      jsonResponse(null, { ok: false, status: 403, headers: { 'x-ratelimit-remaining': '0' } })
+      jsonResponse(null, {
+        ok: false,
+        status: 403,
+        headers: {
+          'x-ratelimit-remaining': '0',
+          'x-ratelimit-reset': String(nowMs / 1000 + 60 * 60),
+          'retry-after': '60'
+        }
+      })
     )
 
-    const failure = listReleaseBuilds('stable', 'darwin')
-    await expect(failure).rejects.toThrow(/rate limit reached/)
-    // Why: the user is signed in; the breaker, not a missing login, kept the token home.
-    await expect(failure).rejects.not.toThrow(/gh auth login/)
+    await expect(listReleaseBuilds('stable', 'darwin')).rejects.toThrow(
+      'GitHub rate limit reached. Try again in about a minute.'
+    )
 
-    expect(tokenMock).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(requestHeaders()).toEqual({ Accept: 'application/vnd.github+json' })
+    expect(recordRateLimitMock).not.toHaveBeenCalled()
   })
+
+  it.each(['native:github.com', 'wsl:ubuntu:github.com'])(
+    'records a primary limit in the token scope %s',
+    async (scope) => {
+      tokenScope = scope
+      tokenMock.mockResolvedValue('gho_abc')
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse(null, {
+            ok: false,
+            status: 403,
+            headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000600' }
+          })
+        )
+        .mockResolvedValueOnce(jsonResponse([release('v1.4.159')]))
+
+      await listReleaseBuilds('stable', 'win32')
+
+      expect(recordRateLimitMock).toHaveBeenCalledExactlyOnceWith('core', 1_800_000_600_000, scope)
+    }
+  )
+
+  it.each([
+    ['native:github.com', 'wsl:ubuntu:github.com'],
+    ['wsl:ubuntu:github.com', 'native:github.com'],
+    ['wsl:ubuntu:github.com', 'wsl:debian:github.com']
+  ])('keeps %s authenticated when only %s is blocked', async (scope, blockedScope) => {
+    tokenScope = scope
+    tokenMock.mockResolvedValue('gho_abc')
+    blockedUntilMock.mockImplementation((_bucket, now, queriedScope) =>
+      queriedScope === blockedScope ? now + 60_000 : null
+    )
+    fetchMock.mockResolvedValue(jsonResponse([release('v1.4.159')]))
+
+    await listReleaseBuilds('stable', 'win32')
+
+    expect(blockedUntilMock).toHaveBeenCalledWith('core', expect.any(Number), scope)
+    expect(requestHeaders().Authorization).toBe('Bearer gho_abc')
+  })
+
+  it.each(['native:github.com', 'wsl:ubuntu:github.com'])(
+    'skips the token while its scope %s is blocked',
+    async (scope) => {
+      tokenScope = scope
+      blockedUntilMock.mockReturnValue(Date.now() + 60_000)
+      tokenMock.mockResolvedValue('gho_abc')
+      fetchMock.mockResolvedValue(
+        jsonResponse(null, { ok: false, status: 403, headers: { 'x-ratelimit-remaining': '0' } })
+      )
+
+      const failure = listReleaseBuilds('stable', 'darwin')
+      await expect(failure).rejects.toThrow(/rate limit reached/)
+      // Why: the user is signed in; the breaker, not a missing login, kept the token home.
+      await expect(failure).rejects.not.toThrow(/gh auth login/)
+
+      expect(tokenMock).toHaveBeenCalledTimes(1)
+      expect(blockedUntilMock).toHaveBeenCalledWith('core', expect.any(Number), scope)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(requestHeaders()).toEqual({ Accept: 'application/vnd.github+json' })
+    }
+  )
 
   it('surfaces a rate limit with its reset time and a sign-in hint when unauthenticated', async () => {
     const nowMs = 1_800_000_000_000
@@ -418,11 +469,18 @@ describe('rateLimitResetAtMs', () => {
     expect(rateLimitResetAtMs(new Headers(), nowMs)).toBeNull()
   })
 
-  it('prefers the primary reset epoch over retry-after', () => {
+  // Why: a secondary limit sends both, and only Retry-After is the wait GitHub asked
+  // for — quoting the hour-out primary window would tell the user to wait far too long.
+  it('prefers retry-after over the primary reset epoch', () => {
     const headers = new Headers({
       'x-ratelimit-reset': String(nowMs / 1000 + 10 * 60),
       'retry-after': '30'
     })
+    expect(rateLimitResetAtMs(headers, nowMs)).toBe(nowMs + 30_000)
+  })
+
+  it('falls back to the primary reset epoch when there is no retry-after', () => {
+    const headers = new Headers({ 'x-ratelimit-reset': String(nowMs / 1000 + 10 * 60) })
     expect(rateLimitResetAtMs(headers, nowMs)).toBe(nowMs + 10 * 60_000)
   })
 
