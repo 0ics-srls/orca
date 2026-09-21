@@ -346,18 +346,18 @@ describe('agent completion coordinator', () => {
     expect(dispatchAttention).toHaveBeenCalledTimes(2)
   })
 
-  it('delivers a Codex pause notification before a null-foreground inspection blip', async () => {
-    // Why: the notification used to be deferred 1.5s, and the deferred callback
-    // re-checked liveness — so a pause whose pane blipped inside the window was
-    // dropped outright rather than delayed. Delivery is synchronous now.
+  it('settles foreground misses after Codex pauses before reporting a sustained exit', async () => {
+    // Why: a real attention hook is positive liveness evidence even when the
+    // local process table briefly misses the foreground agent during handoff.
     let foreground: string | null = 'codex'
     const dispatchAttention = vi.fn()
+    const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',
       getPtyId: () => 'pty-1',
       getSettings: () => null,
       inspectProcess: vi.fn(async () => processResult(foreground)),
-      dispatchCompletion: vi.fn(),
+      dispatchCompletion,
       dispatchAttention,
       isLive: () => true
     })
@@ -365,6 +365,11 @@ describe('agent completion coordinator', () => {
     coordinator.startProcessTracking()
     await vi.advanceTimersByTimeAsync(2_000)
     await flushAsyncTicks()
+
+    foreground = null
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flushAsyncTicks()
+    expect(dispatchCompletion).not.toHaveBeenCalled()
 
     const turn = { prompt: 'apply patch', agentType: 'codex' as const }
     coordinator.observeHookStatus({
@@ -375,11 +380,20 @@ describe('agent completion coordinator', () => {
     })
     expect(dispatchAttention).toHaveBeenCalledTimes(1)
 
-    foreground = null
     await vi.advanceTimersByTimeAsync(2_000)
     await flushAsyncTicks()
 
     expect(dispatchAttention).toHaveBeenCalledTimes(1)
+    expect(dispatchCompletion).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flushAsyncTicks()
+
+    expect(dispatchCompletion).toHaveBeenCalledExactlyOnceWith('codex', {
+      source: 'process-exit',
+      quietedHookDone: false,
+      terminalIdleConfirmed: true
+    })
   })
 
   it('notifies a Codex pause even when the pane stops being live right after it', () => {

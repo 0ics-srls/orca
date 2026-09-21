@@ -56,7 +56,7 @@ export function createAgentCompletionCoordinator(
     pollTimerTier: null as 'active' | 'idle' | 'hidden' | 'no-evidence' | null,
     lastPaneActivityAt: null,
     hasAgentRunEvidence: false,
-    pendingProcessExitAgent: null as RecognizedAgentProcess | null,
+    pendingProcessExit: null,
     lastForegroundAgent: null as RecognizedAgentProcess | null,
     processSession: 0
   }
@@ -71,6 +71,7 @@ export function createAgentCompletionCoordinator(
     agentIdentityEstablished = true
     hasAgentRunEvidence = true
     processState.hasAgentRunEvidence = true
+    processState.pendingProcessExit = null
     processMonitor?.scheduleNextPoll()
   }
 
@@ -79,7 +80,7 @@ export function createAgentCompletionCoordinator(
     hasAgentRunEvidence = false
     completionState.workingStatusObserved = false
     processState.hasAgentRunEvidence = false
-    processState.pendingProcessExitAgent = null
+    processState.pendingProcessExit = null
     dropPendingTitle()
   }
 

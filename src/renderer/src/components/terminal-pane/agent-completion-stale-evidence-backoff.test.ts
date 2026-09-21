@@ -73,7 +73,7 @@ function inspect(result: RuntimeTerminalProcessInspection, roundTripMs = 20): Pr
     pollTimerTier: null,
     lastPaneActivityAt: null,
     hasAgentRunEvidence: false,
-    pendingProcessExitAgent: null,
+    pendingProcessExit: null,
     lastForegroundAgent: null,
     processSession: 1
   }
