@@ -30,13 +30,12 @@ function restartButton(): HTMLElement {
   return screen.getByRole('button', { name: /^Restart/ })
 }
 
-/** Scoped to the footer: DialogContent's own dismiss X carries the same accessible name. */
-function footerCloseButton(): HTMLElement {
+function footerButton(name: string): HTMLElement {
   const footer = screen.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
   if (!(footer instanceof HTMLElement)) {
     throw new Error('dialog footer did not render')
   }
-  return within(footer).getByRole('button', { name: 'Close' })
+  return within(footer).getByRole('button', { name })
 }
 
 beforeEach(() => {
@@ -83,27 +82,28 @@ describe('MacFolderAccessFixDialog', () => {
     expect(restartButton().hasAttribute('disabled')).toBe(false)
   })
 
-  it('opens step one and blocks Restart when Orca itself is denied', () => {
+  it('makes System Settings the only action when Orca itself is denied', () => {
     openWith(false)
     render(<MacFolderAccessFixDialog />)
 
-    expect(screen.getByRole('button', { name: 'Open System Settings' })).toBeTruthy()
-    expect(restartButton().hasAttribute('disabled')).toBe(true)
+    expect(footerButton('Open System Settings')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Restart/ })).toBeNull()
   })
 
   // An unanswered probe must not accuse the user of a missing grant, but the pane stays reachable.
-  it('keeps both steps available when the probe could not answer', () => {
+  it('keeps both actions and says so when the probe could not answer', () => {
     openWith(null)
     render(<MacFolderAccessFixDialog />)
 
-    expect(screen.getByRole('button', { name: 'Open System Settings' })).toBeTruthy()
+    expect(footerButton('Open System Settings')).toBeTruthy()
     expect(restartButton().hasAttribute('disabled')).toBe(false)
+    expect(screen.getByText(/Orca couldn’t check this/)).toBeTruthy()
   })
 
   it('flips step one to done when a later poll reports the grant landed', async () => {
     openWith(false)
     render(<MacFolderAccessFixDialog />)
-    expect(restartButton().hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: /^Restart/ })).toBeNull()
 
     act(() => {
       useMacFolderAccessFixStore.getState().observeMismatch({
@@ -171,7 +171,9 @@ describe('MacFolderAccessFixDialog', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Done. Terminals opened in your Documents folder can read it now.')
+        screen.getByText(
+          'Terminal service restarted. Terminals in your Documents folder should work now.'
+        )
       ).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: /^Restart/ })).toBeNull()
@@ -209,11 +211,11 @@ describe('MacFolderAccessFixDialog', () => {
     expect(restartButton().hasAttribute('disabled')).toBe(false)
   })
 
-  it('closes on Close', async () => {
+  it('closes on Cancel', async () => {
     openWith(true)
     render(<MacFolderAccessFixDialog />)
 
-    await userEvent.click(footerCloseButton())
+    await userEvent.click(footerButton('Cancel'))
 
     expect(useMacFolderAccessFixStore.getState().open).toBe(false)
   })

@@ -6406,8 +6406,10 @@
           "restartFailed": "Restart failed. Try again from Settings → Terminal → Manage Sessions.",
           "title": "Fix access to your {{folder}}",
           "lead": "macOS is blocking Orca’s terminal service from this folder.",
-          "done": "Done. Terminals opened in your {{folder}} can read it now.",
-          "close": "Close"
+          "done": "Terminal service restarted. Terminals in your {{folder}} should work now.",
+          "close": "Close",
+          "cancel": "Cancel",
+          "stepAllowUnknown": "Orca couldn’t check this. Skip it if Orca is already allowed."
         },
         "macFolderAccessFolderName": {
           "documents": "Documents folder",

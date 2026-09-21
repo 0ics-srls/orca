@@ -23,13 +23,11 @@ type RestartState = 'idle' | 'busy' | 'done' | 'failed'
 function Step({
   done,
   label,
-  helper,
-  action
+  helper
 }: {
   done: boolean
   label: string
   helper?: string
-  action?: React.ReactNode
 }): React.JSX.Element {
   return (
     <li className="flex items-start gap-2">
@@ -38,10 +36,9 @@ function Step({
       ) : (
         <CircleDashed className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       )}
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm text-foreground">{label}</span>
         {helper ? <span className="text-xs text-muted-foreground">{helper}</span> : null}
-        {action}
       </div>
     </li>
   )
@@ -49,38 +46,29 @@ function Step({
 
 function FixSteps({
   mismatch,
-  restartState,
-  onOpenSettings,
-  onRestart
+  restartState
 }: {
   mismatch: PtyManagementFolderAccessMismatch
   restartState: RestartState
-  onOpenSettings: () => void
-  onRestart: () => void
 }): React.JSX.Element {
-  // Why `!== false`: a probe that could not answer must not accuse the user of a missing grant.
-  const allowed = mismatch.restartWillHelp !== false
-  const busy = restartState === 'busy'
   return (
     <>
       <ol className="flex flex-col gap-3">
         <Step
-          done={allowed}
+          done={mismatch.restartWillHelp === true}
           label={translate(
             'auto.components.shared.MacFolderAccessFixDialog.stepAllow',
             'Allow Orca under Files and Folders'
           )}
-          action={
-            // Why keep the button on an unanswered probe: opening the pane is the one step the
-            // user can always take, and hiding it would strand them.
-            mismatch.restartWillHelp === true ? undefined : (
-              <Button variant="outline" size="sm" onClick={onOpenSettings}>
-                {translate(
-                  'auto.components.shared.MacFolderAccessFixDialog.openSystemSettings',
-                  'Open System Settings'
-                )}
-              </Button>
-            )
+          helper={
+            // Why only when unanswered: a probe that could not answer must not accuse the user of a
+            // missing grant, but it must say why the step is left to them.
+            mismatch.restartWillHelp === null
+              ? translate(
+                  'auto.components.shared.MacFolderAccessFixDialog.stepAllowUnknown',
+                  'Orca couldn’t check this. Skip it if Orca is already allowed.'
+                )
+              : undefined
           }
         />
         <Step
@@ -93,17 +81,6 @@ function FixSteps({
             'auto.components.shared.MacFolderAccessFixDialog.restartConsequence',
             'Open terminals and agents will restart.'
           )}
-          action={
-            <Button size="sm" onClick={onRestart} disabled={!allowed || busy}>
-              {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-              {busy
-                ? translate(
-                    'auto.components.shared.MacFolderAccessFixDialog.restarting',
-                    'Restarting…'
-                  )
-                : translate('auto.components.shared.MacFolderAccessFixDialog.restart', 'Restart')}
-            </Button>
-          }
         />
       </ol>
       {restartState === 'failed' ? (
@@ -114,6 +91,65 @@ function FixSteps({
           )}
         </p>
       ) : null}
+    </>
+  )
+}
+
+/** The footer carries the active step's one action, so the steps stay a checklist. */
+function FixFooter({
+  mismatch,
+  restartState,
+  onCancel,
+  onOpenSettings,
+  onRestart
+}: {
+  mismatch: PtyManagementFolderAccessMismatch
+  restartState: RestartState
+  onCancel: () => void
+  onOpenSettings: () => void
+  onRestart: () => void
+}): React.JSX.Element {
+  const busy = restartState === 'busy'
+  const openSettingsLabel = translate(
+    'auto.components.shared.MacFolderAccessFixDialog.openSystemSettings',
+    'Open System Settings'
+  )
+  if (restartState === 'done') {
+    return (
+      <Button size="sm" onClick={onCancel}>
+        {translate('auto.components.shared.MacFolderAccessFixDialog.close', 'Close')}
+      </Button>
+    )
+  }
+  if (mismatch.restartWillHelp === false) {
+    return (
+      <>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          {translate('auto.components.shared.MacFolderAccessFixDialog.cancel', 'Cancel')}
+        </Button>
+        <Button size="sm" onClick={onOpenSettings}>
+          {openSettingsLabel}
+        </Button>
+      </>
+    )
+  }
+  return (
+    <>
+      {mismatch.restartWillHelp === null ? (
+        <Button variant="ghost" size="sm" onClick={onOpenSettings} disabled={busy}>
+          {openSettingsLabel}
+        </Button>
+      ) : (
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
+          {translate('auto.components.shared.MacFolderAccessFixDialog.cancel', 'Cancel')}
+        </Button>
+      )}
+      <Button size="sm" onClick={onRestart} disabled={busy}>
+        {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+        {busy
+          ? translate('auto.components.shared.MacFolderAccessFixDialog.restarting', 'Restarting…')
+          : translate('auto.components.shared.MacFolderAccessFixDialog.restart', 'Restart')}
+      </Button>
     </>
   )
 }
@@ -209,22 +245,21 @@ export function MacFolderAccessFixDialog(): React.JSX.Element | null {
           <p className="text-sm text-foreground">
             {translate(
               'auto.components.shared.MacFolderAccessFixDialog.done',
-              'Done. Terminals opened in your {{folder}} can read it now.',
+              'Terminal service restarted. Terminals in your {{folder}} should work now.',
               { folder }
             )}
           </p>
         ) : (
-          <FixSteps
+          <FixSteps mismatch={mismatch} restartState={restartState} />
+        )}
+        <DialogFooter>
+          <FixFooter
             mismatch={mismatch}
             restartState={restartState}
+            onCancel={close}
             onOpenSettings={onOpenSettings}
             onRestart={() => void onRestart()}
           />
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={close} disabled={busy}>
-            {translate('auto.components.shared.MacFolderAccessFixDialog.close', 'Close')}
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
