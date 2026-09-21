@@ -1,10 +1,17 @@
 import type { CommandHandler } from '../dispatch'
-import { formatEnvironment, formatEnvironmentList, formatHostList, printResult } from '../format'
+import {
+  formatEnvironment,
+  formatEnvironmentList,
+  formatHostList,
+  formatHostName,
+  printResult
+} from '../format'
 import { listSshTargets } from '../host-selector-alternatives'
-import { getDefaultUserDataPath, RuntimeClientError } from '../runtime-client'
+import { getDefaultUserDataPath, RuntimeClient, RuntimeClientError } from '../runtime-client'
 import type { RuntimeRpcSuccess } from '../runtime-client'
 import { rejectRemoteSelectionFlags } from '../remote-selection-flag-rejection'
 import { redactRuntimeEnvironment } from '../../shared/runtime-environments'
+import type { RuntimeStatus } from '../../shared/runtime-types'
 import {
   addEnvironmentFromPairingCode,
   listEnvironments,
@@ -15,6 +22,28 @@ import {
 } from '../runtime/environments'
 
 export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
+  'host name': async ({ client, flags, json }) => {
+    const requestedName = flags.get('name')
+    if (requestedName !== undefined && typeof requestedName !== 'string') {
+      throw new RuntimeClientError('invalid_argument', 'Missing value for --name')
+    }
+    if (typeof requestedName === 'string') {
+      const result = await client.call<{ machineName: string }>('settings.update', {
+        machineName: requestedName
+      })
+      printResult(result, json, (settings) => formatHostName({ machineName: settings.machineName }))
+      return
+    }
+    const descriptor = await readStatusDescriptor(client)
+    printResult(
+      localSuccess({
+        machineName: descriptor.machineName ?? 'unknown',
+        ...(descriptor.platform ? { platform: descriptor.platform } : {})
+      }),
+      json,
+      formatHostName
+    )
+  },
   'environment add': async ({ flags, json }) => {
     const name = getRequiredStringFlag(flags, 'name')
     const pairingCode = getRequiredStringFlag(flags, 'pairing-code')
@@ -40,12 +69,6 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       '`orca host list`. It answers from this machine\u2019s own pairing store, so a routed answer would name servers paired with a different machine.',
       'Run `orca host list` on that machine to see the SSH targets registered there.'
     )
-    const environments = listEnvironments(getDefaultUserDataPath()).map((environment) => ({
-      kind: 'environment' as const,
-      name: environment.name,
-      id: environment.id,
-      selector: `--environment ${environment.name}`
-    }))
     const sshTargets = (await listSshTargets(client)).map((target) => ({
       kind: 'ssh' as const,
       name: target.label,
@@ -55,13 +78,29 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       ...(target.connectionStatus ? { connectionStatus: target.connectionStatus } : {}),
       ...(target.remotePlatform ? { platform: target.remotePlatform } : {})
     }))
+    const localStatus = await readStatusDescriptor(client)
+    const environments = await Promise.all(
+      listEnvironments(getDefaultUserDataPath()).map(async (environment) => {
+        const descriptor = await readStatusDescriptor(
+          new RuntimeClient(getDefaultUserDataPath(), undefined, null, environment.name)
+        )
+        return {
+          kind: 'environment' as const,
+          name: environment.name,
+          id: environment.id,
+          selector: `--environment ${environment.name}`,
+          ...descriptor
+        }
+      })
+    )
     const hosts = [
       {
         kind: 'local' as const,
         name: 'this machine',
         id: 'local',
         selector: '--host local',
-        platform: process.platform
+        ...localStatus,
+        platform: localStatus.platform ?? process.platform
       },
       ...sshTargets,
       ...environments
@@ -74,7 +113,14 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       '`orca environment list`. Paired servers are stored on this machine, so there is no other host to ask.',
       'Run `orca environment list` on that machine to see the servers paired with it.'
     )
-    const environments = listEnvironments(getDefaultUserDataPath()).map(redactRuntimeEnvironment)
+    const environments = await Promise.all(
+      listEnvironments(getDefaultUserDataPath()).map(async (environment) => {
+        const descriptor = await readStatusDescriptor(
+          new RuntimeClient(getDefaultUserDataPath(), undefined, null, environment.name)
+        )
+        return { ...redactRuntimeEnvironment(environment), ...descriptor }
+      })
+    )
     printResult(localSuccess({ environments }), json, formatEnvironmentList)
   },
   'environment show': async ({ flags, json }) => {
@@ -95,6 +141,21 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       (result: EnvironmentRemoveResult) =>
         `Removed environment ${result.removed.name} (${result.removed.id}).`
     )
+  }
+}
+
+async function readStatusDescriptor(client: RuntimeClient): Promise<{
+  machineName?: string
+  platform?: string
+}> {
+  try {
+    const status = await client.call<RuntimeStatus>('status.get')
+    return {
+      ...(status.result.machineName ? { machineName: status.result.machineName } : {}),
+      ...(status.result.hostPlatform ? { platform: status.result.hostPlatform } : {})
+    }
+  } catch {
+    return {}
   }
 }
 

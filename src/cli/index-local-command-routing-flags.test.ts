@@ -89,12 +89,33 @@ describe('runtime-selector flags on locally pinned CLI commands', () => {
     expect(runtimeClientConstructorMock).toHaveBeenCalledWith(null, null)
   })
 
+  it('reads and updates the answering runtime machine name', async () => {
+    callMock.mockImplementation(async (method: string) => {
+      if (method === 'status.get') {
+        return okFixture('req_status', { machineName: 'm4airs-Air', hostPlatform: 'darwin' })
+      }
+      return okFixture('req_settings', { machineName: 'build-server' })
+    })
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(['host', 'name', '--json'], '/tmp/repo')
+    await main(['host', 'name', '--name', 'build-server', '--json'], '/tmp/repo')
+
+    const first = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
+    const second = JSON.parse(String(logSpy.mock.calls[1]?.[0]))
+    expect(first.result).toMatchObject({ machineName: 'm4airs-Air', platform: 'darwin' })
+    expect(second.result.machineName).toBe('build-server')
+    expect(callMock).toHaveBeenNthCalledWith(1, 'status.get')
+    expect(callMock).toHaveBeenNthCalledWith(2, 'settings.update', { machineName: 'build-server' })
+  })
+
   it('rejects `host list --environment` instead of answering with a half-routed listing', async () => {
     // Why: pre-fix this routed the SSH lookup to m4air while reading paired servers from this
     // machine, dropped the openclaw row, and still stamped `_meta.runtimeId: "local"` — one
     // listing describing two hosts, which reads as "m4air has no SSH targets".
     pairRuntimeEnvironment(listEnvironmentsMock, 'env-m4air', 'm4air')
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    runtimeClientConstructorMock.mockClear()
 
     await main(['host', 'list', '--environment', 'm4air', '--json'], '/tmp/repo')
 

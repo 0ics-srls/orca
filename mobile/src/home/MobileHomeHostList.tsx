@@ -21,7 +21,10 @@ type MobileHomeHostListProps = {
   hostConnections: HomeHostConnections
   hosts: HostCatalogEntry[]
   hostStates: Record<string, ConnectionState>
-  hostStatusByHostId: Record<string, { hostPlatform: NodeJS.Platform | null }>
+  hostStatusByHostId: Record<
+    string,
+    { hostPlatform: NodeJS.Platform | null; machineName: string | null }
+  >
   isWideLayout: boolean
   stats: HomeStatsSummary | null
   worktreeInfo: Record<string, HostWorktreeInfo>

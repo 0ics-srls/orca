@@ -9,13 +9,10 @@ import {
 } from '../mobile/paired-mobile-devices'
 import { useMobilePairingDevicePolling } from './mobile-pairing-device-polling'
 import type { MobileNetworkInterface } from './mobile-network-interface-selection'
-import { MobilePairingQrSection } from './MobilePairingQrSection'
-import { MobilePairedDevicesSection } from './MobilePairedDevicesSection'
-import { MobileAutoRestoreFitSection } from './MobileAutoRestoreFitSection'
+import { MobilePanePairingOutput } from './MobilePanePairingOutput'
 import { MobilePairingConnectionOptions } from './MobilePairingConnectionOptions'
 import { MobilePairingSetupSection } from './MobilePairingSetupSection'
 import { MobileRelayMintFailureNotice } from '../mobile/mobile-relay-mint-failure-notice'
-import { WindowsFirewallNotice } from '../mobile/WindowsFirewallNotice'
 import { translate } from '@/i18n/i18n'
 import {
   canMintMobilePairingOffer,
@@ -25,11 +22,14 @@ import type { MobileRelayMintFailure } from '../../../../shared/mobile-relay-min
 import { useMobilePairingConnectionMode } from '../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../mobile/use-mobile-pairing-address-preference'
 import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
+import { useDetectedMachineName } from './use-detected-machine-name'
 export { getMobilePaneSearchEntries } from './mobile-pane-search'
 
 export function MobilePane(): React.JSX.Element {
   const autoRestoreFitMs = useAppStore((s) => s.settings?.mobileAutoRestoreFitMs ?? null)
+  const machineName = useAppStore((s) => s.settings?.machineName ?? '')
   const updateSettings = useAppStore((s) => s.updateSettings)
+  const detectedMachineName = useDetectedMachineName()
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [qrSize, setQrSize] = useState<number | null>(null)
   const [pairingUrl, setPairingUrl] = useState<string | null>(null)
@@ -48,6 +48,7 @@ export function MobilePane(): React.JSX.Element {
   const [rotateNextQr, setRotateNextQr] = useState(false)
   const codeCopiedResetTimerRef = useRef<number | null>(null)
   const wasSignedInRef = useRef(signedIn)
+
   // Why: monotonically bumped per pairing request so a late getPairingQR
   // response cannot paint a stale QR after sign-out, a mode switch, or an
   // address change invalidated the request that produced it.
@@ -393,6 +394,9 @@ export function MobilePane(): React.JSX.Element {
   return (
     <div className="space-y-6">
       <MobilePairingSetupSection
+        machineName={machineName}
+        detectedMachineName={detectedMachineName}
+        onMachineNameChange={(name) => void updateSettings({ machineName: name })}
         connectionMode={connectionMode}
         canGenerate={canMintMobilePairingOffer({ connectionMode, signedIn })}
         addressDisclosureForcedOpen={shouldOpenMobilePairingAddress(settingsSearchQuery)}
@@ -437,7 +441,7 @@ export function MobilePane(): React.JSX.Element {
           : ''}
       </span>
 
-      <MobilePairingQrSection
+      <MobilePanePairingOutput
         qrDataUrl={qrDataUrl}
         qrSize={qrSize}
         qrError={qrError}
@@ -448,21 +452,10 @@ export function MobilePane(): React.JSX.Element {
         onQrEnlargedChange={setQrEnlarged}
         onCodeCopiedChange={setCodeCopied}
         onClearCodeCopiedTimer={clearCodeCopiedResetTimer}
-      />
-
-      <WindowsFirewallNotice
-        pairingReady={pairingUrl != null}
-        address={selectedAddress}
-        usingRelay={connectionMode === 'automatic'}
-      />
-
-      <MobilePairedDevicesSection
+        connectionMode={connectionMode}
+        selectedAddress={selectedAddress}
         devices={devices}
-        hasQrCode={qrDataUrl != null}
         onRevokeDevice={(deviceId) => void revokeDevice(deviceId)}
-      />
-
-      <MobileAutoRestoreFitSection
         autoRestoreFitMs={autoRestoreFitMs}
         onAutoRestoreFitChange={(ms) => void updateSettings({ mobileAutoRestoreFitMs: ms })}
       />

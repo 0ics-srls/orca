@@ -34,6 +34,7 @@ type Setters = {
 
 export type HomeHostStatus = {
   hostPlatform: NodeJS.Platform | null
+  machineName: string | null
 }
 
 async function fetchHomeHostStatus(
@@ -54,7 +55,10 @@ async function fetchHomeHostStatus(
     }
     setHostStatus((previous) => ({
       ...previous,
-      [entry.hostId]: { hostPlatform: status.hostPlatform ?? null }
+      [entry.hostId]: {
+        hostPlatform: status.hostPlatform ?? null,
+        machineName: status.machineName ?? null
+      }
     }))
   } catch {
     // Keep the last readable platform when a reconnect status read fails.

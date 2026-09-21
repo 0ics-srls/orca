@@ -35,3 +35,12 @@ describe('retired Agents sidebar setting', () => {
     expect(normalized.agentsSidebarMigratedFromExperimental).toBe(true)
   })
 })
+
+describe('machine name setting', () => {
+  it('trims persisted names and defaults missing legacy values to automatic detection', () => {
+    expect(normalizeLegacyProfile({ machineName: '  Build server  ' }).machineName).toBe(
+      'Build server'
+    )
+    expect(normalizeLegacyProfile({ machineName: undefined }).machineName).toBe('')
+  })
+})

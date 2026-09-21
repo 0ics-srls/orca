@@ -109,6 +109,8 @@ export function normalizeLoadedGlobalSettings(
     appIcon: normalizeAppIconId(parsed.settings?.appIcon),
     mobilePairingCustomAddress,
     mobilePairingCustomAddresses,
+    machineName:
+      typeof parsed.settings?.machineName === 'string' ? parsed.settings.machineName.trim() : '',
     // Why: persisted settings may be hand-edited or from older builds; keep tray-minimize false unless stored value is true.
     minimizeToTrayOnClose: parsed.settings?.minimizeToTrayOnClose === true,
     // Why: missing means default-on; round-trips unchanged on non-mac since darwin consumers gate the effect.

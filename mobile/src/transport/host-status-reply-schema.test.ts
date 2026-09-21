@@ -26,7 +26,7 @@ describe('the host status decodes from every version the gate admits', () => {
     expect(reads(hostStatusSchema, status)).toMatchObject(status)
   })
 
-  it('reads a host that answers none of the five fields', () => {
+  it('reads a host that answers none of the status fields', () => {
     expect(reads(hostStatusSchema, {})).toEqual({})
     expect(reads(hostStatusSchema, { error: 'refused' })).toMatchObject({ error: 'refused' })
   })
@@ -34,6 +34,11 @@ describe('the host status decodes from every version the gate admits', () => {
   it('reads the host platform from the existing status reply', () => {
     expect(reads(hostStatusSchema, { hostPlatform: 'darwin' }).hostPlatform).toBe('darwin')
     expect(reads(hostStatusSchema, { hostPlatform: 'plan9' }).hostPlatform).toBeUndefined()
+  })
+
+  it('reads an optional machine name from newer status replies', () => {
+    expect(reads(hostStatusSchema, { machineName: 'm4airs-Air' }).machineName).toBe('m4airs-Air')
+    expect(reads(hostStatusSchema, { machineName: 42 }).machineName).toBeUndefined()
   })
 
   it('names a reply that is not a status object at all', () => {

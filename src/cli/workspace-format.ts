@@ -105,7 +105,10 @@ function formatByteCount(bytes: number): string {
 }
 
 export function formatEnvironmentList(result: {
-  environments: PublicKnownRuntimeEnvironment[]
+  environments: (PublicKnownRuntimeEnvironment & {
+    machineName?: string
+    platform?: string
+  })[]
 }): string {
   if (result.environments.length === 0) {
     return 'No saved environments.'
@@ -113,7 +116,7 @@ export function formatEnvironmentList(result: {
   return result.environments
     .map(
       (environment) =>
-        `${environment.id}  ${environment.name}  ${environment.endpoints[0]?.endpoint ?? 'no-endpoint'}`
+        `${environment.id}  ${environment.name}${environment.machineName ? ` (${environment.machineName})` : ''}  ${environment.platform ?? 'platform unknown'}  ${environment.endpoints[0]?.endpoint ?? 'no-endpoint'}`
     )
     .join('\n')
 }

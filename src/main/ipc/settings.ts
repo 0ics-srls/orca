@@ -56,6 +56,9 @@ function sanitizeRendererSettingsUpdate(args: Partial<GlobalSettings>): Partial<
   // writes must pass the dedicated reviewed-fingerprint handlers.
   delete sanitizedArgs.pluginConsents
   delete sanitizedArgs.disabledPlugins
+  if (typeof sanitizedArgs.machineName === 'string') {
+    sanitizedArgs.machineName = sanitizedArgs.machineName.trim().slice(0, 255)
+  }
   return sanitizedArgs
 }
 

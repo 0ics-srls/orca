@@ -7,7 +7,7 @@ import { NODE_PLATFORM_NAMES } from './mobile-runtime-host-platform'
  *
  * Checked against src/main/runtime/rpc/methods/status.ts, which spreads `runtime.getStatus()` and
  * adds `appVersion` and `remoteUpdateSupport`. Every member is optional, because this reply has to
- * decode from every host version the protocol gate admits and each of the four fields arrived in a
+ * decode from every host version the protocol gate admits and each status field arrived in a
  * different release: an older host that answers none of them must still read, or the gate would
  * refuse the build it exists to evaluate.
  *
@@ -29,7 +29,8 @@ export const hostStatusSchema = z.looseObject({
   appVersion: salvagedOptional('appVersion', z.string()),
   floatingWorkspaceEnabled: salvagedOptional('floatingWorkspaceEnabled', z.boolean()),
   capabilities: salvagedOptional('capabilities', z.array(z.string())),
-  hostPlatform: salvagedOptional('hostPlatform', z.enum(NODE_PLATFORM_NAMES))
+  hostPlatform: salvagedOptional('hostPlatform', z.enum(NODE_PLATFORM_NAMES)),
+  machineName: salvagedOptional('machineName', z.string())
 })
 
 export type HostStatusReply = z.output<typeof hostStatusSchema>
