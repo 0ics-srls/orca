@@ -3,7 +3,8 @@ import {
   isAutomationGeneratedWorkspace,
   isCliCreatedWorkspace,
   isDetachedHeadWorkspace,
-  isSleepingSweepExemptWorkspace
+  isSleepingSweepExemptWorkspace,
+  getWorktreeIdsWithStructuredChat
 } from '@/components/sidebar/visible-worktrees'
 import { isDefaultBranchWorkspace } from '@/components/sidebar/default-branch-workspace'
 import { sortWorktreesSmart } from '@/components/sidebar/smart-sort'
@@ -56,6 +57,7 @@ export function useWorktreeJumpPaletteWorktrees({
   alwaysShowDefaultBranchWorkspace,
   ptyIdsByTabId,
   browserTabsByWorktree,
+  unifiedTabsByWorktree,
   activeWorktreeId,
   activeWorkspaceExecutionHostId,
   runtimeEnvironments,
@@ -129,7 +131,8 @@ export function useWorktreeJumpPaletteWorktrees({
             tabsByWorktree,
             ptyIdsByTabId,
             browserTabsByWorktree,
-            worktreeIdsWithLiveAgent
+            worktreeIdsWithLiveAgent,
+            getWorktreeIdsWithStructuredChat(unifiedTabsByWorktree)
           )
         ) {
           return false
@@ -150,7 +153,8 @@ export function useWorktreeJumpPaletteWorktrees({
       ptyIdsByTabId,
       showSleepingWorkspaces,
       tabsByWorktree,
-      worktreeIdsWithLiveAgent
+      worktreeIdsWithLiveAgent,
+      unifiedTabsByWorktree
     ]
   )
   const { visibleWorktreesForState, switchableWorktreesForRows } = useMemo(
