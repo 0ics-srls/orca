@@ -1,131 +1,105 @@
-# Structured native chat in the floating workspace
+# Make the floating workspace a first-class workspace
 
-Follow-up to #21390. That PR routed the floating launch button through the shared launcher and made
-it honour the chat-view default. This one makes the floating workspace able to host a real
-structured session.
+Follow-up to #21390. The host half is done (commit `3fc38da5c6`); this document covers the
+renderer half, which is the real work.
 
-## What works today, after #21390
+## The one cause behind three symptoms
 
-With `experimentalNativeChat` + `openAgentTabsInChatByDefault` on, the floating launch button opens
-the **terminal-backed** chat view: a chat interface drawn over a live agent TUI, with the user's
-model and effort preferences applied. It renders because `TerminalPaneNativeChatPortal` portals into
-the pane's own container, and the floating panel already hosts that pane.
+The floating panel does not use the shared workspace surface. `FloatingTerminalPanelSurface.tsx`
+re-implements the tab body by hand: it maps tabs to `TerminalPane`, `FloatingBrowserSlot`,
+`EmulatorPane` and `EditorPanel` itself, and it renders exactly one group
+(`use-floating-terminal-panel-items.ts:27-38` picks `groups.find(g => g.activeTabId != null)` and
+filters tabs to it).
 
-What it does not do is open a **structured** session, the way the main window does with
-`experimentalStructuredNativeChat` on. That is the gap here.
+Three consequences, all the same bug:
 
-## Why structured does not work in the floating workspace
+1. **Splitting a floating tab loses it.** The tab moves to a second group and the panel keeps
+   drawing the first. Nothing is deleted — the row and its PTY survive — but nothing renders it.
+   Present on `origin/main`; verified by diff.
+2. **No structured chat.** There is no `agent-session` branch in the hand-written body, so a
+   session created there would have no surface.
+3. **Every new pane type needs porting by hand**, which is why 1 and 2 exist at all.
 
-Not a renderer problem at root. A structured session record persists **no path**:
+Patching any one of these separately adds a fourth hand-written branch. The fix is to stop
+hand-writing the body.
 
-- `AgentSessionRecord` (`src/shared/agent-session-record.ts:125-142`) carries
-  `location: { executionHostId, wslDistro, workspaceId, workspaceKind }` and nothing else
-  place-like.
-- The working directory is re-derived from `location.workspaceId` on **every** acquisition — create
-  and resume alike — in both providers:
-  `src/main/claude/claude-structured-launch-resolution.ts:245`,
-  `src/main/codex/codex-structured-launch-resolution.ts:81`,
-  `src/main/claude/claude-tui-resume-launch.ts:95`.
-- The resolver (`src/main/runtime/orca-runtime-get-worktree-ps.ts:149`) maps `id:<workspaceId>` to a
-  **worktree row** and reads `.path`.
-- The session journal is workspace-keyed too:
-  `<userData>/agent-session-journal/<sha256(workspaceId)>/<sha256(sessionId)>/journal.db`
-  (`journal-paths.ts:26-36`).
+## What replaces it
 
-`FLOATING_TERMINAL_WORKTREE_ID` is `'global-floating-terminal'`, a constant rather than a row, so
-that lookup has nothing to return. `parseWorkspaceKey` (`workspace-scope.ts:15-25`) understands only
-`worktree:` and `folder:`, and `AgentSessionWorkspaceKind` (`:24`) is `'git-worktree' | 'folder'`.
+`WorktreeSplitSurface` (`src/renderer/src/components/TerminalWorktreeSplitSurface.tsx`, 99 lines)
+is what every other workspace uses, and it is already generic over `worktreeId`:
 
-The floating workspace does have a directory — `floatingTerminalCwd`, resolved main-side at
-`src/main/ipc/app.ts:317`. What it lacks is an identity the host can resolve. The blocker in
-`resolveStructuredNativeChatSupport` follows from that; it is the only member of
-`StructuredNativeChatBlocker` with no doc comment.
+```
+TabGroupSplitLayout               renders the whole group tree — splits included
+TerminalPaneOverlayLayer          terminals; already takes coldParkTerminalPanes / isForceParked
+RetainedBrowserPaneOverlayLayer   browser
+EmulatorPaneOverlayLayer          emulator
+StructuredAgentSessionPaneOverlayLayer   structured chat
+AiVaultSessionDropLayer           vault drops
+```
 
-Keying by id rather than path is deliberate and should not change: it is what makes a git worktree,
-a folder workspace, a WSL distro and an SSH host interchangeable, it survives a workspace being
-moved, and it keeps the host deriving the location from its own records rather than trusting a
-caller-supplied path.
+It works for floating because nothing in the chain needs a `Worktree` row.
+`useTabGroupWorkspaceModel` reads only `groupsByWorktree`, `unifiedTabsByWorktree`,
+`tabsByWorktree` and `browserTabsByWorktree`, all of which the floating workspace already fills,
+and its model already exposes `agentSessionItems`. Layout is populated per worktree id in
+`tabs-hydration.ts:222`, and floating is an admitted workspace id
+(`tabs-session-actions.ts:83`).
 
-## The plan
+**Keep the shell, replace the body.** The shell — bounds, dragging, resize handles, maximize,
+titlebar, window controls, the orchestration and save dialogs — is genuinely floating-specific and
+stays. The body becomes one `WorktreeSplitSurface`.
 
-### 1. Make the floating workspace resolvable
+## Steps
 
-Teach `resolveWorkspacePath` to answer for the floating sentinel using the resolved
-`floatingTerminalCwd`. The resolution already exists behind `app:getFloatingTerminalCwd`; this is
-wiring, not new behaviour.
+1. **Render the shared surface.** Mount `WorktreeSplitSurface` in the floating shell with
+   `worktreeId = FLOATING_TERMINAL_WORKTREE_ID` and `worktreePath` = the resolved floating cwd the
+   panel already holds. Note `TerminalPaneOverlayLayer:129` bails on an empty path, so the existing
+   "no cwd yet" gate is partly inherited rather than re-implemented.
+2. **Delete the hand-written body** from `FloatingTerminalPanelSurface.tsx` — the tab-to-pane maps
+   and the single-group projection in `use-floating-terminal-panel-items.ts`. Deleting this is the
+   point of the change; leaving it beside the new path would be the failure mode.
+3. **Re-home what is genuinely floating** (see the table below).
+4. **Prove the UI did not change** (see the evidence section).
 
-### 2. Record the directory the session actually ran in
+## The behaviours that must survive, and where each lands
 
-Add an optional resolved-path field to the session's location, written at create. At launch and
-resume, prefer it when it still exists on disk and fall back to the id-derived location when it does
-not.
+| Behaviour | Where it is now | Where it goes | Risk |
+|---|---|---|---|
+| Cold terminal parking | `parkedTerminalTabIds` in the panel | Already props on the shared layer: `coldParkTerminalPanes`, `isForceParked` | Low — pass them |
+| "Not until the panel has settled" mount gate | `cwd && panelViewportSettled` | Partly inherited via the empty-`worktreePath` bail; the maximize-restore timing still needs an explicit gate | Medium — a restored-maximized panel must not fit a live TUI to a grid it is about to leave |
+| Markdown + browser creators | Floating tab strip | Shared creation commands already exist, but they are `openNew…InActiveWorkspace` variants | **High — must target the floating group, not the active workspace** |
+| Floating selection stays out of the global selection | `activate: false` + `activateTab` (#21390) | Group-scoped selection in the shared model | **High — regressing this breaks the `agent-auto-ack-targets` invariant** |
+| Tab drag | `FloatingWorkspaceTabDragContext` | `TabGroupSplitLayout`'s own dnd | **High — two drag systems must not both be live** |
 
-This matters because `floatingTerminalCwd` is a user setting that can be repointed at any time.
-Without it, repointing the floating folder silently moves where every existing floating chat
-resumes. The path stays a **verified cache over the id**, never the authority — the id remains what
-the journal is keyed by and what a resume trusts when the cached path is gone.
+The three High rows are the actual cost of this change. Each gets a test that fails without it.
 
-Check that adding an optional field does not disturb `isAgentSessionExecutionLocation`
-(`agent-session-record.ts:193-203`); it validates named fields, so an extra optional one should pass,
-but confirm rather than assume.
+## What "good" means here
 
-### 3. Label floating sessions `'folder'`
+- **One surface, not two.** If the change ends with a floating-only rendering path still in the
+  tree, it has failed regardless of whether chat works.
+- **No flag.** A flag would mean maintaining both surfaces; the point is to have one.
+- **No new floating branch inside shared components.** If a shared component needs to know it is
+  floating, that is a signal the seam is wrong — prefer passing a prop the shared component already
+  understands (as `worktreePath` and `coldParkTerminalPanes` already are).
+- **Deletions should outweigh additions.** The body being removed is ~349 lines; the replacement is
+  a component call plus the re-homed behaviours.
 
-Do **not** add a third member to `AgentSessionWorkspaceKind`. It is validated as a closed enum on
-every persisted row (`agent-session-record.ts:201`, `agent-status-subject.ts:80`) and participates in
-the ownership identity comparison (`structured-agent-session-status-ownership.ts:34`). A new value
-means a schema bump and an older build rejecting the new rows.
+## How we prove the UI is unchanged
 
-`'folder'` describes how Orca manages the place — a directory the user pointed it at, rather than a
-git worktree Orca created — not whether the directory contains a repo. Folder workspaces routinely
-contain repos. Neither of the two sites that read the label branches on it behaviourally; both only
-check it is one of the allowed values.
+The constraint is that this looks identical. Test it, do not assert it:
 
-### 4. Lift the blocker
-
-Remove the `workspaceKind === 'floating'` branch from `resolveStructuredNativeChatSupport`, update
-its tests, and give the remaining blockers the doc comment this one never had.
-
-### 5. Render it in the floating panel
-
-`StructuredAgentSessionPaneOverlayLayer` is already generic over `worktreeId` and is mounted once at
-`TerminalWorktreeSplitSurface.tsx:92`. Preferred approach is to mount it for
-`FLOATING_TERMINAL_WORKTREE_ID`, which needs two supporting changes:
-
-- Its slots position through `RetainedPaneHost`, which anchors to `[data-tab-group-body-id]` —
-  emitted only by `TabGroupPanel.tsx:338`. The floating panel does not use `TabGroupPanel`; it
-  renders each pane type directly. It needs to publish that anchor.
-- `use-floating-terminal-panel-items.ts` computes `activeEditorUnifiedId` as "any tab that is not
-  terminal, browser or simulator", so an `agent-session` tab is currently misread as a file-editor
-  tab. Exclude it.
-
-`TabBar` already renders `agent-session` items (`tab-bar-item-surface.tsx:230`), so the tab strip
-needs nothing.
-
-Fallback if the anchor fights the panel's fixed-position shell: render
-`NativeChatView mode="structured"` directly, the way the panel already renders `TerminalPane`. More
-code, same approach the panel already takes for every other pane type.
-
-## Worth fixing while we are here
-
-Orca has no fallback when a session's workspace has moved or been deleted — `resolveWorkspacePath`
-either resolves or it does not. Step 2 introduces the first one, for the floating case. Consider
-whether the same verify-then-fall-back should cover git worktrees removed out from under a session.
-
-## Risk
-
-Steps 1–4 are small and traced. Step 5 carries the uncertainty: the floating panel is a parallel tab
-surface rather than a user of the shared one, which is why every pane type has had to be added to it
-by hand. If that turns out to be more than a day, the panel's divergence from `TabGroupPanel` is the
-real debt and worth raising separately rather than absorbing here.
-
-## How to validate
-
-- Launch structured chat in the floating panel and confirm it is genuinely a session, not a terminal
-  wearing a chat UI: no chat/terminal toggle in the pane header, and a `journal.db` under the
-  workspace hash.
-- Restart the app and confirm the session resumes in the floating panel.
-- Repoint `floatingTerminalCwd` in Settings and confirm an existing session still resumes in the
-  directory it originally ran in.
-- Delete that directory and confirm the session falls back rather than failing to launch.
+- Electron screenshots of the floating panel before and after, same profile and bounds: empty
+  state, one terminal, several tabs, maximized, and with an editor and a browser tab open.
+- Drag a tab to split and confirm both panes render — the bug that motivated this.
+- Launch structured chat in the panel; confirm a real session (Orca-rendered chat, no
+  chat/terminal toggle in the pane header, a `journal.db` under the workspace hash) rather than a
+  terminal wearing a chat UI.
+- Restart the app; confirm the session resumes in the panel.
 - Confirm a floating launch still does not move the main window's active tab.
+
+## Still open
+
+**Where should a floating chat reopen after the floating folder is changed in Settings?** Today it
+reopens wherever the setting now points, because the directory is looked up fresh each time. The
+alternative is to record the directory the session actually ran in, check it still exists on
+reopen, and fall back to the setting when it is gone. Recommended, and separable — it is host-side
+and lands as its own commit that can be dropped independently of this work.
