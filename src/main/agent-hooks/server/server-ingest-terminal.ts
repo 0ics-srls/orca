@@ -4,9 +4,9 @@ import { parseLegacyNumericPaneKey, parsePaneKey } from '../../../shared/stable-
 import { terminalStatusPayloadMatchesHook } from '../../../shared/agent-terminal-status-equivalence'
 import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
 import type { EnrichedAgentHookEventPayload } from './server-types'
-import { AgentHookServerIngestNormalization } from './server-ingest-normalization'
+import { AgentHookServerIngestAntigravityScreen } from './server-ingest-antigravity-screen'
 
-export abstract class AgentHookServerIngestTerminal extends AgentHookServerIngestNormalization {
+export abstract class AgentHookServerIngestTerminal extends AgentHookServerIngestAntigravityScreen {
   ingestTerminalStatus(event: {
     ptyId?: string
     paneKey: string
