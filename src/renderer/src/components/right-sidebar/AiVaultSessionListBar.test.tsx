@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { aiVaultBrowseSortMenu, aiVaultSearchSortMenu } from './ai-vault-sort-options'
 import {
-  AiVaultResultCountLabel,
+  aiVaultResultCountLabel,
   AiVaultSessionListBar,
-  AiVaultSessionCountLabel
+  aiVaultSessionCountLabel
 } from './AiVaultSessionListBar'
 
 afterEach(cleanup)
@@ -14,7 +14,7 @@ afterEach(cleanup)
 it('reports how many hits are shown and which order produced them', () => {
   const { rerender } = render(
     <AiVaultSessionListBar
-      label={<AiVaultResultCountLabel count={1} />}
+      label={aiVaultResultCountLabel(1)}
       value="relevance"
       menu={aiVaultSearchSortMenu()}
       onChange={vi.fn()}
@@ -25,7 +25,7 @@ it('reports how many hits are shown and which order produced them', () => {
 
   rerender(
     <AiVaultSessionListBar
-      label={<AiVaultResultCountLabel count={20} />}
+      label={aiVaultResultCountLabel(20)}
       value="newest"
       menu={aiVaultSearchSortMenu()}
       onChange={vi.fn()}
@@ -38,7 +38,7 @@ it('reports how many hits are shown and which order produced them', () => {
 it('reports how much of the browsed history is shown and its order', () => {
   render(
     <AiVaultSessionListBar
-      label={<AiVaultSessionCountLabel shown={4} loaded={12} />}
+      label={aiVaultSessionCountLabel(4, 12)}
       value="created"
       menu={aiVaultBrowseSortMenu()}
       onChange={vi.fn()}
@@ -51,7 +51,7 @@ it('reports how much of the browsed history is shown and its order', () => {
 it('counts plainly when filters hide nothing', () => {
   render(
     <AiVaultSessionListBar
-      label={<AiVaultSessionCountLabel shown={12} loaded={12} />}
+      label={aiVaultSessionCountLabel(12, 12)}
       value="updated"
       menu={aiVaultBrowseSortMenu()}
       onChange={vi.fn()}
@@ -65,7 +65,7 @@ it('hands the picked search order back to the caller', async () => {
   const user = userEvent.setup({ pointerEventsCheck: 0 })
   render(
     <AiVaultSessionListBar
-      label={<AiVaultResultCountLabel count={20} />}
+      label={aiVaultResultCountLabel(20)}
       value="relevance"
       menu={aiVaultSearchSortMenu()}
       onChange={onChange}
@@ -83,7 +83,7 @@ it('hands the picked browse order back to the caller', async () => {
   const user = userEvent.setup({ pointerEventsCheck: 0 })
   render(
     <AiVaultSessionListBar
-      label={<AiVaultSessionCountLabel shown={4} loaded={12} />}
+      label={aiVaultSessionCountLabel(4, 12)}
       value="updated"
       menu={aiVaultBrowseSortMenu()}
       onChange={onChange}

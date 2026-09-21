@@ -37,12 +37,12 @@ import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
 import { AiVaultPanelHeader } from './AiVaultPanelHeader'
 import {
-  AiVaultResultCountLabel,
+  aiVaultResultCountLabel,
   AiVaultSessionListBar,
-  AiVaultSessionCountLabel
+  aiVaultSessionCountLabel
 } from './AiVaultSessionListBar'
 import { aiVaultBrowseSortMenu, aiVaultSearchSortMenu } from './ai-vault-sort-options'
-import { AiVaultShowMoreSessionsRow } from './AiVaultSessionLimitMenu'
+import { AiVaultShowMoreSessionsRow } from './AiVaultShowMoreSessionsRow'
 import { AiVaultSessionVirtualList } from './AiVaultSessionVirtualList'
 import { useAiVaultSessionRefresh } from './ai-vault-session-refresh'
 import {
@@ -160,7 +160,8 @@ export default function AiVaultPanel(): React.JSX.Element {
     loading,
     refresh,
     scanResult,
-    sessions: history
+    sessions: history,
+    loadedSessionLimit
   } = useAiVaultSessionRefresh(scopePaths, executionHostScope, sessionLimit)
   // Why an identity and not paths: a project's worktrees are the host's to
   // enumerate, and a repo with hundreds of them has no path list a request can carry.
@@ -333,31 +334,26 @@ export default function AiVaultPanel(): React.JSX.Element {
 
       {!searching && <AiVaultScanIssueBanners scanResult={scanResult} />}
       <AiVaultPanelSearch search={search} noAgents={agents.length === 0}>
-        {filteredSessions.length > 0 &&
-          (searching ? (
-            <AiVaultSessionListBar
-              label={<AiVaultResultCountLabel count={filteredSessions.length} />}
-              value={searchSort}
-              menu={aiVaultSearchSortMenu()}
-              onChange={setSearchSort}
-            />
-          ) : (
-            <AiVaultSessionListBar
-              label={
-                <AiVaultSessionCountLabel
-                  shown={filteredSessions.length}
-                  loaded={sessions.length}
-                />
-              }
-              value={sort}
-              menu={aiVaultBrowseSortMenu()}
-              onChange={setSort}
-            />
-          ))}
+        {searching
+          ? filteredSessions.length > 0 && (
+              <AiVaultSessionListBar
+                label={aiVaultResultCountLabel(filteredSessions.length)}
+                value={searchSort}
+                menu={aiVaultSearchSortMenu()}
+                onChange={setSearchSort}
+              />
+            )
+          : sessions.length > 0 && (
+              <AiVaultSessionListBar
+                label={aiVaultSessionCountLabel(filteredSessions.length, sessions.length)}
+                value={sort}
+                menu={aiVaultBrowseSortMenu()}
+                onChange={setSort}
+              />
+            )}
         {(!searching || sessions.length > 0 || search.loading) && (
           <AiVaultSessionVirtualList
             key={searching ? search.resetKey : 'history'}
-            hideGroupHeaders={searching}
             searchHits={searching ? searchHits : undefined}
             groups={groups}
             collapsedGroups={collapsedGroups}
@@ -408,6 +404,7 @@ export default function AiVaultPanel(): React.JSX.Element {
         {!searching && (
           <AiVaultShowMoreSessionsRow
             loaded={sessions.length}
+            loadedSessionLimit={loadedSessionLimit}
             loading={loading}
             sessionLimit={sessionLimit}
             onSessionLimitChange={setSessionLimit}

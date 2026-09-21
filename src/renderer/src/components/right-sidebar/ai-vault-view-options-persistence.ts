@@ -1,5 +1,6 @@
 import {
   AI_VAULT_AGENTS,
+  AI_VAULT_SEARCH_SORTS,
   type AiVaultAgent,
   type AiVaultGroup,
   type AiVaultSearchSort,
@@ -49,12 +50,12 @@ export function enabledAiVaultAgents(disabledAgents: readonly AiVaultAgent[]): A
   return AI_VAULT_AGENTS.filter((agent) => !disabled.has(agent))
 }
 
-export function isAiVaultSort(value: unknown): value is AiVaultSort {
+function isAiVaultSort(value: unknown): value is AiVaultSort {
   return value === 'updated' || value === 'created'
 }
 
-export function isAiVaultSearchSort(value: unknown): value is AiVaultSearchSort {
-  return value === 'relevance' || value === 'newest'
+function isAiVaultSearchSort(value: unknown): value is AiVaultSearchSort {
+  return AI_VAULT_SEARCH_SORTS.some((sort) => sort === value)
 }
 
 function isAiVaultGroup(value: unknown): value is AiVaultGroup {

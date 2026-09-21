@@ -1,5 +1,4 @@
 import type React from 'react'
-import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,41 +12,23 @@ import { translate } from '@/i18n/i18n'
 import type { AiVaultSortMenu } from './ai-vault-sort-options'
 
 /** Left-hand label while searching: how many hits the list is showing. */
-export function AiVaultResultCountLabel({ count }: { count: number }): React.JSX.Element {
-  return (
-    <>
-      {count === 1
-        ? translate('sessionSearch.panel.resultsOne', '{{count}} result', { count })
-        : translate('sessionSearch.panel.resultsOther', '{{count}} results', { count })}
-    </>
-  )
+export function aiVaultResultCountLabel(count: number): string {
+  return count === 1
+    ? translate('sessionSearch.panel.resultsOne', '{{count}} result', { count })
+    : translate('sessionSearch.panel.resultsOther', '{{count}} results', { count })
 }
 
 /** Left-hand label while browsing: the count, and how much of the scan filters hid. */
-export function AiVaultSessionCountLabel({
-  shown,
-  loaded
-}: {
-  shown: number
-  loaded: number
-}): React.JSX.Element {
+export function aiVaultSessionCountLabel(shown: number, loaded: number): string {
   if (shown !== loaded) {
-    return (
-      <>
-        {translate('sessionSearch.panel.sessionsOfLoaded', '{{value0}} of {{value1}} sessions', {
-          value0: shown,
-          value1: loaded
-        })}
-      </>
-    )
+    return translate('sessionSearch.panel.sessionsOfLoaded', '{{value0}} of {{value1}} sessions', {
+      value0: shown,
+      value1: loaded
+    })
   }
-  return (
-    <>
-      {shown === 1
-        ? translate('sessionSearch.panel.sessionsOne', '{{count}} session', { count: shown })
-        : translate('sessionSearch.panel.sessionsOther', '{{count}} sessions', { count: shown })}
-    </>
-  )
+  return shown === 1
+    ? translate('sessionSearch.panel.sessionsOne', '{{count}} session', { count: shown })
+    : translate('sessionSearch.panel.sessionsOther', '{{count}} sessions', { count: shown })
 }
 
 /**
@@ -60,7 +41,7 @@ export function AiVaultSessionListBar<Value extends string>({
   menu,
   onChange
 }: {
-  label: ReactNode
+  label: string
   value: Value
   menu: AiVaultSortMenu<Value>
   onChange: (value: Value) => void
