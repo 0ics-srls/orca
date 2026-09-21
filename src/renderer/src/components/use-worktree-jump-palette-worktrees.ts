@@ -4,6 +4,7 @@ import {
   isCliCreatedWorkspace,
   isDetachedHeadWorkspace,
   isSleepingSweepExemptWorkspace,
+  EMPTY_STRUCTURED_CHAT_WORKTREE_IDS,
   getWorktreeIdsWithStructuredChat
 } from '@/components/sidebar/visible-worktrees'
 import { isDefaultBranchWorkspace } from '@/components/sidebar/default-branch-workspace'
@@ -96,6 +97,9 @@ export function useWorktreeJumpPaletteWorktrees({
         : EMPTY_PAIRED_DEVICE_IDS_BY_ENVIRONMENT,
     [hideWorkspacesFromOtherDevices, runtimeEnvironments, runtimeStatusByEnvironmentId]
   )
+  const worktreeIdsWithStructuredChat = showSleepingWorkspaces
+    ? EMPTY_STRUCTURED_CHAT_WORKTREE_IDS
+    : getWorktreeIdsWithStructuredChat(unifiedTabsByWorktree)
   const emptyQueryVisibleWorktrees = useMemo(
     () =>
       allWorktrees.filter((worktree) => {
@@ -132,7 +136,7 @@ export function useWorktreeJumpPaletteWorktrees({
             ptyIdsByTabId,
             browserTabsByWorktree,
             worktreeIdsWithLiveAgent,
-            getWorktreeIdsWithStructuredChat(unifiedTabsByWorktree)
+            worktreeIdsWithStructuredChat
           )
         ) {
           return false
@@ -154,7 +158,7 @@ export function useWorktreeJumpPaletteWorktrees({
       showSleepingWorkspaces,
       tabsByWorktree,
       worktreeIdsWithLiveAgent,
-      unifiedTabsByWorktree
+      worktreeIdsWithStructuredChat
     ]
   )
   const { visibleWorktreesForState, switchableWorktreesForRows } = useMemo(

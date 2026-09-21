@@ -36,7 +36,7 @@ export function getVisibleWorktreeBrowserActivityTabs(
   return browserProjection.project(browserTabsByWorktree)
 }
 
-const EMPTY_WORKTREE_IDS: ReadonlySet<string> = new Set()
+export const EMPTY_STRUCTURED_CHAT_WORKTREE_IDS: ReadonlySet<string> = new Set()
 const structuredChatWorktreeIds = new WeakMap<Record<string, Tab[]>, ReadonlySet<string>>()
 
 /**
@@ -51,7 +51,7 @@ export function getWorktreeIdsWithStructuredChat(
   unifiedTabsByWorktree: Record<string, Tab[]> | null | undefined
 ): ReadonlySet<string> {
   if (!unifiedTabsByWorktree) {
-    return EMPTY_WORKTREE_IDS
+    return EMPTY_STRUCTURED_CHAT_WORKTREE_IDS
   }
   // Keyed on the snapshot, like the tab projection it reads: zustand re-runs every mounted card's
   // selector on each store write, and this is a whole-store scan.

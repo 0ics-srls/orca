@@ -24,7 +24,10 @@ import {
 import type { Worktree } from '../../../../shared/worktree/types'
 import { buildWorktreeComparator, sortWorktreesSmart } from './smart-sort'
 import { isInactiveWorkspace } from '@/lib/worktree-activity-state'
-export { getWorktreeIdsWithStructuredChat } from './visible-worktree-activity-inputs'
+export {
+  EMPTY_STRUCTURED_CHAT_WORKTREE_IDS,
+  getWorktreeIdsWithStructuredChat
+} from './visible-worktree-activity-inputs'
 // Runtime edge only one way: the builder imports VisibleWorktreeOptions as a type, which erases.
 import { buildVisibleWorktreeOptionsFromState } from './visible-worktree-options-from-state'
 import { useAppStore } from '@/store'

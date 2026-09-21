@@ -11,6 +11,7 @@ import {
   getPairedDeviceIdsByEnvironment
 } from '../../workspace-creator-visibility'
 import {
+  EMPTY_STRUCTURED_CHAT_WORKTREE_IDS,
   getVisibleWorktreeBrowserActivityTabs,
   getVisibleWorktreeTerminalActivityTabs,
   getWorktreeIdsWithStructuredChat
@@ -72,7 +73,9 @@ export function useVisibleSidebarWorktrees(args: {
     !showSleepingWorkspaces ? getVisibleWorktreeBrowserActivityTabs(s.browserTabsByWorktree) : null
   )
   const worktreeIdsWithStructuredChat = useAppStore((s) =>
-    getWorktreeIdsWithStructuredChat(s.unifiedTabsByWorktree)
+    showSleepingWorkspaces
+      ? EMPTY_STRUCTURED_CHAT_WORKTREE_IDS
+      : getWorktreeIdsWithStructuredChat(s.unifiedTabsByWorktree)
   )
 
   const recomputedVisibleWorktrees = useMemo(() => {
