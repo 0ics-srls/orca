@@ -10,13 +10,13 @@ import { allResumeSessionIds, type ResumeCandidate } from './native-chat-resume-
 import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-restart-dialog'
 
 /**
- * Which interrupted chats the host is still offering to reconnect.
+ * Which interrupted chats the host is still offering to resume.
  *
  * The offer is the HOST's answer, not a list whichever surface rendered first happens to be
  * holding. It has to be, because the host retires an offer for reasons no renderer can see —
- * simply reopening a chat re-acquires its provider at the same cursor, which is the whole of what
- * reconnecting would have done. So this fetches the list and both surfaces read it, and anything
- * about to ACT on the offer asks the host again first.
+ * simply reopening a chat re-acquires its provider at the same cursor, which is the reattach half
+ * of a resume. So this fetches the list and both surfaces read it, and anything about to ACT on
+ * the offer asks the host again first.
  *
  * What stays on this side is the user's own facts: the snooze, and the preference that decides
  * whether the launch asks at all.
@@ -100,7 +100,11 @@ export function clearNativeChatRestartOffer(): void {
 
 /**
  * This launch's single read of the offer, and the one decision the preference makes: ask, or
- * reconnect without asking.
+ * resume without asking.
+ *
+ * "Resume automatically" has to mean the same thing the button means, or the preference is a lie:
+ * the identical call, reattaching AND asking each agent to carry on. Reattaching on its own is
+ * what opening the chat already does, so a silent version of that would recover nothing.
  *
  * Runs once however many surfaces mount, so the count and the dialog describe the same answer and
  * an opted-in launch cannot dispatch twice.
@@ -117,18 +121,20 @@ async function loadLaunchOffer(): Promise<void> {
     return
   }
   // Identical call to the dialog's own button; the host re-derives eligibility either way.
-  const result = await callStructuredAgentSession<{ results: RestartActionOutcome[] }>(
-    LOCAL,
-    'agentSession.restartResume',
-    {}
-  ).catch(() => null)
+  const result = await callStructuredAgentSession<{
+    /** Which chats the host reattached, and so which claims it spent. Optional because the payload
+     *  is unvalidated, exactly as the dialog reads it. */
+    resumed?: RestartActionOutcome[]
+    continued: RestartActionOutcome[]
+  }>(LOCAL, 'agentSession.restartContinue', {}).catch(() => null)
   if (!result) {
-    announceRestartUnconfirmed(offered.length, 'reconnect')
+    announceRestartUnconfirmed(offered.length, 'continue')
     return
   }
-  // Automatic must never be silent: someone who ticked the box months ago still sees this.
-  announceRestartResults(allResumeSessionIds(offered), result.results, 'reconnect')
-  settleNativeChatRestartOffer(result.results.map((entry) => entry.sessionId))
+  // Automatic must never be silent: someone who ticked the box months ago still sees this, and
+  // this is the only place they learn a message went out on their behalf.
+  announceRestartResults(allResumeSessionIds(offered), result.continued, 'continue')
+  settleNativeChatRestartOffer((result.resumed ?? []).map((entry) => entry.sessionId))
 }
 
 /**

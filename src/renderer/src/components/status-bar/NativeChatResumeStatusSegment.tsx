@@ -8,7 +8,7 @@ import {
   useNativeChatRestartOffer
 } from '../native-chat-resume-on-restart-store'
 
-// Why: closing the reconnect dialog is a snooze, not a decline — the host keeps the offer. This is
+// Why: closing the resume dialog is a snooze, not a decline — the host keeps the offer. This is
 // then the only surface left carrying it, so it is always rendered rather than gated by
 // `statusBarItems`.
 
@@ -39,11 +39,11 @@ export function NativeChatResumeStatusSegment({
     count === 1
       ? translate(
           'auto.components.status.bar.NativeChatResumeStatusSegment.labelOne',
-          '1 chat to reconnect'
+          '1 chat to resume'
         )
       : translate(
           'auto.components.status.bar.NativeChatResumeStatusSegment.label',
-          '{{value0}} chats to reconnect',
+          '{{value0}} chats to resume',
           { value0: count }
         )
   return (
@@ -57,11 +57,11 @@ export function NativeChatResumeStatusSegment({
             count === 1
               ? translate(
                   'auto.components.status.bar.NativeChatResumeStatusSegment.ariaLabelOne',
-                  '1 chat available to reconnect'
+                  '1 chat available to resume'
                 )
               : translate(
                   'auto.components.status.bar.NativeChatResumeStatusSegment.ariaLabel',
-                  '{{value0}} chats available to reconnect',
+                  '{{value0}} chats available to resume',
                   { value0: count }
                 )
           }
@@ -73,7 +73,7 @@ export function NativeChatResumeStatusSegment({
       <TooltipContent side="top" sideOffset={6}>
         {translate(
           'auto.components.status.bar.NativeChatResumeStatusSegment.tooltip',
-          'Open interrupted chats available to reconnect'
+          'Open interrupted chats available to resume'
         )}
       </TooltipContent>
     </Tooltip>

@@ -32,9 +32,9 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     }
   }),
   defineMethod({
-    // Reconnect AND ask each reconnected agent to carry on. Separate from `restartResume` on
-    // purpose: that method sends nothing, and the automatic-reconnect setting only ever calls it,
-    // so no configuration can reach this one.
+    // Reattach AND ask each reattached agent to carry on — what the desktop prompt now calls
+    // resuming, and what an opted-in launch runs without asking. Still a separate method from
+    // `restartResume`, which sends nothing, but no longer one that only a button can reach.
     name: 'agentSession.restartContinue',
     params: RestartResumeParams,
     handler: async (params, ctx) => {
@@ -47,6 +47,9 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     }
   }),
   defineMethod({
+    // Reattach only, no send. The desktop prompt stopped calling this once its single action became
+    // resume-and-continue, but it stays: it is a published wire method, and its absence is what an
+    // older or non-desktop client would be met with.
     name: 'agentSession.restartResume',
     params: RestartResumeParams,
     handler: async (params, ctx) => {

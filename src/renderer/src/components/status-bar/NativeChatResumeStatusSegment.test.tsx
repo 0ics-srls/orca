@@ -72,8 +72,8 @@ describe('NativeChatResumeStatusSegment', () => {
     rpc.mockResolvedValue({ sessions: candidates })
     await mount()
 
-    expect(screen.getByRole('button', { name: '2 chats available to reconnect' })).toBeTruthy()
-    expect(screen.getByText('2 chats to reconnect')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '2 chats available to resume' })).toBeTruthy()
+    expect(screen.getByText('2 chats to resume')).toBeTruthy()
 
     expect(getNativeChatResumeOnRestartDialogRequest()).toBe(false)
     await act(async () => screen.getByRole('button').click())
@@ -89,8 +89,8 @@ describe('NativeChatResumeStatusSegment', () => {
     rpc.mockResolvedValue({ sessions: candidates.slice(0, 1) })
     await mount()
 
-    expect(screen.getByRole('button', { name: '1 chat available to reconnect' })).toBeTruthy()
-    expect(screen.getByText('1 chat to reconnect')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '1 chat available to resume' })).toBeTruthy()
+    expect(screen.getByText('1 chat to resume')).toBeTruthy()
   })
 
   // The count can lag the host — another window may have dismissed the offer. The re-read decides.
@@ -128,6 +128,6 @@ describe('NativeChatResumeStatusSegment', () => {
     await mount(true)
 
     expect(screen.getByRole('button').textContent).toContain('2')
-    expect(screen.queryByText('2 chats to reconnect')).toBeNull()
+    expect(screen.queryByText('2 chats to resume')).toBeNull()
   })
 })

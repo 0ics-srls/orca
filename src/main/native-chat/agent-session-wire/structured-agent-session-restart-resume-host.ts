@@ -40,10 +40,13 @@ export type StructuredAgentSessionRestartResumeSurfaces = {
   /** The resume-capable hold; see the runner for why a hold and not a send. */
   hold: (sessionId: string, holderId: string) => Promise<void>
   release: (sessionId: string, holderId: string) => void
-  /** The host's own send. Reached ONLY from `continueAfterRestart` — `resume` never calls it, which
-   *  is what makes "automatic reconnect can never continue" structural.
+  /** The host's own send. Reached ONLY from `continueAfterRestart`; `resume` still never calls it,
+   *  so reattaching on its own sends nothing. That is no longer a guarantee about SETTINGS, though:
+   *  a launch the user opted into calls `continueAfterRestart` directly, which is acceptable
+   *  because the work is the user's own, the message asks the agent to verify its last action
+   *  before repeating it, and the launch toast reports what happened.
    *
-   *  Typed against the wire result rather than a hand-written subset: an narrower local shape hid
+   *  Typed against the wire result rather than a hand-written subset: a narrower local shape hid
    *  `value.submission` here once, and the continuation reads it. */
   send: (input: {
     envelope: AgentSessionMutationEnvelope
@@ -70,7 +73,8 @@ export type StructuredAgentSessionRestartResume = {
     sessionIds: readonly string[] | undefined,
     owner: string
   ) => Promise<StructuredAgentSessionResumeOutcome[]>
-  /** Reconnect, then ask each reconnected agent to carry on. A deliberate user action only. */
+  /** Reattach, then ask each reattached agent to carry on — what the UI calls resuming, whether
+   *  the user pressed it or opted into it happening at launch. */
   continueAfterRestart: (
     sessionIds: readonly string[] | undefined,
     owner: string
@@ -163,9 +167,9 @@ export function createStructuredAgentSessionRestartResume(
     )
   }
 
-  /** Reconnect first, then send. Continuation is a message ON TOP of a reconnect and reuses every
+  /** Reattach first, then send. Continuation is a message ON TOP of a reattach and reuses every
    *  guard the resume path applies — eligibility, the admission gate, staggering, consume-once —
-   *  rather than re-deriving any of them. A session that did not reconnect is never sent to. */
+   *  rather than re-deriving any of them. A session that did not reattach is never sent to. */
   const continueAfterRestart = async (
     sessionIds: readonly string[] | undefined,
     owner: string

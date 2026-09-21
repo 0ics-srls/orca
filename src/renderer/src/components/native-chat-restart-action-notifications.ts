@@ -1,6 +1,14 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 
+/**
+ * What Orca tells the user after acting on a restart offer.
+ *
+ * `continue` is the only action a surface takes now — resuming always reattaches AND sends. The
+ * `reconnect` wording belongs to the host's plain-reattach RPC, which is still published on the
+ * wire, so its vocabulary stays here rather than being reinvented if anything calls it again.
+ */
+
 export type RestartActionOutcome = {
   sessionId: string
   outcome: 'resumed' | 'continued' | 'pending' | 'unknown' | 'refused'
@@ -12,10 +20,10 @@ function announceResumed(count: number): void {
   }
   toast(
     count === 1
-      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Reconnected 1 chat')
+      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Resumed 1 chat')
       : translate(
           'auto.components.NativeChatResumeOnRestartModal.resumedMany',
-          'Reconnected {{value0}} chats',
+          'Resumed {{value0}} chats',
           {
             value0: count
           }
@@ -31,11 +39,11 @@ function announceContinued(count: number): void {
     count === 1
       ? translate(
           'auto.components.NativeChatResumeOnRestartModal.continuedOne',
-          'Reconnected 1 chat and asked it to continue'
+          'Resumed 1 chat and asked it to continue'
         )
       : translate(
           'auto.components.NativeChatResumeOnRestartModal.continuedMany',
-          'Reconnected {{value0}} chats and asked them to continue',
+          'Resumed {{value0}} chats and asked them to continue',
           { value0: count }
         )
   )
@@ -54,7 +62,7 @@ export function announceRestartUnconfirmed(count: number, action: 'reconnect' | 
         )
       : translate(
           'auto.components.NativeChatResumeOnRestartModal.reconnectUnconfirmed',
-          'Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.',
+          'Resuming is unconfirmed for {{value0}} chats. You can still open them normally.',
           { value0: count, count }
         )
   )
@@ -65,7 +73,7 @@ export function announceRestartDismissUnconfirmed(): void {
   toast(
     translate(
       'auto.components.NativeChatResumeOnRestartModal.dismissUnconfirmed',
-      'Dismissing the reconnect offer was not confirmed — it may still be in the status bar.'
+      'Dismissing the resume offer was not confirmed — it may still be in the status bar.'
     )
   )
 }
@@ -105,7 +113,7 @@ export function announceRestartResults(
           )
         : translate(
             'auto.components.NativeChatResumeOnRestartModal.reconnectRefused',
-            '{{value0}} chats could not be reconnected. You can still open them normally.',
+            '{{value0}} chats could not be resumed. You can still open them normally.',
             { value0: refused, count: refused }
           )
     )

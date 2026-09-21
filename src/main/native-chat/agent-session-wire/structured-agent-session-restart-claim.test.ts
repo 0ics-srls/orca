@@ -216,9 +216,10 @@ describe('the restart-resume surface', () => {
     expect(snapshot).toHaveBeenCalledTimes(1)
   })
 
-  // The structural guarantee behind "the checkbox can never continue": the reconnect path contains
-  // no send at all, so no setting, and no automatic launch, can turn it into a continuation.
-  it('never sends a message when reconnecting', async () => {
+  // Reattaching stays a send-free operation: continuing is layered on top of it, never something
+  // `resume` does by itself. It is no longer a guarantee about SETTINGS, though — an opted-in
+  // launch now calls `continueAfterRestart` instead of this.
+  it('never sends a message when reattaching', async () => {
     const { restartResume, held, sent } = surface({})
 
     await restartResume.resume(undefined, 'modal')
@@ -227,7 +228,7 @@ describe('the restart-resume surface', () => {
     expect(sent).toEqual([])
   })
 
-  it('reconnects and then sends exactly one continuation carrying the shared message', async () => {
+  it('reattaches and then sends exactly one continuation carrying the shared message', async () => {
     const { restartResume, held, sent } = surface({})
 
     const result = await restartResume.continueAfterRestart(undefined, 'modal')

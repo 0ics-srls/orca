@@ -85,10 +85,7 @@ afterEach(() => {
   consumeNativeChatResumeOnRestartDialogRequest()
 })
 
-it.each([
-  ['Reconnect 1', 'agentSession.restartResume'],
-  ['Reconnect and continue', 'agentSession.restartContinue']
-])('keeps next-launch preference out of the current %s action', async (label, method) => {
+it('keeps next-launch preference out of the current resume action', async () => {
   const action = Promise.withResolvers<unknown>()
   rpc.mockImplementation(async (_target, calledMethod) => {
     if (calledMethod === 'agentSession.restartResumable') {
@@ -99,30 +96,47 @@ it.each([
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
   await act(async () => checkbox(2).click())
-  await act(async () => button(label).click())
+  await act(async () => button('Resume 1').click())
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
   expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
     ['agentSession.restartResumable', undefined],
-    [method, { sessionIds: ['a'] }]
+    ['agentSession.restartContinue', { sessionIds: ['a'] }]
   ])
   await act(async () =>
     action.resolve({
-      results: [{ sessionId: 'a', outcome: 'resumed' }],
+      resumed: [{ sessionId: 'a', outcome: 'resumed' }],
       continued: [{ sessionId: 'a', outcome: 'continued' }]
     })
   )
   expect(rpc).toHaveBeenCalledTimes(2)
 })
 
+// One primary action and one way out of it. The vacuous plain-reconnect button, the Not now button
+// and the "what gets sent" popover are gone; the body copy carries the transparency now.
+it('offers exactly Dismiss all and the resume action', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  // Row and preference checkboxes are buttons too; the controls are what is left after them.
+  const controls = document.querySelectorAll('[role="dialog"] button:not([role="checkbox"])')
+  expect([...controls].map((entry) => entry.textContent?.trim())).toEqual([
+    'Dismiss all',
+    'Resume all',
+    'Close'
+  ])
+})
+
 // Snoozing saves the preference like every other way out of the dialog, and calls NOTHING: the
-// offer is the host's and stays exactly where it was.
-it('keeps Not now available through the status-bar offer', async () => {
+// offer is the host's and stays exactly where it was. Closing the dialog is the only snooze left
+// now that Not now is gone, so it has to keep doing all of that.
+it('snoozes to the status-bar offer when the dialog is closed', async () => {
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(2).click())
-  await act(async () => button('Not now').click())
+  await act(async () => button('Close').click())
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
   expect(rpc.mock.calls.map((call) => call[1])).toEqual(['agentSession.restartResumable'])
   expect(offerIds()).toEqual(['a', 'b'])
@@ -169,9 +183,9 @@ it('saves Don’t ask again when the offer is dismissed outright', async () => {
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
 })
 
-// Reopening must ask the host again, never replay the launch answer: the chats already reconnected
-// are gone from its list, and offering them back earns the user a refusal.
-it('never re-offers a reconnected chat when the status entry reopens the dialog', async () => {
+// Reopening must ask the host again, never replay the launch answer: the chats already resumed are
+// gone from its list, and offering them back earns the user a refusal.
+it('never re-offers a resumed chat when the status entry reopens the dialog', async () => {
   let remaining = offered
   rpc.mockImplementation(async (_target, method) => {
     if (method === 'agentSession.restartResumable') {
@@ -179,7 +193,10 @@ it('never re-offers a reconnected chat when the status entry reopens the dialog'
     }
     // The host spends the claim it settled, so its next answer no longer names that chat.
     remaining = remaining.filter((candidate) => candidate.sessionId !== 'a')
-    return { results: [{ sessionId: 'a', outcome: 'resumed' }] }
+    return {
+      resumed: [{ sessionId: 'a', outcome: 'resumed' }],
+      continued: [{ sessionId: 'a', outcome: 'continued' }]
+    }
   })
   await act(async () =>
     root.render(
@@ -190,23 +207,22 @@ it('never re-offers a reconnected chat when the status entry reopens the dialog'
     )
   )
   await act(async () => checkbox(1).click())
-  await act(async () => button('Reconnect 1').click())
+  await act(async () => button('Resume 1').click())
   expect(offerIds()).toEqual(['b'])
-
-  await act(async () => button('Not now').click())
+  // The action closes the dialog itself; the status entry is the way back to what is left.
   expect(document.querySelector('[role="dialog"]')).toBeNull()
 
-  await act(async () => button('1 chat to reconnect').click())
+  await act(async () => button('1 chat to resume').click())
   expect(document.querySelector('[role="dialog"]')).not.toBeNull()
   expect(offerIds()).toEqual(['b'])
-  // One offered row plus the preference box — never the reconnected chat again.
+  // One offered row plus the preference box — never the resumed chat again.
   expect(document.querySelectorAll('[role="checkbox"]')).toHaveLength(2)
 })
 
-// Continuing spends the same claims reconnecting does, so the offer has to shrink with it. A count
-// left standing over chats the host already handed back sends the user to a status entry that
-// re-reads, finds nothing, and does nothing.
-it('settles the offer for the chats a continuation reconnected', async () => {
+// Resuming spends the host's claims, so the offer has to shrink with it. A count left standing over
+// chats the host already handed back sends the user to a status entry that re-reads, finds nothing,
+// and does nothing.
+it('settles the offer for the chats a resume reattached', async () => {
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable'
       ? { sessions: offered }
@@ -217,11 +233,13 @@ it('settles the offer for the chats a continuation reconnected', async () => {
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
-  await act(async () => button('Reconnect and continue').click())
+  await act(async () => button('Resume 1').click())
   expect(offerIds()).toEqual(['b'])
 })
 
-it('automatically reconnects once when the launch begins opted in', async () => {
+// The point of the preference. "Resume automatically" has to run the action the button runs —
+// reattach AND ask each agent to carry on — or it recovers nothing that opening the chat would not.
+it('resumes and continues once when the launch begins opted in', async () => {
   useAppStore.setState({
     settings: {
       ...getDefaultSettings(''),
@@ -230,7 +248,12 @@ it('automatically reconnects once when the launch begins opted in', async () => 
     }
   })
   rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : {
+          resumed: offered.map(({ sessionId }) => ({ sessionId, outcome: 'resumed' })),
+          continued: offered.map(({ sessionId }) => ({ sessionId, outcome: 'continued' }))
+        }
   )
   await act(async () =>
     root.render(
@@ -253,9 +276,32 @@ it('automatically reconnects once when the launch begins opted in', async () => 
   )
   expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
     ['agentSession.restartResumable', undefined],
-    ['agentSession.restartResume', {}]
+    ['agentSession.restartContinue', {}]
   ])
+  // Automatic is never silent, and the offer shrinks by what the host says it reattached.
+  expect(toast).toHaveBeenCalledWith('Resumed 2 chats and asked them to continue')
+  expect(offerIds()).toEqual([])
   expect(document.querySelector('[role="dialog"]')).toBeNull()
+})
+
+// An opted-in launch reports the chats the host would not take, exactly as the button does.
+it('reports refused and newly ineligible chats on an opted-in launch', async () => {
+  useAppStore.setState({
+    settings: {
+      ...getDefaultSettings(''),
+      experimentalStructuredNativeChat: true,
+      nativeChatResumeWorkOnRestart: true
+    }
+  })
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : { resumed: [], continued: [{ sessionId: 'a', outcome: 'refused' }] }
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  expect(toast).toHaveBeenCalledWith(
+    '2 chats could not be continued. Open them to continue manually.'
+  )
 })
 
 it('dispatches the selected action while a future preference save is still pending', async () => {
@@ -267,9 +313,9 @@ it('dispatches the selected action while a future preference save is still pendi
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
   await act(async () => checkbox(2).click())
-  await act(async () => button('Reconnect 1').click())
+  await act(async () => button('Resume 1').click())
   expect(rpc.mock.calls.at(-1)?.slice(1)).toEqual([
-    'agentSession.restartResume',
+    'agentSession.restartContinue',
     { sessionIds: ['a'] }
   ])
   await act(async () => saved.reject(new Error('settings write failed')))
@@ -288,7 +334,7 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
           }
     )
     await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-    await act(async () => button('Reconnect and continue').click())
+    await act(async () => button('Resume all').click())
     const notices = vi
       .mocked(toast)
       .mock.calls.map(([text]) => text)
@@ -301,33 +347,19 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
   }
 )
 
-it('reports refused and newly ineligible reconnects', async () => {
-  rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable'
-      ? { sessions: offered }
-      : { results: [{ sessionId: 'a', outcome: 'refused' }] }
-  )
+it('reports a lost resume response without retrying the action', async () => {
+  rpc.mockImplementation(async (_target, method) => {
+    if (method === 'agentSession.restartResumable') {
+      return { sessions: offered }
+    }
+    throw new Error('response lost')
+  })
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-  await act(async () => button('Reconnect all').click())
-  expect(toast).toHaveBeenCalledWith(expect.stringContaining('2 chats could not be reconnected'))
+  await act(async () => button('Resume all').click())
+  expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
+  expect(rpc).toHaveBeenCalledTimes(2)
+  expect(document.querySelector('[role="dialog"]')).toBeNull()
 })
-
-it.each(['Reconnect all', 'Reconnect and continue'])(
-  'reports a lost %s response without retrying the action',
-  async (label) => {
-    rpc.mockImplementation(async (_target, method) => {
-      if (method === 'agentSession.restartResumable') {
-        return { sessions: offered }
-      }
-      throw new Error('response lost')
-    })
-    await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-    await act(async () => button(label).click())
-    expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
-    expect(rpc).toHaveBeenCalledTimes(2)
-    expect(document.querySelector('[role="dialog"]')).toBeNull()
-  }
-)
 
 it('keeps an unconfirmed delivery visible when another chat was refused', async () => {
   rpc.mockImplementation(async (_target, method) =>
@@ -341,7 +373,7 @@ it('keeps an unconfirmed delivery visible when another chat was refused', async 
         }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-  await act(async () => button('Reconnect and continue').click())
+  await act(async () => button('Resume all').click())
   expect(toast).toHaveBeenCalledWith('1 chat could not be continued. Open it to continue manually.')
   expect(vi.mocked(toast).mock.calls.at(-1)?.[0]).toBe(
     'Continuation delivery is unconfirmed for 1 chat. Open it to check before sending another message.'

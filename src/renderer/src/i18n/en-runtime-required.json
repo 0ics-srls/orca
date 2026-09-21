@@ -80,12 +80,10 @@
         "manyAgents": "{{value0}} agents",
         "oneAgent": "1 agent",
         "projects": "Folder workspaces",
-        "reconnectAgent": "Reconnect {{value0}} chat",
-        "reconnectRefused_one": "{{value0}} chat could not be reconnected. You can still open it normally.",
-        "reconnectRefused_other": "{{value0}} chats could not be reconnected. You can still open them normally.",
-        "reconnectUnconfirmed_one": "Reconnection is unconfirmed for {{value0}} chat. You can still open it normally.",
-        "reconnectUnconfirmed_other": "Reconnection is unconfirmed for {{value0}} chats. You can still open them normally.",
-        "resume": "Reconnect"
+        "reconnectRefused_one": "{{value0}} chat could not be resumed. You can still open it normally.",
+        "reconnectRefused_other": "{{value0}} chats could not be resumed. You can still open them normally.",
+        "reconnectUnconfirmed_one": "Resuming is unconfirmed for {{value0}} chat. You can still open it normally.",
+        "reconnectUnconfirmed_other": "Resuming is unconfirmed for {{value0}} chats. You can still open them normally."
       },
       "NewWorkspaceComposerCard": {
         "0e587e31fb": "yaml",
