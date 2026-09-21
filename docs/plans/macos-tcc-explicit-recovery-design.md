@@ -67,7 +67,8 @@ deadline, argv only, scrubbed env, single JSON line, anything else is `unknown`.
 same poll as `freshDaemonAccess: 'allowed' | 'denied' | 'unknown'`.
 
 **Renderer: toast.** Title, one sentence, one action, in `useMacTccAttributionSeveredNotice.ts`.
-Once per daemon scope per app session; the X latches the scope (sonner's `onDismiss`, which also
+Once per scope per app session, where a scope is the daemon identity plus the folder class, so one
+daemon denied a second folder raises a new toast that replaces the first; the X latches the scope (sonner's `onDismiss`, which also
 fires for programmatic `toast.dismiss`, so the hook clears its scope before any programmatic
 takedown and only counts a user's X as `dismissed`). No cancel button: every other toast in the
 app dismisses through the X alone.
@@ -102,7 +103,11 @@ macOS is blocking Orca's terminal service from this folder.
   prompts from the app, then forces the fresh-daemon re-probe. Allowed → step 1 turns green and
   Restart appears. Still denied → "Still blocked after the reset." and the buttons stay. Reset
   failed or unsupported → "Couldn't reset the permission. Use System Settings instead." Open
-  System Settings remains as the ghost fallback.
+  System Settings remains as the ghost fallback. Reset is offered only for the three TCC folder
+  classes (`MAC_TCC_FOLDER_CLASSES`); a denial in `other-home`/`outside-home` has no row to
+  reset, so Open System Settings takes the primary slot. The prompting read races a 60 s deadline:
+  an unanswered sheet reports `reset_outcome_unknown` and releases the dialog instead of holding
+  it busy for the session.
 - `unknown`: step 1 shows "Couldn't verify. Skip if already allowed."; Settings stays reachable as the
   ghost button and Restart is offered, because an unanswered probe must not accuse the user.
 - Step 1 also completes itself without the button: the poll re-runs on window focus, main
@@ -120,7 +125,9 @@ macOS is blocking Orca's terminal service from this folder.
 - The existing Manage Sessions confirmation copy is updated to match ("Open terminals and agents
   will restart. Terminals on remote hosts are not affected.").
 
-**Recovery and clearing.** Evidence is keyed by daemon identity; a restart replaces the identity,
+**Recovery and clearing.** Evidence is keyed by daemon identity plus folder class; the dialog is
+derived from the store and renders only while the latest verdict's scope equals the scope the
+user opened, so evidence that moves or clears unmounts it. A restart replaces the identity,
 so the next poll returns `null` and the toast is dismissed. If the replacement daemon is also
 denied, the next spawn re-records, the toast returns, and the dialog reopens with step 1 unchecked.
 
@@ -149,8 +156,9 @@ ships gated behind the probe and is judged by its telemetry; G1 below is the oth
 
 **Tests.** `terminal-host-cwd-readability.test.ts` for opendir mapping (EPERM, EACCES, ENOENT,
 ENOTDIR, readable, empty). Evidence store: records only on divergence, one per identity, clears
-on success or identity change, ignores daemons without the field. IPC shape. Hook: toast once per
-scope, dismissal latch, clears when the poll returns `null`, no toast when both sides fail or the
+on success or identity change, mints a new scope per folder class, ignores daemons without the
+field. IPC shape. Reset: class gate, prompt deadline. Hook: toast once per scope, dismissal
+latch, a replaced toast's dismissal ignored, clears when the poll returns `null`, no toast when both sides fail or the
 path is missing. No Electron perf gate: nothing new runs on the spawn path beyond one `opendir`.
 
 ## 3. Open gate
