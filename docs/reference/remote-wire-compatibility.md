@@ -190,10 +190,36 @@ Run it with:
 pnpm exec vitest run --config config/vitest.config.ts tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts
 ```
 
-The harness covers the terminal stream and the structured agent-session surface. It does
-**not** cover the session-tab sync channel, legacy agent-session publications, file or Git
-RPCs, mobile/E2EE framing, or the relay transport. A change on those paths still needs its
-own reasoning against the three rules above.
+`tests/e2e/cross-version-wire/cross-version-agent-status-wire.unit.test.ts` pairs the same
+two builds over the agent-status store. The execution host owns status in one store and
+every reader subscribes to it, so a remote host and its client each keep a copy that updates
+on its own schedule. Rule 1 does not hold on this surface: the snapshot and mutation-envelope
+decoders refuse a payload carrying a key they do not know, so an added field breaks the older
+peer rather than being ignored by it. The suite carries a snapshot, the mutation envelope that
+follows it, and an OSC status payload in both directions, and checks that no arm the baseline
+can send has been dropped.
+
+`tests/e2e/cross-version-wire/cross-version-relay-transport-wire.unit.test.ts` pairs the relay.
+It is the one wire whose endpoints are not both the app: the daemon lives on the remote host
+and keeps running across a desktop update, which is why the handshake carries a version and the
+bridge has a dedicated exit code for refusing a mismatched one. The suite skews the handshake
+and a desktop JSON-RPC frame in both directions. Reaching the frozen daemon needs `src/relay`
+in the extracted tree, so `ARCHIVE_PATHS` in `release-checkout-tree.ts` includes it.
+
+The harness covers the terminal stream, the structured agent-session surface, the agent-status
+store and the relay handshake and framing. It does **not** cover the session-tab sync channel,
+legacy agent-session publications, file or Git RPCs, mobile/E2EE framing, or what the relay
+*publishes* over its transport — the workspace snapshot, hook envelopes and pty publications are
+Rule 3 surfaces with no pairing yet. A change on those paths still needs its own reasoning
+against the rules above.
+
+Every suite in `tests/e2e/cross-version-wire/` runs in the `cross-version-wire` PR job and
+nowhere else — the unit shards exclude the directory, because a shallow shard clone has no tags
+for an extracted release to skew against. The job's vitest argv is therefore the only thing
+deciding whether a file executes, so it names the directory rather than a list of files, and
+`config/scripts/cross-version-wire-lane-registration.test.mjs` holds that shut. Which diffs
+start the job is a separate list, `CROSS_VERSION_WIRE_PREFIXES` in
+`config/scripts/pr-code-change-scope.mjs`; a wire module missing from it runs no pairing at all.
 
 ## Worked example: `agentWait` on terminal and worker reads
 
