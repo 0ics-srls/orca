@@ -107,7 +107,9 @@ export class AntigravityAccountService {
     if (!accounts.some((account) => account.id === id)) {
       throw new Error('Antigravity account was not found.')
     }
-    if (this.activeAccountId === id) {
+    // Resolve the native credential here too; callers may remove before the first list refresh.
+    const active = await this.knownActiveAccount(accounts)
+    if (active?.id === id || this.activeAccountId === id) {
       throw new Error('Select another Antigravity account before removing the active account.')
     }
     this.store.write(accounts.filter((account) => account.id !== id))

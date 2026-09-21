@@ -69,4 +69,15 @@ describe('AntigravityAccountService', () => {
     await expect(service.removeAccount(account.id)).rejects.toThrow('active account')
     await expect(service.selectAccount('missing')).rejects.toThrow('was not found')
   })
+
+  it('protects the active account even before the first list refresh', async () => {
+    const active = backend(first)
+    const account = createSyntheticAntigravityAccount(first)
+    const service = new AntigravityAccountService(
+      createMemoryAntigravityAccountStore([account]),
+      active
+    )
+
+    await expect(service.removeAccount(account.id)).rejects.toThrow('active account')
+  })
 })
