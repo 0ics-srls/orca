@@ -11,12 +11,7 @@ import {
   BRIDGE_ACK_INTERVAL_BYTES,
   BRIDGE_ACK_INTERVAL_FRAMES
 } from './bridge-client-subscriptions'
-import {
-  BRIDGE_PROTOCOL_VERSION,
-  readBridgeClientMessage,
-  type BridgeClientMessage,
-  type BridgeHostMessage
-} from './bridge-envelope'
+import { BRIDGE_PROTOCOL_VERSION, type BridgeHostMessage } from './bridge-envelope'
 import {
   BRIDGE_READY_RETRY_MAX_MS,
   BRIDGE_READY_RETRY_MIN_MS
@@ -24,100 +19,16 @@ import {
 import {
   BridgeClientCapExceededError,
   BridgeClientClosedError,
-  BridgeClientNotReadyError,
-  createBridgeRpcClient,
-  type BridgeRpcClientDiagnostic
+  BridgeClientNotReadyError
 } from './bridge-rpc-client'
-
-const CONNECTION = {
-  state: 'connected',
-  reconnectAttempt: 2,
-  lastConnectedAt: 1700,
-  lastInboundAt: 1800,
-  generation: 5
-} as const
-
-const INIT: BridgeHostMessage = {
-  v: BRIDGE_PROTOCOL_VERSION,
-  type: 'init',
-  sessionId: 'session-a',
-  buildId: 'build-a',
-  connection: CONNECTION,
-  grants: { rpc: { maxPendingRequests: 64, maxSubscriptions: 32 }, native: [] }
-}
-
-type PageClientOptions = {
-  send?: (json: string) => void
-  /** A port that ignores its own unsubscribe, which is the only way to observe the read guard. */
-  keepDeliveringAfterUnsubscribe?: boolean
-}
-
-function createPageClient(options: PageClientOptions = {}) {
-  const sent: string[] = []
-  const diagnostics: BridgeRpcClientDiagnostic[] = []
-  let handler: ((json: string) => void) | null = null
-  const client = createBridgeRpcClient({
-    send: (json) => {
-      sent.push(json)
-      options.send?.(json)
-    },
-    onMessage: (received) => {
-      handler = received
-      return () => {
-        if (options.keepDeliveringAfterUnsubscribe !== true) {
-          handler = null
-        }
-      }
-    },
-    onDiagnostic: (diagnostic) => {
-      diagnostics.push(diagnostic)
-    }
-  })
-  return {
-    client,
-    sent,
-    diagnostics,
-    deliver(frame: unknown): void {
-      handler?.(JSON.stringify(frame))
-    },
-    deliverRaw(json: string): void {
-      handler?.(json)
-    },
-    frames(): BridgeClientMessage[] {
-      return sent.map((json) => {
-        const read = readBridgeClientMessage(json)
-        if (!read.ok) {
-          throw new Error(`the shell would have refused this frame: ${read.refusal}`)
-        }
-        return read.message
-      })
-    },
-    start(): void {
-      this.deliver(INIT)
-    }
-  }
-}
-
-/** Narrows what a rejection handed back, so a test reads an error rather than asserting one. */
-function readError(thrown: unknown): Error {
-  if (!(thrown instanceof Error)) {
-    throw new Error(`expected an Error, got ${typeof thrown}`)
-  }
-  return thrown
-}
-
-function eventFrame(id: string, seq: number, payload: unknown): BridgeHostMessage {
-  return { v: BRIDGE_PROTOCOL_VERSION, type: 'event', id, seq, payload }
-}
-
-/** The id the client minted for the nth exchange it opened, read back off its own frame. */
-function idOf(page: ReturnType<typeof createPageClient>, index: number): string {
-  const frame = page.frames().filter((message) => 'id' in message)[index]
-  if (frame === undefined || !('id' in frame)) {
-    throw new Error('the page opened no such exchange')
-  }
-  return frame.id
-}
+import {
+  CONNECTION,
+  INIT,
+  createPageClient,
+  eventFrame,
+  idOf,
+  readError
+} from './bridge-page-client-test-harness'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -211,8 +122,45 @@ describe('bridge client handshake', () => {
     expect(page.client.getShellSession()).toEqual({
       sessionId: 'session-a',
       buildId: 'build-a',
-      grants: INIT.grants
+      grants: INIT.grants,
+      // A shell too old to name a screen, which is a state the page has an answer for.
+      route: null,
+      // And one that names no page routes, so the page hands every navigation back.
+      pageRoutes: [],
+      pageRouteGrants: null,
+      // And no host and no stored keys, which is what `host-store.web.ts` then answers with.
+      host: null,
+      storage: {}
     })
+  })
+
+  it('posts nothing, and says so, when the shell granted no navigate', () => {
+    // An older shell: `notify` is a closed union there, so the frame would be refused whole. The
+    // page has to learn that before it decides it has navigated, which is why this answers.
+    const page = createPageClient()
+    page.deliver({ ...INIT, grants: { ...INIT.grants, native: [] } })
+    const before = page.sent.length
+    expect(page.client.notifyNavigate('/h/host-a/tasks')).toBe(false)
+    expect(page.sent).toHaveLength(before)
+  })
+
+  it('posts the screen it was granted the right to ask for', () => {
+    const page = createPageClient()
+    page.deliver({ ...INIT, grants: { ...INIT.grants, native: ['navigate'] } })
+    expect(page.client.notifyNavigate('/h/host-a/tasks')).toBe(true)
+    expect(JSON.parse(page.sent.at(-1) ?? '{}')).toEqual({
+      v: BRIDGE_PROTOCOL_VERSION,
+      type: 'notify',
+      name: 'navigate',
+      href: '/h/host-a/tasks'
+    })
+  })
+
+  it('carries the screen the shell opened this page for', () => {
+    const page = createPageClient()
+    const route = { pathname: '/h/host-a/session/wt-1', params: { name: 'a branch' } }
+    page.deliver({ ...INIT, route })
+    expect(page.client.getShellSession()?.route).toEqual(route)
   })
 
   it('answers a generation the shell does not keep with a constant epoch', () => {
@@ -484,43 +432,6 @@ describe('bridge client replies', () => {
   })
 })
 
-describe('bridge client refusals and send failures', () => {
-  it('reports a frame its own reader will not take, and changes nothing', () => {
-    const page = createPageClient()
-    page.start()
-    page.deliverRaw('{ not json')
-    page.deliverRaw(JSON.stringify({ v: 99, type: 'state' }))
-    page.deliverRaw(`"${'z'.repeat(BRIDGE_MAX_MESSAGE_BYTES)}"`)
-    expect(page.diagnostics).toEqual([
-      { kind: 'refused', refusal: 'malformed-json' },
-      { kind: 'refused', refusal: 'unrecognised-message' },
-      { kind: 'refused', refusal: 'oversized' }
-    ])
-    expect(page.client.getState()).toBe('connected')
-  })
-
-  it('fails a request whose frame never left the page, without the delivery mark', async () => {
-    let live = true
-    const page = createPageClient({
-      send: () => {
-        if (!live) {
-          throw new Error('the port is gone')
-        }
-      }
-    })
-    page.start()
-    live = false
-    const answer = page.client.sendRequest('worktree.ps')
-    const error = await answer.catch((thrown: unknown) => thrown)
-    expect(readError(error).name).toBe('BridgeSendFailedError')
-    expect(isRpcDeliveryUnknown(error)).toBe(false)
-    expect(page.diagnostics.at(-1)).toEqual({
-      kind: 'send-failed',
-      error: expect.any(Error)
-    })
-  })
-})
-
 describe('bridge client caps', () => {
   it('refuses the request past the shell grant without a round trip', async () => {
     const page = createPageClient()
@@ -699,7 +610,7 @@ describe('bridge client binary frames', () => {
     expect(opened[1]).toHaveProperty('wantsBinary', true)
   })
 
-  it('decodes to the frame a native listener would have been handed', () => {
+  it('decodes to the frame a native listener would have been handed, base64 kept beside it', () => {
     const page = createPageClient()
     page.start()
     const onBinaryFrame = vi.fn()
@@ -710,7 +621,10 @@ describe('bridge client binary frames', () => {
       seq: 41,
       format: 'png',
       metadata: { imageWidth: 8 },
-      image
+      image,
+      // The page's data URI wants base64 and this is the base64 the shell sent, so the web frame
+      // path reads it instead of encoding `image` back into the same string every frame.
+      b64
     })
   })
 
