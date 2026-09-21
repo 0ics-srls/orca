@@ -35,13 +35,13 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({ kind: 'none' })
   })
 
-  it('names the bound leaf of the one recorded owner', () => {
+  it('finds the one tab whose layout records the pty', () => {
     const s = state({
       layouts: { 'tab-a': { root: leaf('leaf-a'), ptyIdsByLeafId: { 'leaf-a': PTY_ID } } }
     })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-a', leafId: 'leaf-a', tier: 'recorded' }
+      owner: { tabId: 'tab-a', tier: 'recorded' }
     })
   })
 
@@ -49,7 +49,7 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     const s = state({ layouts: { 'tab-a': { ptyIdsByLeafId: { 'leaf-a': PTY_ID } } } })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-a', leafId: 'leaf-a', tier: 'recorded' }
+      owner: { tabId: 'tab-a', tier: 'recorded' }
     })
   })
 
@@ -62,7 +62,15 @@ describe('resolveTerminalPtyPaneOwnership', () => {
 
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-a', leafId: 'leaf-a', tier: 'recorded' }
+      owner: { tabId: 'tab-a', tier: 'recorded' }
+    })
+    expect(resolveTerminalPtyPaneOwnership(s, '')).toEqual({ kind: 'none' })
+  })
+
+  it('does not let an empty binding make a rooted layout look like an owner either', () => {
+    // The leaf is in the tree, so only the emptiness of the binding can refuse it.
+    const s = state({
+      layouts: { 'tab-a': { root: leaf('leaf-a'), ptyIdsByLeafId: { 'leaf-a': '' } } }
     })
     expect(resolveTerminalPtyPaneOwnership(s, '')).toEqual({ kind: 'none' })
   })
@@ -77,18 +85,18 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-live', leafId: 'leaf-a', tier: 'recorded' }
+      owner: { tabId: 'tab-live', tier: 'recorded' }
     })
   })
 
-  it('lets a mounted pane decide over a recorded one, with no leaf of its own', () => {
+  it('lets a mounted pane decide over a recorded one', () => {
     const s = state({
       layouts: { 'tab-stale': { root: leaf('leaf-x'), ptyIdsByLeafId: { 'leaf-x': PTY_ID } } },
       livePtyIds: { 'tab-mounted': [PTY_ID] }
     })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-mounted', leafId: null, tier: 'mounted' }
+      owner: { tabId: 'tab-mounted', tier: 'mounted' }
     })
   })
 
@@ -126,7 +134,7 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, { preferTabId: 'tab-b' })).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-b', leafId: 'leaf-b', tier: 'recorded' }
+      owner: { tabId: 'tab-b', tier: 'recorded' }
     })
   })
 
@@ -139,7 +147,7 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     })
     expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, { preferTabId: 'tab-minted-in' })).toEqual({
       kind: 'owned',
-      owner: { tabId: 'tab-detached-to', leafId: 'leaf-a', tier: 'recorded' }
+      owner: { tabId: 'tab-detached-to', tier: 'recorded' }
     })
   })
 
@@ -148,7 +156,7 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     // from the tab id the PTY's env was stamped with at spawn.
     expect(
       resolveTerminalPtyPaneOwnership(state({}), PTY_ID, { preferTabId: 'tab-hinted' })
-    ).toEqual({ kind: 'owned', owner: { tabId: 'tab-hinted', leafId: null, tier: 'hinted' } })
+    ).toEqual({ kind: 'owned', owner: { tabId: 'tab-hinted', tier: 'hinted' } })
   })
 
   it('owns a pty whose only holder is filed under a foreign worktree key', () => {
@@ -170,8 +178,8 @@ describe('listTerminalPtyPaneOwners', () => {
       livePtyIds: { 'tab-z': [PTY_ID] }
     })
     expect(listTerminalPtyPaneOwners(s, PTY_ID)).toEqual([
-      { tabId: 'tab-z', leafId: null, tier: 'mounted' },
-      { tabId: 'tab-a', leafId: 'leaf-a', tier: 'recorded' }
+      { tabId: 'tab-z', tier: 'mounted' },
+      { tabId: 'tab-a', tier: 'recorded' }
     ])
   })
 })

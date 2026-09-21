@@ -1,5 +1,4 @@
 import { collectLeafIdsInOrder } from '@/components/terminal-pane/terminal-layout-leaf-ids'
-import type { TerminalLayoutSnapshot } from '../../../shared/terminal-tab-types'
 import type { AppState } from '@/store/types'
 
 /** No `tabsByWorktree`: ownership is tab-keyed, so no worktree key participates. */
@@ -7,8 +6,6 @@ export type TerminalPtyPaneOwnerState = Pick<AppState, 'terminalLayoutsByTabId' 
 
 export type TerminalPtyPaneOwner = {
   tabId: string
-  /** The leaf the layout binds; null when nothing but the live map or the hint names the tab. */
-  leafId: string | null
   /** `hinted` is the PTY's baked-in tab id standing in for a binding nothing has written yet. */
   tier: 'mounted' | 'recorded' | 'hinted'
 }
@@ -24,42 +21,22 @@ export type TerminalPtyPaneOwnerOptions = {
 }
 
 /**
- * Leaf ids this layout holds: its tree, or — for a rootless layout, which binds its sole pane
- * off-tree — every leaf it actually binds. A binding whose leaf has left a rooted tree reattaches
- * nothing, so it must not outrank a live pane (#13098).
- *
- * Why the truthiness check: the persisted map types its values as a plain string, so an empty one
- * survives the schema and is not a binding. Counting it would name a leaf no session is attached
- * to, and a reveal that adopted that tab would show nothing.
+ * Whether this tab's layout binds `ptyId` to a leaf it still holds. A rootless layout binds its
+ * sole pane off-tree; a binding whose leaf has left a rooted tree reattaches nothing, so it must
+ * not outrank a live pane (#13098). The persisted map types its values as a plain string, so an
+ * empty one survives the schema and is not a binding — counting it would name a leaf no session
+ * is attached to, and a reveal that adopted that tab would show nothing.
  */
-function collectOwnedLeafIds(layout: TerminalLayoutSnapshot): Set<string> {
-  if (layout.root) {
-    return new Set(collectLeafIdsInOrder(layout.root))
-  }
-  return new Set(
-    Object.entries(layout.ptyIdsByLeafId ?? {})
-      .filter(([, ptyId]) => Boolean(ptyId))
-      .map(([leafId]) => leafId)
-  )
-}
-
-/** The leaf a tab's layout binds to `ptyId`, or null when no leaf it owns holds that binding. */
-function findLayoutBoundLeafId(
-  state: TerminalPtyPaneOwnerState,
-  tabId: string,
-  ptyId: string
-): string | null {
+function layoutBindsPty(state: TerminalPtyPaneOwnerState, tabId: string, ptyId: string): boolean {
   const layout = state.terminalLayoutsByTabId[tabId]
-  if (!layout?.ptyIdsByLeafId) {
-    return null
+  const bindings = layout?.ptyIdsByLeafId
+  if (!bindings || !ptyId) {
+    return false
   }
-  const ownedLeafIds = collectOwnedLeafIds(layout)
-  for (const [leafId, boundPtyId] of Object.entries(layout.ptyIdsByLeafId)) {
-    if (boundPtyId === ptyId && ownedLeafIds.has(leafId)) {
-      return leafId
-    }
-  }
-  return null
+  const treeLeafIds = layout.root ? new Set(collectLeafIdsInOrder(layout.root)) : null
+  return Object.entries(bindings).some(
+    ([leafId, boundPtyId]) => boundPtyId === ptyId && (treeLeafIds?.has(leafId) ?? true)
+  )
 }
 
 /** Every candidate, strongest tier first; the raw input to the verdict below. */
@@ -74,11 +51,10 @@ export function listTerminalPtyPaneOwners(
     ...Object.keys(state.terminalLayoutsByTabId)
   ])
   for (const tabId of tabIds) {
-    const leafId = findLayoutBoundLeafId(state, tabId, ptyId)
     if (state.ptyIdsByTabId[tabId]?.includes(ptyId)) {
-      mounted.push({ tabId, leafId, tier: 'mounted' })
-    } else if (leafId !== null) {
-      recorded.push({ tabId, leafId, tier: 'recorded' })
+      mounted.push({ tabId, tier: 'mounted' })
+    } else if (layoutBindsPty(state, tabId, ptyId)) {
+      recorded.push({ tabId, tier: 'recorded' })
     }
   }
   // Why: object key order is persistence order, so sort to keep the verdict reproducible.
@@ -110,6 +86,6 @@ export function resolveTerminalPtyPaneOwnership(
   // Why: nothing records the PTY yet, so the tab it was minted against is the only thing left
   // that keeps paneKey hook attribution intact (#10486).
   return options.preferTabId !== undefined
-    ? { kind: 'owned', owner: { tabId: options.preferTabId, leafId: null, tier: 'hinted' } }
+    ? { kind: 'owned', owner: { tabId: options.preferTabId, tier: 'hinted' } }
     : { kind: 'none' }
 }
