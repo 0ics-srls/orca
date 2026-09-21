@@ -53,17 +53,19 @@ export function resolveTerminalRevealTabAdoption(
   if (ownership.kind === 'owned') {
     return ownership.owner.tabId
   }
-  // Why: nothing holds the PTY yet, so the tab it was minted against is the only thing left that
-  // keeps paneKey hook attribution intact (#10486), and a split names its parent by that id.
-  if (ownership.kind === 'none' && hintTabId !== undefined) {
-    return hintTabId
-  }
   // STA-7961: the PTY is unowned here, but the leaf id may already be someone's pane.
   const leafOwnerTabId = request.leafId
     ? findTerminalTabIdBindingLeafId(state, request.leafId)
     : null
   if (leafOwnerTabId !== null) {
     return leafOwnerTabId
+  }
+  // Why: nothing holds the PTY yet, so the tab it was minted against is the only thing left that
+  // keeps paneKey hook attribution intact (#10486), and a split names its parent by that id. It
+  // ranks below the leaf owner because a layout already carrying the leaf is that pane's home,
+  // and reusing the hinted tab instead writes a single pane over it and orphans the rest.
+  if (ownership.kind === 'none' && hintTabId !== undefined) {
+    return hintTabId
   }
   // Why mint even when claimants exist: no layout carries this leaf id, so the bridge would
   // replace the adopted tab's whole layout with a single pane and orphan its other panes' PTYs.
