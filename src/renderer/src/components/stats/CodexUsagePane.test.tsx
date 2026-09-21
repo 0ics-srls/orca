@@ -54,7 +54,10 @@ vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
 }))
 
-function summaryWithUnpriced(hasUnpricedModels: boolean): CodexUsageSummary {
+function summaryWithUnpriced(
+  hasUnpricedModels: boolean,
+  estimatedCostUsd: number | null = 12.5
+): CodexUsageSummary {
   return {
     scope: 'orca',
     range: '30d',
@@ -65,7 +68,7 @@ function summaryWithUnpriced(hasUnpricedModels: boolean): CodexUsageSummary {
     outputTokens: 250,
     reasoningOutputTokens: 100,
     totalTokens: 1250,
-    estimatedCostUsd: 12.5,
+    estimatedCostUsd,
     hasUnpricedModels,
     topModel: 'gpt-6-astra',
     topProject: 'Repo',
@@ -88,6 +91,16 @@ describe('CodexUsagePane estimated cost card', () => {
       screen.getByText('Est. API-equivalent cost • excludes unpriced models')
     ).toBeInTheDocument()
     expect(screen.getByText('$12.50')).toBeInTheDocument()
+  })
+
+  it('drops the caveat when no model was priced, since there is no remainder to exclude', () => {
+    currentSummary = summaryWithUnpriced(true, null)
+
+    render(<CodexUsagePane />)
+
+    expect(screen.getByText('Est. API-equivalent cost')).toBeInTheDocument()
+    expect(screen.queryByText(/excludes unpriced models/)).not.toBeInTheDocument()
+    expect(screen.getByText('n/a')).toBeInTheDocument()
   })
 
   it('leaves the total unqualified when every model is priced', () => {

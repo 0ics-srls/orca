@@ -101,9 +101,11 @@ export function CodexUsagePane(): React.JSX.Element {
     'auto.components.stats.CodexUsagePane.1a18fbd56b',
     'Est. API-equivalent cost'
   )
-  const unpricedCostLabel = summary?.hasUnpricedModels
-    ? `${costLabel} ${translate('auto.components.stats.CodexUsagePane.costExcludesUnpricedModels', '• excludes unpriced models')}`
-    : costLabel
+  // "Excludes" promises a remainder, so it only qualifies a total that exists.
+  const costCardLabel =
+    summary?.hasUnpricedModels && summary.estimatedCostUsd !== null
+      ? `${costLabel} ${translate('auto.components.stats.CodexUsagePane.costExcludesUnpricedModels', '• excludes unpriced models')}`
+      : costLabel
 
   return (
     <UsageTrackingPaneShell
@@ -198,7 +200,7 @@ export function CodexUsagePane(): React.JSX.Element {
             icon={<FolderKanban className="size-4" />}
           />
           <StatCard
-            label={unpricedCostLabel}
+            label={costCardLabel}
             value={formatCost(summary?.estimatedCostUsd ?? null)}
             icon={<Coins className="size-4" />}
           />
