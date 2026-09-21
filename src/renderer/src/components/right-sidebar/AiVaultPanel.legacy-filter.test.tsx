@@ -172,4 +172,37 @@ it('shows the whole history and no offer while the box is empty', async () => {
   expect(screen.getByText('Fix the foo pipeline')).toBeTruthy()
   expect(screen.getByText('Rename the bar widget')).toBeTruthy()
   expect(searchSessions).not.toHaveBeenCalled()
+  // Browse mode groups its own rows, so the results bar belongs to search alone.
+  expect(screen.queryByText('2 results')).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Sort results:/ })).toBeNull()
+})
+
+it('puts the hit count and the sort menu on a results bar once the index answers', async () => {
+  mockState.settings = { aiVaultSearch: { enabled: true } }
+  searchSessions.mockResolvedValue({
+    kind: 'results',
+    hits: [
+      {
+        agent: 'claude',
+        sessionId: 'claude:1',
+        title: 'Fix the foo pipeline',
+        cwd: '/Users/ada/repo',
+        branch: null,
+        updatedAt: '2026-05-01T10:10:00.000Z',
+        messageCount: 4,
+        score: 1,
+        source: { presence: 'present', filePath: '/Users/ada/.claude/claude:1.jsonl' },
+        evidence: null
+      }
+    ],
+    page: { cursor: null, hasMore: false },
+    generation: 1,
+    durationMs: 1,
+    truncated: { candidates: false, snippets: 0, query: false, freshness: false }
+  })
+
+  await typeQuery('foo')
+
+  await waitFor(() => expect(screen.getByText('1 result')).toBeTruthy())
+  expect(screen.getByRole('button', { name: 'Sort results: Most relevant' })).toBeTruthy()
 })

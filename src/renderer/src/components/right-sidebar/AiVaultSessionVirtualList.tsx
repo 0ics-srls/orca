@@ -30,6 +30,7 @@ const VAULT_EXPANDED_SESSION_ROW_ESTIMATED_HEIGHT = 420
 export function AiVaultSessionVirtualList({
   groups,
   collapsedGroups,
+  hideGroupHeaders = false,
   loading,
   sessionsCount,
   filteredSessionsCount,
@@ -60,6 +61,8 @@ export function AiVaultSessionVirtualList({
 }: {
   groups: readonly AiVaultSessionGroup[]
   collapsedGroups: ReadonlySet<string>
+  /** Search mode labels its one group on the results bar instead, so rows run flat. */
+  hideGroupHeaders?: boolean
   loading: boolean
   sessionsCount: number
   filteredSessionsCount: number
@@ -96,15 +99,17 @@ export function AiVaultSessionVirtualList({
   const vaultRows = useMemo(() => {
     const rows: AiVaultListRow[] = []
     for (const sessionGroup of groups) {
-      rows.push({ type: 'group', group: sessionGroup })
-      if (!collapsedGroups.has(sessionGroup.key)) {
+      if (!hideGroupHeaders) {
+        rows.push({ type: 'group', group: sessionGroup })
+      }
+      if (hideGroupHeaders || !collapsedGroups.has(sessionGroup.key)) {
         for (const session of sessionGroup.sessions) {
           rows.push({ type: 'session', groupKey: sessionGroup.key, session })
         }
       }
     }
     return rows
-  }, [collapsedGroups, groups])
+  }, [collapsedGroups, groups, hideGroupHeaders])
 
   const stickyHeaderIndexes = useMemo(() => getVaultStickyHeaderIndexes(vaultRows), [vaultRows])
 

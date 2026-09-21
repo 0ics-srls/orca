@@ -6,7 +6,6 @@ import type {
   AiVaultAgent,
   AiVaultGroup,
   AiVaultScope,
-  AiVaultSearchSort,
   AiVaultSort
 } from '../../../../shared/ai-vault-types'
 import type { ExecutionHostScope } from '../../../../shared/execution-host'
@@ -28,7 +27,6 @@ type AiVaultPanelHeaderProps = {
   hostScopeOptions: readonly AiVaultHostScopeOption[]
   agents: readonly AiVaultAgent[]
   sort: AiVaultSort
-  searchSort: AiVaultSearchSort
   group: AiVaultGroup
   hideEmptySessions: boolean
   sessionLimit: AiVaultSessionLimit
@@ -41,7 +39,6 @@ type AiVaultPanelHeaderProps = {
   onAgentEnabledChange: (agent: AiVaultAgent, enabled: boolean) => void
   onAllAgentsEnabledChange: (enabled: boolean) => void
   onSortChange: (sort: AiVaultSort) => void
-  onSearchSortChange: (sort: AiVaultSearchSort) => void
   onGroupChange: (group: AiVaultGroup) => void
   onHideEmptySessionsChange: (hideEmptySessions: boolean) => void
   onSessionLimitChange: (limit: AiVaultSessionLimit) => void
@@ -63,7 +60,6 @@ export function AiVaultPanelHeader({
   hostScopeOptions,
   agents,
   sort,
-  searchSort,
   group,
   hideEmptySessions,
   sessionLimit,
@@ -75,7 +71,6 @@ export function AiVaultPanelHeader({
   onAgentEnabledChange,
   onAllAgentsEnabledChange,
   onSortChange,
-  onSearchSortChange,
   onGroupChange,
   onHideEmptySessionsChange,
   onSessionLimitChange,
@@ -107,14 +102,7 @@ export function AiVaultPanelHeader({
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
             {searching ? (
-              searchSort === 'newest' ? (
-                translate(
-                  'sessionSearch.panel.indexedHistoryNewest',
-                  'Indexed history · newest first'
-                )
-              ) : (
-                translate('sessionSearch.panel.indexedHistory', 'Indexed history · best matches')
-              )
+              translate('sessionSearch.panel.indexedHistory', 'Indexed history')
             ) : hasScanResult ? (
               <>
                 <span className="@max-[300px]/ai-vault:hidden">
@@ -150,7 +138,6 @@ export function AiVaultPanelHeader({
             searching={searching}
             agents={agents}
             sort={sort}
-            searchSort={searchSort}
             group={group}
             hideEmptySessions={hideEmptySessions}
             sessionLimit={sessionLimit}
@@ -158,7 +145,6 @@ export function AiVaultPanelHeader({
             onAgentEnabledChange={onAgentEnabledChange}
             onAllAgentsEnabledChange={onAllAgentsEnabledChange}
             onSortChange={onSortChange}
-            onSearchSortChange={onSearchSortChange}
             onGroupChange={onGroupChange}
             onHideEmptySessionsChange={onHideEmptySessionsChange}
             onSessionLimitChange={onSessionLimitChange}

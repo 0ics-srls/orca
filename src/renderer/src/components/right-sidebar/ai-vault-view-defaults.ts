@@ -14,6 +14,7 @@ export const DEFAULT_AI_VAULT_SORT: AiVaultSort = 'updated'
 export const DEFAULT_AI_VAULT_SEARCH_SORT: AiVaultSearchSort = 'relevance'
 export const DEFAULT_AI_VAULT_GROUP: AiVaultGroup = 'project'
 
+// searchSort is uncounted on purpose: the results bar shows it, so it is never a hidden adjustment.
 export function countAiVaultViewAdjustments(options: {
   agents: readonly AiVaultAgent[]
   sort: AiVaultSort

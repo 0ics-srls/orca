@@ -1,10 +1,5 @@
 import { useMemo } from 'react'
-import { translate } from '@/i18n/i18n'
-import type {
-  AiVaultGroup,
-  AiVaultSearchSort,
-  AiVaultSession
-} from '../../../../shared/ai-vault-types'
+import type { AiVaultGroup, AiVaultSession } from '../../../../shared/ai-vault-types'
 import {
   filterAiVaultSessions,
   groupAiVaultSessions,
@@ -43,9 +38,8 @@ export function useAiVaultPanelSessions(
     activeProjectKey,
     sessionProjectById,
     projectLabelByKey,
-    hideEmptySessions,
-    searchSort
-  }: AiVaultSessionFilterState & { searchSort: AiVaultSearchSort }
+    hideEmptySessions
+  }: AiVaultSessionFilterState
 ) {
   const filteredSessions = useMemo(
     () =>
@@ -81,18 +75,10 @@ export function useAiVaultPanelSessions(
       searching
         ? filteredSessions.length === 0
           ? []
-          : [
-              {
-                key: 'search-results',
-                label:
-                  searchSort === 'newest'
-                    ? translate('sessionSearch.panel.newestResults', 'Newest')
-                    : translate('sessionSearch.panel.rankedResults', 'Best matches'),
-                sessions: [...filteredSessions]
-              }
-            ]
+          : // The results bar above the list carries the count, so this group only holds rows.
+            [{ key: 'search-results', label: '', sessions: [...filteredSessions] }]
         : groupAiVaultSessions(filteredSessions, group, { sessionProjectById, projectLabelByKey }),
-    [searching, searchSort, filteredSessions, group, projectLabelByKey, sessionProjectById]
+    [searching, filteredSessions, group, projectLabelByKey, sessionProjectById]
   )
   return { filteredSessions, groups }
 }

@@ -36,6 +36,7 @@ import { useAiVaultOriginalPaneActions } from './ai-vault-original-pane-actions'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
 import { AiVaultPanelHeader } from './AiVaultPanelHeader'
+import { AiVaultSearchResultsBar } from './AiVaultSearchResultsBar'
 import { AiVaultSessionVirtualList } from './AiVaultSessionVirtualList'
 import { useAiVaultSessionRefresh } from './ai-vault-session-refresh'
 import {
@@ -215,8 +216,7 @@ export default function AiVaultPanel(): React.JSX.Element {
     activeProjectKey,
     sessionProjectById,
     projectLabelByKey,
-    hideEmptySessions,
-    searchSort
+    hideEmptySessions
   })
 
   const copyText = useCallback(async (text: string, label: string): Promise<void> => {
@@ -306,7 +306,6 @@ export default function AiVaultPanel(): React.JSX.Element {
         hostScopeOptions={hostScopeOptions}
         agents={agents}
         sort={sort}
-        searchSort={searchSort}
         group={group}
         hideEmptySessions={hideEmptySessions}
         sessionLimit={sessionLimit}
@@ -318,7 +317,6 @@ export default function AiVaultPanel(): React.JSX.Element {
         onAgentEnabledChange={setAgentEnabled}
         onAllAgentsEnabledChange={setAllAgentsEnabled}
         onSortChange={setSort}
-        onSearchSortChange={setSearchSort}
         onGroupChange={setGroup}
         onHideEmptySessionsChange={setHideEmptySessions}
         onSessionLimitChange={setSessionLimit}
@@ -334,9 +332,17 @@ export default function AiVaultPanel(): React.JSX.Element {
 
       {!searching && <AiVaultScanIssueBanners scanResult={scanResult} />}
       <AiVaultPanelSearch search={search} noAgents={agents.length === 0}>
+        {searching && filteredSessions.length > 0 && (
+          <AiVaultSearchResultsBar
+            count={filteredSessions.length}
+            sort={searchSort}
+            onSortChange={setSearchSort}
+          />
+        )}
         {(!searching || sessions.length > 0 || search.loading) && (
           <AiVaultSessionVirtualList
             key={searching ? search.resetKey : 'history'}
+            hideGroupHeaders={searching}
             searchHits={searching ? searchHits : undefined}
             groups={groups}
             collapsedGroups={collapsedGroups}
