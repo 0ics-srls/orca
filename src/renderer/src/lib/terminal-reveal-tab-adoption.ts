@@ -11,7 +11,7 @@ export type TerminalRevealAdoptionState = TerminalPtyPaneOwnerState &
   Pick<AppState, 'tabsByWorktree'>
 
 export type TerminalRevealTabAdoption =
-  | { kind: 'adopt'; tabId: string; via: 'pty-owner' | 'bound-leaf' | 'ambiguity-tiebreak' }
+  | { kind: 'adopt'; tabId: string; via: 'pty-owner' | 'bound-leaf' }
   | { kind: 'mint' }
 
 /**
@@ -62,17 +62,15 @@ export function resolveTerminalRevealTabAdoption(
   if (leafOwnerTabId !== null) {
     return { kind: 'adopt', tabId: leafOwnerTabId, via: 'bound-leaf' }
   }
-  if (ownership.kind === 'ambiguous') {
-    console.warn(
-      `[terminal-reveal] ptyId ${request.ptyId} is claimed by ${ownership.owners
-        .map((owner) => `${owner.tabId}(${owner.tier})`)
-        .join(', ')}; adopting the first`
-    )
-    return { kind: 'adopt', tabId: ownership.owners[0]!.tabId, via: 'ambiguity-tiebreak' }
-  }
-  console.warn(
-    `[terminal-reveal] no pane owns ptyId ${request.ptyId} (tabId hint ${request.hintTabId ?? 'none'}, leafId ${request.leafId ?? 'none'}); minting a tab`
-  )
+  // Why mint even when claimants exist: no layout carries this leaf id, so the bridge would
+  // replace the adopted tab's whole layout with a single pane and orphan its other panes' PTYs.
+  const claim =
+    ownership.kind === 'ambiguous'
+      ? `ptyId ${request.ptyId} is claimed by ${ownership.owners
+          .map((owner) => `${owner.tabId}(${owner.tier})`)
+          .join(', ')}, and no layout carries leafId ${request.leafId ?? 'none'}`
+      : `no pane owns ptyId ${request.ptyId} (tabId hint ${request.hintTabId ?? 'none'}, leafId ${request.leafId ?? 'none'})`
+  console.warn(`[terminal-reveal] ${claim}; minting a tab`)
   return { kind: 'mint' }
 }
 
