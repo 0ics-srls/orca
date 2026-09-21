@@ -63,6 +63,23 @@ export class OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree extend
       : this.resolveEmulatorWorkspaceId(selector)
   }
 
+  protected floatingWorkspaceToResolvedWorktree(path: string): ResolvedWorktree {
+    const worktree = floatingWorkspaceToWorktree(path)
+    return {
+      ...worktree,
+      parentWorktreeId: null,
+      childWorktreeIds: [],
+      lineage: null,
+      git: {
+        path: worktree.path,
+        head: worktree.head,
+        branch: worktree.branch,
+        isBare: worktree.isBare,
+        isMainWorktree: worktree.isMainWorktree
+      }
+    }
+  }
+
   protected folderWorkspaceToResolvedWorktree(folderWorkspace: FolderWorkspace): ResolvedWorktree {
     const worktree = folderWorkspaceToWorktree(folderWorkspace)
     return {
