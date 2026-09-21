@@ -91,7 +91,7 @@ jobs:
       - name: Build Electron app for terminal perf
         run: npx electron-vite build --mode e2e
 
-      - name: Compare compositor configurations
+      - name: Compare hidden and Xvfb-visible windows
         env:
           ORCA_BACKGROUND_LAUNCH: '1'
           ORCA_PERF_DIAGNOSTIC_TRACE: '1'
@@ -100,11 +100,15 @@ jobs:
           ORCA_E2E_OPENCODE_SCALE_HIDDEN_PRESSURE_PANES: '25'
         run: |
           mkdir -p "$RUNNER_TEMP/perf-evidence"
-          for mode in current before-c647 swiftshader; do
-            export ORCA_PERF_DIAGNOSTIC_RENDERER="$mode"
+          for mode in hidden visible; do
+            export ORCA_PERF_DIAGNOSTIC_RENDERER=swiftshader
+            export ORCA_E2E_FORCE_HEADFUL=0
+            if [ "$mode" = visible ]; then
+              export ORCA_E2E_FORCE_HEADFUL=1
+            fi
             export ORCA_PERF_DIAGNOSTIC_DIR="$RUNNER_TEMP/perf-evidence/mode-$mode"
             mkdir -p "$ORCA_PERF_DIAGNOSTIC_DIR"
-            xvfb-run --auto-servernum pnpm exec playwright test tests/e2e/artificial-opencode-terminal-load.spec.ts --config tests/playwright.config.ts --project electron-headless --workers=1 --grep 'Latin hidden|hidden restore responsive with 25' --repeat-each=3 --reporter=json > "$ORCA_PERF_DIAGNOSTIC_DIR/report.json" 2> "$ORCA_PERF_DIAGNOSTIC_DIR/stderr.log" || echo "mode $mode had a test failure"
+            xvfb-run --auto-servernum pnpm exec playwright test tests/e2e/artificial-opencode-terminal-load.spec.ts --config tests/playwright.config.ts --project electron-headless --workers=1 --grep 'Latin hidden|hidden restore responsive with 25' --repeat-each=5 --reporter=json > "$ORCA_PERF_DIAGNOSTIC_DIR/report.json" 2> "$ORCA_PERF_DIAGNOSTIC_DIR/stderr.log" || echo "mode $mode had a test failure"
           done
 
       - name: Upload profiles and reports
