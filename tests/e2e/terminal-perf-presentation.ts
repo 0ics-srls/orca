@@ -19,8 +19,8 @@ export function shouldPresentTerminalPerfWindow(
 }
 
 export async function presentTerminalPerfWindow(
-  electronApp: ElectronApplication,
-  testInfo: TestInfo
+  electronApp: Pick<ElectronApplication, 'evaluate'>,
+  testInfo: Pick<TestInfo, 'annotations'>
 ): Promise<void> {
   if (!shouldPresentTerminalPerfWindow()) {
     return

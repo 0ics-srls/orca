@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { shouldPresentTerminalPerfWindow } from './terminal-perf-presentation'
+import type { ElectronApplication, TestInfo } from '@stablyai/playwright-test'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  presentTerminalPerfWindow,
+  shouldPresentTerminalPerfWindow
+} from './terminal-perf-presentation'
 
 describe('terminal perf window presentation', () => {
+  afterEach(() => vi.unstubAllGlobals())
   const isolatedDisplay = {
     ORCA_E2E_TERMINAL_PERF_XVFB: '1',
     ORCA_BACKGROUND_LAUNCH: '1',
@@ -20,7 +25,7 @@ describe('terminal perf window presentation', () => {
     ).toBe(false)
   })
 
-  it('permits the explicit Linux CI display without changing background launch policy', () => {
+  it('permits the explicit hosted Linux CI display', () => {
     expect(shouldPresentTerminalPerfWindow(isolatedDisplay, 'linux')).toBe(true)
   })
 
@@ -37,5 +42,43 @@ describe('terminal perf window presentation', () => {
     { ...isolatedDisplay, DISPLAY: '' }
   ])('rejects a missing isolated display: %j', (env) => {
     expect(() => shouldPresentTerminalPerfWindow(env, 'linux')).toThrow('isolated')
+  })
+
+  function presentationFixture(env: Record<string, string | undefined>, platform = 'linux') {
+    vi.stubGlobal('process', { ...process, platform, env })
+    const app = { evaluate: vi.fn<ElectronApplication['evaluate']>() }
+    const info: Pick<TestInfo, 'annotations'> = { annotations: [] }
+    return { app, info }
+  }
+
+  it('does not contact Electron during an ordinary local run', async () => {
+    const { app, info } = presentationFixture({ ORCA_BACKGROUND_LAUNCH: '1' })
+    await presentTerminalPerfWindow(app, info)
+    expect(app.evaluate).not.toHaveBeenCalled()
+    expect(info.annotations).toEqual([])
+  })
+
+  it('rejects a local opt-in before contacting Electron', async () => {
+    const { app, info } = presentationFixture({ ...isolatedDisplay, GITHUB_ACTIONS: undefined })
+    await expect(presentTerminalPerfWindow(app, info)).rejects.toThrow('isolated')
+    expect(app.evaluate).not.toHaveBeenCalled()
+    expect(info.annotations).toEqual([])
+  })
+
+  it('records presentation only after Electron confirms visibility', async () => {
+    const { app, info } = presentationFixture(isolatedDisplay)
+    app.evaluate.mockResolvedValue(true)
+    await presentTerminalPerfWindow(app, info)
+    expect(app.evaluate).toHaveBeenCalledOnce()
+    expect(info.annotations).toEqual([
+      { type: 'terminal-perf-presentation', description: 'isolated-xvfb' }
+    ])
+  })
+
+  it('fails instead of measuring an absent or still-hidden window', async () => {
+    const { app, info } = presentationFixture(isolatedDisplay)
+    app.evaluate.mockResolvedValue(false)
+    await expect(presentTerminalPerfWindow(app, info)).rejects.toThrow('not presented')
+    expect(info.annotations).toEqual([])
   })
 })
