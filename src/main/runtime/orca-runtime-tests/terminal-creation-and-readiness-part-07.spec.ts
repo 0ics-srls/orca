@@ -3,7 +3,8 @@ import {
   AGENT_PROMPT_BRACKETED_PASTE_END,
   AGENT_PROMPT_BRACKETED_PASTE_START,
   buildAgentPromptPasteBytes,
-  getAgentPromptSubmitDelayMs
+  getAgentPromptSubmitDelayMs,
+  resolveAgentPromptSubmitDelayForAgent
 } from '../../../shared/agent-prompt-injection'
 import { TUI_AGENT_CONFIG } from '../../../shared/tui-agent-config'
 import type { TuiAgent } from '../../../shared/tui-agent'
@@ -610,9 +611,18 @@ describe('OrcaRuntimeService', () => {
         launchAgent: agent
       })
 
-      const submitDelayMs = getAgentPromptSubmitDelayMs(
+      // The submit wait is per agent: a line-settle policy adds to the generic byte-ingest
+      // delay, so expecting the generic delay here stalls this test for its whole timeout.
+      const submitDelayMs = resolveAgentPromptSubmitDelayForAgent(
         process.platform,
-        Buffer.byteLength(buildAgentPromptPasteBytes('review this change'), 'utf8')
+        'review this change',
+        agent
+      )
+      expect(submitDelayMs).toBe(
+        getAgentPromptSubmitDelayMs(
+          process.platform,
+          Buffer.byteLength(buildAgentPromptPasteBytes('review this change'), 'utf8')
+        ) + (TUI_AGENT_CONFIG[agent].submitLineSettleMsPerLine ?? 0)
       )
       const sendPromise = runtime.sendTerminalAgentPrompt(handle, 'review this change')
       if (agent === 'omp') {
