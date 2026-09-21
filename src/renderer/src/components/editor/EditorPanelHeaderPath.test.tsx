@@ -196,7 +196,8 @@ describe('EditorPanelHeaderPath inline rename', () => {
     const rerenderPath = renderPath(baseFile())
     openRenameInput()
 
-    fireEvent.change(getRenameInput('Rename file notes.md'), { target: { value: 'renamed.md' } })
+    const input = getRenameInput('Rename file notes.md')
+    fireEvent.change(input, { target: { value: 'renamed.md' } })
     rerenderPath(
       baseFile({
         id: '/repo/other.md',
@@ -207,6 +208,9 @@ describe('EditorPanelHeaderPath inline rename', () => {
 
     expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
     expect(screen.queryByLabelText('Rename file other.md')).toBeNull()
+
+    // React may deliver the removed input's blur after the active file render.
+    fireEvent.blur(input)
     expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 

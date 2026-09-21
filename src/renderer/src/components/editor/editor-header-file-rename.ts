@@ -30,6 +30,7 @@ export function useEditorHeaderFileRename(activeFile: OpenFile): EditorHeaderFil
   // Why: the header renders one unkeyed path strip for every file, so a file
   // switch mid-rename would otherwise commit the typed name against the new path.
   if (renameFilePath !== activeFile.filePath) {
+    renameCancelledRef.current = true
     setRenameFilePath(activeFile.filePath)
     setIsRenaming(false)
   }
