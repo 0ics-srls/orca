@@ -19,13 +19,17 @@ function worker(
   return {
     paneKey: 'tab-worker:leaf-worker',
     state: 'working',
+    prompt: '',
+    updatedAt: 1,
+    stateStartedAt: 1,
+    stateHistory: [],
     orchestration: {
       taskId: 'task-1',
       dispatchId: 'ctx-1',
       dispatchStatus,
       ...(parentPaneKey ? { parentPaneKey } : {})
     }
-  } as unknown as AgentStatusEntry
+  }
 }
 
 describe('supervisors with unsettled dispatches', () => {
@@ -53,7 +57,14 @@ describe('supervisors with unsettled dispatches', () => {
   it('ignores entries with no orchestration context', () => {
     expect(
       getSupervisorLeafIdsWithUnsettledDispatch({
-        a: { paneKey: 'tab:leaf', state: 'done' } as unknown as AgentStatusEntry,
+        a: {
+          paneKey: 'tab:leaf',
+          state: 'done',
+          prompt: '',
+          updatedAt: 1,
+          stateStartedAt: 1,
+          stateHistory: []
+        },
         b: undefined
       }).size
     ).toBe(0)

@@ -25,6 +25,11 @@ const TAB_ID = 'tab-slept'
 const LEAF_ID = '11111111-1111-4111-8111-111111111111'
 const PANE_KEY = `${TAB_ID}:${LEAF_ID}`
 
+function sleepWakeFixture<T>(value: unknown): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this runtime integration harness supplies only internal surfaces exercised by the explicit sleep/wake flow.
+  return value as T
+}
+
 async function flushMicrotasks(): Promise<void> {
   for (let index = 0; index < 10; index += 1) {
     await Promise.resolve()
@@ -77,7 +82,7 @@ async function sleptPaneRuntime(record: SleepingAgentSessionRecord): Promise<{
   setRendererAvailable: (available: boolean) => void
 }> {
   const { runtimeStore } = makeRuntimeStoreWithWorkspaceSession(sleptSession(record))
-  const runtime = new OrcaRuntimeService(runtimeStore as never)
+  const runtime = new OrcaRuntimeService(sleepWakeFixture(runtimeStore))
   const db = new InMemoryOrchestrationMessages()
   setInMemoryOrchestrationMessages(runtime, db)
   const write = vi.fn().mockReturnValue(true)
@@ -87,43 +92,48 @@ async function sleptPaneRuntime(record: SleepingAgentSessionRecord): Promise<{
   const confirmForegroundProcess = vi.fn(async () =>
     confirmedForegroundProcess === undefined ? foregroundProcess : confirmedForegroundProcess
   )
-  runtime.setPtyController({
-    write,
-    kill: vi.fn(),
-    getForegroundProcess: async () => foregroundProcess,
-    confirmForegroundProcess,
-    supportsForegroundProcessConfirmation: () => foregroundConfirmationSupported
-  } as never)
+  runtime.setPtyController(
+    sleepWakeFixture({
+      write,
+      kill: vi.fn(),
+      getForegroundProcess: async () => foregroundProcess,
+      confirmForegroundProcess,
+      supportsForegroundProcessConfirmation: () => foregroundConfirmationSupported
+    })
+  )
   runtime.attachWindow(1)
   const syncGraph = (ptyId: string | null): void => {
-    runtime.syncWindowGraph(1, {
-      tabs: [
-        {
-          tabId: TAB_ID,
-          worktreeId: TEST_WORKTREE_ID,
-          title: 'coordinator',
-          activeLeafId: LEAF_ID,
-          layout: null
-        }
-      ],
-      leaves: [
-        {
-          tabId: TAB_ID,
-          worktreeId: TEST_WORKTREE_ID,
-          leafId: LEAF_ID,
-          paneRuntimeId: 1,
-          ptyId,
-          paneTitle: null
-        }
-      ]
-    } as never)
+    runtime.syncWindowGraph(
+      1,
+      sleepWakeFixture({
+        tabs: [
+          {
+            tabId: TAB_ID,
+            worktreeId: TEST_WORKTREE_ID,
+            title: 'coordinator',
+            activeLeafId: LEAF_ID,
+            layout: null
+          }
+        ],
+        leaves: [
+          {
+            tabId: TAB_ID,
+            worktreeId: TEST_WORKTREE_ID,
+            leafId: LEAF_ID,
+            paneRuntimeId: 1,
+            ptyId,
+            paneTitle: null
+          }
+        ]
+      })
+    )
   }
   syncGraph(null)
 
   const tabMountSends: unknown[][] = []
   let rendererAvailable = true
   vi.spyOn(
-    runtime as unknown as { getAuthoritativeWindow: () => unknown },
+    sleepWakeFixture<{ getAuthoritativeWindow: () => unknown }>(runtime),
     'getAuthoritativeWindow'
   ).mockImplementation(() => {
     if (!rendererAvailable) {
@@ -448,7 +458,7 @@ describe('mail addressed to a listed slept pane', () => {
         })
         remountStatuslessCodex('pty-codex-woken', graphBeforeRegistration)
         expect(reattachDelivery).toHaveBeenCalledWith(handle)
-        const runtimeState = runtime as unknown as {
+        const runtimeState = sleepWakeFixture<{
           leaves: Map<
             string,
             { leafId: string; lastAgentStatus: string | null; lastAgentStatusObservedLive: boolean }
@@ -457,7 +467,7 @@ describe('mail addressed to a listed slept pane', () => {
             string,
             { lastAgentStatus: string | null; lastAgentStatusObservedLive: boolean }
           >
-        }
+        }>(runtime)
         expect(
           [...runtimeState.leaves.values()].find((leaf) => leaf.leafId === LEAF_ID)
         ).toMatchObject({

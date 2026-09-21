@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SleepingAgentSessionRecord } from '../../shared/agent-session-resume'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import { getDefaultWorkspaceSession } from '../../shared/constants'
 import { collectResumableSleptPanes } from './resumable-slept-pane-listing'
 
 const LEAF = '22222222-2222-4222-8222-222222222222'
@@ -25,8 +26,9 @@ function record(overrides: Partial<SleepingAgentSessionRecord> = {}): SleepingAg
 
 function session(...records: SleepingAgentSessionRecord[]): WorkspaceSessionState {
   return {
+    ...getDefaultWorkspaceSession(),
     sleepingAgentSessionsByPaneKey: Object.fromEntries(records.map((r) => [r.paneKey, r]))
-  } as unknown as WorkspaceSessionState
+  }
 }
 
 const anyWorktree = {

@@ -10,13 +10,24 @@ const TARGET_SOURCE_LEAF_ID = '22222222-2222-4222-8222-222222222222'
 const TARGET_LEAF_ID = '33333333-3333-4333-8333-333333333333'
 const PTY_ID = 'pty-existing'
 
+type HarnessState = {
+  tabsByWorktree: Record<string, { id: string }[]>
+  terminalLayoutsByTabId: Record<string, { ptyIdsByLeafId?: Record<string, string> } | undefined>
+  transferAgentPaneAuthority: ReturnType<typeof vi.fn>
+}
+
 const harness = vi.hoisted(() => ({
-  state: null as unknown as {
-    tabsByWorktree: Record<string, { id: string }[]>
-    terminalLayoutsByTabId: Record<string, { ptyIdsByLeafId?: Record<string, string> } | undefined>
-    transferAgentPaneAuthority: ReturnType<typeof vi.fn>
-  }
+  state: {
+    tabsByWorktree: {},
+    terminalLayoutsByTabId: {},
+    transferAgentPaneAuthority: vi.fn()
+  } satisfies HarnessState
 }))
+
+function mountEventFixture<T>(value: object): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each partial pane fixture implements every member reached by installTerminalPaneMountEvents in this test.
+  return value as T
+}
 
 vi.mock('@/store', () => ({
   useAppStore: { getState: () => harness.state }
@@ -69,17 +80,17 @@ describe('terminal pane mount existing PTY split', () => {
       splitPane: vi.fn(() => ({ leafId: TARGET_LEAF_ID }))
     }
     dispose = installTerminalPaneMountEvents({
-      manager: manager as never,
+      manager: mountEventFixture(manager),
       deps: {
         tabId: TARGET_TAB_ID,
         worktreeId: WORKTREE_ID,
         isActive: true,
-        managerRef: { current: manager } as never,
+        managerRef: mountEventFixture({ current: manager }),
         persistLayoutSnapshot: vi.fn(),
         syncCanExpandState: vi.fn(),
         queueResizeAll: vi.fn()
       },
-      ptyDeps: {} as never
+      ptyDeps: mountEventFixture({})
     })
 
     dispatchTerminalPaneSplitRequest({

@@ -20,7 +20,7 @@ function harness(options: { wake?: (request: SleepingPaneWakeRequest) => boolean
     now: () => now,
     schedule: (run, delayMs) => {
       timers.push({ run, delayMs, runAt: now + delayMs })
-      return timers.length as unknown as ReturnType<typeof setTimeout>
+      return timers.length
     },
     cancel: () => undefined
   })

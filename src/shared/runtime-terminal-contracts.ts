@@ -12,6 +12,16 @@ import type { TabGroupLayoutNode } from './tab-types'
 import type { TerminalExitCause } from './terminal-exit-cause'
 import type { TerminalPaneLayoutNode } from './terminal-tab-types'
 import type { TuiAgent } from './tui-agent'
+import type { RuntimeTerminalVisualLayout } from './runtime-terminal-visual-layout-contracts'
+
+export type {
+  RuntimeTerminalVisualGroupNode,
+  RuntimeTerminalVisualLayout,
+  RuntimeTerminalVisualLayoutNode,
+  RuntimeTerminalVisualPaneNode,
+  RuntimeTerminalVisualTab,
+  RuntimeTerminalVisualTerminalNode
+} from './runtime-terminal-visual-layout-contracts'
 
 export type RuntimeTerminalSummary = {
   handle: string
@@ -42,54 +52,6 @@ export type RuntimeTerminalSummary = {
    * the pane is resumable. Absent from hosts that predate the field.
    */
   resumable?: boolean
-}
-
-export type RuntimeTerminalVisualTerminalNode = {
-  type: 'terminal'
-  handle: string
-  tabId: string
-  leafId: string
-  title: string | null
-  connected: boolean
-  active: boolean
-}
-
-export type RuntimeTerminalVisualPaneNode =
-  | RuntimeTerminalVisualTerminalNode
-  | {
-      type: 'pane-split'
-      direction: Extract<TerminalPaneLayoutNode, { type: 'split' }>['direction']
-      first: RuntimeTerminalVisualPaneNode
-      second: RuntimeTerminalVisualPaneNode
-    }
-
-export type RuntimeTerminalVisualTab = {
-  tabId: string
-  title: string | null
-  activeLeafId: string | null
-  panes: RuntimeTerminalVisualPaneNode
-}
-
-export type RuntimeTerminalVisualGroupNode = {
-  type: 'group'
-  groupId: string | null
-  activeTabId: string | null
-  tabs: RuntimeTerminalVisualTab[]
-}
-
-export type RuntimeTerminalVisualLayoutNode =
-  | RuntimeTerminalVisualGroupNode
-  | {
-      type: 'split'
-      direction: Extract<TabGroupLayoutNode, { type: 'split' }>['direction']
-      first: RuntimeTerminalVisualLayoutNode
-      second: RuntimeTerminalVisualLayoutNode
-    }
-
-export type RuntimeTerminalVisualLayout = {
-  worktreeId: string
-  worktreePath: string
-  root: RuntimeTerminalVisualLayoutNode
 }
 
 /** The shared listing-scope shape, kept under its incumbent name for existing consumers. */
@@ -271,6 +233,8 @@ type RuntimeTerminalCreateBaseRequestPayload = {
   activate?: boolean
   presentation?: RuntimeTerminalPresentation
   surfaceOwner?: false
+  /** Windows shell the created tab spawns AS, instead of the host default. */
+  shellOverride?: string
 }
 
 export type RuntimeTerminalCreateRequestPayload =
@@ -338,6 +302,10 @@ export type RuntimeTerminalClose = {
 
 export type RuntimeTerminalWaitCondition = 'exit' | 'tui-idle'
 
+// Why both spellings: the codex-* members were published by every host before the agent-neutral
+// rename, so they are permanent — a client still has to read them off an older host. This build
+// keeps a codex-* reason only where the matched wording is plausibly Codex's own; every matcher
+// that inspects no agent publishes the agent-* spelling.
 export type RuntimeTerminalWaitBlockedReason =
   | 'codex-update-prompt'
   | 'codex-trust-workspace'
@@ -345,6 +313,11 @@ export type RuntimeTerminalWaitBlockedReason =
   | 'codex-model-migration-prompt'
   | 'codex-hooks-review-prompt'
   | 'codex-interactive-prompt'
+  | 'agent-update-prompt'
+  | 'agent-trust-workspace'
+  | 'agent-cwd-prompt'
+  | 'agent-hooks-review-prompt'
+  | 'agent-interactive-prompt'
   | 'agent-approval-prompt'
 
 export type RuntimeTerminalWait = {

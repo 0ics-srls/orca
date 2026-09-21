@@ -4,15 +4,39 @@ import {
   type WakeHibernatedAgentsWorktreeDetail
 } from '@/constants/terminal'
 
-type PaneBindingWithWake = IDisposable & {
+type WakeablePaneBinding = IDisposable & {
   paneKey?: string
-  wakeHibernatedAgentIfArmed?: (claimedProviderSessions?: Set<string>) => string | null
+  wakeHibernatedAgentIfArmed: (claimedProviderSessions?: Set<string>) => string | null
 }
 
 type WakeHibernatedAgentsListenerDeps = {
   worktreeId: string
   tabId: string
   getPanePtyBindings: () => Iterable<IDisposable>
+}
+
+function isWakeDetail(value: unknown): value is WakeHibernatedAgentsWorktreeDetail {
+  if (typeof value !== 'object' || value === null || !('worktreeId' in value)) {
+    return false
+  }
+  const detail = value
+  return (
+    typeof detail.worktreeId === 'string' &&
+    (!('tabId' in detail) || detail.tabId === undefined || typeof detail.tabId === 'string') &&
+    (!('paneKey' in detail) ||
+      detail.paneKey === undefined ||
+      typeof detail.paneKey === 'string') &&
+    (!('wokenClaimKeys' in detail) ||
+      detail.wokenClaimKeys === undefined ||
+      detail.wokenClaimKeys instanceof Set)
+  )
+}
+
+function isWakeablePaneBinding(binding: IDisposable): binding is WakeablePaneBinding {
+  return (
+    'wakeHibernatedAgentIfArmed' in binding &&
+    typeof binding.wakeHibernatedAgentIfArmed === 'function'
+  )
 }
 
 /**
@@ -27,8 +51,8 @@ export function installWakeHibernatedAgentsListener(
   deps: WakeHibernatedAgentsListenerDeps
 ): () => void {
   const onWakeHibernatedAgents = (event: Event): void => {
-    const detail = (event as CustomEvent<WakeHibernatedAgentsWorktreeDetail>).detail
-    if (!detail || detail.worktreeId !== deps.worktreeId) {
+    const detail = event instanceof CustomEvent ? event.detail : null
+    if (!isWakeDetail(detail) || detail.worktreeId !== deps.worktreeId) {
       return
     }
     // Why: a mail-driven wake targets one slept tab; an unscoped detail keeps
@@ -37,11 +61,13 @@ export function installWakeHibernatedAgentsListener(
       return
     }
     for (const panePtyBinding of deps.getPanePtyBindings()) {
-      const binding = panePtyBinding as PaneBindingWithWake
-      if (detail.paneKey && binding.paneKey !== detail.paneKey) {
+      if (!isWakeablePaneBinding(panePtyBinding)) {
         continue
       }
-      const claimKey = binding.wakeHibernatedAgentIfArmed?.(detail.wokenClaimKeys)
+      if (detail.paneKey && panePtyBinding.paneKey !== detail.paneKey) {
+        continue
+      }
+      const claimKey = panePtyBinding.wakeHibernatedAgentIfArmed(detail.wokenClaimKeys)
       if (claimKey) {
         detail.wokenClaimKeys?.add(claimKey)
       }

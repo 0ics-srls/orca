@@ -61,6 +61,11 @@ describe('registerPtyHandlers', () => {
   const { handlers, mainWindow, installDaemonTestProvider, installObservableDaemonTestProvider } =
     setupPtyIpcSuite()
 
+  function runtimeControllerFixture<T>(value: unknown): T {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: registerPtyHandlers installs this controller before each test reads it, and the fixture names only methods the test invokes.
+    return value as T
+  }
+
   it('routes runtime foreground confirmation to the provider owning the captured PTY', async () => {
     const confirmForegroundProcess = vi.fn(async () => 'codex')
     registerSshPtyProvider('ssh-1', { confirmForegroundProcess } as never)
@@ -68,10 +73,10 @@ describe('registerPtyHandlers', () => {
     const runtime = { setPtyController: vi.fn() }
     handlers.clear()
     registerPtyHandlers(mainWindow as never, runtime as never)
-    const controller = runtime.setPtyController.mock.calls[0]?.[0] as {
+    const controller = runtimeControllerFixture<{
       confirmForegroundProcess: (ptyId: string) => Promise<string | null>
       supportsForegroundProcessConfirmation: (ptyId: string) => boolean
-    }
+    }>(runtime.setPtyController.mock.calls[0]?.[0])
 
     expect(controller.supportsForegroundProcessConfirmation('remote-pty')).toBe(true)
     await expect(controller.confirmForegroundProcess('remote-pty')).resolves.toBe('codex')
@@ -155,10 +160,10 @@ describe('registerPtyHandlers', () => {
     const runtime = { setPtyController: vi.fn() }
     handlers.clear()
     registerPtyHandlers(mainWindow as never, runtime as never)
-    const controller = runtime.setPtyController.mock.calls[0]?.[0] as {
+    const controller = runtimeControllerFixture<{
       confirmForegroundProcess: (ptyId: string) => Promise<string | null>
       supportsForegroundProcessConfirmation: (ptyId: string) => boolean
-    }
+    }>(runtime.setPtyController.mock.calls[0]?.[0])
 
     expect(controller.supportsForegroundProcessConfirmation('unsupported-pty')).toBe(false)
     expect(controller.supportsForegroundProcessConfirmation('missing-pty')).toBe(false)
@@ -299,10 +304,11 @@ describe('registerPtyHandlers', () => {
       [['pty:exit', { id: 'local-pty', code: 0 }]]
     )
   })
-  it('ignores a late provider exit after synthesizing kill exit', async () => {
+  it('reconciles a late provider exit without repeating the synthetic renderer exit', async () => {
     const exitListeners = new Set<(payload: { id: string; code: number }) => void>()
     const runtime = {
       setPtyController: vi.fn(),
+      markPtyStopRequested: vi.fn(),
       onPtyExit: vi.fn()
     }
     setLocalPtyProvider({
@@ -338,8 +344,12 @@ describe('registerPtyHandlers', () => {
       listener({ id: 'local-pty', code: 0 })
     }
 
-    expect(runtime.onPtyExit).toHaveBeenCalledTimes(1)
-    expect(runtime.onPtyExit).toHaveBeenCalledWith('local-pty', -1, undefined)
+    expect(runtime.onPtyExit).toHaveBeenCalledTimes(2)
+    expect(runtime.onPtyExit).toHaveBeenNthCalledWith(1, 'local-pty', -1, undefined)
+    expect(runtime.onPtyExit).toHaveBeenNthCalledWith(2, 'local-pty', 0, undefined, {
+      providerExitObserved: true
+    })
+    expect(runtime.markPtyStopRequested).toHaveBeenCalledTimes(2)
     expect(mainWindow.webContents.send.mock.calls.filter((call) => call[0] === 'pty:exit')).toEqual(
       [['pty:exit', { id: 'local-pty', code: -1 }]]
     )

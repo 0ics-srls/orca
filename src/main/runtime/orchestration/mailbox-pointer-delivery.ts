@@ -1,11 +1,15 @@
-import { ORCHESTRATION_DELIVERY_BATCH_LIMIT } from './db'
 import type { PointerDeliveryDependencies } from './mailbox-pointer-delivery-contract'
 import {
   hasUnfilteredOrchestrationWaiter,
+  selectOrchestrationPointerBatch,
   type OrchestrationMessageWaiter
 } from './mailbox-pointer-eligibility'
 import type { OrchestrationMailboxLeaf } from './mailbox-owner'
-import { getOrchestrationMailboxPointerCandidates } from './mailbox-pointer-candidates'
+import {
+  OrchestrationMailboxPointerHandleDelivery,
+  type OrchestrationMailboxPointerDeliveryOptions
+} from './mailbox-pointer-handle-delivery'
+import { pointerEnterDelayMs } from './mailbox-pointer-enter-delay'
 import { OrchestrationMailboxStatuslessCodexProofCoordinator } from './mailbox-statusless-codex-proof-coordinator'
 import { OrchestrationMailboxStatuslessCodexRedrive } from './mailbox-statusless-codex-redrive'
 import { isStatuslessIdleProofCurrent } from './mailbox-statusless-idle-proof'
@@ -14,107 +18,41 @@ import {
   type OrchestrationMailboxDeliveryFlight,
   type OrchestrationStatuslessIdleProof
 } from './mailbox-pointer-state'
+import {
+  MAILBOX_POINTER_RESERVED,
+  MAILBOX_POINTER_WRITE_ATTEMPTED
+} from './db/messages/mailbox-pointer-enter-state'
 import { resumePendingOrchestrationMailboxPointer } from './mailbox-pointer-resume'
 import { stageOrchestrationMailboxPointer } from './mailbox-pointer-stage'
 
 export type { OrchestrationMessageWaiter } from './mailbox-pointer-eligibility'
-
-const DEFAULT_POINTER_ENTER_DELAY_MS = 500
-
-function pointerEnterDelayMs(): number {
-  const configured = Number(process.env.ORCA_E2E_ORCHESTRATION_POINTER_ENTER_DELAY_MS)
-  return Number.isFinite(configured) && configured >= 1 && configured <= 60_000
-    ? configured
-    : DEFAULT_POINTER_ENTER_DELAY_MS
-}
 
 export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMessageWaiter> {
   private readonly state = new OrchestrationMailboxPointerState()
   private readonly coldParkedPtys = new Set<string>()
   private readonly statuslessCodexProofs: OrchestrationMailboxStatuslessCodexProofCoordinator
   private readonly statuslessCodexRedrives: OrchestrationMailboxStatuslessCodexRedrive
+  private readonly handleDelivery: OrchestrationMailboxPointerHandleDelivery<TWaiter>
 
   constructor(private readonly deps: PointerDeliveryDependencies<TWaiter>) {
     this.statuslessCodexProofs = new OrchestrationMailboxStatuslessCodexProofCoordinator(deps)
     this.statuslessCodexRedrives = new OrchestrationMailboxStatuslessCodexRedrive((mailboxHandle) =>
       this.redrive(mailboxHandle, true)
     )
+    this.handleDelivery = new OrchestrationMailboxPointerHandleDelivery(
+      deps,
+      this.statuslessCodexProofs,
+      (leaf, options) => this.deliver(leaf, options)
+    )
   }
 
   deliverForHandle(handle: string, reservedTypes?: ReadonlySet<string>): void {
-    const terminalHandle = this.deps.deliveryTarget.resolveTerminalHandle(handle)
-    if (!terminalHandle) {
-      // No live pane owns this mailbox. The message arriving is itself the
-      // evidence the recipient is owed work, so ask for a wake rather than
-      // leaving the mail to an idle edge that a slept pane will never reach.
-      this.deps.requestSleepingRecipientWake?.(handle)
-      return
-    }
-    try {
-      const leaf = this.deps.getLiveLeafForHandle(terminalHandle)
-      // Why before the status check: a leaf with no PTY still resolves once the
-      // pane is listable, and its status reads the same as a busy pane's. Waiting
-      // for an idle edge that no process will ever emit is the silent give-up
-      // this path exists to end, so treat "no process" as the wake evidence.
-      if (!leaf.ptyId) {
-        this.deps.requestSleepingRecipientWake?.(handle)
-        return
-      }
-      if (leaf.lastAgentStatus === 'idle' && leaf.lastAgentStatusObservedLive) {
-        const mailboxHandle = this.deps.mailboxOwner.resolve(leaf, handle)
-        if (mailboxHandle) {
-          this.deliver(leaf, { mailboxHandle, reservedTypes })
-        }
-        return
-      }
-      if (leaf.lastAgentStatus !== null) {
-        return
-      }
-      const mailboxHandle = this.deps.mailboxOwner.resolve(leaf, handle)
-      const db = this.deps.getDb()
-      if (
-        !db ||
-        !mailboxHandle?.startsWith('run:') ||
-        db.hasOutstandingRunDelivery?.(mailboxHandle.slice('run:'.length)) ||
-        (getOrchestrationMailboxPointerCandidates(
-          db,
-          mailboxHandle,
-          this.deps.getMessageWaiters(mailboxHandle),
-          reservedTypes
-        ).length === 0 &&
-          // A pending pointer reservation still needs the resume pass in deliver().
-          db.getPendingMailboxPointerMessages(mailboxHandle).length === 0)
-      ) {
-        return
-      }
-      this.statuslessCodexProofs.runWhenProven(
-        terminalHandle,
-        leaf,
-        (currentLeaf, statuslessIdleProof) => {
-          const currentMailbox = this.deps.mailboxOwner.resolve(currentLeaf, handle)
-          if (currentMailbox === mailboxHandle) {
-            this.deliver(currentLeaf, {
-              mailboxHandle,
-              reservedTypes,
-              statuslessIdleProof
-            })
-          }
-        }
-      )
-    } catch {
-      // Persisted mail remains available to explicit check or a later idle edge.
-      this.deps.requestSleepingRecipientWake?.(handle)
-    }
+    this.handleDelivery.deliverForHandle(handle, reservedTypes)
   }
 
   deliver(
     leaf: OrchestrationMailboxLeaf,
-    options: {
-      mailboxHandle: string
-      reservedTypes?: ReadonlySet<string>
-      skipAbsenceProbe?: boolean
-      statuslessIdleProof?: OrchestrationStatuslessIdleProof
-    }
+    options: OrchestrationMailboxPointerDeliveryOptions
   ): void {
     const db = this.deps.getDb()
     const mailboxHandle = options.mailboxHandle
@@ -135,6 +73,16 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
       return
     }
     if (db.hasOutstandingMailboxDelivery?.(mailboxHandle)) {
+      return
+    }
+    // Why the gate lives HERE and not at each caller: this method is the single point at
+    // which this subsystem commits to typing the pointer into the pane, and it has four
+    // callers (handle delivery, post-probe redelivery, flight settle, and the notification
+    // coordinator's per-leaf path). Gating callers meant each new one silently bypassed the
+    // check; gating the commit point cannot be bypassed. Refusal parks and re-offers rather
+    // than dropping — `isAgentSettledForDelivery` arms the re-check.
+    if (!this.deps.isAgentSettledForDelivery(leaf)) {
+      this.parkRedelivery(mailboxHandle, options.reservedTypes)
       return
     }
     if (leaf.ptyId) {
@@ -187,16 +135,11 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
     ) {
       return
     }
-    // Every waiter here is type-filtered (unfiltered ones returned above), so SQL exclusion is exact.
-    const excludedTypes = new Set(options.reservedTypes)
-    for (const waiter of waiters ?? []) {
-      for (const type of waiter.typeFilter ?? []) {
-        excludedTypes.add(type)
-      }
-    }
-    const unread = db.getUndeliveredUnreadMessages(mailboxHandle, undefined, {
-      excludeTypes: [...excludedTypes],
-      limit: ORCHESTRATION_DELIVERY_BATCH_LIMIT
+    const unread = selectOrchestrationPointerBatch({
+      db,
+      mailboxHandle,
+      waiters,
+      reservedTypes: options.reservedTypes
     })
     if (unread.length === 0 || !leaf.writable || !leaf.ptyId) {
       return
@@ -235,9 +178,7 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
       newestSequence,
       enterDelayMs: pointerEnterDelayMs(),
       leafKey: this.leafKey(leaf),
-      ...(options.statuslessIdleProof
-        ? { statuslessIdleProof: options.statuslessIdleProof }
-        : {}),
+      ...(options.statuslessIdleProof ? { statuslessIdleProof: options.statuslessIdleProof } : {}),
       ...(this.deps.submitStatuslessCodexPointer
         ? {
             deferRedriveUntilPtyOutput: (ptyId: string, redriveMailbox: string, sequence: number) =>
@@ -264,7 +205,19 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
       clearTimeout(flight.enterTimer)
     }
     if (flight?.stagedMessageIds.length) {
-      this.deps.getDb()?.markAsUndelivered(flight.stagedMessageIds)
+      const db = this.deps.getDb()
+      if (db && flight.processIncarnation) {
+        // Why: the Enter timer was just cleared, so a reserved or merely-written pointer provably
+        // never submitted and is released. An attempted Enter may already have landed, so it stays
+        // at its phase for the resume path to revalidate rather than being sent a second time.
+        db.releaseMailboxPointerEnter(
+          flight.stagedMessageIds,
+          { ptyId, processIncarnation: flight.processIncarnation },
+          [MAILBOX_POINTER_RESERVED, MAILBOX_POINTER_WRITE_ATTEMPTED]
+        )
+      } else {
+        db?.markAsUndelivered(flight.stagedMessageIds)
+      }
     }
     for (const mailboxHandle of releasedMailboxes) {
       this.redrive(mailboxHandle, true)

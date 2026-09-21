@@ -199,7 +199,7 @@ describe('connectPanePty', () => {
             updatedAt: 1
           }
         }
-      } as StoreState
+      }
       const pane = createPane(2)
       const manager = createManager(2)
       const deps = createDeps({
@@ -271,10 +271,10 @@ describe('connectPanePty', () => {
           }
         }
         activePtyId = 'fresh-resume-pty'
-        const onPtySpawn = createdTransportOptions[0]?.onPtySpawn as
-          | ((ptyId: string) => void)
-          | undefined
-        onPtySpawn?.('fresh-resume-pty')
+        const onPtySpawn = createdTransportOptions[0]?.onPtySpawn
+        if (typeof onPtySpawn === 'function') {
+          onPtySpawn('fresh-resume-pty')
+        }
         return 'fresh-resume-pty'
       })
       transportFactoryQueue.push(transport)
@@ -308,7 +308,7 @@ describe('connectPanePty', () => {
             updatedAt: 1
           }
         }
-      } as StoreState
+      }
       const pane = createPane(2)
       const manager = createManager(2)
       const deps = createDeps({

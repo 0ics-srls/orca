@@ -5,27 +5,32 @@
 import { describe, expect, it } from 'vitest'
 import type { OrchestrationDb } from '../../orchestration/db'
 import type { OrcaRuntimeService } from '../../orca-runtime'
-import { resolveBareOrchestrationRecipient } from './orchestration-recipient-routing'
+import { resolveBareOrchestrationRecipient } from './orchestration/messaging/recipient-routing'
 
 const HANDLE = 'term_slept'
 const PANE_KEY = 'tab-1:leaf-1'
 
+function routingFixture<T>(value: object): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recipient routing reads only the runtime and database lookup methods supplied by each fixture.
+  return value as T
+}
+
 function runtimeWith(
   sleptPane: { paneKey: string; autoWakes: boolean } | null
 ): OrcaRuntimeService {
-  return {
+  return routingFixture({
     getLiveTerminalPaneKey: () => null,
     getResumableSleptRecipientPane: () => sleptPane
-  } as unknown as OrcaRuntimeService
+  })
 }
 
 function dbWith(overrides: Partial<OrchestrationDb> = {}): OrchestrationDb {
-  return {
+  return routingFixture({
     getCurrentRunForPane: () => undefined,
     getActiveDispatchMailboxOwners: () => [],
     getRunMailboxOwnerIdsForHandle: () => [],
     ...overrides
-  } as unknown as OrchestrationDb
+  })
 }
 
 describe('sending to a slept recipient', () => {
@@ -33,8 +38,8 @@ describe('sending to a slept recipient', () => {
     const resolution = resolveBareOrchestrationRecipient({
       runtime: runtimeWith({ paneKey: PANE_KEY, autoWakes: true }),
       db: dbWith({
-        getCurrentRunForPane: ((paneKey: string) =>
-          paneKey === PANE_KEY ? { id: 'run-1' } : undefined) as never
+        getCurrentRunForPane: (paneKey: string) =>
+          paneKey === PANE_KEY ? routingFixture({ id: 'run-1' }) : undefined
       }),
       handle: HANDLE
     })
@@ -46,7 +51,7 @@ describe('sending to a slept recipient', () => {
   it('tells the sender a deliberately slept pane is never woken automatically', () => {
     const resolution = resolveBareOrchestrationRecipient({
       runtime: runtimeWith({ paneKey: PANE_KEY, autoWakes: false }),
-      db: dbWith({ getCurrentRunForPane: (() => ({ id: 'run-1' })) as never }),
+      db: dbWith({ getCurrentRunForPane: () => routingFixture({ id: 'run-1' }) }),
       handle: HANDLE
     })
     expect(resolution.warning?.message).toContain('next opened')
@@ -80,22 +85,22 @@ describe('sending to a slept recipient', () => {
   })
 
   it('leaves a live recipient unannotated', () => {
-    const runtime = {
+    const runtime = routingFixture<OrcaRuntimeService>({
       getLiveTerminalPaneKey: () => PANE_KEY,
       getResumableSleptRecipientPane: () => {
         throw new Error('must not consult sleeping records for a live pane')
       }
-    } as unknown as OrcaRuntimeService
+    })
     const resolution = resolveBareOrchestrationRecipient({
       runtime,
-      db: dbWith({ getCurrentRunForPane: (() => ({ id: 'run-1' })) as never }),
+      db: dbWith({ getCurrentRunForPane: () => routingFixture({ id: 'run-1' }) }),
       handle: HANDLE
     })
     expect(resolution).toEqual({ ok: true, to: 'run:run-1', runId: 'run-1' })
   })
 
   it('tolerates a runtime that predates the slept-recipient lookup', () => {
-    const runtime = { getLiveTerminalPaneKey: () => null } as unknown as OrcaRuntimeService
+    const runtime = routingFixture<OrcaRuntimeService>({ getLiveTerminalPaneKey: () => null })
     expect(
       resolveBareOrchestrationRecipient({ runtime, db: dbWith(), handle: HANDLE })
     ).toMatchObject({ ok: false, code: 'terminal_not_found' })

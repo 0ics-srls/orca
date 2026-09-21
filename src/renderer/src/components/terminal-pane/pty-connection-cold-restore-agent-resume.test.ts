@@ -134,6 +134,11 @@ function createDeps(overrides: Record<string, unknown> = {}) {
   return buildPaneConnectionDeps(() => mockStoreState, overrides)
 }
 
+function connectionFixture<T>(value: unknown): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the shared pane fixtures implement every member reached by connectPanePty in this integration suite.
+  return value as T
+}
+
 describe('connectPanePty', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -432,20 +437,20 @@ describe('connectPanePty', () => {
           updatedAt: 1
         }
       }
-    } as StoreState
+    }
 
     const binding = connectPanePty(
-      createPane(2) as never,
-      createManager(2) as never,
-      createDeps({
-        restoredLeafId: LEAF_2,
-        restoredPtyIdByLeafId: { [LEAF_2]: 'lost-sibling-pty' },
-        coldRestorePaneKeys: new Set([addressedPaneKey]),
-        isVisibleRef: { current: false }
-      }) as never
-    ) as unknown as {
-      wakeHibernatedAgentIfArmed: (claims?: Set<string>) => string | null
-    }
+      connectionFixture(createPane(2)),
+      connectionFixture(createManager(2)),
+      connectionFixture(
+        createDeps({
+          restoredLeafId: LEAF_2,
+          restoredPtyIdByLeafId: { [LEAF_2]: 'lost-sibling-pty' },
+          coldRestorePaneKeys: new Set([addressedPaneKey]),
+          isVisibleRef: { current: false }
+        })
+      )
+    )
     await flushAsyncTicks(20)
     await new Promise((resolve) => setTimeout(resolve, 300))
 
@@ -489,17 +494,19 @@ describe('connectPanePty', () => {
           updatedAt: 1
         }
       }
-    } as StoreState
+    }
 
     connectPanePty(
-      createPane(2) as never,
-      createManager(2) as never,
-      createDeps({
-        restoredLeafId: LEAF_2,
-        restoredPtyIdByLeafId: { [LEAF_2]: 'lost-sibling-pty' },
-        coldRestorePaneKeys: new Set([addressedPaneKey]),
-        isVisibleRef: { current: true }
-      }) as never
+      connectionFixture(createPane(2)),
+      connectionFixture(createManager(2)),
+      connectionFixture(
+        createDeps({
+          restoredLeafId: LEAF_2,
+          restoredPtyIdByLeafId: { [LEAF_2]: 'lost-sibling-pty' },
+          coldRestorePaneKeys: new Set([addressedPaneKey]),
+          isVisibleRef: { current: true }
+        })
+      )
     )
     await flushAsyncTicks(20)
 
@@ -560,7 +567,7 @@ describe('connectPanePty', () => {
           updatedAt: 1
         }
       }
-    } as StoreState
+    }
 
     const pane = createPane(1)
     const manager = createManager(1)
@@ -612,15 +619,17 @@ describe('connectPanePty', () => {
         [firstPaneKey]: sleepingRecord(firstPaneKey, 'tab-obsolete-a', 'session-a'),
         [secondPaneKey]: sleepingRecord(secondPaneKey, 'tab-obsolete-b', 'session-b')
       }
-    } as StoreState
+    }
 
     connectPanePty(
-      createPane(1) as never,
-      createManager(1) as never,
-      createDeps({
-        restoredLeafId: LEAF_1,
-        restoredPtyIdByLeafId: { [LEAF_1]: 'lost-pty' }
-      }) as never
+      connectionFixture(createPane(1)),
+      connectionFixture(createManager(1)),
+      connectionFixture(
+        createDeps({
+          restoredLeafId: LEAF_1,
+          restoredPtyIdByLeafId: { [LEAF_1]: 'lost-pty' }
+        })
+      )
     )
     await flushAsyncTicks(20)
 
@@ -678,7 +687,7 @@ describe('connectPanePty', () => {
           updatedAt: 1
         }
       }
-    } as StoreState
+    }
 
     const pane = createPane(1)
     const manager = createManager(1)
@@ -687,7 +696,7 @@ describe('connectPanePty', () => {
       restoredPtyIdByLeafId: { [LEAF_1]: 'lost-pty' }
     })
 
-    connectPanePty(pane as never, manager as never, deps as never)
+    connectPanePty(connectionFixture(pane), connectionFixture(manager), connectionFixture(deps))
     await flushAsyncTicks(20)
     await new Promise((resolve) => setTimeout(resolve, 70))
 

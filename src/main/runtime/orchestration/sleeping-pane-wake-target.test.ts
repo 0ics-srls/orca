@@ -93,8 +93,7 @@ describe('resolveSleepingPaneWakeTarget', () => {
     ['a still-working manual sleep', { state: 'working' as const }],
     ['a quit capture', { origin: 'quit' as const }],
     ['a live resume anchor', { origin: 'live' as const }],
-    ['an interrupted turn', { interrupted: true }],
-    ['a fenced legacy worker', { automaticResumeBlockedBy: 'legacy-orchestration-worker' as const }]
+    ['an interrupted turn', { interrupted: true }]
   ])('never auto-wakes %s', (_label, overrides) => {
     expect(
       resolveSleepingPaneWakeTarget(

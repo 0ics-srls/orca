@@ -112,6 +112,11 @@ export function useTerminalPaneFoundation(
     caseSensitive: false,
     regex: false
   })
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const focusSearchInput = useCallback((): void => {
+    searchInputRef.current?.focus()
+    searchInputRef.current?.select()
+  }, [])
   const [pendingCloseConfirmation, setPendingCloseConfirmation] = useState<{
     paneId: number
     copyKind: CloseTerminalDialogCopyKind
@@ -202,6 +207,8 @@ export function useTerminalPaneFoundation(
     setSearchOpen,
     searchOpenRef,
     searchStateRef,
+    searchInputRef,
+    focusSearchInput,
     pendingCloseConfirmation,
     setPendingCloseConfirmation,
     quickCommandEditorOpen,

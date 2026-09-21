@@ -65,13 +65,16 @@ export function useTerminalParkingFoundation(controller: TerminalEditorCloseCont
   const [evictionExemptTerminalTabIds, setEvictionExemptTerminalTabIds] = useState<
     ReadonlySet<string>
   >(() => new Set())
-  const forceParkedCaptureDoneRef = useRef(new Set<string>())
+  const parkedCaptureDoneRef = useRef(new Set<string>())
   const backgroundMountTabIdsByWorktreeRef = useRef(new Map<string, ReadonlySet<string>>())
   const backgroundMountColdRestorePaneKeysRef = useRef(
     new Map<string, ReadonlyMap<string, ReadonlySet<string>>>()
   )
   const activationDeferredMountTabIdsByWorktreeRef = useRef(new Map<string, ReadonlySet<string>>())
   const lastActivationWorktreeIdRef = useRef<string | null>(null)
+  // Why a ref, not state: the cold-activation pass runs during render, where a
+  // setState would be a render-phase update; the pass returns the count instead.
+  const activationDeferralPlanRevisionRef = useRef(0)
 
   useEffect(() => {
     const timers = measurableBackgroundWorktreeTimersRef.current
@@ -168,11 +171,12 @@ export function useTerminalParkingFoundation(controller: TerminalEditorCloseCont
     setForceParkedTerminalWorktreeIds,
     evictionExemptTerminalTabIds,
     setEvictionExemptTerminalTabIds,
-    forceParkedCaptureDoneRef,
+    parkedCaptureDoneRef,
     backgroundMountTabIdsByWorktreeRef,
     backgroundMountColdRestorePaneKeysRef,
     activationDeferredMountTabIdsByWorktreeRef,
-    lastActivationWorktreeIdRef
+    lastActivationWorktreeIdRef,
+    activationDeferralPlanRevisionRef
   }
 }
 

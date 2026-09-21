@@ -14,8 +14,14 @@ import { OrchestrationMailboxPointerDelivery } from './mailbox-pointer-delivery'
 import { OrchestrationMailboxPointerState } from './mailbox-pointer-state'
 import { submitOrchestrationMailboxPointer } from './mailbox-pointer-submit'
 import type { OrchestrationDb } from './db'
+import { WRITE_ACCEPTED } from '../../../shared/pty-write-settlement'
 
 const MAILBOX = 'run:run-1'
+
+function mailboxFixture<T>(value: object): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each dependency double implements every member reached by the isolated delivery path under test.
+  return value as T
+}
 
 function liveLeaf(): OrchestrationMailboxLeaf {
   return {
@@ -35,10 +41,10 @@ function makeDelivery(overrides: {
 }) {
   const requestSleepingRecipientWake = vi.fn()
   const delivery = new OrchestrationMailboxPointerDelivery({
-    mailboxOwner: { resolve: () => null } as unknown as OrchestrationMailboxOwner,
-    deliveryTarget: {
+    mailboxOwner: mailboxFixture<OrchestrationMailboxOwner>({ resolve: () => null }),
+    deliveryTarget: mailboxFixture<OrchestrationMailboxDeliveryTarget>({
       resolveTerminalHandle: overrides.resolveTerminalHandle
-    } as unknown as OrchestrationMailboxDeliveryTarget,
+    }),
     getDb: () => null,
     getLeaf: () => undefined,
     getLeafKey: (tabId, leafId) => `${tabId}:${leafId}`,
@@ -47,14 +53,17 @@ function makeDelivery(overrides: {
       (() => {
         throw new Error('no_active_terminal')
       }),
+    isAgentSettledForDelivery: () => true,
     getMessageWaiters: () => undefined,
     getTabTitle: () => null,
+    getCliCommand: () => 'orca',
     getTerminalHandleForLeafKey: () => undefined,
     getTerminalProcessIncarnation: () => null,
+    resolveSubmitTarget: () => null,
     isLeafPtyProvenAbsent: () => Promise.resolve(false),
     redriveMailbox: () => undefined,
     requestSleepingRecipientWake,
-    writePty: () => true
+    writePty: () => WRITE_ACCEPTED
   })
   return { delivery, requestSleepingRecipientWake }
 }
@@ -111,34 +120,40 @@ describe('mail delivery to a pane with no process', () => {
 
   it('requests a wake when the PTY is proven absent while a pointer is in flight', async () => {
     const requestSleepingRecipientWake = vi.fn()
-    const markAsUndelivered = vi.fn()
+    const releaseMailboxPointerEnter = vi.fn()
     const state = new OrchestrationMailboxPointerState()
     const flight = state.beginFlight('pty-1')
+    const leaf = liveLeaf()
+    const expectedTarget = {
+      leaf,
+      terminalHandle: 'term-1',
+      processIncarnation: 'pty-1:incarnation-1'
+    }
     submitOrchestrationMailboxPointer(
       {
-        mailboxOwner: { resolve: () => MAILBOX } as unknown as OrchestrationMailboxOwner,
+        mailboxOwner: mailboxFixture<OrchestrationMailboxOwner>({ resolve: () => MAILBOX }),
         state,
-        getDb: () => ({ markAsUndelivered }) as unknown as OrchestrationDb,
-        getLeaf: () => undefined,
-        getLeafKey: (tabId, leafId) => `${tabId}:${leafId}`,
-        getTerminalProcessIncarnation: () => null,
+        getDb: () => mailboxFixture<OrchestrationDb>({ releaseMailboxPointerEnter }),
+        resolveSubmitTarget: () => expectedTarget,
+        getTerminalProcessIncarnation: () => expectedTarget.processIncarnation,
         getMessageWaiters: () => undefined,
         isLeafPtyProvenAbsent: () => Promise.resolve(true),
         requestSleepingRecipientWake,
-        writePty: () => true,
+        writePty: () => WRITE_ACCEPTED,
         settle: () => undefined,
         redrive: () => undefined
       },
       {
-        leaf: liveLeaf(),
+        leaf,
         mailboxHandle: MAILBOX,
         messages: [{ id: 'msg-1', type: 'worker_done' }],
         newestSequence: 1,
         ptyId: 'pty-1',
-        flight
+        flight,
+        expectedTarget
       }
     )
-    await vi.waitFor(() => expect(markAsUndelivered).toHaveBeenCalled())
+    await vi.waitFor(() => expect(releaseMailboxPointerEnter).toHaveBeenCalled())
     expect(requestSleepingRecipientWake).toHaveBeenCalledWith(MAILBOX)
   })
 })

@@ -104,6 +104,34 @@ describe('orchestration worker-start CLI contract', () => {
     expect(process.exitCode).toBeUndefined()
   })
 
+  it.each(['succeeded', 'failed'])(
+    'accepts a successful start whose task already %s',
+    async (workerOutcome) => {
+      const receipt = {
+        taskId: 'task_1',
+        dispatchId: 'ctx_1',
+        state: 'ready',
+        stage: 'settled',
+        workerOutcome,
+        effects: [],
+        residualResources: []
+      }
+      callMock.mockResolvedValue({ result: receipt })
+      await invokeWorkerStart(
+        new Map([
+          ['task', 'task_1'],
+          ['from', 'term_coord']
+        ])
+      )
+      expect(process.exitCode).toBeUndefined()
+      expect(printResult).toHaveBeenCalledWith(
+        expect.objectContaining({ result: receipt }),
+        true,
+        expect.any(Function)
+      )
+    }
+  )
+
   it('capability-gates and forwards per-invocation launch preferences', async () => {
     callMock
       .mockResolvedValueOnce({
@@ -334,6 +362,59 @@ describe('orchestration worker-start CLI contract', () => {
     ).toContain('Warning: Terminal term_worker is running but could not be revealed.')
   })
 
+  it('states the worker mode that actually ran, so a fallback is never silent', async () => {
+    callMock.mockResolvedValue({
+      result: {
+        taskId: 'task_1',
+        dispatchId: 'ctx_1',
+        state: 'ready',
+        mode: {
+          mode: 'terminal',
+          preferred: 'structured',
+          reason: 'reused_terminal',
+          detail:
+            'Your default is a structured chat session, but --terminal reuses a running terminal agent; started a terminal agent worker instead.'
+        },
+        effects: [],
+        residualResources: []
+      }
+    })
+
+    await ORCHESTRATION_HANDLERS['orchestration worker-start']({
+      flags: new Map<string, string | boolean>([
+        ['task', 'task_1'],
+        ['terminal', 'term_worker'],
+        ['from', 'term_coord']
+      ]),
+      client: { call: callMock },
+      cwd: '/tmp/repo',
+      json: false
+    } as never)
+
+    const formatter = vi.mocked(printResult).mock.calls[0]?.[2] as
+      | ((result: {
+          taskId: string
+          dispatchId: string
+          state: string
+          mode?: { mode: string; preferred: string; reason: string; detail: string }
+        }) => string)
+      | undefined
+    expect(
+      formatter?.({
+        taskId: 'task_1',
+        dispatchId: 'ctx_1',
+        state: 'ready',
+        mode: {
+          mode: 'terminal',
+          preferred: 'structured',
+          reason: 'reused_terminal',
+          detail:
+            'Your default is a structured chat session, but --terminal reuses a running terminal agent; started a terminal agent worker instead.'
+        }
+      })
+    ).toContain('but --terminal reuses a running terminal agent')
+  })
+
   it('prints the retained-process warning for a manual worker-stop', async () => {
     callMock.mockResolvedValue({
       result: {
@@ -472,6 +553,37 @@ describe('orchestration worker-start CLI contract', () => {
         counts: { active: 1 }
       })
     ).toContain('ctx_legacy task=task_legacy [ready] terminal=active')
+  })
+
+  it('passes a truncation warning to the receipt and still prints the cursor hint', async () => {
+    const response = {
+      result: {
+        workers: [],
+        counts: { active: 1 },
+        page: { total: 105, hasMore: true, nextCursor: 'owlc_next' },
+        warnings: ['Showing 100 of 105 Dispatches, newest first; more are on later pages.']
+      }
+    }
+    callMock.mockResolvedValue(response)
+
+    await ORCHESTRATION_HANDLERS['orchestration worker-list']({
+      flags: new Map<string, string | boolean>(),
+      client: { call: callMock },
+      cwd: '/tmp/repo',
+      json: true
+    } as never)
+
+    expect(vi.mocked(printResult).mock.calls[0]?.[0]).toMatchObject({
+      result: { warnings: response.result.warnings }
+    })
+    const formatter = vi.mocked(printResult).mock.calls[0]?.[2] as
+      | ((result: (typeof response)['result']) => string)
+      | undefined
+    const output = formatter?.(response.result)
+    expect(output).toContain('More: --cursor owlc_next')
+    expect(output).toContain(
+      'Warning: Showing 100 of 105 Dispatches, newest first; more are on later pages.'
+    )
   })
 
   it.each([

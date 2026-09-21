@@ -7,7 +7,9 @@ import {
   PS_ARGS,
   PS_MAX_BUFFER_BYTES,
   ProcessTableCaptureError,
+  SHELL_FOREGROUND_PS_ARGS,
   parseProcessTableRows,
+  parseShellForegroundRows,
   parseStrictProcessTableRows,
   type ProcessTableRow
 } from './process-table-snapshot'
@@ -146,7 +148,7 @@ type ProcessTableCapture = {
   strict: () => ProcessTableRow[]
 }
 
-async function captureProcessTable(args: readonly string[]): Promise<ProcessTableCapture> {
+async function captureProcessTableText(args: readonly string[]): Promise<string> {
   let stdout: string
   try {
     ;({ stdout } = await execFile('ps', [...args], {
@@ -160,7 +162,12 @@ async function captureProcessTable(args: readonly string[]): Promise<ProcessTabl
     }
     throw error
   }
-  const baseCapture = createProcessTableCapture(assertWholeCapture(stdout))
+  return assertWholeCapture(stdout)
+}
+
+async function captureProcessTable(args: readonly string[]): Promise<ProcessTableCapture> {
+  const stdout = await captureProcessTableText(args)
+  const baseCapture = createProcessTableCapture(stdout)
   const startTimesByPid = await readLinuxProcessStartTimes(baseCapture.lenient())
   return createProcessTableCapture(stdout, startTimesByPid, process.platform === 'linux')
 }
@@ -238,6 +245,20 @@ const processTableReader = createProcessTableSnapshotReader<ProcessTableCapture>
   now: () => Date.now()
 })
 
+// Its own reader, not a column-set flag on the shared one: terminal-name resolution dominates
+// macOS capture time, and a shell proof must not queue behind a full capture it cannot use.
+const shellForegroundReader = createProcessTableSnapshotReader<ProcessTableRow[]>({
+  runPs: async () =>
+    parseShellForegroundRows(await captureProcessTableText(SHELL_FOREGROUND_PS_ARGS)),
+  now: () => Date.now()
+})
+
+export async function getFreshShellForegroundSnapshot(): Promise<ProcessTableRow[]> {
+  return process.platform === 'darwin'
+    ? shellForegroundReader.getFreshSnapshot()
+    : getFreshProcessTableSnapshot()
+}
+
 export async function getProcessTableSnapshot(): Promise<ProcessTableRow[]> {
   return (await processTableReader.getSnapshot()).lenient()
 }
@@ -285,4 +306,5 @@ export async function getStrictProcessTableSnapshotWithAge(): Promise<{
 
 export function resetProcessTableSnapshotForTests(): void {
   processTableReader.reset()
+  shellForegroundReader.reset()
 }

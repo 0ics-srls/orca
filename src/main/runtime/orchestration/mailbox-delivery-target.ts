@@ -5,6 +5,8 @@ type OrchestrationMailboxDeliveryTargetDependencies = {
   getDb: () => OrchestrationDb | null
   getTerminalHandleForPaneKey: (paneKey: string) => string | null
   hasTerminalHandle: (handle: string) => boolean
+  /** A structured worker has no PTY handle; its own lane delivers, so this must not claim it. */
+  isStructuredWorkerHandle: (handle: string) => boolean
   canProbePtyLiveness: () => boolean
   controllerKnowsPtyIsLive: (ptyId: string) => boolean
   isLeafPtyProvenAbsent: (ptyId: string) => Promise<boolean>
@@ -19,6 +21,9 @@ export class OrchestrationMailboxDeliveryTarget {
     if (this.deps.hasTerminalHandle(handle)) {
       return handle
     }
+    if (this.deps.isStructuredWorkerHandle(handle)) {
+      return null
+    }
     const db = this.deps.getDb()
     const runId = handle.startsWith('run:') ? handle.slice('run:'.length) : ''
     const dispatchId = handle.startsWith('dispatch:') ? handle.slice('dispatch:'.length) : ''
@@ -28,12 +33,31 @@ export class OrchestrationMailboxDeliveryTarget {
       dispatchId && !dispatch ? db?.getRemoteDispatchAttachment?.(dispatchId) : undefined
     const paneKey = run?.coordinator_pane_key ?? dispatch?.assignee_pane_key ?? remote?.pane_key
     const paneHandle = paneKey ? this.deps.getTerminalHandleForPaneKey(paneKey) : null
+    if (run?.coordinator_handle && this.deps.isStructuredWorkerHandle(run.coordinator_handle)) {
+      return null
+    }
     const ownerHandle = runId
       ? paneHandle && this.deps.hasTerminalHandle(paneHandle)
         ? paneHandle
         : run?.coordinator_handle
       : (paneHandle ?? dispatch?.assignee_handle ?? remote?.terminal_handle)
-    return ownerHandle && this.deps.hasTerminalHandle(ownerHandle) ? ownerHandle : null
+    if (!ownerHandle) {
+      return null
+    }
+    if (this.deps.isStructuredWorkerHandle(ownerHandle)) {
+      // The structured lane owns this mailbox; nothing here can type into it.
+      return null
+    }
+    if (!this.deps.hasTerminalHandle(ownerHandle)) {
+      // Why logged rather than silent: an unroutable owner is the shape of a lost mailbox, and a
+      // silent null is indistinguishable from "no mail".
+      console.warn('[orchestration] mailbox owner resolved to an unknown terminal', {
+        mailboxHandle: handle,
+        ownerHandle
+      })
+      return null
+    }
+    return ownerHandle
   }
 
   deferForAbsenceProbe(

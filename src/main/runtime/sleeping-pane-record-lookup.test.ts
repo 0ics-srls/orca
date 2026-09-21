@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SleepingAgentSessionRecord } from '../../shared/agent-session-resume'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import { getDefaultWorkspaceSession } from '../../shared/constants'
 import { findSleepingAgentSessionRecord } from './sleeping-pane-record-lookup'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
@@ -19,7 +20,7 @@ function record(paneKey: string, worktreeId: string): SleepingAgentSessionRecord
 }
 
 function session(records: Record<string, SleepingAgentSessionRecord>): WorkspaceSessionState {
-  return { sleepingAgentSessionsByPaneKey: records } as unknown as WorkspaceSessionState
+  return { ...getDefaultWorkspaceSession(), sleepingAgentSessionsByPaneKey: records }
 }
 
 describe('findSleepingAgentSessionRecord', () => {
@@ -51,7 +52,7 @@ describe('findSleepingAgentSessionRecord', () => {
 
   it('tolerates partitions with no sleeping records', () => {
     expect(
-      findSleepingAgentSessionRecord([{} as WorkspaceSessionState, undefined], `tab-1:${LEAF}`)
+      findSleepingAgentSessionRecord([getDefaultWorkspaceSession(), undefined], `tab-1:${LEAF}`)
     ).toBeUndefined()
   })
 })

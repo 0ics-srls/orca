@@ -30,8 +30,8 @@ export type SleepingPaneWakeRequest = {
 
 export type SleepingPaneWakeOutcome = 'requested' | 'queued' | 'suppressed'
 
-/** Node returns a Timeout, jsdom/browser a number; neither is unref-able for sure. */
-type SleepingPaneWakeTimer = { unref?: () => void } | number
+/** Node returns a Timeout and browsers return a number. */
+type SleepingPaneWakeTimer = ReturnType<typeof setTimeout> | number
 
 type SleepingPaneWakeSchedulerDependencies = {
   wake: (request: SleepingPaneWakeRequest) => boolean
@@ -88,16 +88,24 @@ export class SleepingPaneWakeScheduler {
 
   dispose(): void {
     if (this.drainTimer !== null) {
-      ;(this.deps.cancel ?? clearTimeout)(this.drainTimer as ReturnType<typeof setTimeout>)
+      this.cancelTimer(this.drainTimer)
       this.drainTimer = null
     }
     if (this.pruneTimer !== null) {
-      ;(this.deps.cancel ?? clearTimeout)(this.pruneTimer as ReturnType<typeof setTimeout>)
+      this.cancelTimer(this.pruneTimer)
       this.pruneTimer = null
     }
     this.queue.clear()
     this.failed.clear()
     this.requestedAtByPaneKey.clear()
+  }
+
+  private cancelTimer(timer: SleepingPaneWakeTimer): void {
+    if (this.deps.cancel) {
+      this.deps.cancel(timer)
+    } else {
+      clearTimeout(timer)
+    }
   }
 
   private fire(request: SleepingPaneWakeRequest, now: number): boolean {

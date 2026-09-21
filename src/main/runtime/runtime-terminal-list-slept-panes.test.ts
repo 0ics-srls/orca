@@ -11,11 +11,16 @@ import { RuntimeTerminalList } from './runtime-terminal-list'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 
-const WORKTREE: ResolvedWorktree = {
+function terminalListFixture<T>(value: object): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RuntimeTerminalList reads only the explicitly populated fields in these focused fixtures.
+  return value as T
+}
+
+const WORKTREE = terminalListFixture<ResolvedWorktree>({
   id: 'wt-1',
   path: '/tmp/wt-1',
   branch: 'main'
-} as unknown as ResolvedWorktree
+})
 
 const SLEPT_LEAF_ID = '11111111-1111-4111-8111-111111111111'
 const LIVE_LEAF_ID = '22222222-2222-4222-8222-222222222222'
@@ -31,24 +36,24 @@ const SLEPT_PANE: ResumableSleptPane = {
 }
 
 function leaf(overrides: Partial<RuntimeLeafRecord> = {}): RuntimeLeafRecord {
-  return {
+  return terminalListFixture({
     tabId: 'tab-live',
     leafId: LIVE_LEAF_ID,
     worktreeId: 'wt-1',
     ptyId: 'pty-live',
     connected: true,
     ...overrides
-  } as unknown as RuntimeLeafRecord
+  })
 }
 
 function pty(overrides: Partial<RuntimePtyWorktreeRecord> = {}): RuntimePtyWorktreeRecord {
-  return {
+  return terminalListFixture({
     ptyId: 'pty-live',
     worktreeId: 'wt-1',
     connected: true,
     paneKey: `tab-live:${LIVE_LEAF_ID}`,
     ...overrides
-  } as unknown as RuntimePtyWorktreeRecord
+  })
 }
 
 function summaryFor(source: { tabId: string; leafId: string }): RuntimeTerminalSummary {
@@ -88,7 +93,9 @@ function makeList(args: {
       return Promise.resolve(new Map([[worktree.id, worktree]]))
     },
     refreshPtys: () =>
-      Promise.resolve({ livePtyIds: ['pty-live'], allLivePtyIds: new Set(['pty-live']) } as never),
+      Promise.resolve(
+        terminalListFixture({ livePtyIds: ['pty-live'], allLivePtyIds: new Set(['pty-live']) })
+      ),
     getPtys: () => args.ptys ?? [],
     getLeaves: () => args.leaves ?? [],
     buildLeafSummary: (source) => ({
@@ -192,12 +199,12 @@ describe('terminal list with slept panes', () => {
   })
 
   it('resolves slept-pane metadata through equivalent worktree identity', async () => {
-    const resolved = {
+    const resolved = terminalListFixture<ResolvedWorktree>({
       ...WORKTREE,
       id: 'repo-1::/tmp/wt-1',
       path: '/tmp/wt-1',
       branch: 'feature'
-    } as ResolvedWorktree
+    })
     const pane = { ...SLEPT_PANE, worktreeId: 'repo-1::/tmp//wt-1/' }
     const { list } = makeList({ sleptPanes: [pane], worktree: resolved })
 

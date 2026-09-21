@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AppState } from '@/store'
 import { createTestStore, makeTab } from '@/store/slices/store-test-helpers'
 import { planAgentHibernationCandidates } from '@/lib/agent-hibernation-planner'
+import { getDefaultSettings } from '../../../../../shared/constants'
 
 import { restoreCompletedAgentStatusAfterColdResume } from './hibernated-agent-status-resume'
 
@@ -28,7 +29,7 @@ function seedHibernatedCompletion(store: ReturnType<typeof createTestStore>): vo
     providerSession: PROVIDER_SESSION,
     lastAssistantMessage: 'done'
   }
-  store.setState({
+  const hibernatedState: Partial<AppState> = {
     activeWorktreeId: 'foreground-workspace',
     tabsByWorktree: {
       [WORKTREE_ID]: [makeTab({ id: 'tab-1', worktreeId: WORKTREE_ID, ptyId: 'resumed-pty' })]
@@ -42,7 +43,11 @@ function seedHibernatedCompletion(store: ReturnType<typeof createTestStore>): vo
       }
     },
     ptyIdsByTabId: { 'tab-1': ['resumed-pty'] },
-    settings: { experimentalAgentHibernation: true, agentHibernationIdleMs: 60_000 },
+    settings: {
+      ...getDefaultSettings('/tmp'),
+      experimentalAgentHibernation: true,
+      agentHibernationIdleMs: 60_000
+    },
     agentStatusByPaneKey: {},
     retainedAgentsByPaneKey: {
       [PANE_KEY]: {
@@ -68,7 +73,8 @@ function seedHibernatedCompletion(store: ReturnType<typeof createTestStore>): vo
         origin: 'worktree-sleep'
       }
     }
-  } as unknown as Partial<AppState>)
+  }
+  store.setState(hibernatedState)
 }
 
 describe('hibernated agent status resume', () => {

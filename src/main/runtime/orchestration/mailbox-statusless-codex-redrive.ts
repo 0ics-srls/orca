@@ -21,7 +21,7 @@ export class OrchestrationMailboxStatuslessCodexRedrive {
     if (existing?.timer) {
       clearTimeout(existing.timer)
     }
-    const retry = { sequence, armed: true, timer: null as ReturnType<typeof setTimeout> | null }
+    const retry: DeferredRedrive = { sequence, armed: true, timer: null }
     retry.timer = setTimeout(() => {
       const current = this.redrivesByPtyId.get(ptyId)?.get(mailboxHandle)
       if (current === retry && retry.armed) {

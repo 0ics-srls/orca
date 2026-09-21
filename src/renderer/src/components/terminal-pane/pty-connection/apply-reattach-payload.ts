@@ -1,5 +1,3 @@
-import { safeFitAndThen } from '@/lib/pane-manager/pane-tree-ops'
-import { getFitOverrideForPty } from '@/lib/pane-manager/mobile-fit-overrides'
 import { waitForTerminalReplayWritesParsed } from '../replay-guard'
 import {
   POST_REPLAY_MODE_RESET,
@@ -16,6 +14,7 @@ import {
 import { isRemoteRuntimePtyId } from './paired-parked-terminal-restore'
 import { restoredSnapshotPaintsPrintableContent } from '../restored-snapshot-coverage'
 import { resolveSshReconnectModelPaint } from './resolve-ssh-reconnect-model-paint'
+import { fitAfterReattachRestore } from './fit-after-reattach-restore'
 
 import type { ReattachPayloadContext } from './reattach-payload-context'
 import type { ReattachPayloadSession } from './reattach-payload-session'
@@ -320,38 +319,8 @@ export function createReattachPayloadHandlers(
     }
   }
 
-  const fitAfterReattachRestore = async (): Promise<void> => {
-    if (!ctx.isCurrentReattachPayload()) {
-      return
-    }
-    const reattachPtyId = session.transport.getPtyId()
-    if (!reattachPtyId) {
-      return
-    }
-    if (!getFitOverrideForPty(reattachPtyId)) {
-      const gridPush = session.createReattachGridPush(ctx.attemptGeneration, reattachPtyId)
-      const fit = safeFitAndThen(session.pane, 'reattach-pty-resize', gridPush.continuation, {
-        shouldContinue: gridPush.shouldContinue,
-        retryIfUnmeasurable: true,
-        // Why only this caller: a restored floating workspace is display:none until the
-        // user opens it, so dropping the grid push strands the PTY at the replay grid.
-        deferIfHidden: true
-      })
-      session.pendingReattachFit = fit
-      try {
-        // Why: reattach resize is fire-and-forget, so the continuation itself requests the
-        // applied-grid verification — it is the only point reached by both the immediate
-        // and the deferred-until-revealed path.
-        await fit.completion
-      } finally {
-        if (session.pendingReattachFit === fit) {
-          session.pendingReattachFit = null
-        }
-      }
-    } else if (ctx.isCurrentReattachPayload() && !isRemoteRuntimePtyId(reattachPtyId)) {
-      window.api.pty.signal(reattachPtyId, 'SIGWINCH')
-    }
+  return {
+    applyReattachPayload,
+    fitAfterReattachRestore: () => fitAfterReattachRestore(session, ctx)
   }
-
-  return { applyReattachPayload, fitAfterReattachRestore }
 }

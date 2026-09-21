@@ -5,11 +5,17 @@ import { OrchestrationMailboxDeliveryTarget } from './mailbox-delivery-target'
 import type { OrchestrationMailboxLeaf, OrchestrationMailboxOwner } from './mailbox-owner'
 import { OrchestrationMailboxPointerDelivery } from './mailbox-pointer-delivery'
 import type { SubmitStatuslessCodexPointer } from './mailbox-statusless-codex-submit'
+import { WRITE_ACCEPTED } from '../../../shared/pty-write-settlement'
 
 const MAILBOX = 'run:run-1'
 const TERMINAL_HANDLE = 'term-1'
 const STALE_TERMINAL_HANDLE = 'term-slept'
 const PANE_KEY = 'tab-1:leaf-1'
+
+function statuslessDeliveryFixture<T>(value: object): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the harness supplies every dependency the statusless delivery scenarios exercise.
+  return value as T
+}
 
 function statuslessLeaf(): OrchestrationMailboxLeaf {
   return {
@@ -44,35 +50,42 @@ function makeHarness(
       coordinator_pane_key: PANE_KEY
     })
   }
-  const writePty = vi.fn().mockReturnValue(true)
+  const writePty = vi.fn().mockReturnValue(WRITE_ACCEPTED)
   let delivery: OrchestrationMailboxPointerDelivery<never>
   const redriveMailbox = vi.fn((mailboxHandle: string) => {
     delivery.deliverForHandle(mailboxHandle)
   })
   const deliveryTarget = options.useRemintedRunTarget
     ? new OrchestrationMailboxDeliveryTarget({
-        getDb: () => db as unknown as OrchestrationDb,
+        getDb: () => statuslessDeliveryFixture<OrchestrationDb>(db),
         getTerminalHandleForPaneKey: (paneKey) => (paneKey === PANE_KEY ? TERMINAL_HANDLE : null),
         hasTerminalHandle: (handle) => handle === TERMINAL_HANDLE,
+        isStructuredWorkerHandle: () => false,
         canProbePtyLiveness: () => false,
         controllerKnowsPtyIsLive: () => false,
         isLeafPtyProvenAbsent: () => Promise.resolve(false)
       })
-    : ({
+    : statuslessDeliveryFixture<OrchestrationMailboxDeliveryTarget>({
         resolveTerminalHandle: () => TERMINAL_HANDLE,
         deferForAbsenceProbe: () => false
-      } as unknown as OrchestrationMailboxDeliveryTarget)
+      })
   delivery = new OrchestrationMailboxPointerDelivery({
-    mailboxOwner: { resolve: () => MAILBOX } as unknown as OrchestrationMailboxOwner,
+    mailboxOwner: statuslessDeliveryFixture<OrchestrationMailboxOwner>({
+      resolve: () => MAILBOX
+    }),
     deliveryTarget,
-    getDb: () => db as unknown as OrchestrationDb,
+    getDb: () => statuslessDeliveryFixture<OrchestrationDb>(db),
     getLeaf: () => leaf,
     getLeafKey: (tabId, leafId) => `${tabId}:${leafId}`,
     getLiveLeafForHandle: () => leaf,
+    isAgentSettledForDelivery: () => true,
     getMessageWaiters: () => undefined,
     getTabTitle: () => null,
+    getCliCommand: () => 'orca',
     getTerminalHandleForLeafKey: () => TERMINAL_HANDLE,
     getTerminalProcessIncarnation: () => processIncarnation,
+    resolveSubmitTarget: (_stagedLeaf, ptyId) =>
+      leaf.ptyId === ptyId ? { leaf, terminalHandle: TERMINAL_HANDLE, processIncarnation } : null,
     isLeafPtyProvenAbsent: () => Promise.resolve(false),
     proveStatuslessCodexIdle,
     redriveMailbox,

@@ -14,10 +14,10 @@ const harness = vi.hoisted(() => ({
   coverageCalls: 0,
   syncCalls: 0,
   slotRenders: 0,
-  slotProps: [] as {
+  slotProps: new Array<{
     terminalTabId: string
     coldRestorePaneKeys?: ReadonlySet<string>
-  }[],
+  }>(),
   renderedParkedSets: [] as string[][]
 }))
 

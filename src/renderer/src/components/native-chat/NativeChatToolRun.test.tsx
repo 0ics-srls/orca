@@ -23,6 +23,16 @@ function leadingGlyphs(container: HTMLElement): (string | null)[] {
   )
 }
 
+/** The run header — the first button in a run, above its member rows. Its
+ *  members render as separate pills, so it has no single joined summary node. */
+function runHeader(container: HTMLElement): HTMLElement {
+  const header = container.querySelector('button')
+  if (!header) {
+    throw new Error('run header did not render')
+  }
+  return header
+}
+
 describe('NativeChatToolRun', () => {
   it('uses the shared clean label for a desktop tool row', () => {
     const blocks: NativeChatBlock[] = [
@@ -244,6 +254,122 @@ describe('NativeChatToolRun', () => {
     expect(writeClipboardText).toHaveBeenCalledWith(' ctx\n-was\n+now\n+tail')
   })
 
+  describe('reading a batch as a group', () => {
+    const batch: NativeChatBlock[] = [
+      {
+        type: 'tool-call',
+        name: 'mcp__linear__list_issues',
+        input: { query: 'todo' },
+        state: 'completed',
+        mcpIdentity: { server: 'linear', tool: 'list_issues' }
+      },
+      { type: 'tool-call', name: 'Bash', input: { command: 'ls -la' }, state: 'completed' },
+      { type: 'tool-call', name: 'read', input: { file_path: 'README.md' }, state: 'completed' }
+    ]
+
+    // The header names the whole run, so it says what the run DID rather than
+    // listing the calls it made. Naming them was ambiguous in a way a category
+    // cannot be: a separator also occurs inside `browser.open` and `tools/read`.
+    it('summarizes a run by category, in the order the run first used each one', () => {
+      const { container } = render(<NativeChatToolRun blocks={batch} expandSignal={false} />)
+
+      expect(runHeader(container)).toHaveTextContent(
+        'Used 1 integration, ran 1 command, and read 1 file'
+      )
+    })
+
+    it('names no individual call in the header, however wide the run', () => {
+      const { container } = render(<NativeChatToolRun blocks={batch} expandSignal={false} />)
+
+      const header = runHeader(container)
+      expect(header).not.toHaveTextContent('mcp__linear__list_issues')
+      expect(header).not.toHaveTextContent('ls -la')
+      expect(header).not.toHaveTextContent('README.md')
+    })
+
+    it('counts every call rather than capping the list and marking a remainder', () => {
+      const wide: NativeChatBlock[] = [
+        ...batch,
+        { type: 'tool-call', name: 'Grep', input: { pattern: 'todo' }, state: 'completed' },
+        { type: 'tool-call', name: 'Write', input: { file_path: 'a.ts' }, state: 'completed' }
+      ]
+
+      const { container } = render(<NativeChatToolRun blocks={wide} expandSignal={false} />)
+
+      expect(runHeader(container)).not.toHaveTextContent('more')
+      expect(runHeader(container)).toHaveTextContent(
+        'Used 1 integration, ran 1 command, read 1 file, searched 1 time, and edited 1 file'
+      )
+    })
+
+    it('joins exactly two categories with "and", and no comma', () => {
+      const pair: NativeChatBlock[] = [
+        { type: 'tool-call', name: 'Bash', input: { command: 'ls' }, state: 'completed' },
+        { type: 'tool-call', name: 'Bash', input: { command: 'pwd' }, state: 'completed' },
+        { type: 'tool-call', name: 'read', input: { file_path: 'a.ts' }, state: 'completed' }
+      ]
+
+      const { container } = render(<NativeChatToolRun blocks={pair} expandSignal={false} />)
+
+      expect(runHeader(container)).toHaveTextContent('Ran 2 commands and read 1 file')
+    })
+
+    it('keeps the run in the transcript type, not a monospace dump', () => {
+      const { container } = render(<NativeChatToolRun blocks={batch} expandSignal={false} />)
+
+      const label = runHeader(container).querySelector('span.truncate')
+      expect(label).toHaveClass('text-sm')
+      expect(label).not.toHaveClass('font-mono')
+    })
+
+    it('indents opened members so the run has a visible end', () => {
+      const { container } = render(<NativeChatToolRun blocks={batch} expandSignal />)
+
+      const members = runHeader(container).parentElement?.querySelector('.pl-4')
+      expect(members).toBeInTheDocument()
+      expect(members?.querySelectorAll('button').length).toBe(batch.length)
+    })
+
+    // The split MCP name still appears on the row beneath; only the header has
+    // stopped naming calls at all.
+    it('prints the split MCP name on the opened row', () => {
+      render(<NativeChatToolRun blocks={batch} expandSignal />)
+
+      expect(screen.getByText('Linear')).toBeInTheDocument()
+    })
+
+    it('gives a run whose tool it cannot name the generic category', () => {
+      const { container } = render(
+        <NativeChatToolRun
+          blocks={[{ type: 'tool-call', name: '   ', input: {}, state: 'completed' }]}
+          expandSignal={false}
+        />
+      )
+
+      expect(runHeader(container)).toHaveTextContent('Used 1 tool')
+    })
+
+    // A lone command is the one case where naming the call beats summarizing it.
+    it('keeps a lone command as the header, unwrapped from its login shell', () => {
+      const { container } = render(
+        <NativeChatToolRun
+          blocks={[
+            {
+              type: 'tool-call',
+              name: 'shell',
+              input: { command: `/bin/zsh -lc 'git push --force-with-lease'` },
+              state: 'completed'
+            }
+          ]}
+          expandSignal={false}
+        />
+      )
+
+      expect(runHeader(container)).toHaveTextContent('git push --force-with-lease')
+      expect(runHeader(container)).not.toHaveTextContent('/bin/zsh')
+    })
+  })
+
   it('keeps a grouped active run to one stable row showing only the latest tool', () => {
     const blocks: NativeChatBlock[] = [
       { type: 'tool-call', name: 'shell', input: { command: 'date' }, state: 'completed' },
@@ -293,7 +419,9 @@ describe('NativeChatToolRun', () => {
     const runningBlocks: NativeChatBlock[] = [
       { type: 'tool-call', name: 'shell', input: { command: 'sleep 1' }, state: 'running' }
     ]
-    const { rerender } = render(<NativeChatToolRun blocks={runningBlocks} expandSignal={false} />)
+    const { rerender, container } = render(
+      <NativeChatToolRun blocks={runningBlocks} expandSignal={false} />
+    )
 
     expect(screen.getByText('Running sleep 1')).toBeInTheDocument()
 
@@ -308,7 +436,7 @@ describe('NativeChatToolRun', () => {
     )
 
     expect(screen.queryByText('Running sleep 1')).toBeNull()
-    expect(screen.getByText('shell sleep 1')).toBeInTheDocument()
+    expect(runHeader(container)).toHaveTextContent('sleep 1')
   })
 
   it('never animates a settled tool row with its completion check', () => {
@@ -323,13 +451,14 @@ describe('NativeChatToolRun', () => {
       />
     )
 
-    const settledRow = screen.getByText('shell pnpm test').closest('button')
-    expect(settledRow?.querySelector('.lucide-check')).toBeInTheDocument()
-    expect(settledRow?.querySelector('.animate-pulse')).toBeNull()
+    const settledRow = runHeader(container)
+    expect(settledRow).toHaveTextContent('pnpm test')
+    expect(settledRow.querySelector('.lucide-check')).toBeInTheDocument()
+    expect(settledRow.querySelector('.animate-pulse')).toBeNull()
     expect(container.querySelector('.animate-pulse')).toBeNull()
   })
 
-  it('keeps failed tool runs visually neutral while collapsed', () => {
+  it('refuses the completion mark to a collapsed run whose call failed', () => {
     const blocks: NativeChatBlock[] = [
       { type: 'tool-call', name: 'shell', input: { command: 'false' }, state: 'failed' },
       { type: 'tool-result', output: 'exit 1', isError: true }
@@ -337,9 +466,44 @@ describe('NativeChatToolRun', () => {
 
     const { container } = render(<NativeChatToolRun blocks={blocks} expandSignal={false} />)
 
-    expect(container.querySelector('.lucide-check')).toBeInTheDocument()
+    // The defect: nothing was running, so the header inherited a check and
+    // asserted success over a failure only expanding the run would reveal.
+    expect(container.querySelector('.lucide-check')).toBeNull()
+    expect(runHeader(container)).toHaveTextContent('1 failed')
+    expect(runHeader(container)).toHaveAccessibleName(/Failed tool calls: 1/)
+    // Quiet text, not a severity escalation: no destructive tint, no swapped glyph.
     expect(container.querySelector('.lucide-circle-alert')).toBeNull()
+    expect(container.querySelector('[class*="destructive"]')).toBeNull()
+    // The detail still belongs behind the disclosure.
     expect(screen.queryByText('exit 1')).toBeNull()
+  })
+
+  it('counts every failed call in a run, not just the last one', () => {
+    const blocks: NativeChatBlock[] = [
+      { type: 'tool-call', name: 'shell', input: { command: 'a' }, state: 'failed' },
+      { type: 'tool-result', output: 'exit 1', isError: true },
+      { type: 'tool-call', name: 'shell', input: { command: 'b' }, state: 'failed' },
+      { type: 'tool-result', output: 'exit 2', isError: true },
+      { type: 'tool-call', name: 'shell', input: { command: 'c' }, state: 'completed' },
+      { type: 'tool-result', output: 'ok' }
+    ]
+
+    const { container } = render(<NativeChatToolRun blocks={blocks} expandSignal={false} />)
+
+    expect(runHeader(container)).toHaveTextContent('2 failed')
+    expect(container.querySelector('.lucide-check')).toBeNull()
+  })
+
+  it('says nothing and keeps the mark when every call in the run succeeded', () => {
+    const blocks: NativeChatBlock[] = [
+      { type: 'tool-call', name: 'shell', input: { command: 'a' }, state: 'completed' },
+      { type: 'tool-result', output: 'ok' }
+    ]
+
+    const { container } = render(<NativeChatToolRun blocks={blocks} expandSignal={false} />)
+
+    expect(runHeader(container)).not.toHaveTextContent('failed')
+    expect(container.querySelector('.lucide-check')).toBeInTheDocument()
   })
 
   it('keeps settled tool activity behind the completed turn disclosure', () => {
@@ -348,7 +512,7 @@ describe('NativeChatToolRun', () => {
       { type: 'tool-result', output: 'exit 128', isError: true }
     ]
 
-    const { rerender } = render(
+    const { rerender, container } = render(
       <NativeChatToolRun
         blocks={blocks}
         expandSignal={false}
@@ -369,21 +533,62 @@ describe('NativeChatToolRun', () => {
       />
     )
 
-    expect(screen.getByText('shell git log -1')).toBeInTheDocument()
+    expect(runHeader(container)).toHaveTextContent('git log -1')
   })
 
-  it('settles an orphaned running call when its turn lifecycle has ended', () => {
+  // Opening a turn lists the work; a call's output is one more click. Printing
+  // every result beside its call doubled an opened run's height with rows whose
+  // own word was `Result`.
+  it('keeps a call output behind the call row, not beside it', () => {
+    const blocks: NativeChatBlock[] = [
+      { type: 'tool-call', name: 'shell', input: { command: 'git log -1' }, state: 'failed' },
+      { type: 'tool-result', output: 'exit 128', isError: true }
+    ]
+
+    // Opened from the turn's own caret, which is the path that leaves each
+    // call's line collapsed.
+    render(
+      <NativeChatToolRun
+        blocks={blocks}
+        expandSignal={false}
+        expandOverride
+        activeTurnIsWorking={false}
+      />
+    )
+
+    expect(screen.queryByText('Result')).toBeNull()
+    expect(screen.queryByText('exit 128')).toBeNull()
+
+    // The row under the header, not the header itself, which names the same
+    // command because the run is a single call.
+    const rows = screen.getAllByText('git log -1')
+    fireEvent.click(rows.at(-1)!.closest('button')!)
+
+    expect(screen.getByText('exit 128')).toBeInTheDocument()
+  })
+
+  it('keeps a post-turn running call neutral until the item itself settles', () => {
     const blocks: NativeChatBlock[] = [
       { type: 'tool-call', name: 'shell', input: { command: 'sleep 1' }, state: 'running' }
     ]
 
-    const { container } = render(
+    const { container, rerender } = render(
       <NativeChatToolRun blocks={blocks} expandSignal={false} activeTurnIsWorking={false} />
     )
 
     expect(screen.queryByText('Running sleep 1')).toBeNull()
-    expect(container.querySelector('.lucide-check')).toBeInTheDocument()
+    expect(container.querySelector('.lucide-check')).toBeNull()
     expect(container.querySelector('.lucide-circle-alert')).toBeNull()
+    rerender(
+      <NativeChatToolRun
+        blocks={[
+          { type: 'tool-call', name: 'shell', input: { command: 'sleep 1' }, state: 'completed' }
+        ]}
+        expandSignal={false}
+        activeTurnIsWorking={false}
+      />
+    )
+    expect(container.querySelector('.lucide-check')).toBeInTheDocument()
   })
 
   it('shows the category glyph beside the word a classified row is named by', () => {
@@ -401,7 +606,7 @@ describe('NativeChatToolRun', () => {
     const glyph = container.querySelector('.lucide-eye')
     expect(glyph).toBeInTheDocument()
     expect(glyph).toHaveAttribute('aria-hidden')
-    expect(screen.getByText('read')).toBeInTheDocument()
+    expect(screen.getByText('read', { selector: 'code' })).toBeInTheDocument()
   })
 
   it('holds one glyph for a category across running, completed, and failed', () => {
@@ -428,7 +633,7 @@ describe('NativeChatToolRun', () => {
     const blocks: NativeChatBlock[] = [
       {
         type: 'tool-call',
-        name: 'AskUserQuestion',
+        name: 'CreateWidget',
         input: { prompt: 'which?' },
         state: 'completed'
       }
@@ -445,7 +650,7 @@ describe('NativeChatToolRun', () => {
     const blocks: NativeChatBlock[] = [
       {
         type: 'tool-call',
-        name: 'AskUserQuestion',
+        name: 'CreateWidget',
         input: { prompt: 'which?' },
         state: 'completed'
       }
@@ -457,11 +662,10 @@ describe('NativeChatToolRun', () => {
     expect(leadingGlyphs(container)).toEqual(['lucide-wrench', 'lucide-wrench'])
   })
 
-  it('leaves a result row without a category glyph, its word being translated copy', () => {
-    const blocks: NativeChatBlock[] = [
-      { type: 'tool-call', name: 'read', input: { path: 'notes.txt' }, state: 'completed' },
-      { type: 'tool-result', output: 'first line' }
-    ]
+  // A result with no call to answer still draws its own row, and its word is
+  // translated copy rather than a tool name.
+  it('leaves an unpaired result row without a category glyph', () => {
+    const blocks: NativeChatBlock[] = [{ type: 'tool-result', output: 'first line' }]
 
     render(<NativeChatToolRun blocks={blocks} expandSignal />)
 
@@ -614,5 +818,118 @@ describe('NativeChatToolRun', () => {
 
     expect(container.querySelector('.lucide-folder')).toBeInTheDocument()
     expect(screen.getByTitle('ls')).toHaveTextContent('ls')
+  })
+
+  // A bare `group-hover:` matches a hover on ANY ancestor carrying `.group`, and
+  // the assistant message row around this run is one. Hovering a single tool line
+  // therefore revealed every chevron in the message at once.
+  describe('hover reveal', () => {
+    const run: NativeChatBlock[] = [
+      { type: 'tool-call', name: 'Bash', input: { command: 'ls -la' }, state: 'completed' },
+      { type: 'tool-result', output: 'a\nb' },
+      { type: 'tool-call', name: 'Bash', input: { command: 'pwd' }, state: 'completed' },
+      { type: 'tool-result', output: '/tmp' }
+    ]
+
+    /** Every node's class list, read through the attribute because an SVG's
+     *  `className` is an `SVGAnimatedString` rather than a string. */
+    function hoverRevealed(container: HTMLElement): { element: Element; classes: string }[] {
+      return [...container.querySelectorAll('[class*="group-hover"]')].map((element) => ({
+        element,
+        classes: element.getAttribute('class') ?? ''
+      }))
+    }
+
+    it('scopes a row’s reveal to that row rather than the whole message', () => {
+      // Open run, collapsed children — the state the turn caret leaves behind.
+      const { container } = render(
+        <NativeChatToolRun blocks={run} expandSignal={false} expandOverride />
+      )
+
+      const revealed = hoverRevealed(container)
+      expect(revealed.length).toBeGreaterThan(0)
+      revealed.forEach(({ classes }) => {
+        expect(classes).not.toMatch(/(^|\s)group-hover:/)
+      })
+    })
+
+    it('puts every reveal inside the row button that governs it', () => {
+      const { container } = render(
+        <NativeChatToolRun blocks={run} expandSignal={false} expandOverride />
+      )
+
+      hoverRevealed(container).forEach(({ element, classes }) => {
+        const scope = /group-hover\/([a-z-]+):/.exec(classes)?.[1]
+        expect(scope).toBeDefined()
+        expect(element.closest(`.group\\/${scope}`)).not.toBeNull()
+      })
+    })
+
+    it('hides a collapsed chevron on every row until its own row is hovered', () => {
+      const { container } = render(
+        <NativeChatToolRun blocks={run} expandSignal={false} expandOverride />
+      )
+
+      const chevrons = [...container.querySelectorAll('.pl-4 button svg.lucide-chevron-right')]
+      expect(chevrons.length).toBeGreaterThan(1)
+      chevrons.forEach((chevron) => {
+        expect(chevron.getAttribute('class')).toContain('group-hover/tool-line:opacity-100')
+      })
+    })
+  })
+})
+
+describe('NativeChatToolRun task lists', () => {
+  it('renders task updates instead of JSON and consumes successful results', () => {
+    const blocks: NativeChatBlock[] = [
+      {
+        type: 'tool-call',
+        name: 'update_plan',
+        input: {
+          plan: [
+            { step: 'Read', status: 'in_progress' },
+            { step: 'Test', status: 'pending' }
+          ]
+        }
+      },
+      { type: 'tool-result', output: 'Plan updated' },
+      {
+        type: 'tool-call',
+        name: 'update_plan',
+        input: {
+          plan: [
+            { step: 'Read', status: 'completed' },
+            { step: 'Test', status: 'in_progress' }
+          ]
+        }
+      }
+    ]
+    const { container } = render(<NativeChatToolRun blocks={blocks} expandSignal />)
+    expect(screen.getByText('Completed Read')).toBeInTheDocument()
+    expect(screen.getByText('Started Test')).toBeInTheDocument()
+    expect(screen.getByText('1/2')).toBeInTheDocument()
+    expect(screen.queryByText('Plan updated')).toBeNull()
+    expect(container.querySelector('pre')).toBeNull()
+  })
+
+  it('keeps malformed calls and failed results visible in the generic view', () => {
+    render(
+      <NativeChatToolRun
+        blocks={[
+          { type: 'tool-call', name: 'TodoWrite', input: '{' },
+          { type: 'tool-result', output: 'Invalid arguments', isError: true },
+          {
+            type: 'tool-call',
+            name: 'TodoWrite',
+            input: { todos: [{ content: 'Test', status: 'completed' }] }
+          },
+          { type: 'tool-result', output: 'Update rejected', isError: true }
+        ]}
+        expandSignal
+      />
+    )
+    expect(screen.getByText('Invalid arguments', { selector: 'pre' })).toBeInTheDocument()
+    expect(screen.getByText('Update rejected', { selector: 'pre' })).toBeInTheDocument()
+    expect(screen.queryByText('1/1')).toBeNull()
   })
 })
