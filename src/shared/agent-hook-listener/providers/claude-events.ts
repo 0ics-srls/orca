@@ -17,10 +17,10 @@ import {
   normalizeClaudeSubagentLifecycleEvent
 } from './claude-lifecycle-events'
 import {
-  claudePendingApprovalOwnedBy,
-  foldClaudeApprovalEvent,
-  raiseClaudePendingApproval
-} from './claude-pending-approval'
+  claudeApprovalOwnedBy,
+  claudeHasOutstandingApproval,
+  foldClaudeApprovalEvent
+} from './claude-approval-ledger'
 import {
   getOrCreateClaudeSubagentRoster,
   resolveClaudePaneStatus,
@@ -34,7 +34,9 @@ export function normalizeClaudeEvent(
   eventName: unknown,
   promptText: string,
   paneKey: string,
-  hookPayload: Record<string, unknown>
+  hookPayload: Record<string, unknown>,
+  /** Durable re-delivery from the spool, not a live observation. */
+  isReplay = false
 ): ParsedAgentStatusPayload | null {
   const eventAgentId = readString(hookPayload, 'agent_id')
   if (
@@ -140,7 +142,7 @@ export function normalizeClaudeEvent(
   }
 
   const eventToolUseId = readFirstString(hookPayload, ['tool_use_id', 'toolUseId'])
-  const { toolCall, announcedCalls, pendingAfterCall, raisedApproval } = foldClaudeApprovalEvent({
+  const { toolCall, announcedCalls, approvals } = foldClaudeApprovalEvent({
     carriedOver: previousLead,
     eventName,
     agentId: eventAgentId,
@@ -148,17 +150,29 @@ export function normalizeClaudeEvent(
     toolName: eventToolName,
     toolInput: hookPayload['tool_input'],
     raisesWait: reportedStateName === 'waiting',
-    raisesQuestionWait: isAskUserQuestionWait
+    raisesQuestionWait: isAskUserQuestionWait,
+    endsTurn: isManualCompactCompletion,
+    isReplay
   })
-  const pendingBefore = previousLead?.pendingApprovals ?? []
-  // Why: the pane is paused for exactly as long as a prompt Claude raised is still outstanding.
-  // A parallel batch announces siblings around the prompt, and a late PreToolUse can arrive after
-  // it, so neither may stand in for the answer — only the pending set emptying clears the card.
-  if (previousLead?.state === 'waiting' && toolCall && pendingAfterCall.length > 0) {
-    if (pendingAfterCall !== pendingBefore || announcedCalls !== previousLead.announcedCalls) {
+  // Why: a replayed prompt is durable evidence one was once raised, never that one is outstanding
+  // now — and the spool that re-delivers it structurally never carries the completion that would
+  // settle it, so honouring it would pin an amber row nothing could ever release. Re-state the
+  // pane's last live status instead of fabricating a wait from a prior runtime.
+  if (isReplay && reportedStateName === 'waiting') {
+    return buildClaudeCachedLeadStatusPayload(state, eventName, paneKey, hookPayload)
+  }
+  // A tool event that is not itself a prompt, arriving while one is outstanding, is work — never
+  // an answer. Re-state the card rather than letting the activity overwrite it.
+  if (
+    previousLead &&
+    toolCall &&
+    reportedStateName !== 'waiting' &&
+    claudeHasOutstandingApproval(approvals)
+  ) {
+    if (approvals !== previousLead.approvals || announcedCalls !== previousLead.announcedCalls) {
       state.claudeLeadStateByPaneKey.set(paneKey, {
         ...previousLead,
-        pendingApprovals: pendingAfterCall,
+        approvals,
         ...(announcedCalls ? { announcedCalls } : {})
       })
     }
@@ -188,14 +202,13 @@ export function normalizeClaudeEvent(
   if (subagentOriginId) {
     const lead = state.claudeLeadStateByPaneKey.get(paneKey)
     if (
-      lead?.state !== 'waiting' ||
-      !claudePendingApprovalOwnedBy(pendingBefore, (agentId) => agentId === subagentOriginId)
+      !claudeApprovalOwnedBy(previousLead?.approvals, (agentId) => agentId === subagentOriginId)
     ) {
       return buildClaudeCachedLeadStatusPayload(state, eventName, paneKey, hookPayload, {
         workingChildEvidence: true
       })
     }
-    if (pendingAfterCall.length > 0) {
+    if (claudeHasOutstandingApproval(approvals)) {
       // Why: this child still owes an answer (or a sibling of its batch just finished); its card stays.
       return buildClaudeCachedLeadStatusPayload(state, eventName, paneKey, hookPayload, {
         workingChildEvidence: true
@@ -203,9 +216,12 @@ export function normalizeClaudeEvent(
     }
     // Why: approval granted — update the tool snapshot (drop the pending card) as the lead's own next tool event would.
     // Restore the stashed lead state, not this child's 'working': the lead may already be done, and the done-gate never upgrades working back to done once the roster drains.
-    const restored = lead.stateBeforeWait ?? { state: 'working' as const }
+    const restored = lead?.stateBeforeWait ?? { state: 'working' as const }
     state.claudeLeadStateByPaneKey.set(paneKey, {
       ...restored,
+      // Why explicit rather than implied-empty: this branch only runs once nothing is outstanding,
+      // and writing the ledger it settled keeps a future edit from stranding a lead's own prompt.
+      ...(approvals.length > 0 ? { approvals } : {}),
       ...(announcedCalls ? { announcedCalls } : {})
     })
     return buildClaudeStatusPayload(state, eventName, promptText, paneKey, hookPayload, {
@@ -290,23 +306,11 @@ export function normalizeClaudeEvent(
       ? Date.now()
       : undefined
 
-  // Why: a turn boundary is the unconditional sweep — whatever Claude never answered for died
-  // with the turn, so no prompt may be inherited by the next one.
-  const pendingApprovals =
-    isTurnBoundary || eventName === 'UserPromptSubmit' || isManualCompactCompletion
-      ? []
-      : raisedApproval
-        ? raiseClaudePendingApproval(pendingAfterCall, raisedApproval)
-        : pendingAfterCall
-  const carriedAnnouncedCalls =
-    isTurnBoundary || eventName === 'UserPromptSubmit' || isManualCompactCompletion
-      ? undefined
-      : announcedCalls
   state.claudeLeadStateByPaneKey.set(paneKey, {
     state: reportedStateName,
     ...(interrupted ? { interrupted } : {}),
-    ...(pendingApprovals.length > 0 ? { pendingApprovals } : {}),
-    ...(carriedAnnouncedCalls ? { announcedCalls: carriedAnnouncedCalls } : {}),
+    ...(approvals.length > 0 ? { approvals } : {}),
+    ...(announcedCalls ? { announcedCalls } : {}),
     ...(stateBeforeWait ? { stateBeforeWait } : {}),
     ...(turnCompletedAt !== undefined ? { turnCompletedAt } : {})
   })

@@ -9,7 +9,7 @@ import {
 } from '../../claude-subagent-roster'
 import type { HookListenerState } from '../listener-state'
 import { readString } from '../tool-input-preview'
-import { claudePendingApprovalOwnedBy } from './claude-pending-approval'
+import { claudeApprovalOwnedBy } from './claude-approval-ledger'
 import {
   clearClaudePendingWaitForAgent,
   getOrCreateClaudeSubagentRoster,
@@ -33,7 +33,7 @@ export function normalizeClaudeSubagentLifecycleEvent(
   const ownsUnbackedWait =
     cachedLead?.state === 'waiting' &&
     cachedLead.stateBeforeWait === undefined &&
-    claudePendingApprovalOwnedBy(cachedLead.pendingApprovals, (waitingAgentId) =>
+    claudeApprovalOwnedBy(cachedLead.approvals, (waitingAgentId) =>
       eventName === 'TeammateIdle'
         ? claudeTeammateIdMatchesName(waitingAgentId, lifecycleId)
         : waitingAgentId === lifecycleId
