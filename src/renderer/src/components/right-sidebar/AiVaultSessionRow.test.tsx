@@ -164,9 +164,7 @@ describe('VaultSessionRow native session actions', () => {
     expect(await screen.findByRole('menuitem', { name: 'Jump to Original Pane' })).toBeTruthy()
     expect(screen.queryByRole('menuitem', { name: 'Resume in New Tab' })).toBeNull()
   })
-})
 
-describe('VaultSessionRow native session actions', () => {
   it('hides Delete for structured native sessions', async () => {
     const nativeSession = {
       ...session,
