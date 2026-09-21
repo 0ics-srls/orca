@@ -168,3 +168,36 @@ away and never appears.
 - Whether the daemon's in-process `opendir` and its shells' reads diverge when the lineage is
   broken (gate G1 in the design).
 - Whether restart alone recovers, or restart plus `tccutil reset` and re-allow is required (G1).
+
+---
+
+# PostHog field data (queried 2026-09-21, 21-day window)
+
+`daemon_pty_cwd_denied` fires only on proven divergence: daemon `accessSync` denied, app
+`accessSync` succeeded, macOS only (#18043, shipped 2026-09-01).
+
+| cwd_class | app_version_match | events | users |
+| --- | --- | ---: | ---: |
+| documents | different | 5,674 | 863 |
+| desktop | different | 2,379 | 404 |
+| outside-home | different | 480 | 58 |
+| downloads | different | 369 | 79 |
+| documents | same | 113 | 33 |
+| desktop | same | 113 | 25 |
+| other-home | different | 25 | 8 |
+
+- Distinct denied users: 1,438 (1,374 in documents/desktop/downloads). Users who adopted a
+  different-version daemon in the window: 50,876. Denial rate among them: 2.8%.
+- Persistence: 910 users denied on one day, 413 on 2–3 days, 115 on 4 or more days.
+- Daily denied users ramped from single digits on 2026-09-07 to about 300/day by 2026-09-16 as
+  the telemetry release rolled out, then about 110–135/day over the weekend.
+- Remedy signal: among denied users with a later same-version `daemon_adopted` (a daemon forked
+  by the current app), 151 had no further denial and 68 were denied again (about 69% / 31%).
+  1,219 had no same-version adoption inside the window.
+- `daemon_adopted` with `tcc_attribution=severed` (the existing notice's trigger): 45 users. The
+  cwd-denial population is about 30 times larger.
+
+Consequence: the daemon's existing `accessSync` verdict does observe the failure in the field.
+The grant-less launchd probe (section A above) shows a second TCC mode on `~/Documents` where
+`access()` passes and `opendir` fails; the two modes are different TCC states, and enumeration
+covers both.
