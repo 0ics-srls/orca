@@ -130,13 +130,18 @@ reset_outcome_allowed | reset_outcome_still_denied | reset_outcome_unknown` and 
 restart outcomes fire on the replacement daemon's first spawn in the same folder class, replacing
 the PostHog proxy for "does a restart fix it". The reset outcomes come from the forced re-probe
 right after the reset and are the first measurement of whether the documented recovery works for
-the third of users a fresh daemon does not help. Keep `daemon_pty_cwd_denied` as the denominator.
+the users a fresh daemon does not help. Keep `daemon_pty_cwd_denied` as the denominator.
 
-**What is known about the stuck third (2026-09-21).** By construction of the trigger, every user
-who sees the notice already has the folder enabled for Orca; "not enabled, enable it" describes
-nobody. Of 219 denied users later observed with a same-version daemon, 151 read fine and 68 were
-denied again (a proxy: some of those "same-version" daemons may still have been stale copies, so
-real restarts may fix more). No Settings action has been measured to fix the 68. Candidate
+**What is known about the stuck group (2026-09-21, corrected the same day).** By construction of
+the trigger, every user who sees the notice already has the folder enabled for Orca; "not enabled,
+enable it" describes nobody. Of 255 denied users later observed with a same-version daemon, 75
+were denied again, but only 30 by that same-version daemon (all spawned from /Applications, all in
+the same folder class); the other 45 were denied by yet another different-version daemon, i.e. the
+bug recurring after a further update, which a restart fixes. So the group a restart cannot help is
+about one in eight, not one in three. Two proxies remain: a "same-version" daemon can still be a
+leftover from an earlier launch of that version, and "recovered" means only "no later denial
+event". The PR's `restart_outcome_*` telemetry replaces both. No Settings action has been measured
+to fix the 30. Candidate
 remedies, none verified on an affected machine: toggle off/on, `tccutil reset` + re-allow, reboot.
 Guaranteed workaround: a workspace outside Documents/Desktop/Downloads. The state cannot be
 reproduced on demand (the 2026-09-01 signed-build matrix never produced it), so the reset step
