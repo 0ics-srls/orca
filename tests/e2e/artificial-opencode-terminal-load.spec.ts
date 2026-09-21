@@ -30,7 +30,8 @@ import { runMainPressureScenario } from './artificial-opencode-main-pressure-sce
 import { runRendererBackpressureRevisitScenario } from './artificial-opencode-revisit-pressure-scenario'
 import { startSyntheticOpenCodeInjection } from './artificial-opencode-synthetic-injection'
 
-test.beforeEach(async ({ electronApp }, testInfo) => {
+test.beforeEach(async ({ electronApp, orcaPage }, testInfo) => {
+  await orcaPage.waitForLoadState('domcontentloaded')
   await presentTerminalPerfWindow(electronApp, testInfo)
 })
 
