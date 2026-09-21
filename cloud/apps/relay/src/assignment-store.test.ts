@@ -1555,15 +1555,19 @@ describe('RelayAssignmentStore', () => {
     expect(pinned.cellId).toBe(first.cellId)
   })
 
-  it('keeps migration-only cells pinned inside the stranded window', async () => {
+  it('re-places a host off a migration-only cell isolated for a roll', async () => {
+    // Why: a roll's isolate step writes migration-only while the cell keeps
+    // heartbeating ready=1 and refuses every attach. The stranded rule above
+    // never fires here (it demands existing-only), so this is the only exit.
     let now = 100
     const store = await setup(() => now)
     const identity = { userId: 'user-a', relayHostId: 'host000000000001' }
     const first = await store.assign(identity)
     await store.setCellAdmissionState(first.cellId, 'migration-only')
     now += 61_000
-    const pinned = await store.assign(identity)
-    expect(pinned.cellId).toBe(first.cellId)
+    const moved = await store.assign(identity)
+    expect(moved.cellId).not.toBe(first.cellId)
+    expect(moved.assignmentEpoch).toBe(first.assignmentEpoch + 1)
   })
 
   it('leaves quiet existing-only assignments to the normal dormancy rule', async () => {
