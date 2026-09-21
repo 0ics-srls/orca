@@ -75,30 +75,15 @@ export function resolveTerminalRevealTabAdoption(
   return null
 }
 
-export type TerminalRevealTargetRequest = {
-  worktreeId: string
-  ptyId?: string
-  tabId?: string
-  leafId?: string
-  splitFromLeafId?: string
-}
-
-export type TerminalRevealTarget = {
-  /** The row to reuse: the PTY or leaf owner, else a split reveal's parent row. */
-  tab: TerminalTab | undefined
-  /** The worktree key the reused row is filed under; the event's key when minting. */
-  ownerWorktreeId: string
-}
-
 /**
- * The tab a reveal should land on, and the worktree key to surface it under. Ownership is
- * tab-keyed, so the owning row can sit under a worktree key other than the event's — surfacing
- * under the event's key then fails `verifyTerminalRevealIdentity` (STA-7961).
+ * The row a reveal should land on, and the worktree key it is filed under; null to mint. Ownership
+ * is tab-keyed, so the owning row can sit under a key other than the event's — surfacing under the
+ * event's key then fails `verifyTerminalRevealIdentity` (STA-7961).
  */
 export function resolveTerminalRevealTarget(
   state: TerminalRevealAdoptionState,
-  request: TerminalRevealTargetRequest
-): TerminalRevealTarget {
+  request: { ptyId?: string; tabId?: string; leafId?: string; splitFromLeafId?: string }
+): { tab: TerminalTab; worktreeId: string } | null {
   const adoptedTabId = request.ptyId
     ? resolveTerminalRevealTabAdoption(state, {
         ptyId: request.ptyId,
@@ -119,5 +104,5 @@ export function resolveTerminalRevealTarget(
   if (isSplitReveal && !adoptedRow) {
     throw new Error(`Terminal tab ${request.tabId} not found`)
   }
-  return { tab: adoptedRow?.tab, ownerWorktreeId: adoptedRow?.worktreeId ?? request.worktreeId }
+  return adoptedRow
 }

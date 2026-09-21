@@ -57,7 +57,6 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
           // Why: a split pane revealed from mobile is only bound in the persisted layout until
           // its pane mounts, and its row can sit under another worktree key (#10486, STA-7961).
           const revealTarget = resolveTerminalRevealTarget(store, {
-            worktreeId,
             ...(ptyId ? { ptyId } : {}),
             ...(tabId !== undefined ? { tabId } : {}),
             ...(leafId ? { leafId } : {}),
@@ -65,11 +64,11 @@ export function registerTerminalPresentationIpcBridge(unsubs: (() => void)[]): v
           })
           // Why: every surfacing site below must use the owner's key, not the event's, or
           // verifyTerminalRevealIdentity looks the tab up under a key that does not hold it.
-          const ownerWorktreeId = revealTarget.ownerWorktreeId
+          const ownerWorktreeId = revealTarget?.worktreeId ?? worktreeId
           if (shouldActivate) {
             activateTerminalInitiatedWorktree(store, ownerWorktreeId)
           }
-          const reusedTab = revealTarget.tab
+          const reusedTab = revealTarget?.tab
           const tab =
             reusedTab ??
             (ptyId
