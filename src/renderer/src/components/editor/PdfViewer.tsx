@@ -45,7 +45,9 @@ const USER_SCROLL_INPUT_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown
 type PdfViewerProps = {
   content: string
   filePath: string
-  preferenceKey?: string
+  // Why: callers that do not have an owner identity (for example diff and
+  // conflict panes) must not persist a preference under a path-only key.
+  preferenceKey?: string | null
   // Why: absent means "no scroll memory" — the diff and conflict-review callers
   // mount several viewers on one path, so a shared key would cross-write.
   scrollCacheKey?: string | null
@@ -54,7 +56,7 @@ type PdfViewerProps = {
 export default function PdfViewer({
   content,
   filePath,
-  preferenceKey = filePath,
+  preferenceKey = null,
   scrollCacheKey = null
 }: PdfViewerProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -74,10 +76,12 @@ export default function PdfViewer({
   const filename = useMemo(() => filePath.split(/[/\\]/).pop() || filePath, [filePath])
   const cleanedContent = useMemo(() => content.replace(/\s/g, ''), [content])
 
-  // Why: restore the path's preference outside render (refs mutated in render can
-  // leak from discarded renders) and cover same-content/different-path opens.
+  // Why: restore the owner's preference outside render (refs mutated in render
+  // can leak from discarded renders) and cover same-content/different-path opens.
   useEffect(() => {
-    scalePreferenceRef.current = readPdfScalePreference(preferenceKey) ?? 'page-width'
+    scalePreferenceRef.current = preferenceKey
+      ? (readPdfScalePreference(preferenceKey) ?? 'page-width')
+      : 'page-width'
     const viewer = pdfViewerRef.current
     if (viewer) {
       applyPdfScalePreference(viewer, scalePreferenceRef.current, SCALE_BOUNDS)
@@ -317,7 +321,9 @@ export default function PdfViewer({
       const next = stepPdfScalePreference(viewer.currentScale, direction, SCALE_BOUNDS)
       viewer.currentScale = next.scale
       scalePreferenceRef.current = next.preference
-      writePdfScalePreference(preferenceKey, next.preference)
+      if (preferenceKey) {
+        writePdfScalePreference(preferenceKey, next.preference)
+      }
     },
     [preferenceKey]
   )
@@ -332,7 +338,9 @@ export default function PdfViewer({
     }
     scalePreferenceRef.current = 'page-width'
     applyPdfScalePreference(viewer, 'page-width', SCALE_BOUNDS)
-    writePdfScalePreference(preferenceKey, 'page-width')
+    if (preferenceKey) {
+      writePdfScalePreference(preferenceKey, 'page-width')
+    }
   }, [preferenceKey])
 
   useEffect(() => {

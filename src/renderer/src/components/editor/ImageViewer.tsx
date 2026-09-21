@@ -29,7 +29,9 @@ type ImageViewerProps = {
   filePath: string
   mimeType?: string
   layout?: 'fill' | 'intrinsic'
-  preferenceKey?: string
+  // Why: callers without an owner identity (for example diff and conflict
+  // panes) must not persist a preference under a path-only key.
+  preferenceKey?: string | null
   // Why: absent means "no PDF scroll memory" — diff and conflict-review callers
   // mount several viewers on one path, so they deliberately pass nothing.
   scrollCacheKey?: string | null
