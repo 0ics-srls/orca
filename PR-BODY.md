@@ -30,13 +30,12 @@ finished — so nothing goes quiet just because the work moved to a child.
    producer marker and the shared `isRootAgentJournalItem` predicate that already ship on this
    branch. Two consumers read that clock, and both are the session's status summary.
 
-2. *The subagent roster row is marked as what it is.* Claude's roster row — the "Ran 3 agents" row —
-   is written from the parent's code, with no child identity anywhere near the call, yet it holds
-   nothing but children's state and is rewritten on every child transition. Left unmarked it kept
-   moving the clock by itself and the symptom survived everything else. It is now stamped
-   child-produced. Nothing is hidden by that: the transcript deliberately renders every producer's
-   rows, and the sidebar's child list comes from the live roster the host publishes, not from this
-   row.
+2. *Subagent roster rows are marked as what they are.* Claude and Codex both write child-only roster
+   rows from the parent's code. Those rows are rewritten on child transitions, so leaving either
+   provider unmarked still moved the parent clock. Both providers now stamp roster revisions as
+   child-produced, and Claude preserves that attribution when removing its roster row. Nothing is
+   hidden by that: the transcript deliberately renders every producer's rows, and the sidebar's
+   child list comes from the live roster the host publishes, not from this row.
 
 3. *Status, and only status, rolls up.* The host's status feed now publishes `working` for a session
    whose own agent has settled but whose subagent is still running. The recency clock, the prompt,
@@ -82,11 +81,9 @@ structured path has one `stateStartedAt` rule instead of two, and they agree. Co
 writers is a separate, already-planned change, and it gets easier for this one having landed, not
 harder.
 
-Two further limits worth stating. Attribution here is a convention, not a type: a future append site
+One further limit worth stating: attribution here is a convention, not a type. A future append site
 that forgets the marker re-opens the hole, and the mitigation is the producer-boundary tests below
-rather than something the compiler can enforce. And only the Claude translator attributes today —
-another structured provider that journals a child's output into the session timeline will still
-contaminate the clock, with no new guard against it.
+rather than something the compiler can enforce.
 
 ## Linked Issue
 
@@ -102,7 +99,7 @@ including the acknowledgement consequence, which is the part a screenshot cannot
 ## Testing
 
 `pnpm tc` clean. `pnpm exec oxlint` clean on every changed file.
-`pnpm run check:code-quality:changed` passes — 0 new findings across 32 changed files.
+`pnpm run check:code-quality:changed` passes — 0 new findings across 37 changed files.
 
 Suites run green: `src/main/native-chat`, `src/main/claude`, `src/main/codex`, `src/main/runtime`,
 `src/shared`, `src/renderer/src/store`, `src/renderer/src/attention`,
@@ -117,6 +114,8 @@ green with it restored:
 | `structured-agent-session-status-feed-subagents.test.ts` — an idle session's clock and publication count hold still across five child rows | the same |
 | `structured-agent-session-status-feed-subagents.test.ts` — a session with a working subagent reads `working`, claims no tool of its own, and ignores a backgrounded shell or a settled child | the status rollup |
 | `claude-subagent-roster.test.ts` — every roster row is child-produced, first write and each revision | the roster row's marker |
+| `codex-subagent-roster.test.ts` — Codex roster rows are child-produced | the Codex roster marker |
+| `structured-agent-session-event-sink.test.ts` — child attribution survives a tombstone append | tombstone attribution forwarding |
 | `claude-structured-journal-translation-subagents.test.ts` — the roster row is stamped | the same |
 | `StructuredAgentSessionStatusBridge.test.tsx` — a settled row holds its completion stamp, its attention timestamp, and its read state as the host clock advances | the bridge's `stateStartedAt` |
 | `StructuredAgentSessionStatusBridge.test.tsx` — a restored completion is stamped with host journal time and the bridge sends no `stateStartedAt` | the same |
