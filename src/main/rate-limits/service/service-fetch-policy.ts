@@ -54,9 +54,13 @@ export abstract class RateLimitServiceFetchPolicy extends RateLimitServiceFetchT
   ): ProviderRateLimits {
     // Why: a live statusline post can land while an OAuth cycle is in flight; a failed fetch must not
     // roll the bar back to the pre-cycle snapshot or flip the just-refreshed live data to error.
+    // The 429's Retry-After still has to reach the poll gate, or every cycle re-hits the throttle.
     const current = this.state.claude
     if (fresh.status !== 'ok' && current && this.isLiveClaudeUsageFresh(current)) {
-      return current
+      const retryAtMs = fresh.usageMetadata?.retryAtMs
+      return retryAtMs
+        ? { ...current, usageMetadata: { ...current.usageMetadata, retryAtMs } }
+        : current
     }
     return this.applyStalePolicy(fresh, previous)
   }
