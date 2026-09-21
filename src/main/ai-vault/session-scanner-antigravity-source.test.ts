@@ -1,10 +1,11 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { filterAiVaultSessions } from '../../shared/ai-vault-session-filters'
 import { AI_VAULT_AGENTS } from '../../shared/ai-vault-types'
 import { scanAiVaultSessions } from './session-scanner'
+import { readLocalAntigravityHistory } from './session-scanner-antigravity-history'
 import {
   isolatedScanRoots,
   writeAntigravityHistory,
@@ -18,6 +19,104 @@ afterEach(async () => {
 })
 
 describe('Antigravity AI Vault discovery', () => {
+  it('joins newer IDE cache metadata when history.jsonl is absent', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-ide-cache-'))
+    tempRoots.push(root)
+    const cliRoot = join(root, '.gemini', 'antigravity-cli')
+    await mkdir(join(cliRoot, 'cache'), { recursive: true })
+    await writeFile(
+      join(cliRoot, 'cache', 'conversation_metadata.json'),
+      JSON.stringify({
+        conversations: {
+          'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee': {
+            summary: {
+              ID: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+              UpdatedAt: '2026-07-15T11:39:10.000Z',
+              ProjectID: 'project-synthetic'
+            }
+          }
+        }
+      })
+    )
+    await writeFile(
+      join(cliRoot, 'cache', 'projects.json'),
+      JSON.stringify({ '/tmp/sanitized-antigravity-workspace': 'project-synthetic' })
+    )
+
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      '"conversationId":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"'
+    )
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      '"workspace":"/tmp/sanitized-antigravity-workspace"'
+    )
+  })
+
+  it('joins live cache metadata through last_conversations when project IDs are stale', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-ide-last-conversations-'))
+    tempRoots.push(root)
+    const cliRoot = join(root, '.gemini', 'antigravity-cli')
+    await mkdir(join(cliRoot, 'cache'), { recursive: true })
+    const conversationId = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'
+    const workspace = '/Users/synthetic/agy-workspace'
+    await writeFile(
+      join(cliRoot, 'cache', 'conversation_metadata.json'),
+      JSON.stringify({
+        conversations: {
+          [conversationId]: {
+            summary: {
+              ID: conversationId,
+              UpdatedAt: '2026-07-15T11:39:10.000Z',
+              ProjectID: 'stale-project-id'
+            }
+          }
+        }
+      })
+    )
+    await writeFile(join(cliRoot, 'cache', 'projects.json'), JSON.stringify({}))
+    await writeFile(
+      join(cliRoot, 'cache', 'last_conversations.json'),
+      JSON.stringify({ [workspace]: conversationId })
+    )
+
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      `"conversationId":"${conversationId}"`
+    )
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      `"workspace":"${workspace}"`
+    )
+  })
+
+  it('preserves Windows-style workspace paths from the project index', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-ide-windows-cache-'))
+    tempRoots.push(root)
+    const cliRoot = join(root, '.gemini', 'antigravity-cli')
+    await mkdir(join(cliRoot, 'cache'), { recursive: true })
+    const conversationId = 'cccccccc-dddd-4eee-8fff-aaaaaaaaaaaa'
+    const workspace = 'C:\\Users\\Ada\\agy-project'
+    await writeFile(
+      join(cliRoot, 'cache', 'conversation_metadata.json'),
+      JSON.stringify({
+        conversations: {
+          [conversationId]: {
+            summary: {
+              ID: conversationId,
+              UpdatedAt: '2026-07-15T11:39:10.000Z',
+              ProjectID: 'project-windows'
+            }
+          }
+        }
+      })
+    )
+    await writeFile(
+      join(cliRoot, 'cache', 'projects.json'),
+      JSON.stringify({ [workspace]: 'project-windows' })
+    )
+
+    await expect(readLocalAntigravityHistory(join(cliRoot, 'history.jsonl'))).resolves.toContain(
+      `"workspace":"${workspace.replaceAll('\\', '\\\\')}"`
+    )
+  })
+
   it('discovers canonical transcripts from WSL homes without indexing sibling artifacts', async () => {
     const root = await mkdtemp(join(tmpdir(), 'orca-antigravity-wsl-'))
     tempRoots.push(root)
