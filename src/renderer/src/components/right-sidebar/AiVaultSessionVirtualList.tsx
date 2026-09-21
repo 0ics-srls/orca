@@ -7,7 +7,7 @@ import type { AiVaultResumeStartup } from '@/lib/ai-vault-resume-command'
 import { translate } from '@/i18n/i18n'
 import { getActiveStickyHeaderIndexForScroll } from '../sidebar/worktree-list/viewport/virtual-rows'
 import { EmptyState, SessionLoadingState } from './AiVaultSessionListStates'
-import type { AiVaultSessionGroup } from './ai-vault-session-filters'
+import type { AiVaultSessionListGroup } from './ai-vault-session-filters'
 import type { AiVaultOriginalPaneTarget } from './ai-vault-original-pane'
 import type {
   AiVaultSessionResumeActions,
@@ -30,7 +30,6 @@ const VAULT_EXPANDED_SESSION_ROW_ESTIMATED_HEIGHT = 420
 export function AiVaultSessionVirtualList({
   groups,
   collapsedGroups,
-  hideGroupHeaders = false,
   loading,
   sessionsCount,
   filteredSessionsCount,
@@ -59,10 +58,8 @@ export function AiVaultSessionVirtualList({
   onRequestDelete,
   searchHits
 }: {
-  groups: readonly AiVaultSessionGroup[]
+  groups: readonly AiVaultSessionListGroup[]
   collapsedGroups: ReadonlySet<string>
-  /** Search mode labels its one group on the results bar instead, so rows run flat. */
-  hideGroupHeaders?: boolean
   loading: boolean
   sessionsCount: number
   filteredSessionsCount: number
@@ -99,17 +96,18 @@ export function AiVaultSessionVirtualList({
   const vaultRows = useMemo(() => {
     const rows: AiVaultListRow[] = []
     for (const sessionGroup of groups) {
-      if (!hideGroupHeaders) {
-        rows.push({ type: 'group', group: sessionGroup })
+      const label = sessionGroup.label
+      if (label !== null) {
+        rows.push({ type: 'group', group: { ...sessionGroup, label } })
       }
-      if (hideGroupHeaders || !collapsedGroups.has(sessionGroup.key)) {
+      if (label === null || !collapsedGroups.has(sessionGroup.key)) {
         for (const session of sessionGroup.sessions) {
           rows.push({ type: 'session', groupKey: sessionGroup.key, session })
         }
       }
     }
     return rows
-  }, [collapsedGroups, groups, hideGroupHeaders])
+  }, [collapsedGroups, groups])
 
   const stickyHeaderIndexes = useMemo(() => getVaultStickyHeaderIndexes(vaultRows), [vaultRows])
 
