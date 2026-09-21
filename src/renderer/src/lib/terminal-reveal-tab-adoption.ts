@@ -96,12 +96,15 @@ export function resolveTerminalRevealTarget(
     // Why: minting instead would re-bind a leaf id the orphan layout still holds.
     throw new Error(`terminal_reveal_owner_row_missing: tab ${adoptedTabId}`)
   }
-  const isSplitReveal = Boolean(
-    request.ptyId && request.tabId && request.leafId && request.splitFromLeafId
-  )
-  // Why no lookup of its own: the hinted parent is adopted as the pty's owner across every
-  // worktree key, so a split never needs one — a null row here means the hint names no row at all.
-  if (isSplitReveal && !adoptedRow) {
+  // Why null and not a rowless owner, which already threw above: a split names its parent by id
+  // and that hint is adopted across every worktree key, so a mint means it names no row at all.
+  if (
+    adoptedTabId === null &&
+    request.ptyId &&
+    request.tabId &&
+    request.leafId &&
+    request.splitFromLeafId
+  ) {
     throw new Error(`Terminal tab ${request.tabId} not found`)
   }
   return adoptedRow
