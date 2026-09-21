@@ -13201,8 +13201,6 @@
             "agentSessionQueued": "{{value0}} session queued",
             "sessionHistory": "Agent Session History",
             "agents": "Agents",
-            "shownRecent": "{{value0}} shown · {{value1}} recent",
-            "sessionsShownCompact": "{{value0}} shown",
             "resumePastSessions": "Resume past sessions",
             "refreshSessionHistory": "Refresh Session History",
             "searchSessions": "Search sessions",
@@ -18021,7 +18019,11 @@
       "enable": "Enable",
       "retry": "Try again",
       "scopeUnknown": "This computer does not have this workspace or project. Switch the scope to All to search everything on it.",
-      "sortSessionsAriaLabel": "Sort sessions: {{value0}}"
+      "sortSessionsAriaLabel": "Sort sessions: {{value0}}",
+      "sessionsOne": "{{count}} session",
+      "sessionsOther": "{{count}} sessions",
+      "sessionsOfLoaded": "{{value0}} of {{value1}} sessions",
+      "showMoreSessions": "Show more sessions"
     }
   },
   "sessionHistory": {

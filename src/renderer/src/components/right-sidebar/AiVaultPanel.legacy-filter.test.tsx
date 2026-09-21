@@ -173,7 +173,7 @@ it('shows the whole history and no offer while the box is empty', async () => {
   expect(screen.getByText('Rename the bar widget')).toBeTruthy()
   expect(searchSessions).not.toHaveBeenCalled()
   // The same bar serves both modes; browsing it reports the history counts and its own sort.
-  expect(screen.getByText('2 shown · 2 recent')).toBeTruthy()
+  expect(screen.getByText('2 sessions')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Sort sessions: Last updated' })).toBeTruthy()
   expect(screen.queryByText('2 results')).toBeNull()
   expect(screen.queryByRole('button', { name: /^Sort results:/ })).toBeNull()

@@ -7,12 +7,42 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger
 } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import {
   AI_VAULT_SESSION_LIMITS,
   DEFAULT_AI_VAULT_SESSION_LIMIT,
+  nextAiVaultSessionLimit,
   type AiVaultSessionLimit
 } from './ai-vault-session-limit'
+
+/** Footer row once the scan filled its History depth; steps the same setting the menu edits. */
+export function AiVaultShowMoreSessionsRow({
+  loaded,
+  sessionLimit,
+  onSessionLimitChange
+}: {
+  loaded: number
+  sessionLimit: AiVaultSessionLimit
+  onSessionLimitChange: (limit: AiVaultSessionLimit) => void
+}): React.JSX.Element | null {
+  const next = nextAiVaultSessionLimit(sessionLimit)
+  if (next === null || typeof sessionLimit !== 'number' || loaded < sessionLimit) {
+    return null
+  }
+  return (
+    <div className="border-t border-sidebar-border p-2">
+      <Button
+        className="w-full"
+        variant="ghost"
+        size="xs"
+        onClick={() => onSessionLimitChange(next)}
+      >
+        {translate('sessionSearch.panel.showMoreSessions', 'Show more sessions')}
+      </Button>
+    </div>
+  )
+}
 
 export function AiVaultSessionLimitMenu({
   sessionLimit,

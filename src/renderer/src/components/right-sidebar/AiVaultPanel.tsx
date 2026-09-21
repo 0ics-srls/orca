@@ -39,14 +39,10 @@ import { AiVaultPanelHeader } from './AiVaultPanelHeader'
 import {
   AiVaultResultCountLabel,
   AiVaultSessionListBar,
-  AiVaultShownCountLabel
+  AiVaultSessionCountLabel
 } from './AiVaultSessionListBar'
-import {
-  aiVaultBrowseSortAriaLabel,
-  aiVaultBrowseSortOptions,
-  aiVaultSearchSortAriaLabel,
-  aiVaultSearchSortOptions
-} from './ai-vault-sort-options'
+import { aiVaultBrowseSortMenu, aiVaultSearchSortMenu } from './ai-vault-sort-options'
+import { AiVaultShowMoreSessionsRow } from './AiVaultSessionLimitMenu'
 import { AiVaultSessionVirtualList } from './AiVaultSessionVirtualList'
 import { useAiVaultSessionRefresh } from './ai-vault-session-refresh'
 import {
@@ -342,18 +338,19 @@ export default function AiVaultPanel(): React.JSX.Element {
             <AiVaultSessionListBar
               label={<AiVaultResultCountLabel count={filteredSessions.length} />}
               value={searchSort}
-              options={aiVaultSearchSortOptions()}
-              sortAriaLabel={aiVaultSearchSortAriaLabel}
+              menu={aiVaultSearchSortMenu()}
               onChange={setSearchSort}
             />
           ) : (
             <AiVaultSessionListBar
               label={
-                <AiVaultShownCountLabel shown={filteredSessions.length} recent={sessions.length} />
+                <AiVaultSessionCountLabel
+                  shown={filteredSessions.length}
+                  loaded={sessions.length}
+                />
               }
               value={sort}
-              options={aiVaultBrowseSortOptions()}
-              sortAriaLabel={aiVaultBrowseSortAriaLabel}
+              menu={aiVaultBrowseSortMenu()}
               onChange={setSort}
             />
           ))}
@@ -406,6 +403,13 @@ export default function AiVaultPanel(): React.JSX.Element {
               }
             }}
             onRequestDelete={(session) => void requestDelete(session)}
+          />
+        )}
+        {!searching && (
+          <AiVaultShowMoreSessionsRow
+            loaded={sessions.length}
+            sessionLimit={sessionLimit}
+            onSessionLimitChange={setSessionLimit}
           />
         )}
       </AiVaultPanelSearch>

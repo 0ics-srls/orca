@@ -2,16 +2,11 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
-import {
-  aiVaultBrowseSortAriaLabel,
-  aiVaultBrowseSortOptions,
-  aiVaultSearchSortAriaLabel,
-  aiVaultSearchSortOptions
-} from './ai-vault-sort-options'
+import { aiVaultBrowseSortMenu, aiVaultSearchSortMenu } from './ai-vault-sort-options'
 import {
   AiVaultResultCountLabel,
   AiVaultSessionListBar,
-  AiVaultShownCountLabel
+  AiVaultSessionCountLabel
 } from './AiVaultSessionListBar'
 
 afterEach(cleanup)
@@ -21,8 +16,7 @@ it('reports how many hits are shown and which order produced them', () => {
     <AiVaultSessionListBar
       label={<AiVaultResultCountLabel count={1} />}
       value="relevance"
-      options={aiVaultSearchSortOptions()}
-      sortAriaLabel={aiVaultSearchSortAriaLabel}
+      menu={aiVaultSearchSortMenu()}
       onChange={vi.fn()}
     />
   )
@@ -33,8 +27,7 @@ it('reports how many hits are shown and which order produced them', () => {
     <AiVaultSessionListBar
       label={<AiVaultResultCountLabel count={20} />}
       value="newest"
-      options={aiVaultSearchSortOptions()}
-      sortAriaLabel={aiVaultSearchSortAriaLabel}
+      menu={aiVaultSearchSortMenu()}
       onChange={vi.fn()}
     />
   )
@@ -45,16 +38,26 @@ it('reports how many hits are shown and which order produced them', () => {
 it('reports how much of the browsed history is shown and its order', () => {
   render(
     <AiVaultSessionListBar
-      label={<AiVaultShownCountLabel shown={4} recent={12} />}
+      label={<AiVaultSessionCountLabel shown={4} loaded={12} />}
       value="created"
-      options={aiVaultBrowseSortOptions()}
-      sortAriaLabel={aiVaultBrowseSortAriaLabel}
+      menu={aiVaultBrowseSortMenu()}
       onChange={vi.fn()}
     />
   )
-  expect(screen.getByText('4 shown · 12 recent')).toBeTruthy()
-  expect(screen.getByText('4 shown')).toBeTruthy()
+  expect(screen.getByText('4 of 12 sessions')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Sort sessions: Created' })).toBeTruthy()
+})
+
+it('counts plainly when filters hide nothing', () => {
+  render(
+    <AiVaultSessionListBar
+      label={<AiVaultSessionCountLabel shown={12} loaded={12} />}
+      value="updated"
+      menu={aiVaultBrowseSortMenu()}
+      onChange={vi.fn()}
+    />
+  )
+  expect(screen.getByText('12 sessions')).toBeTruthy()
 })
 
 it('hands the picked search order back to the caller', async () => {
@@ -64,8 +67,7 @@ it('hands the picked search order back to the caller', async () => {
     <AiVaultSessionListBar
       label={<AiVaultResultCountLabel count={20} />}
       value="relevance"
-      options={aiVaultSearchSortOptions()}
-      sortAriaLabel={aiVaultSearchSortAriaLabel}
+      menu={aiVaultSearchSortMenu()}
       onChange={onChange}
     />
   )
@@ -81,10 +83,9 @@ it('hands the picked browse order back to the caller', async () => {
   const user = userEvent.setup({ pointerEventsCheck: 0 })
   render(
     <AiVaultSessionListBar
-      label={<AiVaultShownCountLabel shown={4} recent={12} />}
+      label={<AiVaultSessionCountLabel shown={4} loaded={12} />}
       value="updated"
-      options={aiVaultBrowseSortOptions()}
-      sortAriaLabel={aiVaultBrowseSortAriaLabel}
+      menu={aiVaultBrowseSortMenu()}
       onChange={onChange}
     />
   )

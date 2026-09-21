@@ -3,37 +3,46 @@ import type { AiVaultSearchSort, AiVaultSort } from '../../../../shared/ai-vault
 
 export type AiVaultSortOption<Value extends string> = { value: Value; label: string }
 
-export function aiVaultBrowseSortOptions(): readonly AiVaultSortOption<AiVaultSort>[] {
-  return [
-    {
-      value: 'updated',
-      label: translate(
-        'auto.components.right.sidebar.AiVaultPanelControls.lastUpdated',
-        'Last updated'
-      )
-    },
-    {
-      value: 'created',
-      label: translate('auto.components.right.sidebar.AiVaultPanelControls.created', 'Created')
-    }
-  ]
+/** One mode's sort menu: its choices, and the accessible name of the trigger showing one. */
+export type AiVaultSortMenu<Value extends string> = {
+  options: readonly AiVaultSortOption<Value>[]
+  ariaLabel: (selectedLabel: string) => string
 }
 
-export function aiVaultSearchSortOptions(): readonly AiVaultSortOption<AiVaultSearchSort>[] {
-  return [
-    { value: 'relevance', label: translate('sessionSearch.panel.sortRelevance', 'Most relevant') },
-    { value: 'newest', label: translate('sessionSearch.panel.sortNewest', 'Newest') }
-  ]
+export function aiVaultBrowseSortMenu(): AiVaultSortMenu<AiVaultSort> {
+  return {
+    options: [
+      {
+        value: 'updated',
+        label: translate(
+          'auto.components.right.sidebar.AiVaultPanelControls.lastUpdated',
+          'Last updated'
+        )
+      },
+      {
+        value: 'created',
+        label: translate('auto.components.right.sidebar.AiVaultPanelControls.created', 'Created')
+      }
+    ],
+    ariaLabel: (selectedLabel) =>
+      translate('sessionSearch.panel.sortSessionsAriaLabel', 'Sort sessions: {{value0}}', {
+        value0: selectedLabel
+      })
+  }
 }
 
-export function aiVaultBrowseSortAriaLabel(selectedLabel: string): string {
-  return translate('sessionSearch.panel.sortSessionsAriaLabel', 'Sort sessions: {{value0}}', {
-    value0: selectedLabel
-  })
-}
-
-export function aiVaultSearchSortAriaLabel(selectedLabel: string): string {
-  return translate('sessionSearch.panel.sortResultsAriaLabel', 'Sort results: {{value0}}', {
-    value0: selectedLabel
-  })
+export function aiVaultSearchSortMenu(): AiVaultSortMenu<AiVaultSearchSort> {
+  return {
+    options: [
+      {
+        value: 'relevance',
+        label: translate('sessionSearch.panel.sortRelevance', 'Most relevant')
+      },
+      { value: 'newest', label: translate('sessionSearch.panel.sortNewest', 'Newest') }
+    ],
+    ariaLabel: (selectedLabel) =>
+      translate('sessionSearch.panel.sortResultsAriaLabel', 'Sort results: {{value0}}', {
+        value0: selectedLabel
+      })
+  }
 }

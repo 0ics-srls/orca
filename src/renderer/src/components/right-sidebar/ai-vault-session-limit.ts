@@ -9,3 +9,8 @@ export function normalizeAiVaultSessionLimit(value: unknown): AiVaultSessionLimi
     ? (value as AiVaultSessionLimit)
     : DEFAULT_AI_VAULT_SESSION_LIMIT
 }
+
+/** The next History depth step, or null once the scan is already unlimited. */
+export function nextAiVaultSessionLimit(limit: AiVaultSessionLimit): AiVaultSessionLimit | null {
+  return AI_VAULT_SESSION_LIMITS[AI_VAULT_SESSION_LIMITS.indexOf(limit) + 1] ?? null
+}

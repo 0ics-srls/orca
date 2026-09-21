@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { translate } from '@/i18n/i18n'
-import type { AiVaultSortOption } from './ai-vault-sort-options'
+import type { AiVaultSortMenu } from './ai-vault-sort-options'
 
 /** Left-hand label while searching: how many hits the list is showing. */
 export function AiVaultResultCountLabel({ count }: { count: number }): React.JSX.Element {
@@ -23,31 +23,29 @@ export function AiVaultResultCountLabel({ count }: { count: number }): React.JSX
   )
 }
 
-/** Left-hand label while browsing: how much of the scanned history the list is showing. */
-export function AiVaultShownCountLabel({
+/** Left-hand label while browsing: the count, and how much of the scan filters hid. */
+export function AiVaultSessionCountLabel({
   shown,
-  recent
+  loaded
 }: {
   shown: number
-  recent: number
+  loaded: number
 }): React.JSX.Element {
+  if (shown !== loaded) {
+    return (
+      <>
+        {translate('sessionSearch.panel.sessionsOfLoaded', '{{value0}} of {{value1}} sessions', {
+          value0: shown,
+          value1: loaded
+        })}
+      </>
+    )
+  }
   return (
     <>
-      {/* Why: below 300px the bar competes with the sort menu, so compact copy prevents overlap. */}
-      <span className="@max-[300px]/ai-vault:hidden">
-        {translate(
-          'auto.components.right.sidebar.AiVaultPanel.shownRecent',
-          '{{value0}} shown · {{value1}} recent',
-          { value0: shown, value1: recent }
-        )}
-      </span>
-      <span className="hidden @max-[300px]/ai-vault:inline">
-        {translate(
-          'auto.components.right.sidebar.AiVaultPanel.sessionsShownCompact',
-          '{{value0}} shown',
-          { value0: shown }
-        )}
-      </span>
+      {shown === 1
+        ? translate('sessionSearch.panel.sessionsOne', '{{count}} session', { count: shown })
+        : translate('sessionSearch.panel.sessionsOther', '{{count}} sessions', { count: shown })}
     </>
   )
 }
@@ -59,17 +57,15 @@ export function AiVaultShownCountLabel({
 export function AiVaultSessionListBar<Value extends string>({
   label,
   value,
-  options,
-  sortAriaLabel,
+  menu,
   onChange
 }: {
   label: ReactNode
   value: Value
-  options: readonly AiVaultSortOption<Value>[]
-  sortAriaLabel: (selectedLabel: string) => string
+  menu: AiVaultSortMenu<Value>
   onChange: (value: Value) => void
 }): React.JSX.Element {
-  const selected = options.find((option) => option.value === value)
+  const selected = menu.options.find((option) => option.value === value)
   return (
     <div className="flex h-8 shrink-0 items-center gap-2 border-y border-sidebar-border bg-sidebar-accent/60 pl-3 pr-1.5">
       <span className="min-w-0 flex-1 truncate text-xs font-semibold tabular-nums text-foreground">
@@ -81,7 +77,7 @@ export function AiVaultSessionListBar<Value extends string>({
             variant="ghost"
             size="xs"
             className="shrink-0"
-            aria-label={sortAriaLabel(selected?.label ?? '')}
+            aria-label={menu.ariaLabel(selected?.label ?? '')}
           >
             {selected?.label}
             <ChevronDown className="text-muted-foreground" />
@@ -92,13 +88,13 @@ export function AiVaultSessionListBar<Value extends string>({
             value={value}
             // Radix hands back a bare string; the option list is what narrows it.
             onValueChange={(next) => {
-              const picked = options.find((option) => option.value === next)
+              const picked = menu.options.find((option) => option.value === next)
               if (picked) {
                 onChange(picked.value)
               }
             }}
           >
-            {options.map((option) => (
+            {menu.options.map((option) => (
               <DropdownMenuRadioItem key={option.value} value={option.value}>
                 {option.label}
               </DropdownMenuRadioItem>
