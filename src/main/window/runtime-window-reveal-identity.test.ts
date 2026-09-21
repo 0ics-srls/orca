@@ -2,8 +2,10 @@
 // renderer decides which workspace key holds the row; re-asserting the caller's key here rejected
 // a reveal that had surfaced exactly the right pane under a different one (STA-7961).
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TerminalTabCreateReply } from '../../shared/terminal-reveal-identity'
-import { revealedLegacyWorkerIdentityMatches } from '../runtime/legacy-worker-reveal-identity'
+import {
+  revealedPaneMatches,
+  type TerminalTabCreateReply
+} from '../../shared/terminal-reveal-identity'
 
 let lastWebContents: unknown = null
 const sentByChannel: [string, ...unknown[]][] = []
@@ -184,22 +186,19 @@ describe('revealTerminalSession identity assertion', () => {
   })
 })
 
-describe('revealedLegacyWorkerIdentityMatches', () => {
+describe('revealedPaneMatches', () => {
   const candidate = { tabId: 'tab-a', leafId: 'leaf-a', ptyId: 'pty-a' }
 
   it('accepts a reveal filed under another worktree key', () => {
     // Without this the recovery rolled the surface back and the worker never materialized.
-    expect(
-      revealedLegacyWorkerIdentityMatches(
-        { worktreeId: OWNER_WORKTREE_ID, ...candidate },
-        candidate
-      )
-    ).toBe(true)
+    expect(revealedPaneMatches({ worktreeId: OWNER_WORKTREE_ID, ...candidate }, candidate)).toBe(
+      true
+    )
   })
 
   it('refuses a reply that names a different pane', () => {
     expect(
-      revealedLegacyWorkerIdentityMatches(
+      revealedPaneMatches(
         { worktreeId: CALLER_WORKTREE_ID, ...candidate, leafId: 'leaf-other' },
         candidate
       )
@@ -207,6 +206,6 @@ describe('revealedLegacyWorkerIdentityMatches', () => {
   })
 
   it('refuses a reply with no identity at all', () => {
-    expect(revealedLegacyWorkerIdentityMatches(undefined, candidate)).toBe(false)
+    expect(revealedPaneMatches(undefined, candidate)).toBe(false)
   })
 })

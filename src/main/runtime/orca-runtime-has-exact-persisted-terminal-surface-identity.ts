@@ -5,7 +5,7 @@ import {
   runtimeWorktreeIdsEqual
 } from './runtime-worktree-path-identity'
 import { makePaneKey } from '../../shared/stable-pane-id'
-import { revealedLegacyWorkerIdentityMatches } from './legacy-worker-reveal-identity'
+import { revealedPaneMatches } from '../../shared/terminal-reveal-identity'
 import type { LegacyWorkerTerminalRecoveryPlan } from './orchestration/orchestration-legacy-worker-terminal-recovery'
 import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
 import type {
@@ -170,7 +170,7 @@ export class OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity extends Orc
         incarnationId: candidate.incarnationId
       }
     })
-    return revealedLegacyWorkerIdentityMatches(reveal?.identity, candidate)
+    return revealedPaneMatches(reveal?.identity, candidate)
   }
 
   setAutomationService(service: AutomationService): void {

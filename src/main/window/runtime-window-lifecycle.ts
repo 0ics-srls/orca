@@ -9,7 +9,10 @@ import type {
   RuntimeMarkdownSaveTabResult
 } from '../../shared/mobile-markdown-document'
 import type { RuntimeMobileSessionTabMove } from '../../shared/runtime-types'
-import type { TerminalTabCreateReply } from '../../shared/terminal-reveal-identity'
+import {
+  revealedPaneMatches,
+  type TerminalTabCreateReply
+} from '../../shared/terminal-reveal-identity'
 import { runWorktreeChangeInvalidators } from '../ipc/worktree-change-invalidators'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { requestMobileMarkdownFromRenderer } from './mobile-markdown-request-relay'
@@ -98,15 +101,7 @@ export function registerRuntimeWindowLifecycle(
             reject(new Error(reply.error))
             return
           }
-          // Why no worktreeId here: the renderer's answer is authoritative for the workspace key,
-          // and rejecting it stranded a reveal whose owner row is filed elsewhere (STA-7961).
-          if (
-            expectedIdentity &&
-            (!reply.identity ||
-              reply.identity.tabId !== expectedIdentity.tabId ||
-              reply.identity.leafId !== expectedIdentity.leafId ||
-              reply.identity.ptyId !== expectedIdentity.ptyId)
-          ) {
+          if (expectedIdentity && !revealedPaneMatches(reply.identity, expectedIdentity)) {
             reject(new Error('terminal_reveal_identity_mismatch'))
             return
           }
