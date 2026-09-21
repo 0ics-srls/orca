@@ -187,6 +187,22 @@ describe('issue 21762: middle-click native-paste suppression in mouse-tracking T
       expect(pane.terminal.focus).not.toHaveBeenCalled()
     })
 
+    // Guards against collapsing the modifier check to `shiftKey || altKey`:
+    // off Mac, xterm still forwards an Alt+middle-click, so the TUI pastes.
+    it('leaves Alt+middle-click on the TUI-owned path off Mac', () => {
+      const pane = buildTrackedPane('sgr')
+      const { result } = renderHook(() => useTerminalPaneMobileActions(buildController(pane)))
+
+      const outcome = fireMiddleMouseDown(
+        result.current.handlePrimarySelectionMiddleMouseDown,
+        pane.container,
+        { altKey: true }
+      )
+
+      expect(outcome.propagationStopped).toBe(false)
+      expect(pane.terminal.focus).not.toHaveBeenCalled()
+    })
+
     it('stops auxclick propagation too, matching the mousedown handler', () => {
       const pane = buildTrackedPane('sgr')
       const { result } = renderHook(() => useTerminalPaneMobileActions(buildController(pane)))
