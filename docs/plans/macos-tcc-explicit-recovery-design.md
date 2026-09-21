@@ -66,30 +66,54 @@ would get, so its verdict answers "will a restart help?" before the user pays fo
 deadline, argv only, scrubbed env, single JSON line, anything else is `unknown`. Exposed on the
 same poll as `restartWillHelp: boolean | null`.
 
-**Renderer: toast.** One line in `useMacTccAttributionSeveredNotice.ts`, once per daemon scope per
-app session, "Not now" latches the scope:
+**Renderer: toast.** Title, one sentence, one action, in `useMacTccAttributionSeveredNotice.ts`.
+Once per daemon scope per app session; the X latches the scope (sonner's `onDismiss`, which also
+fires for programmatic `toast.dismiss`, so the hook clears its scope before any programmatic
+takedown and only counts a user's X as `dismissed`). No cancel button: every other toast in the
+app dismisses through the X alone.
 
 > **Terminals can't read your Documents folder**
-> [Fix…]  [Not now]
+> macOS is blocking Orca's terminal service from this folder, so commands run there may fail
+> until it's fixed.
+> [Fix]
 
-**Renderer: fix dialog.** Opened by Fix. One place for every step, tracking its own progress:
+**Renderer: fix dialog.** Opened by Fix. A checklist with no buttons inside the steps; the footer
+carries the active step's one action (small, like the sign-out dialog) beside a ghost Cancel. The
+X is the only other way out, so there is no footer Close.
 
 ```
 Fix access to your Documents folder
 macOS is blocking Orca's terminal service from this folder.
-  ✓  1. Allow Orca under Files and Folders      [Open System Settings]
-  ○  2. Restart Orca's terminal service          [Restart]
-        Open terminals and agents will restart.
-                                                 [Close]
+  ○  Allow Orca under Files and Folders
+       macOS will ask you to allow Orca again.            (denied state only)
+  ○  Restart Orca's terminal service
+       Open terminals and agents will restart.
+                          [Cancel]  [Reset permission]    restartWillHelp === false
+                          [Cancel]  [Restart]             restartWillHelp === true
+             [Open System Settings]  [Restart]            restartWillHelp === null
+                                     [Done]               after a successful restart
 ```
 
-- Step 1 is pre-checked when `restartWillHelp` is true; open with Restart disabled when false;
-  optional hint when null.
-- Step 1 completes itself: the poll re-runs on window focus, main re-probes, and the check mark
-  appears when the fresh-daemon child can read the folder.
-- Step 2 calls the existing `restartDaemon()` directly. The dialog already states the consequence,
-  so it does not stack the Manage Sessions confirmation. Success shows "Done. Terminals opened in
-  Documents can read it now." Failure shows an inline line pointing at Manage Sessions.
+- `true`: step 1 is already green; the footer goes straight to Restart.
+- `false`: a fresh daemon is denied too, so Restart is not offered (it would spend every terminal
+  for a predictable no-op). The primary action is **Reset permission**: main runs
+  `tccutil reset <SystemPolicy{Documents,Desktop,Downloads}Folder> <app bundle id>`, then reads
+  the folder itself (async `opendir`, so the blocking TCC prompt cannot stall main) so macOS
+  prompts from the app, then forces the fresh-daemon re-probe. Allowed → step 1 turns green and
+  Restart appears. Still denied → "Still blocked after the reset." and the buttons stay. Reset
+  failed or unsupported → "Couldn't reset the permission. Use System Settings instead." Open
+  System Settings remains as the ghost fallback.
+- `null`: step 1 shows "Couldn't verify. Skip if already allowed."; Settings stays reachable as the
+  ghost button and Restart is offered, because an unanswered probe must not accuse the user.
+- Step 1 also completes itself without the button: the poll re-runs on window focus, main
+  re-probes, and the check mark appears when the fresh-daemon child can read the folder.
+- Restart calls the existing `restartDaemon()` directly; the dialog already states the
+  consequence, so it does not stack the Manage Sessions confirmation. Success is shown by the
+  checklist: both steps green, footer Done, no sentence. Failure shows an inline line pointing at
+  Manage Sessions.
+- Copy rules learned in review: no hedged reassurance addressed to the user ("should work now");
+  state is shown by the checklist, not narrated. No instruction the team has not verified: the
+  "turn the toggle off and on again" line was cut for that reason.
 - Agents come back on their own after the restart: the pane treats the synthetic exit as host
   loss, keeps its binding, and cold-restore types the agent's `--resume` into the fresh shell.
   Only a reply in progress is cut off, so the copy says "restart", not "close".
@@ -101,10 +125,22 @@ so the next poll returns `null` and the toast is dismissed. If the replacement d
 denied, the next spawn re-records, the toast returns, and the dialog reopens with step 1 unchecked.
 
 **Telemetry.** `daemon_folder_access_notice` with `action: shown | fix_opened | settings_opened |
-restart_clicked | dismissed | restart_outcome_fixed | restart_outcome_still_denied` and
-`cwd_class`. The two outcome actions fire on the replacement daemon's first spawn in the same folder
-class, replacing the PostHog proxy for "does a restart fix it". Keep `daemon_pty_cwd_denied` as
-the denominator.
+reset_clicked | restart_clicked | dismissed | restart_outcome_fixed | restart_outcome_still_denied |
+reset_outcome_allowed | reset_outcome_still_denied | reset_outcome_unknown` and `cwd_class`. The
+restart outcomes fire on the replacement daemon's first spawn in the same folder class, replacing
+the PostHog proxy for "does a restart fix it". The reset outcomes come from the forced re-probe
+right after the reset and are the first measurement of whether the documented recovery works for
+the third of users a fresh daemon does not help. Keep `daemon_pty_cwd_denied` as the denominator.
+
+**What is known about the stuck third (2026-09-21).** By construction of the trigger, every user
+who sees the notice already has the folder enabled for Orca; "not enabled, enable it" describes
+nobody. Of 219 denied users later observed with a same-version daemon, 151 read fine and 68 were
+denied again (a proxy: some of those "same-version" daemons may still have been stale copies, so
+real restarts may fix more). No Settings action has been measured to fix the 68. Candidate
+remedies, none verified on an affected machine: toggle off/on, `tccutil reset` + re-allow, reboot.
+Guaranteed workaround: a workspace outside Documents/Desktop/Downloads. The state cannot be
+reproduced on demand (the 2026-09-01 signed-build matrix never produced it), so the reset step
+ships gated behind the probe and is judged by its telemetry; G1 below is the other half.
 
 **Tests.** `terminal-host-cwd-readability.test.ts` for opendir mapping (EPERM, EACCES, ENOENT,
 ENOTDIR, readable, empty). Evidence store: records only on divergence, one per identity, clears
