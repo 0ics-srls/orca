@@ -446,6 +446,38 @@ describe('codex journal translation', () => {
       expect(stopped).toEqual([])
     })
 
+    it('releases after systemError arrives before the terminal error notification', () => {
+      const stopped: string[] = []
+      const { translator } = translatorReporting(stopped)
+
+      translator.handle(TURN_STARTED)
+      translator.handle(statusChanged('systemError'))
+      expect(stopped).toEqual([])
+
+      translator.handle(
+        notification('error', {
+          turnId: TURN_ID,
+          willRetry: false,
+          error: { message: 'fatal' }
+        })
+      )
+
+      expect(stopped).toEqual([THREAD_ID])
+    })
+
+    it('releases after idle arrives before the terminal turn completion notification', () => {
+      const stopped: string[] = []
+      const { translator } = translatorReporting(stopped)
+
+      translator.handle(TURN_STARTED)
+      translator.handle(statusChanged('idle'))
+      expect(stopped).toEqual([])
+
+      translator.handle(notification('turn/completed', { turn: { id: TURN_ID } }))
+
+      expect(stopped).toEqual([THREAD_ID])
+    })
+
     it('reports once the open turn has settled', () => {
       const stopped: string[] = []
       const { translator } = translatorReporting(stopped)

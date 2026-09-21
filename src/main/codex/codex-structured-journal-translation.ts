@@ -88,6 +88,15 @@ export function createCodexJournalTranslator(
     resetActivity,
     ...(deps.now ? { now: deps.now } : {})
   })
+  let primaryThreadStoppedRunning = false
+  const reportPrimaryThreadStoppedRunning = (): void => {
+    const primaryThreadId = deps.primaryThreadId?.() ?? null
+    if (!primaryThreadStoppedRunning || !primaryThreadId || activeTurns.current(primaryThreadId)) {
+      return
+    }
+    primaryThreadStoppedRunning = false
+    deps.onPrimaryThreadStoppedRunning?.()
+  }
   const routeThreadItem = createCodexThreadItemRouter({
     deps,
     subagents,
@@ -226,9 +235,14 @@ export function createCodexJournalTranslator(
         if (!childAdmission.accepted) {
           return childAdmission
         }
-        return event.method === 'turn/started'
-          ? turnBoundaries.start(event)
-          : turnBoundaries.complete(event)
+        const admission =
+          event.method === 'turn/started'
+            ? turnBoundaries.start(event)
+            : turnBoundaries.complete(event)
+        if (admission.accepted) {
+          reportPrimaryThreadStoppedRunning()
+        }
+        return admission
       }
       const compaction = compactions.handle(event)
       if (compaction) {
@@ -257,10 +271,10 @@ export function createCodexJournalTranslator(
       const verdict = readCodexProviderVerdict(event.method, event.params)
       if (
         verdict === 'thread-stopped-running' &&
-        event.threadId === (deps.primaryThreadId?.() ?? null) &&
-        activeTurns.current(event.threadId) === null
+        event.threadId === (deps.primaryThreadId?.() ?? null)
       ) {
-        deps.onPrimaryThreadStoppedRunning?.()
+        primaryThreadStoppedRunning = true
+        reportPrimaryThreadStoppedRunning()
       }
       // The row carries the provider's sentence and is written first, so it lands
       // inside the turn this same frame is about to end.
@@ -274,6 +288,7 @@ export function createCodexJournalTranslator(
         if (!failed.accepted) {
           return failed
         }
+        reportPrimaryThreadStoppedRunning()
       }
       return publishActivity(event, unhandled)
     },
