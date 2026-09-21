@@ -61,7 +61,6 @@ export const NativeChatTranscriptRow = memo(function NativeChatTranscriptRow({
           allowFileUriLinks={context.allowFileUriLinks}
           deliveryFailed={context.failedDeliveryMessageIds?.has(message.id) === true}
           structuredActivityUi={context.showTurnStatus}
-          activityExpandOverride={expanded}
           folded={slot.folded}
           runtimeContext={context.runtimeContext}
         />

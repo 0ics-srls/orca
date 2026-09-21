@@ -660,12 +660,10 @@ describe('NativeChatMessageList turn indicator', () => {
     expect(screen.queryByRole('button', { name: /pwd/ })).toBeNull()
     fireEvent.click(status)
     expect(status).toHaveAttribute('aria-expanded', 'true')
-    // The run header, then its row: a single-call run names the same command in both.
-    const tool = screen.getAllByRole('button', { name: /pwd/ })[0]
-    expect(tool).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getAllByRole('button', { name: /pwd/ })[1]).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    )
+    // Opening the turn status reveals the turn, but does not open its nested
+    // tool-run disclosure. The command remains a separate reader action.
+    const tools = screen.getAllByRole('button', { name: /pwd/ })
+    expect(tools).toHaveLength(1)
+    expect(tools[0]).toHaveAttribute('aria-expanded', 'false')
   })
 })

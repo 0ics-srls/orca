@@ -37,7 +37,6 @@ export const MessageRow = memo(function MessageRow({
   onLinkClick,
   allowFileUriLinks = false,
   deliveryFailed = false,
-  activityExpandOverride,
   structuredActivityUi = true,
   folded = false,
   runtimeContext
@@ -53,7 +52,6 @@ export const MessageRow = memo(function MessageRow({
   onLinkClick?: CommentMarkdownLinkClickHandler
   allowFileUriLinks?: boolean
   deliveryFailed?: boolean
-  activityExpandOverride?: boolean
   structuredActivityUi?: boolean
   /** Behind a folded turn: the row keeps only what outlives the turn. */
   folded?: boolean
@@ -208,7 +206,6 @@ export const MessageRow = memo(function MessageRow({
           subagentGroups={subagentGroups}
           backgroundTasks={backgroundTasks}
           expandSignal={expandSignal}
-          expandOverride={activityExpandOverride}
           activeTurnIsWorking={activeTurnIsWorking}
           structuredActivityUi={structuredActivityUi}
           disclosureId={message.id}

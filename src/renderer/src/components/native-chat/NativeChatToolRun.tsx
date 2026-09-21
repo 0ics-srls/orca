@@ -72,7 +72,7 @@ export function NativeChatToolRun({
   backgroundTasks?: NativeChatBackgroundTaskBlock[]
   /** Legacy view-level default; production native-chat entry points pass false. */
   expandSignal: boolean
-  /** Per-turn disclosure state controlled by the completed turn status row. */
+  /** Optional external control for callers that intentionally own this run's disclosure. */
   expandOverride?: boolean
   /** Structured lifecycle state, when available, keeps orphaned running calls from spinning. */
   activeTurnIsWorking?: boolean
@@ -128,7 +128,8 @@ export function NativeChatToolRun({
   const { succeeded: runSucceeded, failedCallCount } = nativeChatToolRunOutcome(headerBlocks, {
     activeTurnIsWorking
   })
-  // The turn caret opens the activity group while each child tool stays collapsed.
+  // An externally opened run keeps child tools collapsed; normal callers leave
+  // the run's own disclosure independent from the turn status bar.
   const expandToolLines = expandOverride === undefined ? open : false
   // Diffing every edit is the run's most expensive work, so a collapsed run —
   // which renders none of it — never pays for it.
