@@ -1,6 +1,6 @@
 // Which tab owns a leaf id decides whether a reveal adopts a pane or mints a second one
 // (STA-7961). Two layouts can name the same leaf: one that still mounts it, and one left
-// holding the id by a detach or by the hydration self-heal.
+// holding the id by a detach.
 import { describe, expect, it } from 'vitest'
 import { findTerminalTabIdBindingLeafId } from './terminal-reveal-tab-adoption'
 import type { AppState } from '@/store/types'
@@ -47,7 +47,7 @@ describe('findTerminalTabIdBindingLeafId', () => {
   })
 
   it('prefers the tab that binds the leaf over one that only carries it unbound', () => {
-    // The hydration self-heal unbinds the losing single-leaf tab but leaves the id in its tree.
+    // A pane keeps its leaf in the tree after its PTY exits, so the id outlives the binding.
     const bound = layout(leaf(SHARED_LEAF_ID), { [SHARED_LEAF_ID]: 'pty-a' })
     const unbound = layout(leaf(SHARED_LEAF_ID))
 

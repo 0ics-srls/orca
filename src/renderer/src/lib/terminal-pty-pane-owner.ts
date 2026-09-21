@@ -1,4 +1,5 @@
-import { collectOwnedLeafIds } from '@/components/terminal-pane/terminal-layout-leaf-claims'
+import { collectLeafIdsInOrder } from '@/components/terminal-pane/terminal-layout-leaf-ids'
+import type { TerminalLayoutSnapshot } from '../../../shared/terminal-tab-types'
 import type { AppState } from '@/store/types'
 
 /** No `tabsByWorktree`: ownership is tab-keyed, so no worktree key participates. */
@@ -20,6 +21,26 @@ export type TerminalPtyPaneOwnership =
 export type TerminalPtyPaneOwnerOptions = {
   /** Tab id baked into the PTY's env; a tie-break and a last resort, never a binding. */
   preferTabId?: string
+}
+
+/**
+ * Leaf ids this layout holds: its tree, or — for a rootless layout, which binds its sole pane
+ * off-tree — every leaf it actually binds. A binding whose leaf has left a rooted tree reattaches
+ * nothing, so it must not outrank a live pane (#13098).
+ *
+ * Why the truthiness check: the persisted map types its values as a plain string, so an empty one
+ * survives the schema and is not a binding. Counting it would name a leaf no session is attached
+ * to, and a reveal that adopted that tab would show nothing.
+ */
+function collectOwnedLeafIds(layout: TerminalLayoutSnapshot): Set<string> {
+  if (layout.root) {
+    return new Set(collectLeafIdsInOrder(layout.root))
+  }
+  return new Set(
+    Object.entries(layout.ptyIdsByLeafId ?? {})
+      .filter(([, ptyId]) => Boolean(ptyId))
+      .map(([leafId]) => leafId)
+  )
 }
 
 /** The leaf a tab's layout binds to `ptyId`, or null when no leaf it owns holds that binding. */

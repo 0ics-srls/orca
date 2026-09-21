@@ -15,8 +15,8 @@ export type TerminalRevealTabAdoption =
   | { kind: 'mint' }
 
 /**
- * The tab whose layout owns a leaf id. Bound-and-in-tree beats in-tree-unbound, because the
- * hydration self-heal leaves a losing single-leaf tab carrying its leaf with no session to adopt.
+ * The tab whose layout owns a leaf id. Bound-and-in-tree beats in-tree-unbound, because a pane
+ * keeps its leaf after its PTY exits or is cleared, and such a tab has no session to adopt.
  * Every layout is scanned, including ones whose row is gone: a leaf id is a pane identity for its
  * lifetime, and re-minting one an orphan layout still holds is how the STA-7961 pair was created.
  */
