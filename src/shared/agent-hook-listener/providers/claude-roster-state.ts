@@ -8,6 +8,7 @@ import {
   reapUnconfirmedRestoredClaudeSubagents,
   type ClaudeSubagentRoster
 } from '../../claude-subagent-roster'
+import { dropClaudePendingApprovalsOwnedBy } from './claude-pending-approval'
 import type { AgentHookEventPayload } from '../listener-event'
 import type { ClaudeLeadTurnState, HookListenerState } from '../listener-state'
 import { readString } from '../tool-input-preview'
@@ -231,7 +232,16 @@ export function clearClaudePendingWaitForAgent(
   ownsWait: (waitingAgentId: string) => boolean
 ): void {
   const lead = state.claudeLeadStateByPaneKey.get(paneKey)
-  if (lead?.state !== 'waiting' || !lead.waitingAgentId || !ownsWait(lead.waitingAgentId)) {
+  if (lead?.state !== 'waiting') {
+    return
+  }
+  const remaining = dropClaudePendingApprovalsOwnedBy(lead.pendingApprovals, ownsWait)
+  if (remaining === lead.pendingApprovals) {
+    return
+  }
+  if (remaining.length > 0) {
+    // Why: this child is gone but somebody else on the pane is still owed an answer.
+    state.claudeLeadStateByPaneKey.set(paneKey, { ...lead, pendingApprovals: remaining })
     return
   }
   state.claudeLeadStateByPaneKey.set(paneKey, lead.stateBeforeWait ?? { state: 'working' })
