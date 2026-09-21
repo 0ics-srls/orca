@@ -166,6 +166,21 @@ describe('VaultSessionRow native session actions', () => {
   })
 })
 
+describe('VaultSessionRow native session actions', () => {
+  it('hides Delete for structured native sessions', async () => {
+    const nativeSession = {
+      ...session,
+      structuredSession: { sessionId: 'native-1', workspaceId: 'workspace-1' }
+    }
+
+    renderRow({ session: nativeSession })
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('ai-vault-session-more-actions'))
+
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull()
+  })
+})
+
 describe('VaultSessionRow agent metadata line', () => {
   it('shows the agent identity when the row is collapsed', () => {
     renderRow()
