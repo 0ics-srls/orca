@@ -78,11 +78,29 @@ the never-presented Linux test window as the trigger for the reproduced native
 stalls. It does not establish a newly introduced application-code regression or
 prove that every historical outlier had the same cause.
 
-## Remaining verification
+## Full scale validation
 
-Run the full terminal scale report gate with the original graphics flags, no
-profiling, and unchanged latency limits. The correction presents the benchmark
-window only when explicitly enabled on an isolated GitHub Actions Linux display;
-ordinary local automation stays windowless. Terminal workloads, hidden-pane gates,
-and production launch policy are unchanged. Temporary diagnostic hooks and the
-comparison workflow have been removed.
+[Run 35662787327](https://github.com/stablyai/orca/actions/runs/35662787327)
+passed all 21 scenarios and all 32 strict report rows, with zero skipped,
+unexpected, or retried tests. All 21 scenarios recorded successful isolated-display
+presentation. This run restored the original graphics flags and removed profiling.
+
+| Metric | Largest measurement | Unchanged report limit |
+| --- | ---: | ---: |
+| Median typing | 15.5 ms | 25 ms |
+| Worst key | 45.7 ms | 300 ms |
+| Hidden-output restore | 395.7 ms | 1,000 ms |
+| Worktree revisit | 50.3 ms | 300 ms |
+| Scroll | 54.7 ms | 150 ms |
+
+Timer drift and queue/drop checks also passed. Coverage includes 100-pane
+same-workspace and cross-workspace redraws, 50 real PTYs under held-ACK pressure,
+and the original plain/Latin/title/rich-model hidden-output scenarios. No workload
+or performance limit changed.
+
+The correction presents the benchmark window only when explicitly enabled inside
+`xvfb-run` on a GitHub-hosted Linux runner. Ordinary local automation stays
+windowless; production launch policy and hidden-terminal delivery remain unchanged.
+For comparable Linux latency evidence, use the Terminal Perf workflow: a never-
+presented local Linux window can still encounter the same compositor throttle.
+Temporary profiling hooks and the comparison workflow were removed before the PR.
