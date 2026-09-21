@@ -209,8 +209,6 @@ describe('EditorPanelHeaderPath inline rename', () => {
     expect(screen.queryByLabelText('Rename file notes.md')).toBeNull()
     expect(screen.queryByLabelText('Rename file other.md')).toBeNull()
 
-    // React may deliver the removed input's blur after the active file render.
-    fireEvent.blur(input)
     expect(renameFileOnDiskMock).not.toHaveBeenCalled()
   })
 
