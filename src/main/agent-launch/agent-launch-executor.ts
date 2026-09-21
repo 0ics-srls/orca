@@ -133,6 +133,10 @@ export type AgentLaunchWorkspaceFactory = {
     /** Set only alongside a `startupAgent` whose CLI takes the prompt on argv: agent-first creation
      *  builds the startup command, so that is where an argv prompt belongs. */
     startupPrompt?: string
+    /** Inputs needed when this terminal is created as the worktree's startup surface. */
+    agentArgs?: string | null
+    cwd?: string
+    launchSource?: string
   }): Promise<{
     worktreeId: string
     startupTerminalHandle: string | undefined
@@ -285,7 +289,14 @@ async function resolveWorkspace(
     // owns the prompt for the same reason, so it re-supplies its own rather than honouring theirs.
     create: withoutReservedAgentCreateFields(intent.target.create),
     startupAgent: preflight.mode === 'structured' ? undefined : intent.agent,
-    ...(startupPrompt ? { startupPrompt } : {})
+    ...(startupPrompt ? { startupPrompt } : {}),
+    ...(preflight.mode === 'structured'
+      ? {}
+      : {
+          ...(intent.agentArgs !== undefined ? { agentArgs: intent.agentArgs } : {}),
+          ...(intent.cwd ? { cwd: intent.cwd } : {}),
+          ...(intent.launchSource ? { launchSource: intent.launchSource } : {})
+        })
   })
   // Only when a startup terminal actually came back: a create that produced none ran no command,
   // so nothing carried the prompt and the launch still owes it to whatever surface it builds next.

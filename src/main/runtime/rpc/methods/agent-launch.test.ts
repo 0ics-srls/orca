@@ -311,6 +311,33 @@ describe('the worktree factory', () => {
     expect(runtime.getStructuredAgentSessionCreateSupport).not.toHaveBeenCalled()
   })
 
+  it('carries terminal launch inputs into an agent-first worktree create', async () => {
+    const runtime = runtimeStub({ settings: {} })
+    await launch(
+      {
+        ...CREATE_LAUNCH,
+        agentArgs: '--model opus',
+        cwd: '/repo/packages/api',
+        launchSource: 'source_control_recovery'
+      },
+      runtime
+    )
+
+    expect(createArgs(runtime)).toMatchObject({
+      startupAgent: 'claude',
+      startupAgentArgs: '--model opus',
+      startupCwd: '/repo/packages/api',
+      startupLaunchSource: 'source_control_recovery'
+    })
+  })
+
+  it('preserves an explicit no-arguments value for an agent-first worktree create', async () => {
+    const runtime = runtimeStub({ settings: {} })
+    await launch({ ...CREATE_LAUNCH, agentArgs: null }, runtime)
+
+    expect(createArgs(runtime)).toHaveProperty('startupAgentArgs', null)
+  })
+
   it('drops a stale startupAgent a caller carried over from worktree.create', async () => {
     const runtime = runtimeStub()
     await launch(
