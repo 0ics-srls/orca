@@ -78,8 +78,27 @@ export function buildWorkspaceTerminalReconnectPlan({
       }
     }
   }
+  // Why indexed: the relay wake handle is a separate fact from the layout, but it must not hand a
+  // tab the very PTY another tab's healed layout binds — that is the duplicate mount reached
+  // through a second door. A wake nothing else binds is untouched, which is every normal one.
+  const tabIdsBindingPtyId = new Map<string, Set<string>>()
+  for (const [tabId, layout] of Object.entries(layoutsByTabId)) {
+    for (const ptyId of Object.values(layout.ptyIdsByLeafId ?? {})) {
+      const binders = tabIdsBindingPtyId.get(ptyId)
+      if (binders) {
+        binders.add(tabId)
+      } else {
+        tabIdsBindingPtyId.set(ptyId, new Set([tabId]))
+      }
+    }
+  }
   for (const [tabId, sessionId] of Object.entries(remoteSessionIds)) {
-    if (validTabIds.has(tabId) && !releasedPtyIdsByTabId.get(tabId)?.has(sessionId)) {
+    const binders = tabIdsBindingPtyId.get(sessionId)
+    if (
+      validTabIds.has(tabId) &&
+      !releasedPtyIdsByTabId.get(tabId)?.has(sessionId) &&
+      (binders === undefined || binders.has(tabId))
+    ) {
       pendingReconnectPtyIdByTabId[tabId] = sessionId
     }
   }

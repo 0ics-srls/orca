@@ -33,6 +33,23 @@ const LEGACY_TAB_ID = '4b0f3f05-5e9e-4a2e-9f3a-6f1f3a4b7c21'
 const LEGACY_LEAF_ID = '7c1a8d2e-2f44-4a7b-93b6-10c6a1f9d0b4'
 const LEGACY_PTY_ID = 'repo1::/wt-1@@legacy01'
 
+/** The rows as the pane attach paths read them: they take `tab.ptyId` straight off the store. */
+function rowPtyIdsAfterReconnect(
+  session: WorkspaceSessionState
+): Promise<(string | null | undefined)[]> {
+  const store = createTestStore()
+  seedStore(store, {
+    worktreesByRepo: {
+      repo1: [makeWorktree({ id: WORKTREE_ID, repoId: 'repo1', path: '/wt-1' })]
+    }
+  })
+  store.getState().hydrateWorkspaceSession(session)
+  return store
+    .getState()
+    .reconnectPersistedTerminals()
+    .then(() => (store.getState().tabsByWorktree[WORKTREE_ID] ?? []).map((tab) => tab.ptyId))
+}
+
 function baseSession(): WorkspaceSessionState {
   return {
     activeRepoId: 'repo1',
@@ -159,6 +176,43 @@ describe('hydrating the STA-7961 duplicate binding', () => {
       type: 'leaf',
       leafId: SHARED_LEAF_ID
     })
+  })
+
+  it('never lets the losing row name the surrendered pty, at hydration or after reconnect', async () => {
+    // The pane attach paths read the row directly: the local reattach choice takes it as
+    // `tabFallbackPtyId` (deferred-session-reattach-choice.ts), and the SSH gate promotes it to
+    // `pendingSessionId` once the leaf map reads empty (ssh-pane-connect-gate.ts). Hydration
+    // clears every row, and reconnect must not hand this one back.
+    expect(
+      hydrate(duplicateLeafSession()).tabsByWorktree[WORKTREE_ID]?.map((tab) => tab.ptyId)
+    ).toEqual([null, null])
+    await expect(rowPtyIdsAfterReconnect(duplicateLeafSession())).resolves.toEqual([
+      SHARED_PTY_ID,
+      null
+    ])
+  })
+
+  it('refuses a relay wake handle that names a pty another tab\u2019s layout binds', async () => {
+    // remoteSessionIdsByTabId is persisted from the row, so a profile saved before the heal
+    // still names the shared session there — a second door onto the same duplicate mount.
+    const session = {
+      ...duplicateLeafSession(),
+      remoteSessionIdsByTabId: { [SINGLE_TAB_ID]: SHARED_PTY_ID }
+    }
+
+    expect(hydrate(session).pendingReconnectPtyIdByTabId[SINGLE_TAB_ID]).toBeUndefined()
+    await expect(rowPtyIdsAfterReconnect(session)).resolves.toEqual([SHARED_PTY_ID, null])
+  })
+
+  it('still wakes a relay session nothing else binds', async () => {
+    const session = {
+      ...duplicateLeafSession(),
+      remoteSessionIdsByTabId: { [SINGLE_TAB_ID]: 'repo1::/wt-1@@relay-own' }
+    }
+
+    expect(hydrate(session).pendingReconnectPtyIdByTabId[SINGLE_TAB_ID]).toBe(
+      'repo1::/wt-1@@relay-own'
+    )
   })
 
   it('a legacy layout with a tree but no bindings map still reconnects through the row', () => {
