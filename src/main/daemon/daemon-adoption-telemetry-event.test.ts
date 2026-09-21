@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ParsedDaemonPid } from './daemon-pid-file-parse'
 import { validate } from '../telemetry/validator'
 
-const { trackMock, accessSyncMock, existsSyncMock, readFileSyncMock, getVersionMock } = vi.hoisted(
+const { trackMock, opendirSyncMock, existsSyncMock, readFileSyncMock, getVersionMock } = vi.hoisted(
   () => ({
     trackMock: vi.fn(),
-    accessSyncMock: vi.fn(),
+    opendirSyncMock: vi.fn(),
     existsSyncMock: vi.fn(() => true),
     readFileSyncMock: vi.fn(),
     getVersionMock: vi.fn(() => '1.4.191')
@@ -14,7 +14,7 @@ const { trackMock, accessSyncMock, existsSyncMock, readFileSyncMock, getVersionM
 vi.mock('../telemetry/client', () => ({ track: trackMock }))
 vi.mock('node:fs', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  accessSync: accessSyncMock,
+  opendirSync: opendirSyncMock,
   existsSync: existsSyncMock,
   readFileSync: readFileSyncMock
 }))
@@ -28,9 +28,28 @@ vi.mock('../../shared/app-environment', () => ({
 
 import {
   classifyDaemonAdoptionOrigin,
+  hasDaemonPtyCwdDenialDiverged,
+  reportDaemonPtyCwdVerdict,
   trackDaemonAdopted,
-  trackDaemonPtyCwdDeniedIfDiverged
+  trackDaemonPtyCwdDenied
 } from './daemon-adoption-telemetry-event'
+import {
+  getDaemonFolderAccessMismatch,
+  resetDaemonFolderAccessMismatchForTests
+} from './daemon-folder-access-mismatch'
+import type { DaemonEndpointIdentity } from './daemon-hello-protocol'
+
+const DAEMON: DaemonEndpointIdentity = { pid: 1530, startedAtMs: 1_700_000, launchNonce: 'n1' }
+
+const DENIED_CWD = '/Users/alice/Documents/repo'
+
+function readableDir(): { readSync: () => { name: string }; closeSync: () => void } {
+  return { readSync: () => ({ name: 'entry' }), closeSync: () => {} }
+}
+
+function failWith(code: string): never {
+  throw Object.assign(new Error(code), { code })
+}
 
 const stalePidRecord: ParsedDaemonPid = {
   pid: 1530,
@@ -49,7 +68,8 @@ const PID_PATH = '/fake/daemon.pid'
 
 beforeEach(() => {
   trackMock.mockReset()
-  accessSyncMock.mockReset()
+  resetDaemonFolderAccessMismatchForTests()
+  opendirSyncMock.mockReset().mockReturnValue(readableDir())
   existsSyncMock.mockReset().mockReturnValue(true)
   readFileSyncMock.mockReset().mockReturnValue(JSON.stringify(stalePidRecord))
   vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
@@ -95,33 +115,46 @@ describe('trackDaemonAdopted', () => {
   })
 })
 
-describe('trackDaemonPtyCwdDeniedIfDiverged', () => {
-  it('emits only when the daemon was denied and the app can read the same cwd', () => {
-    trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', false, PID_PATH)
-    expect(accessSyncMock).toHaveBeenCalledWith('/Users/alice/Documents/repo', expect.any(Number))
+describe('hasDaemonPtyCwdDenialDiverged', () => {
+  it('is true only when the daemon was denied and this process can enumerate the same cwd', () => {
+    expect(hasDaemonPtyCwdDenialDiverged(DENIED_CWD, false)).toBe(true)
+    expect(opendirSyncMock).toHaveBeenCalledWith(DENIED_CWD)
+  })
+
+  // False positives would drown the signal this event exists to measure, so every
+  // non-divergent shape must stay silent — including daemons too old to report.
+  it('is false when the daemon could read the cwd or did not report one', () => {
+    expect(hasDaemonPtyCwdDenialDiverged(DENIED_CWD, true)).toBe(false)
+    expect(hasDaemonPtyCwdDenialDiverged(DENIED_CWD, undefined)).toBe(false)
+    expect(hasDaemonPtyCwdDenialDiverged(undefined, false)).toBe(false)
+    expect(opendirSyncMock).not.toHaveBeenCalled()
+  })
+
+  it('is false when this process cannot enumerate it either (no divergence)', () => {
+    opendirSyncMock.mockImplementation(() => failWith('EACCES'))
+    expect(hasDaemonPtyCwdDenialDiverged(DENIED_CWD, false)).toBe(false)
+  })
+
+  it('is false when the cwd is gone rather than refused', () => {
+    opendirSyncMock.mockImplementation(() => failWith('ENOENT'))
+    expect(hasDaemonPtyCwdDenialDiverged(DENIED_CWD, false)).toBe(false)
+  })
+
+  it('is false off macOS', () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
+    expect(hasDaemonPtyCwdDenialDiverged('/home/alice/Documents/repo', false)).toBe(false)
+    expect(opendirSyncMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('trackDaemonPtyCwdDenied', () => {
+  it('emits a validator-accepted payload', () => {
+    trackDaemonPtyCwdDenied(DENIED_CWD, PID_PATH)
     expect(trackMock).toHaveBeenCalledTimes(1)
     const [name, props] = trackMock.mock.calls[0]
     expect(name).toBe('daemon_pty_cwd_denied')
     expect(props).toEqual({ cwd_class: 'documents', ...origin })
     expect(validate('daemon_pty_cwd_denied', props).ok).toBe(true)
-  })
-
-  // False positives would drown the signal this event exists to measure, so every
-  // non-divergent shape must stay silent.
-  it('stays silent when the daemon could read the cwd or did not report', () => {
-    trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', true, PID_PATH)
-    trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', undefined, PID_PATH)
-    trackDaemonPtyCwdDeniedIfDiverged(undefined, false, PID_PATH)
-    expect(accessSyncMock).not.toHaveBeenCalled()
-    expect(trackMock).not.toHaveBeenCalled()
-  })
-
-  it('stays silent when the app cannot read the cwd either (no divergence)', () => {
-    accessSyncMock.mockImplementation(() => {
-      throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
-    })
-    trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', false, PID_PATH)
-    expect(trackMock).not.toHaveBeenCalled()
   })
 
   it('attributes the denial to the daemon recorded right now, not a startup snapshot', () => {
@@ -132,7 +165,7 @@ describe('trackDaemonPtyCwdDeniedIfDiverged', () => {
         spawnerExecPath: '/Applications/Orca.app/Contents/MacOS/Orca'
       })
     )
-    trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', false, PID_PATH)
+    trackDaemonPtyCwdDenied(DENIED_CWD, PID_PATH)
     expect(readFileSyncMock).toHaveBeenCalledWith(PID_PATH, 'utf8')
     expect(trackMock.mock.calls[0][1]).toEqual({
       cwd_class: 'documents',
@@ -145,16 +178,7 @@ describe('trackDaemonPtyCwdDeniedIfDiverged', () => {
     getVersionMock.mockImplementationOnce(() => {
       throw new Error('AppEnvironment not initialized')
     })
-    expect(() =>
-      trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', false, PID_PATH)
-    ).not.toThrow()
-    expect(trackMock).not.toHaveBeenCalled()
-  })
-
-  it('stays silent off macOS', () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
-    trackDaemonPtyCwdDeniedIfDiverged('/home/alice/Documents/repo', false, PID_PATH)
-    expect(accessSyncMock).not.toHaveBeenCalled()
+    expect(() => trackDaemonPtyCwdDenied(DENIED_CWD, PID_PATH)).not.toThrow()
     expect(trackMock).not.toHaveBeenCalled()
   })
 
@@ -162,8 +186,76 @@ describe('trackDaemonPtyCwdDeniedIfDiverged', () => {
     trackMock.mockImplementationOnce(() => {
       throw new Error('posthog exploded')
     })
+    expect(() => trackDaemonPtyCwdDenied(DENIED_CWD, PID_PATH)).not.toThrow()
+  })
+})
+
+describe('reportDaemonPtyCwdVerdict', () => {
+  it('emits the event and records the notice evidence on one directory read', () => {
+    reportDaemonPtyCwdVerdict({
+      cwd: DENIED_CWD,
+      cwdReadableByDaemon: false,
+      pidPath: PID_PATH,
+      daemonIdentity: DAEMON
+    })
+
+    expect(opendirSyncMock).toHaveBeenCalledTimes(1)
+    expect(trackMock.mock.calls[0][0]).toBe('daemon_pty_cwd_denied')
+    expect(getDaemonFolderAccessMismatch(DAEMON)?.cwdClass).toBe('documents')
+  })
+
+  it('retires the evidence when the same daemon later reads a cwd it owns', () => {
+    reportDaemonPtyCwdVerdict({
+      cwd: DENIED_CWD,
+      cwdReadableByDaemon: false,
+      pidPath: PID_PATH,
+      daemonIdentity: DAEMON
+    })
+    reportDaemonPtyCwdVerdict({
+      cwd: DENIED_CWD,
+      cwdReadableByDaemon: true,
+      pidPath: PID_PATH,
+      daemonIdentity: DAEMON
+    })
+
+    expect(getDaemonFolderAccessMismatch(DAEMON)).toBeNull()
+  })
+
+  it('does nothing for a daemon that never reported a verdict', () => {
+    reportDaemonPtyCwdVerdict({
+      cwd: DENIED_CWD,
+      cwdReadableByDaemon: undefined,
+      pidPath: PID_PATH,
+      daemonIdentity: DAEMON
+    })
+
+    expect(trackMock).not.toHaveBeenCalled()
+    expect(getDaemonFolderAccessMismatch(DAEMON)).toBeNull()
+  })
+
+  it('records nothing when the daemon identity is unknown, and does not throw', () => {
     expect(() =>
-      trackDaemonPtyCwdDeniedIfDiverged('/Users/alice/Documents/repo', false, PID_PATH)
+      reportDaemonPtyCwdVerdict({
+        cwd: DENIED_CWD,
+        cwdReadableByDaemon: false,
+        pidPath: PID_PATH,
+        daemonIdentity: null
+      })
+    ).not.toThrow()
+    expect(getDaemonFolderAccessMismatch(DAEMON)).toBeNull()
+  })
+
+  it('swallows a throwing telemetry client instead of failing the spawn', () => {
+    trackMock.mockImplementationOnce(() => {
+      throw new Error('posthog exploded')
+    })
+    expect(() =>
+      reportDaemonPtyCwdVerdict({
+        cwd: DENIED_CWD,
+        cwdReadableByDaemon: false,
+        pidPath: PID_PATH,
+        daemonIdentity: DAEMON
+      })
     ).not.toThrow()
   })
 })

@@ -6,17 +6,25 @@ const {
   removeHandlerMock,
   getDaemonProviderMock,
   restartDaemonMock,
-  getCurrentDaemonMacTccAttributionHealthMock
+  getCurrentDaemonMacTccAttributionHealthMock,
+  getDaemonFolderAccessMismatchMock
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
   getDaemonProviderMock: vi.fn(),
   restartDaemonMock: vi.fn(),
-  getCurrentDaemonMacTccAttributionHealthMock: vi.fn(async () => 'unknown')
+  getCurrentDaemonMacTccAttributionHealthMock: vi.fn(async () => 'unknown'),
+  getDaemonFolderAccessMismatchMock: vi.fn<() => { daemonScope: string; cwdClass: string } | null>(
+    () => null
+  )
 }))
 
 vi.mock('electron', () => ({
   ipcMain: { handle: handleMock, removeHandler: removeHandlerMock }
+}))
+
+vi.mock('../daemon/daemon-folder-access-mismatch', () => ({
+  getDaemonFolderAccessMismatch: getDaemonFolderAccessMismatchMock
 }))
 
 vi.mock('../daemon/daemon-init', () => ({
@@ -35,11 +43,20 @@ vi.mock('../daemon/daemon-init', () => ({
 vi.mock('../daemon/daemon-pty-router', () => {
   class DaemonPtyRouter {
     private allAdapters: unknown[]
+    private current: unknown
     constructor(opts: { current: unknown; legacy: unknown[] }) {
+      this.current = opts.current
       this.allAdapters = [opts.current, ...opts.legacy]
     }
     getAllAdapters() {
       return this.allAdapters
+    }
+    // Why: the folder-access read asks the *current* adapter for the daemon identity.
+    getCurrentAdapter() {
+      return this.current
+    }
+    getLegacyAdapters() {
+      return this.allAdapters.slice(1)
     }
   }
   return { DaemonPtyRouter }
@@ -51,9 +68,17 @@ vi.mock('../daemon/daemon-pty-router', () => {
 vi.mock('../daemon/degraded-daemon-pty-provider', () => {
   class DegradedDaemonPtyProvider {
     private allAdapters: unknown[]
+    private current: unknown
     private routesFreshToFallback = true
     constructor(opts: { current: unknown; legacy: unknown[] }) {
+      this.current = opts.current
       this.allAdapters = [opts.current, ...opts.legacy]
+    }
+    getCurrentAdapter() {
+      return this.current
+    }
+    getLegacyAdapters() {
+      return this.allAdapters.slice(1)
     }
     get routesFreshSpawnsToLocalProvider(): true | undefined {
       return this.routesFreshToFallback ? true : undefined
@@ -103,6 +128,7 @@ type MockAdapter = {
   protocolVersion: number
   listSessions: ReturnType<typeof vi.fn>
   shutdown: ReturnType<typeof vi.fn>
+  getDaemonIdentity: ReturnType<typeof vi.fn>
 }
 
 function makeAdapter(
@@ -117,7 +143,8 @@ function makeAdapter(
   return {
     protocolVersion,
     listSessions: vi.fn(async () => sessions.map(({ protocolVersion: _pv, ...rest }) => rest)),
-    shutdown: vi.fn(shutdownImpl ?? (async () => {}))
+    shutdown: vi.fn(shutdownImpl ?? (async () => {})),
+    getDaemonIdentity: vi.fn(() => ({ pid: 1530, startedAtMs: 1_700_000, launchNonce: 'n1' }))
   }
 }
 
@@ -148,6 +175,7 @@ describe('pty:management IPC handlers', () => {
     restartDaemonMock.mockReset()
     getCurrentDaemonMacTccAttributionHealthMock.mockReset()
     getCurrentDaemonMacTccAttributionHealthMock.mockResolvedValue('unknown')
+    getDaemonFolderAccessMismatchMock.mockReset().mockReturnValue(null)
   })
 
   afterEach(() => {
@@ -465,32 +493,67 @@ describe('pty:management IPC handlers', () => {
   })
 
   describe('macTccAttribution', () => {
+    type AttributionResult = {
+      health: string
+      folderAccessMismatch: { daemonScope: string; cwdClass: string } | null
+    }
+
+    async function readAttribution(): Promise<AttributionResult> {
+      const { registerDaemonManagementHandlers } = await importFresh()
+      registerDaemonManagementHandlers()
+      const handlers = buildHandlerMap()
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the handler map is untyped by construction; this channel's handler is the one registered above.
+      return (await handlers['pty:management:macTccAttribution']({})) as AttributionResult
+    }
+
     it('reports the daemon attribution health', async () => {
       getCurrentDaemonMacTccAttributionHealthMock.mockResolvedValue('severed')
 
-      const { registerDaemonManagementHandlers } = await importFresh()
-      registerDaemonManagementHandlers()
-
-      const handlers = buildHandlerMap()
-      const result = (await handlers['pty:management:macTccAttribution']({})) as {
-        health: string
-      }
+      const result = await readAttribution()
 
       expect(result.health).toBe('severed')
+      expect(result.folderAccessMismatch).toBeNull()
     })
 
     it('fails open to unknown when the probe throws', async () => {
       getCurrentDaemonMacTccAttributionHealthMock.mockRejectedValue(new Error('no pid record'))
 
-      const { registerDaemonManagementHandlers } = await importFresh()
-      registerDaemonManagementHandlers()
-
-      const handlers = buildHandlerMap()
-      const result = (await handlers['pty:management:macTccAttribution']({})) as {
-        health: string
-      }
+      const result = await readAttribution()
 
       expect(result.health).toBe('unknown')
+      expect(result.folderAccessMismatch).toBeNull()
+    })
+
+    it('carries folder-access evidence for the current daemon', async () => {
+      const current = makeAdapter(5, [])
+      getDaemonProviderMock.mockReturnValue(await makeRouter(current, [makeAdapter(4, [])]))
+      getDaemonFolderAccessMismatchMock.mockReturnValue({
+        daemonScope: 'abc123def4567890',
+        cwdClass: 'documents'
+      })
+
+      const result = await readAttribution()
+
+      expect(result.folderAccessMismatch).toEqual({
+        daemonScope: 'abc123def4567890',
+        cwdClass: 'documents'
+      })
+      // Why: evidence belongs to the daemon spawning terminals now, never a legacy adapter's.
+      expect(getDaemonFolderAccessMismatchMock).toHaveBeenCalledWith({
+        pid: 1530,
+        startedAtMs: 1_700_000,
+        launchNonce: 'n1'
+      })
+      expect(current.getDaemonIdentity).toHaveBeenCalled()
+    })
+
+    it('reads a null identity when no daemon provider exists', async () => {
+      getDaemonProviderMock.mockReturnValue(null)
+
+      const result = await readAttribution()
+
+      expect(getDaemonFolderAccessMismatchMock).toHaveBeenCalledWith(null)
+      expect(result.folderAccessMismatch).toBeNull()
     })
   })
 

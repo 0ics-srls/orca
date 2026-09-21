@@ -7,7 +7,13 @@ import {
   getDaemonProvider,
   restartDaemon
 } from '../daemon/daemon-init'
+import { getCurrentDaemonAdapter } from '../daemon/daemon-provider-routing'
+import {
+  getDaemonFolderAccessMismatch,
+  type DaemonFolderAccessMismatchNotice
+} from '../daemon/daemon-folder-access-mismatch'
 import type { MacDaemonTccAttributionHealth } from '../daemon/daemon-tcc-attribution'
+import type { DaemonEndpointIdentity } from '../daemon/daemon-hello-protocol'
 import type { DaemonSessionInfo } from '../daemon/types'
 
 // Why: poll past the daemon's 5s SIGTERM→SIGKILL ladder (KILL_TIMEOUT_MS in session.ts), else slow-exiting shells falsely look "refused".
@@ -38,6 +44,13 @@ function isDaemonDegraded(): boolean {
   )
 }
 
+// Why the current adapter only: evidence is keyed to the daemon now spawning terminals, so a
+// legacy adapter's daemon must never satisfy the identity match that keeps the notice up.
+function readCurrentDaemonIdentity(): DaemonEndpointIdentity | null {
+  const provider = getDaemonProvider()
+  return provider ? getCurrentDaemonAdapter(provider).getDaemonIdentity() : null
+}
+
 async function collectSessions(adapters: DaemonPtyAdapter[]): Promise<DaemonSessionInfo[]> {
   const results = await Promise.allSettled(
     adapters.map(async (adapter) => {
@@ -58,14 +71,22 @@ export function registerDaemonManagementHandlers(): void {
   ipcMain.removeHandler('pty:management:restart')
   ipcMain.removeHandler('pty:management:macTccAttribution')
 
-  // Why: lets Settings warn that macOS privacy grants no longer reach daemon terminals (STA-3491).
+  // Why: lets Settings warn that macOS privacy grants no longer reach daemon terminals (STA-3491),
+  // and carries the folder-access evidence the notice needs (STA-7948) on the same focus-time poll.
   ipcMain.handle(
     'pty:management:macTccAttribution',
-    async (): Promise<{ health: MacDaemonTccAttributionHealth }> => {
+    async (): Promise<{
+      health: MacDaemonTccAttributionHealth
+      folderAccessMismatch: DaemonFolderAccessMismatchNotice | null
+    }> => {
       try {
-        return { health: await getCurrentDaemonMacTccAttributionHealth() }
+        const health = await getCurrentDaemonMacTccAttributionHealth()
+        return {
+          health,
+          folderAccessMismatch: getDaemonFolderAccessMismatch(readCurrentDaemonIdentity())
+        }
       } catch {
-        return { health: 'unknown' }
+        return { health: 'unknown', folderAccessMismatch: null }
       }
     }
   )

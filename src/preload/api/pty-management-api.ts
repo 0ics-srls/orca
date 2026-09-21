@@ -16,6 +16,22 @@ export type PtyManagementSession = {
 // Automation grants silently stop applying until the daemon is restarted (STA-3491).
 export type PtyManagementMacTccAttributionHealth = 'intact' | 'severed' | 'unknown'
 
+// Mirrors DAEMON_PTY_CWD_CLASSES in src/shared/daemon-adoption-telemetry.ts; declared literally
+// because preload can't depend on main-only modules.
+export type PtyManagementDaemonCwdClass =
+  | 'documents'
+  | 'desktop'
+  | 'downloads'
+  | 'other-home'
+  | 'outside-home'
+
+// The daemon spawned a terminal into a folder it can't read while Orca can (STA-7948).
+// `daemonScope` is an opaque per-daemon digest, never a path — it only latches the notice.
+export type PtyManagementFolderAccessMismatch = {
+  daemonScope: string
+  cwdClass: PtyManagementDaemonCwdClass
+}
+
 export type PtyManagementApi = {
   // `degraded`: daemon is alive but can't spawn fresh PTYs, so new terminals run locally without daemon persistence.
   listSessions: () => Promise<{ sessions: PtyManagementSession[]; degraded: boolean }>
@@ -26,5 +42,8 @@ export type PtyManagementApi = {
   }>
   killOne: (args: { sessionId: string }) => Promise<{ success: boolean }>
   restart: () => Promise<{ success: boolean }>
-  macTccAttribution: () => Promise<{ health: PtyManagementMacTccAttributionHealth }>
+  macTccAttribution: () => Promise<{
+    health: PtyManagementMacTccAttributionHealth
+    folderAccessMismatch: PtyManagementFolderAccessMismatch | null
+  }>
 }

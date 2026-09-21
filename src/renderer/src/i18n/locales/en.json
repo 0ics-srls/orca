@@ -1170,7 +1170,13 @@
         "title": "macOS permissions may not reach Orca terminals",
         "description": "Running Orca terminals are hosted by a daemon started by a previous Orca installation. macOS may not apply Orca’s Accessibility, Automation, or protected-file permissions to them. Restart the daemon from Manage Sessions to restore access. This will close all running Orca terminals.",
         "openManageSessions": "Open Manage Sessions",
-        "dismiss": "Dismiss"
+        "dismiss": "Dismiss",
+        "folderAccessDocuments": "Documents folder",
+        "folderAccessDesktop": "Desktop folder",
+        "folderAccessDownloads": "Downloads folder",
+        "folderAccessWorkspace": "a workspace folder",
+        "folderAccessTitle": "Orca’s terminal service can’t read your {{folder}}.",
+        "folderAccessDescription": "Terminals opened there fail with “Operation not permitted” even though Orca itself can read it. Restart the daemon from Manage Sessions; this closes all running Orca terminals and agents. If it still fails afterwards, re-allow the folder for Orca in System Settings → Privacy & Security → Files and Folders."
       },
       "ipc": {
         "events": {
