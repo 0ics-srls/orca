@@ -91,10 +91,13 @@ Fixes #
 
 ## Visual Proof
 
-Not attached. The change is a timestamp, an unread marker and a status word on an existing sidebar
-row; reproducing it on camera needs a live session that backgrounds a subagent and then sits idle
-for long enough for the stamp to be visibly wrong. The behaviour is covered by the tests below,
-including the acknowledgement consequence, which is the part a screenshot cannot show at all.
+Validated in the exact PR worktree with an isolated background Electron session. The first image
+shows the parent row still `Working` while its subagent is active; the second shows the same row
+settled to `Done` after the child reports back.
+
+![Parent row while the subagent is working](https://github.com/user-attachments/assets/e0bbf758-6416-4081-bd98-bbaca26ecfe2)
+
+![Parent row after the subagent completes](https://github.com/user-attachments/assets/59399f7c-ad34-4a93-bfc8-92846175c304)
 
 ## Testing
 
@@ -104,6 +107,13 @@ including the acknowledgement consequence, which is the part a screenshot cannot
 Suites run green: `src/main/native-chat`, `src/main/claude`, `src/main/codex`, `src/main/runtime`,
 `src/shared`, `src/renderer/src/store`, `src/renderer/src/attention`,
 `src/renderer/src/components/sidebar`, `src/renderer/src/components/native-chat`, `mobile`.
+
+Electron validation launched this branch with `ORCA_BACKGROUND_LAUNCH=1`, attached over CDP, and
+verified the app identity before interaction. A real Claude session spawned a real subagent from
+the UI. While the child worked, the visible parent row stayed `Working`, the backing entry exposed
+the child as `working`, and its `stateStartedAt` held at `1789973127195` while later child activity
+advanced `updatedAt` to `1789973140619`. The row then visibly settled to `Done` after the child
+completed. The renderer console had no errors.
 
 Every new test was proven red by removing the corresponding production change at the final head and
 green with it restored:
@@ -158,7 +168,7 @@ process — the fake session map is now a real `Map` subclass.
 Platforms: the change is platform-independent (journal reducer, host status projection, renderer
 store write). Verified on macOS.
 
-- [ ] I manually tested these changes locally
+- [x] I manually tested these changes locally
 - [x] Automated tests added/updated, or explained why not below
 
 ## AI Disclosure
