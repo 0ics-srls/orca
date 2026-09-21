@@ -301,7 +301,9 @@ function normalizeSubagentSnapshot(value: unknown): AgentSubagentSnapshot | null
     startedAt:
       typeof obj.startedAt === 'number' && Number.isFinite(obj.startedAt) ? obj.startedAt : 0,
     // Unlike startedAt, an unreadable value stays ABSENT rather than becoming 0.
-    ...(typeof obj.evidenceObservedAt === 'number' && Number.isFinite(obj.evidenceObservedAt)
+    ...(typeof obj.evidenceObservedAt === 'number' &&
+    Number.isFinite(obj.evidenceObservedAt) &&
+    obj.evidenceObservedAt >= 0
       ? { evidenceObservedAt: obj.evidenceObservedAt }
       : {}),
     agentType: normalizeOptionalField(obj.agentType, AGENT_TYPE_MAX_LENGTH),
