@@ -104,7 +104,9 @@ macOS is blocking Orca's terminal service from this folder.
   `tccutil reset <SystemPolicy{Documents,Desktop,Downloads}Folder> <app bundle id>`, then reads
   the folder itself (async `opendir`, so the blocking TCC prompt cannot stall main) so macOS
   prompts from the app, then forces the fresh-daemon re-probe. Allowed → step 1 turns green and
-  Restart appears. Still denied → "Still blocked after the reset." and the buttons stay. Reset
+  Restart appears. A measured `denied` → "Still blocked after the reset." and the buttons stay;
+  an unanswered sheet or a probe that could not answer reports `unknown` to the dialog and to
+  telemetry alike, so that line never shows without a verdict behind it. Reset
   failed or unsupported → "Couldn't reset the permission. Use System Settings instead." Open
   System Settings remains as the ghost fallback. Reset is offered only for the three TCC folder
   classes (`MAC_TCC_FOLDER_CLASSES`); a denial in `other-home`/`outside-home` has no row to
@@ -160,6 +162,8 @@ remedies, none verified on an affected machine: toggle off/on, `tccutil reset` +
 Guaranteed workaround: a workspace outside Documents/Desktop/Downloads. The state cannot be
 reproduced on demand (the 2026-09-01 signed-build matrix never produced it), so the reset step
 ships gated behind the probe and is judged by its telemetry; G1 below is the other half.
+
+**Reads never block an event loop.** Both the daemon's cwd verdict and the app's confirming read use the async enumerator; the app's is fire-and-forget on the spawn path because on macOS it is the read that raises the folder prompt, which holds the syscall until the user answers. The sync variant was deleted.
 
 **Tests.** `terminal-host-cwd-readability.test.ts` for opendir mapping (EPERM, EACCES, ENOENT,
 ENOTDIR, readable, empty). Evidence store: records only on divergence, one per identity, clears
