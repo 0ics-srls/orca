@@ -24,8 +24,10 @@ export type StructuredAgentSessionTurnCompletionSubscriber = {
   emit: (event: AgentSessionTurnCompletionEvent) => void
 }
 
-/** Only the newest-turn reader is needed here; asking for the whole journal would overstate it. */
-type CompletionFeedJournal = Pick<AgentSessionJournal, 'newestTurn'>
+/** Only the newest-turn reader and cursor are needed here; asking for the whole journal would overstate it. */
+type CompletionFeedCursor = { epoch: string; sequence: number }
+
+type CompletionFeedJournal = Pick<AgentSessionJournal, 'newestTurn' | 'cursor'>
 
 type CompletionFeedSession = {
   journal: CompletionFeedJournal
@@ -39,7 +41,7 @@ export type StructuredAgentSessionTurnCompletionFeedDeps = {
 
 /** Per-session baseline. `settledTurnId` is the last settled turn this feed has accounted for;
  *  absence of the whole entry — not a null field — is what makes the first observation silent. */
-type SessionBaseline = { settledTurnId: string | null }
+type SessionBaseline = CompletionFeedCursor & { settledTurnId: string | null }
 
 function isSettled(turn: AgentJournalTurnLifecycle | null): turn is AgentJournalTurnLifecycle {
   return turn !== null && turn.state !== 'running'
@@ -89,14 +91,30 @@ export class StructuredAgentSessionTurnCompletionFeed {
     if (!session) {
       return
     }
-    const turn = (journal ?? session.journal).newestTurn()
+    const source = journal ?? session.journal
+    const cursor = source.cursor()
+    const turn = source.newestTurn()
     const settled = isSettled(turn) ? turn : null
     const baseline = this.baselines.get(sessionId)
     if (!baseline) {
       // Baseline only. Whatever the session was already holding is history, not news.
-      this.baselines.set(sessionId, { settledTurnId: settled?.turnId ?? null })
+      this.baselines.set(sessionId, {
+        epoch: cursor.epoch,
+        sequence: cursor.sequence,
+        settledTurnId: settled?.turnId ?? null
+      })
       return
     }
+    if (baseline.epoch !== cursor.epoch || cursor.sequence < baseline.sequence) {
+      // Epoch replacement (rewind, repair, or legacy import) republishes history with a new
+      // identity. It is not a provider edge, so re-baseline silently instead of announcing the
+      // newest settled row as a fresh completion.
+      baseline.epoch = cursor.epoch
+      baseline.sequence = cursor.sequence
+      baseline.settledTurnId = settled?.turnId ?? null
+      return
+    }
+    baseline.sequence = cursor.sequence
     if (!settled) {
       // A running turn clears the mark, so this detector fires on each running → settled
       // transition rather than on an id it happens not to have seen.

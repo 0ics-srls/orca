@@ -21,12 +21,17 @@ function turn(
 function harness(): {
   feed: StructuredAgentSessionTurnCompletionFeed
   setTurn: (next: AgentJournalTurnLifecycle | null) => void
+  setCursor: (next: { epoch: string; sequence: number }) => void
   observe: () => void
   events: AgentSessionTurnCompletionEvent[]
   listen: () => () => void
 } {
   let current: AgentJournalTurnLifecycle | null = null
-  const journal = { newestTurn: () => current }
+  let cursor = { epoch: 'epoch-1', sequence: 0 }
+  const journal = {
+    newestTurn: () => current,
+    cursor: () => cursor
+  }
   const sessions = new Map([['session-1', { journal, params: { location: LOCATION } }]])
   const feed = new StructuredAgentSessionTurnCompletionFeed({ sessions, now: () => 1_700 })
   const events: AgentSessionTurnCompletionEvent[] = []
@@ -34,6 +39,9 @@ function harness(): {
     feed,
     setTurn: (next) => {
       current = next
+    },
+    setCursor: (next) => {
+      cursor = next
     },
     observe: () => feed.observe('session-1'),
     events,
@@ -46,8 +54,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     const h = harness()
     h.listen()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     expect(h.events).toEqual([
       {
@@ -69,8 +79,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
       const h = harness()
       h.listen()
       h.setTurn(turn('turn-1', 'running'))
+      h.setCursor({ epoch: 'epoch-1', sequence: 1 })
       h.observe()
       h.setTurn(turn('turn-1', 'completed', outcome))
+      h.setCursor({ epoch: 'epoch-1', sequence: 2 })
       h.observe()
       expect(h.events).toHaveLength(1)
       expect(h.events[0]).toMatchObject({ completion: { outcome } })
@@ -85,8 +97,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
       const h = harness()
       h.listen()
       h.setTurn(turn('turn-1', 'running'))
+      h.setCursor({ epoch: 'epoch-1', sequence: 1 })
       h.observe()
       h.setTurn(turn('turn-1', state))
+      h.setCursor({ epoch: 'epoch-1', sequence: 2 })
       h.observe()
       expect(h.events).toEqual([])
     }
@@ -106,8 +120,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     const h = harness()
     h.listen()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     h.observe()
     h.observe()
@@ -118,12 +134,16 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     const h = harness()
     h.listen()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     h.setTurn(turn('turn-2', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 3 })
     h.observe()
     h.setTurn(turn('turn-2', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 4 })
     h.observe()
     expect(h.events.map((event) => event.type === 'completion' && event.completion.turnId)).toEqual(
       ['turn-1', 'turn-2']
@@ -134,9 +154,11 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     const h = harness()
     h.listen()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.feed.forget('session-1')
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     expect(h.events).toEqual([])
   })
@@ -146,8 +168,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
   it('replays nothing to a subscriber that arrives after the completion', () => {
     const h = harness()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     h.listen()
     expect(h.events).toEqual([])
@@ -157,10 +181,12 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     const h = harness()
     const stop = h.listen()
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     stop()
     h.events.length = 0
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     h.listen()
     // The host advanced its own mark with no subscriber to tell; nothing is queued for the next.
@@ -174,8 +200,10 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     stop()
     expect(h.events).toEqual([{ type: 'end' }])
     h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
     h.observe()
     h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
     h.observe()
     expect(h.events).toEqual([{ type: 'end' }])
   })
@@ -195,6 +223,33 @@ describe('StructuredAgentSessionTurnCompletionFeed', () => {
     h.setTurn(turn('turn-1', 'completed', 'success'))
     h.observe()
     expect(good).toHaveLength(1)
+  })
+
+  it('re-baselines an epoch replacement without announcing retained history', () => {
+    const h = harness()
+    h.listen()
+    h.setTurn(turn('turn-1', 'running'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 1 })
+    h.observe()
+    h.setTurn(turn('turn-1', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-1', sequence: 2 })
+    h.observe()
+    h.events.length = 0
+
+    // A rewind republishes an earlier settled turn in a new journal epoch.
+    h.setTurn(turn('turn-old', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-2', sequence: 2 })
+    h.observe()
+    expect(h.events).toEqual([])
+
+    h.setTurn(turn('turn-new', 'running'))
+    h.setCursor({ epoch: 'epoch-2', sequence: 3 })
+    h.observe()
+    h.setTurn(turn('turn-new', 'completed', 'success'))
+    h.setCursor({ epoch: 'epoch-2', sequence: 4 })
+    h.observe()
+    expect(h.events).toHaveLength(1)
+    expect(h.events[0]).toMatchObject({ completion: { turnId: 'turn-new' } })
   })
 
   it('ignores a session the host is not holding', () => {
