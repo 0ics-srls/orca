@@ -62,8 +62,6 @@ export async function installDelayedPrGenerator(
   callLogPath: string,
   base: string
 ): Promise<void> {
-  // Why: the PR path asks for the marker envelope; the JSON reply stays covered by
-  // source-control-pr-linked-issue-ai.spec.ts, which exercises the legacy fallback.
   writeFileSync(
     generatorScriptPath,
     [
@@ -71,9 +69,7 @@ export async function installDelayedPrGenerator(
       `fs.appendFileSync(${JSON.stringify(callLogPath)}, 'start\\n')`,
       'setTimeout(() => {',
       `  console.log(${JSON.stringify(PULL_REQUEST_FIELDS_MARKER)})`,
-      `  console.log(${JSON.stringify(`base: ${base}`)})`,
-      "  console.log('title: Generated PR title after switch')",
-      "  console.log('draft: false')",
+      `  console.log(JSON.stringify({ base: ${JSON.stringify(base)}, title: 'Generated PR title after switch', draft: false }))`,
       `  console.log(${JSON.stringify(PULL_REQUEST_BODY_MARKER)})`,
       "  console.log('Generated PR body after switch')",
       `  console.log(${JSON.stringify(PULL_REQUEST_END_MARKER)})`,

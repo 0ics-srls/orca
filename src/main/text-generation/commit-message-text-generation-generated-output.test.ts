@@ -6,6 +6,10 @@ import {
   generatePullRequestFieldsFromContext,
   trimGeneratedCommitMessage
 } from './commit-message-text-generation'
+import {
+  buildPullRequestFieldsPrompt,
+  type PullRequestDraftContext
+} from '../../shared/pull-request-generation'
 
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof ChildProcess>()
@@ -16,6 +20,36 @@ vi.mock('child_process', async (importOriginal) => {
 })
 
 const spawnMock = vi.mocked(spawn)
+
+const ECHOED_PR_CONTEXT: PullRequestDraftContext = {
+  branch: 'feature/pr-fields',
+  base: 'main',
+  branchChangedByPreparation: false,
+  currentTitle: '',
+  // Why: CRLF like a hosted PR body, carrying metadata that must never beat the
+  // agent's real reply.
+  currentBody: '## Summary\r\n{"base":"wrong","title":"Echoed context","draft":true}',
+  currentDraft: false,
+  commitSummary: '- feat: update README',
+  changeSummary: 'M\tREADME.md',
+  patch: '+hello'
+}
+
+const PR_GENERATION_PARAMS = { agentId: 'custom', model: '', customAgentCommand: 'agent' } as const
+
+function remoteTargetEchoing(buildStdout: (prompt: string) => string) {
+  return {
+    kind: 'remote' as const,
+    cwd: '/repo',
+    missingBinaryLocation: 'remote PATH',
+    execute: async () => ({
+      stdout: buildStdout(buildPullRequestFieldsPrompt(ECHOED_PR_CONTEXT, '')),
+      stderr: '',
+      exitCode: 0,
+      timedOut: false
+    })
+  }
+}
 
 beforeEach(() => {
   spawnMock.mockClear()
@@ -130,6 +164,43 @@ describe('generateCommitMessageFromContext', () => {
       success: false,
       error: 'agent returned an empty details.',
       branchChangedByPreparation: false
+    })
+  })
+
+  it('rejects an echoed pull-request prompt even when its context contains valid JSON', async () => {
+    const result = await generatePullRequestFieldsFromContext(
+      ECHOED_PR_CONTEXT,
+      PR_GENERATION_PARAMS,
+      remoteTargetEchoing((prompt) => `Prompt:\n${prompt}\nEnd prompt.`)
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Generated pull request details could not be parsed.',
+      branchChangedByPreparation: false
+    })
+  })
+
+  it('strips an echo of a CRLF-bearing prompt before parsing a legacy JSON reply', async () => {
+    const result = await generatePullRequestFieldsFromContext(
+      ECHOED_PR_CONTEXT,
+      PR_GENERATION_PARAMS,
+      // Why: stdout is line-feed normalized upstream, so the echo comes back as LF.
+      remoteTargetEchoing(
+        (prompt) =>
+          `${prompt.replace(/\r\n/g, '\n')}\n` +
+          '{"base":"main","title":"fix: real reply","body":"Summary","draft":false}'
+      )
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      fields: {
+        base: 'main',
+        title: 'fix: real reply',
+        body: 'Summary',
+        draft: false
+      }
     })
   })
 

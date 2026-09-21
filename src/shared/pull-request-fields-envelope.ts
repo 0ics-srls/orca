@@ -1,159 +1,178 @@
-/** Sentinel-delimited reply envelope for generated pull request fields: the
- *  markdown body travels raw between markers, never as a JSON string literal,
- *  so quotes, backticks and fences in the prose cannot break the parse. */
+import { assertJsonTextStructureWithinLimits } from './json-text-structure-limit'
+
 export const PULL_REQUEST_FIELDS_MARKER = '<<<ORCA_PR_FIELDS>>>'
 export const PULL_REQUEST_BODY_MARKER = '<<<ORCA_PR_BODY>>>'
 export const PULL_REQUEST_END_MARKER = '<<<ORCA_PR_END>>>'
 
-/** One reply read out of either the envelope or the legacy JSON object; `null`
- *  means the model did not supply the field. */
-export type PullRequestFieldsReply = {
+const PULL_REQUEST_MARKERS = [
+  PULL_REQUEST_FIELDS_MARKER,
+  PULL_REQUEST_BODY_MARKER,
+  PULL_REQUEST_END_MARKER
+] as const
+
+export const INCOMPLETE_ENVELOPE_ERROR = 'Expected a complete pull request fields envelope.'
+
+type PullRequestFieldsReply = {
   base: string | null
   title: string | null
   draft: boolean | null
   body: string | null
 }
 
-type MarkerLine = { start: number; afterLine: number }
+type PullRequestHeaderFields = Omit<PullRequestFieldsReply, 'body'>
 
-export function parsePullRequestFieldsEnvelope(raw: string): PullRequestFieldsReply | null {
-  const text = stripEnclosingCodeFence(raw.trim())
-  const markers = findMarkerLines(text)
-  if (!markers.body) {
-    return null
+type EnvelopeScan =
+  | { kind: 'none'; sawMarker: boolean }
+  | { kind: 'truncated' }
+  | {
+      kind: 'complete'
+      headerStart: number
+      headerEnd: number
+      bodyStart: number
+      bodyEnd: number
+    }
+
+const PULL_REQUEST_FIELDS_JSON_STRUCTURE_LIMITS = {
+  structuralTokens: 64,
+  nestingDepth: 8
+} as const
+
+const EMPTY_HEADER_FIELDS: PullRequestHeaderFields = { base: null, title: null, draft: null }
+
+/** Neutralizes marker tokens in untrusted prompt context (descriptions, issue
+ *  text, commits, patches) so an echoed copy can never act as a delimiter. */
+export function neutralizePullRequestMarkers(value: string): string {
+  let neutralized = value
+  for (const marker of PULL_REQUEST_MARKERS) {
+    neutralized = neutralized.split(marker).join(`\`${marker}\``)
   }
-  const headerStart = markers.fields ? markers.fields.afterLine : 0
-  const bodyEnd = markers.end ? markers.end.start : text.length
-  return {
-    ...readHeaderFields(text.slice(headerStart, markers.body.start)),
-    body: text.slice(markers.body.afterLine, bodyEnd)
+  return neutralized
+}
+
+export function parsePullRequestFieldsReply(raw: string): PullRequestFieldsReply {
+  const envelope = scanEnvelope(raw)
+  if (envelope.kind === 'complete') {
+    return {
+      ...parseEnvelopeHeader(raw.slice(envelope.headerStart, envelope.headerEnd)),
+      body: raw.slice(envelope.bodyStart, envelope.bodyEnd)
+    }
+  }
+  if (envelope.kind === 'truncated') {
+    // Why: the header of an unterminated envelope may be an echoed sample, so it
+    // is never salvaged through the legacy path.
+    throw new Error(INCOMPLETE_ENVELOPE_ERROR)
+  }
+  try {
+    return parseJsonFields(extractJsonObjectText(raw))
+  } catch (error) {
+    if (envelope.sawMarker) {
+      throw new Error(INCOMPLETE_ENVELOPE_ERROR)
+    }
+    throw error
   }
 }
 
-/** Unwraps a fence the model wrapped its whole reply in; leaves fences that
- *  merely appear inside the reply alone. */
-export function stripEnclosingCodeFence(text: string): string {
-  const body = getEnclosingFenceBody(text)
-  return body === null ? text : body.trim()
-}
-
-function findMarkerLines(text: string): {
-  fields: MarkerLine | null
-  body: MarkerLine | null
-  end: MarkerLine | null
-} {
-  let fields: MarkerLine | null = null
-  let body: MarkerLine | null = null
-  let end: MarkerLine | null = null
+function scanEnvelope(text: string): EnvelopeScan {
+  let sawMarker = false
+  let headerStart: number | null = null
+  let headerEnd: number | null = null
+  let bodyStart: number | null = null
+  let bodyEnd: number | null = null
+  let lastEnd: number | null = null
+  let depth = 0
   let lineStart = 0
+
   for (;;) {
     const newline = text.indexOf('\n', lineStart)
     const lineEnd = newline === -1 ? text.length : newline
     const afterLine = newline === -1 ? text.length : newline + 1
-    // Trimming absorbs indentation and the CR of a CRLF reply.
     const line = text.slice(lineStart, lineEnd).trim()
-    if (line === PULL_REQUEST_BODY_MARKER) {
-      body ??= { start: lineStart, afterLine }
-    } else if (line === PULL_REQUEST_FIELDS_MARKER) {
-      if (!fields && !body) {
-        fields = { start: lineStart, afterLine }
+
+    if (line === PULL_REQUEST_FIELDS_MARKER) {
+      sawMarker = true
+      // Why: once the body has opened, a fields line is body content — restarting
+      // there would let quoted or injected metadata replace the real header.
+      if (bodyStart === null) {
+        headerStart = afterLine
       }
-    } else if (line === PULL_REQUEST_END_MARKER && body) {
-      // Last one wins: a body that quotes the marker cannot truncate the reply.
-      end = { start: lineStart, afterLine }
+    } else if (line === PULL_REQUEST_BODY_MARKER) {
+      sawMarker = true
+      if (headerStart !== null && bodyStart === null) {
+        headerEnd = lineStart
+        bodyStart = afterLine
+        depth = 1
+      } else if (bodyStart !== null && bodyEnd === null) {
+        depth += 1
+      }
+    } else if (line === PULL_REQUEST_END_MARKER) {
+      sawMarker = true
+      if (bodyStart !== null && bodyEnd === null) {
+        lastEnd = lineStart
+        depth -= 1
+        // Why: body/end pairs nest, so the body ends at the terminator that closes
+        // the one the header opened — not at the first or the last one seen.
+        if (depth === 0) {
+          bodyEnd = lineStart
+        }
+      }
     }
+
     if (newline === -1) {
-      return { fields, body, end }
+      break
     }
     lineStart = afterLine
   }
+
+  const resolvedEnd = bodyEnd ?? lastEnd
+  if (headerStart !== null && headerEnd !== null && bodyStart !== null && resolvedEnd !== null) {
+    return { kind: 'complete', headerStart, headerEnd, bodyStart, bodyEnd: resolvedEnd }
+  }
+  return headerStart !== null ? { kind: 'truncated' } : { kind: 'none', sawMarker }
 }
 
-function readHeaderFields(header: string): Omit<PullRequestFieldsReply, 'body'> {
-  let base: string | null = null
-  let title: string | null = null
-  let draft: boolean | null = null
-  for (const headerLine of header.split('\n')) {
-    const line = headerLine.trim()
-    const separator = line.indexOf(':')
-    if (separator === -1) {
-      continue
-    }
-    const key = line.slice(0, separator).trim().toLowerCase()
-    const value = unwrapQuoted(line.slice(separator + 1).trim())
-    if (!value) {
-      continue
-    }
-    if (key === 'base') {
-      base ??= value
-    } else if (key === 'title') {
-      title ??= value
-    } else if (key === 'draft') {
-      draft ??= readBoolean(value)
-    }
+function parseEnvelopeHeader(content: string): PullRequestHeaderFields {
+  const text = extractJsonObjectText(content)
+  if (!text) {
+    return EMPTY_HEADER_FIELDS
   }
-  return { base, title, draft }
+  assertJsonTextStructureWithinLimits(text, PULL_REQUEST_FIELDS_JSON_STRUCTURE_LIMITS)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    // Why: a malformed header must not discard a byte-intact body.
+    return EMPTY_HEADER_FIELDS
+  }
+  return isRecord(parsed) ? readHeaderFields(parsed) : EMPTY_HEADER_FIELDS
 }
 
-// Why: branch names and titles never legitimately carry wrapping quotes, and a
-// model that quotes `base` would otherwise produce an unusable base branch.
-function unwrapQuoted(value: string): string {
-  if (value.length < 2) {
-    return value
+function parseJsonFields(text: string): PullRequestFieldsReply {
+  assertJsonTextStructureWithinLimits(text, PULL_REQUEST_FIELDS_JSON_STRUCTURE_LIMITS)
+  const parsed: unknown = JSON.parse(text)
+  if (!isRecord(parsed)) {
+    throw new Error('Expected a JSON object.')
   }
-  const first = value[0]
-  if ((first === '"' || first === "'" || first === '`') && value.endsWith(first)) {
-    return value.slice(1, -1).trim()
+  return {
+    ...readHeaderFields(parsed),
+    body: typeof parsed.body === 'string' ? parsed.body : null
   }
-  return value
 }
 
-function readBoolean(value: string): boolean | null {
-  const normalized = value.toLowerCase()
-  if (normalized === 'true') {
-    return true
+function readHeaderFields(parsed: Record<string, unknown>): PullRequestHeaderFields {
+  return {
+    base: typeof parsed.base === 'string' ? parsed.base : null,
+    title: typeof parsed.title === 'string' ? parsed.title : null,
+    draft: typeof parsed.draft === 'boolean' ? parsed.draft : null
   }
-  return normalized === 'false' ? false : null
 }
 
-function getEnclosingFenceBody(text: string): string | null {
-  if (!text.startsWith('```') || !text.endsWith('```')) {
-    return null
-  }
-  const bodyStart = getInfoLineEnd(text)
-  const closeStart = text.length - 3
-  if (bodyStart === null || closeStart <= bodyStart) {
-    return null
-  }
-  const bodyEnd = getBodyEndBeforeClosingFence(text, closeStart)
-  return bodyEnd === null || bodyEnd < bodyStart ? null : text.slice(bodyStart, bodyEnd)
+function extractJsonObjectText(raw: string): string {
+  const text = raw.trim()
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  return start !== -1 && end > start ? text.slice(start, end + 1) : text
 }
 
-/** End of the opening fence's info line (```json, ```markdown, …), or null when
- *  the line is not a fence opener. */
-function getInfoLineEnd(text: string): number | null {
-  for (let index = 3; index < text.length; index++) {
-    const code = text.charCodeAt(index)
-    if (code === 10) {
-      return index + 1
-    }
-    if (code === 13) {
-      return text.charCodeAt(index + 1) === 10 ? index + 2 : index + 1
-    }
-    if (code === 96) {
-      return null
-    }
-  }
-  return null
-}
-
-function getBodyEndBeforeClosingFence(text: string, closeStart: number): number | null {
-  const previousCode = text.charCodeAt(closeStart - 1)
-  if (previousCode === 10) {
-    return text.charCodeAt(closeStart - 2) === 13 ? closeStart - 2 : closeStart - 1
-  }
-  if (previousCode === 13) {
-    return closeStart - 1
-  }
-  return null
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }

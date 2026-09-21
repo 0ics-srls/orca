@@ -41,6 +41,19 @@ export function trimGeneratedCommitMessage(message: string): string {
   return message.replace(/\s+$/, '')
 }
 
+function removeEchoedPrompt(output: string, prompt: string): string {
+  // Why: the agent's stdout is line-feed normalized before it gets here, but the
+  // prompt still carries the CRLF of a PR body or patch it quoted, so the exact
+  // echo no longer matches byte for byte.
+  for (const variant of [prompt, prompt.replace(/\r\n/g, '\n')]) {
+    const at = output.indexOf(variant)
+    if (at !== -1) {
+      return `${output.slice(0, at)}${output.slice(at + variant.length)}`.trim()
+    }
+  }
+  return output.trim()
+}
+
 export function commandBackslashMode(
   target: CommitMessageGenerationTarget,
   platform: NodeJS.Platform = process.platform
@@ -168,7 +181,10 @@ export async function generatePullRequestFields(input: {
   try {
     return {
       success: true,
-      fields: parseGeneratedPullRequestFields(result.rawOutput, context),
+      fields: parseGeneratedPullRequestFields(
+        removeEchoedPrompt(result.rawOutput, prompt),
+        context
+      ),
       agentLabel: result.agentLabel,
       branchChangedByPreparation: context.branchChangedByPreparation
     }
