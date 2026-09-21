@@ -686,11 +686,11 @@ describe('orchestration.send group addresses', () => {
     expect(db.getInbox(100)).toHaveLength(0)
 
     terminals = [sender, makeSummary('term_ag', { agentIdentity: 'antigravity' })]
-    const result = (await call('orchestration.send', {
+    const result = await call('orchestration.send', {
       from: 'term_coord',
       to: '@antigravity',
       subject: 'after ready'
-    })) as GroupReceipt
+    })
 
     expect(result.messages).toMatchObject([{ to_handle: `dispatch:${dispatch}` }])
     expect(db.getUnreadMessages(`dispatch:${dispatch}`)).toHaveLength(1)
