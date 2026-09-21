@@ -47,6 +47,7 @@ function getAssistantSessionMessageCount(db: Database.Database): number {
   const assistantPredicate = columnExists(db, 'session_message', 'type')
     ? "type = 'assistant' AND json_extract(data, '$.tokens.input') IS NOT NULL"
     : "json_extract(data, '$.tokens.input') IS NOT NULL"
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SQLite aggregate rows are validated by the typed count field below.
   const row = db
     .prepare(`SELECT COUNT(*) AS count FROM session_message WHERE ${assistantPredicate}`)
     .get() as { count?: number } | undefined
@@ -77,12 +78,14 @@ function getSessionUsageRowCount(db: Database.Database): number {
   if (!canReadSessionUsageRows(db)) {
     return 0
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SQLite aggregate rows are validated by the typed count field below.
   const row = db
     .prepare(
       `SELECT COUNT(*) AS count
        FROM session
        WHERE ${getSessionTokenTotalExpression(db)} > 0`
     )
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SQLite aggregate rows are validated by the typed count field below.
     .get() as { count?: number } | undefined
   return row?.count ?? 0
 }
@@ -92,6 +95,7 @@ function selectSessionUsageRows(db: Database.Database): OpenCodeUsageRow[] {
   const sessionModelSelect = getSessionModelSelect(db)
   const cacheWriteSelect = getSessionCacheWriteSelect(db)
   const tokenTotalExpression = getSessionTokenTotalExpression(db)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT aliases match OpenCodeSessionUsageRow across supported schemas.
   const rows = db
     .prepare(
       `SELECT s.id, s.id AS session_id, s.time_created, s.time_updated,
