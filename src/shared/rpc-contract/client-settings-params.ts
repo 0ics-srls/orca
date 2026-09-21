@@ -81,6 +81,7 @@ export const GitHubProjectSettings = z
 
 export const SettingsUpdate = z
   .object({
+    machineName: z.string().trim().max(255).optional(),
     worktreeVisibilityDefaults: WorktreeVisibilityDefaultsUpdate.optional(),
     defaultTuiAgent: z
       .unknown()
