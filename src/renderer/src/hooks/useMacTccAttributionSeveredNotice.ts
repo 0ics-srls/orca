@@ -137,6 +137,10 @@ export function useMacTccAttributionSeveredNotice(): void {
         ),
         {
           id: FOLDER_ACCESS_MISMATCH_NOTICE_ID,
+          description: translate(
+            'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDescription',
+            'macOS is blocking Orca’s terminal service from this folder, so commands run there fail with “Operation not permitted” until it’s fixed.'
+          ),
           duration: Infinity,
           action: {
             label: translate(

@@ -1172,6 +1172,7 @@
         "openManageSessions": "Open Manage Sessions",
         "dismiss": "Dismiss",
         "folderAccessTitle": "Terminals can’t read your {{folder}}",
+        "folderAccessDescription": "macOS is blocking Orca’s terminal service from this folder, so commands run there fail with “Operation not permitted” until it’s fixed.",
         "folderAccessFix": "Fix…",
         "folderAccessNotNow": "Not now"
       },

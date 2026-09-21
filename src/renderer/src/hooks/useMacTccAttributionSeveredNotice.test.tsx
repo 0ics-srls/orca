@@ -284,7 +284,7 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     expect(folderNoticeCalls()).toHaveLength(0)
   })
 
-  it('names the denied folder and says nothing more', async () => {
+  it('names the denied folder and the cost, and leaves the steps to the dialog', async () => {
     macTccAttribution.mockResolvedValue({ health: 'intact', folderAccessMismatch: SCOPE_A })
     render(<MacosTccPromptNoticeHost />)
     await waitFor(() => {
@@ -293,8 +293,9 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
 
     const notice = folderNoticeCalls()[0]
     expect(notice.title).toMatch(/Terminals can’t read your Documents folder/i)
-    // The dialog carries the explanation now; the toast is a title and two buttons.
-    expect(notice.options.description).toBeUndefined()
+    // The dialog carries the steps; the toast says what is blocked and what that costs.
+    expect(notice.options.description).toMatch(/Operation not permitted/)
+    expect(notice.options.description).not.toMatch(/Manage Sessions|System Settings/)
     expect(notice.options.duration).toBe(Infinity)
     expect(notice.options.action?.label).toBe('Fix…')
     expect(notice.options.cancel?.label).toBe('Not now')
