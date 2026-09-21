@@ -692,7 +692,9 @@ describe('orchestration.send group addresses', () => {
       subject: 'after ready'
     })
 
-    expect(result.messages).toMatchObject([{ to_handle: `dispatch:${dispatch}` }])
+    expect(result).toMatchObject({
+      messages: [{ to_handle: `dispatch:${dispatch}` }]
+    })
     expect(db.getUnreadMessages(`dispatch:${dispatch}`)).toHaveLength(1)
   })
 
