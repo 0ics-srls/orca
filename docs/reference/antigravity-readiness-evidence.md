@@ -371,3 +371,31 @@ without transcript truncation. The final identity-checked implementation passed
 another delayed launch with an exact 920-character first-turn match. Generation
 still failed with the existing 401 authentication error; this verifies delivery,
 not a successful continuation task. Real Windows/WSL/SSH runs remain unverified.
+
+## Native Windows command approval — 1.2.7 (2026-09-20)
+
+`antigravity-windows-command-approval.txt` records an actual authenticated tool
+turn, stopped while the four-choice “Run this command?” dialog owns the screen.
+`antigravity-windows-command-cancelled.txt` records another harmless command turn
+and Escape dismissing that dialog back to the empty composer. Both used the
+repository PTY recorder on native Windows at 120×40, with account information
+hidden. The command executable's OS username is replaced with a same-length
+placeholder in the transcript and sidecar. Both pass the transcript secret scan.
+
+The approval screen ends with the navigation hint and `esc to cancel`; its four
+choices distinguish it from ordinary working output. The runtime regression
+previously timed out without a blocked reason. The current screen classifier
+reports `agent-approval-prompt`; the cancelled capture must become ready even
+though its retained output contains the earlier menu.
+
+This establishes readiness detection only. Hook-owned permission publication,
+Chat approval controls, selection changes, narrower widths and other platforms
+still need verification. Do not infer permission from `PreToolUse`: agy can
+execute an already-allowed tool without waiting for a user decision.
+
+`antigravity-windows-command-allow-key.txt` additionally records the pending menu,
+sending the single key `1` (no Enter), successful harmless command execution and
+return to the empty composer. This verifies the existing Chat approval card's
+one-time acceptance key on native Windows 1.2.7. The recorder metadata confirms
+completion; the capture was transferred as raw UTF-8 bytes without newline
+normalization and its username was replaced with a same-length placeholder.
