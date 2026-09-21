@@ -189,9 +189,16 @@ function isLikelyWslDistroHomeDirectory(resolvedWorktreePath: string, pathOps: P
   const linuxPath = trimTrailingSlash(wsl.linuxPath)
   const drivePath = toWindowsWslDrivePath(linuxPath)
   if (drivePath) {
-    return isLikelyWindowsUserProfileDirectory(win32.resolve(drivePath), win32)
+    const resolvedDrivePath = win32.resolve(drivePath)
+    // Why: `/mnt/c` is the whole volume. `C:\` is refused as a root before this guard runs; its
+    // drvfs spelling has to be refused here, since its win32 root is the distro share.
+    return (
+      win32.parse(resolvedDrivePath).root === resolvedDrivePath ||
+      isLikelyWindowsUserProfileDirectory(resolvedDrivePath, win32)
+    )
   }
-  return wsl.linuxPath === '/' || isPosixHomeRoot(linuxPath)
+  // Why `/mnt`: the automount parent holds every drvfs volume, so it contains every profile.
+  return wsl.linuxPath === '/' || linuxPath === '/mnt' || isPosixHomeRoot(linuxPath)
 }
 
 function isWslUncRemovalPath(resolvedWorktreePath: string): boolean {

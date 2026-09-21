@@ -93,7 +93,12 @@ describe('path-shape home detection', () => {
     // `C:\Users\bob` wearing a Linux spelling, not a directory in the distro.
     ['\\\\wsl.localhost\\Ubuntu\\mnt\\c\\Users\\bob', true],
     ['\\\\wsl$\\Ubuntu\\mnt\\c\\Users', true],
+    // The volume itself, and the automount that holds every volume, contain the profile.
+    ['\\\\wsl.localhost\\Ubuntu\\mnt\\c', true],
+    ['\\\\wsl.localhost\\Ubuntu\\mnt\\c\\', true],
+    ['\\\\wsl.localhost\\Ubuntu\\mnt', true],
     ['\\\\wsl.localhost\\Ubuntu\\mnt\\c\\Users\\bob\\ws\\wt', false],
+    ['\\\\wsl.localhost\\Ubuntu\\mnt\\c\\src\\repo', false],
     // `/MNT` is an ordinary case-sensitive Linux directory, never the automount.
     ['\\\\wsl.localhost\\Ubuntu\\MNT\\c\\Users\\bob', false]
   ])('WSL drvfs %s -> %s', (worktreePath, expected) => {
