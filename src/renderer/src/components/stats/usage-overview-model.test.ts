@@ -79,6 +79,7 @@ describe('usage overview model', () => {
       reasoningOutputTokens: 300,
       totalTokens: 3_200,
       estimatedCostUsd: 0.02,
+      hasUnpricedModels: false,
       topModel: 'gpt-5.4',
       topProject: 'orca-secondary',
       hasAnyCodexData: true

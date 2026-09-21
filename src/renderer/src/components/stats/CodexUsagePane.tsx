@@ -97,6 +97,13 @@ export function CodexUsagePane(): React.JSX.Element {
   }
 
   const hasAnyData = summary?.hasAnyCodexData ?? scanState.hasAnyCodexData
+  const costLabel = translate(
+    'auto.components.stats.CodexUsagePane.1a18fbd56b',
+    'Est. API-equivalent cost'
+  )
+  const unpricedCostLabel = summary?.hasUnpricedModels
+    ? `${costLabel} ${translate('auto.components.stats.CodexUsagePane.costExcludesUnpricedModels', '• excludes unpriced models')}`
+    : costLabel
 
   return (
     <UsageTrackingPaneShell
@@ -191,10 +198,7 @@ export function CodexUsagePane(): React.JSX.Element {
             icon={<FolderKanban className="size-4" />}
           />
           <StatCard
-            label={translate(
-              'auto.components.stats.CodexUsagePane.1a18fbd56b',
-              'Est. API-equivalent cost'
-            )}
+            label={unpricedCostLabel}
             value={formatCost(summary?.estimatedCostUsd ?? null)}
             icon={<Coins className="size-4" />}
           />

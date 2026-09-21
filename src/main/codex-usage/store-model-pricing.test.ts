@@ -267,6 +267,90 @@ describe('CodexUsageStore', () => {
     ).toBeCloseTo(1.8)
   })
 
+  it('flags a named model with no pricing entry so its missing tokens are declared', async () => {
+    const store = createStoreWithState({
+      dailyAggregates: [
+        {
+          day: '2026-04-09',
+          model: 'gpt-5',
+          projectKey: 'worktree:repo-1::/workspace/repo',
+          projectLabel: 'Repo',
+          repoId: 'repo-1',
+          worktreeId: 'repo-1::/workspace/repo',
+          eventCount: 1,
+          inputTokens: 1000,
+          cachedInputTokens: 400,
+          outputTokens: 250,
+          reasoningOutputTokens: 100,
+          totalTokens: 1250,
+          hasInferredPricing: false
+        },
+        {
+          day: '2026-04-09',
+          model: 'gpt-7-unreleased',
+          projectKey: 'worktree:repo-1::/workspace/repo',
+          projectLabel: 'Repo',
+          repoId: 'repo-1',
+          worktreeId: 'repo-1::/workspace/repo',
+          eventCount: 1,
+          inputTokens: 5_000_000,
+          cachedInputTokens: 0,
+          outputTokens: 5_000_000,
+          reasoningOutputTokens: 0,
+          totalTokens: 10_000_000,
+          hasInferredPricing: false
+        }
+      ]
+    })
+
+    const summary = await store.getSummary('orca', '30d')
+
+    expect(summary.hasUnpricedModels).toBe(true)
+    // The unpriced row's ten million tokens are absent from the total it sits beside.
+    expect(summary.estimatedCostUsd).toBeCloseTo(0.0033, 6)
+  })
+
+  it('keeps the unpriced flag off for priced rows and for rows with no model name', async () => {
+    const store = createStoreWithState({
+      dailyAggregates: [
+        {
+          day: '2026-04-09',
+          model: 'gpt-6-astra',
+          projectKey: 'worktree:repo-1::/workspace/repo',
+          projectLabel: 'Repo',
+          repoId: 'repo-1',
+          worktreeId: 'repo-1::/workspace/repo',
+          eventCount: 1,
+          inputTokens: 1000,
+          cachedInputTokens: 400,
+          outputTokens: 250,
+          reasoningOutputTokens: 100,
+          totalTokens: 1250,
+          hasInferredPricing: false
+        },
+        {
+          day: '2026-04-09',
+          model: null,
+          projectKey: 'worktree:repo-1::/workspace/repo',
+          projectLabel: 'Repo',
+          repoId: 'repo-1',
+          worktreeId: 'repo-1::/workspace/repo',
+          eventCount: 1,
+          inputTokens: 1000,
+          cachedInputTokens: 0,
+          outputTokens: 500,
+          reasoningOutputTokens: 0,
+          totalTokens: 1500,
+          hasInferredPricing: true
+        }
+      ]
+    })
+
+    const summary = await store.getSummary('orca', '30d')
+
+    expect(summary.hasUnpricedModels).toBe(false)
+  })
+
   it('normalizes Codex model variants and reasoning suffixes before pricing', async () => {
     const store = createStoreWithState({
       dailyAggregates: [
