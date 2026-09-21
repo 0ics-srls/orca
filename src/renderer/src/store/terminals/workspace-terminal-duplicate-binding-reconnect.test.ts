@@ -204,6 +204,30 @@ describe('hydrating the STA-7961 duplicate binding', () => {
     await expect(rowPtyIdsAfterReconnect(session)).resolves.toEqual([SHARED_PTY_ID, null])
   })
 
+  it('still wakes a relay session only a stranded binding names', async () => {
+    // The split tab's map still names the pty at a leaf its tree dropped, so it reattaches
+    // nothing. Blocking on that would cost the single tab a real remote restore for no gain.
+    const strandedPty = 'repo1::/wt-1@@relay-stranded'
+    const base = duplicateLeafSession()
+    const splitLayout = base.terminalLayoutsByTabId[SPLIT_TAB_ID]!
+    const session: WorkspaceSessionState = {
+      ...base,
+      remoteSessionIdsByTabId: { [SINGLE_TAB_ID]: strandedPty },
+      terminalLayoutsByTabId: {
+        ...base.terminalLayoutsByTabId,
+        [SPLIT_TAB_ID]: {
+          ...splitLayout,
+          ptyIdsByLeafId: {
+            ...splitLayout.ptyIdsByLeafId,
+            'ac1f6d20-1f3e-4c58-8f2b-0a9e7d4c3b15': strandedPty
+          }
+        }
+      }
+    }
+
+    expect(hydrate(session).pendingReconnectPtyIdByTabId[SINGLE_TAB_ID]).toBe(strandedPty)
+  })
+
   it('still wakes a relay session nothing else binds', async () => {
     const session = {
       ...duplicateLeafSession(),

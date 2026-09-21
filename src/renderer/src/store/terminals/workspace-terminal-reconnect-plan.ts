@@ -2,6 +2,7 @@ import type { Repo } from '../../../../shared/repo-types'
 import type { TerminalLayoutSnapshot } from '../../../../shared/terminal-tab-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
+import { collectOwnedLeafIds } from '@/components/terminal-pane/terminal-layout-leaf-claims'
 import { buildByIdIndex, buildWorktreeByIdIndex } from '../slices/worktree-by-id-index'
 import { resolvePrimaryLayoutPtyId } from './terminal-pty-identities'
 
@@ -81,9 +82,19 @@ export function buildWorkspaceTerminalReconnectPlan({
   // Why indexed: the relay wake handle is a separate fact from the layout, but it must not hand a
   // tab the very PTY another tab's healed layout binds — that is the duplicate mount reached
   // through a second door. A wake nothing else binds is untouched, which is every normal one.
+  //
+  // Why owned leaves only: a binding whose leaf left the tree reattaches nothing, so blocking on
+  // it would cost a real remote session its restore for no gain. And why an id match is enough:
+  // the row, the leaf binding and the relay handle are all written from one spawn id
+  // (`updateTabPtyId`) and rewritten together by `ssh-target-id-migration.ts`, so the index
+  // cannot miss on id form.
   const tabIdsBindingPtyId = new Map<string, Set<string>>()
   for (const [tabId, layout] of Object.entries(layoutsByTabId)) {
-    for (const ptyId of Object.values(layout.ptyIdsByLeafId ?? {})) {
+    const ownedLeafIds = collectOwnedLeafIds(layout)
+    for (const [leafId, ptyId] of Object.entries(layout.ptyIdsByLeafId ?? {})) {
+      if (!ptyId || !ownedLeafIds.has(leafId)) {
+        continue
+      }
       const binders = tabIdsBindingPtyId.get(ptyId)
       if (binders) {
         binders.add(tabId)
