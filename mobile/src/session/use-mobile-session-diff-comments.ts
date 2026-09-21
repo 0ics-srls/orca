@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react'
-import * as Clipboard from 'expo-clipboard'
+import { useClipboardWriter } from '../platform/clipboard'
 import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { sessionWorktreeRecordRead } from './mobile-session-read-operations'
 import { sessionWorktreeNotesWrite } from './mobile-session-write-operations'
@@ -27,6 +27,7 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
     setPendingDiffNotesDelivery,
     showToast
   } = scope
+  const clipboard = useClipboardWriter()
   const loadDiffComments = useCallback(async (): Promise<void> => {
     if (!client || connState !== 'connected' || !worktreeId || isFloatingWorkspaceRoute) {
       setDiffComments([])
@@ -59,6 +60,12 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
   )
 
   useEffect(() => {
+    // No catch, deliberately, and it is a recorded defect rather than an oversight: a *refused*
+    // `worktree.show` returns above, and a *rejected* one is an unhandled rejection on every mount
+    // — visible in the page as a document-level error, measured by
+    // `config/scripts/mobile-web-app-session-render.test.mjs`. Adding `.catch` here is the fix and
+    // it moves a golden: `matrix-session.diff-notes-worktree.show-1` certifies the rejection as an
+    // effect of the loaded checkpoint, so the change is a re-record and a review event, not a line.
     void loadDiffComments()
   }, [loadDiffComments])
 
@@ -131,14 +138,14 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
       return
     }
     try {
-      await Clipboard.setStringAsync(formatDiffComments(comments))
+      await clipboard.writeText(formatDiffComments(comments))
       triggerSuccess()
       showToast('Notes copied')
     } catch {
       triggerError()
       showToast("Couldn't copy notes", 1600)
     }
-  }, [showToast])
+  }, [clipboard, showToast])
 
   const sendDiffCommentsToAgent = useCallback((): void => {
     const comments = diffCommentsRef.current.filter((comment) => !comment.sentAt)
