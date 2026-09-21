@@ -71,7 +71,10 @@ Once per scope per app session, where a scope is the daemon identity plus the fo
 daemon denied a second folder raises a new toast that replaces the first; the X latches the scope (sonner's `onDismiss`, which also
 fires for programmatic `toast.dismiss`, so the hook clears its scope before any programmatic
 takedown and only counts a user's X as `dismissed`). No cancel button: every other toast in the
-app dismisses through the X alone.
+app dismisses through the X alone. The Fix action calls `event.preventDefault()`: sonner deletes
+a toast after an action click without firing `onDismiss`, which would strand the phase at
+`visible` and never re-raise; keeping the toast up behind the dialog also means cancelling the
+dialog leaves the notice where it was.
 
 > **Terminals can't read your Documents folder**
 > macOS is blocking Orca's terminal service from this folder, so commands run there may fail
@@ -127,7 +130,8 @@ macOS is blocking Orca's terminal service from this folder.
 
 **Recovery and clearing.** Evidence is keyed by daemon identity plus folder class; the dialog is
 derived from the store and renders only while the latest verdict's scope equals the scope the
-user opened, so evidence that moves or clears unmounts it. A restart replaces the identity,
+user opened, so evidence that moves or clears unmounts it (a null verdict also clears `openScope`,
+so the same scope returning later starts its remedy afresh). A restart replaces the identity,
 so the next poll returns `null` and the toast is dismissed. If the replacement daemon is also
 denied, the next spawn re-records, the toast returns, and the dialog reopens with step 1 unchecked.
 
