@@ -64,7 +64,7 @@ answer is not "yes", main forks a short-lived child the same way the daemon is l
 detached) and has it enumerate the folder. That child carries the attribution a restarted daemon
 would get, so its verdict answers "will a restart help?" before the user pays for one. 3 s
 deadline, argv only, scrubbed env, single JSON line, anything else is `unknown`. Exposed on the
-same poll as `restartWillHelp: boolean | null`.
+same poll as `freshDaemonAccess: 'allowed' | 'denied' | 'unknown'`.
 
 **Renderer: toast.** Title, one sentence, one action, in `useMacTccAttributionSeveredNotice.ts`.
 Once per daemon scope per app session; the X latches the scope (sonner's `onDismiss`, which also
@@ -88,14 +88,14 @@ macOS is blocking Orca's terminal service from this folder.
        macOS will ask you to allow Orca again.            (denied state only)
   ○  Restart Orca's terminal service
        Open terminals and agents will restart.
-                          [Cancel]  [Reset permission]    restartWillHelp === false
-                          [Cancel]  [Restart]             restartWillHelp === true
-             [Open System Settings]  [Restart]            restartWillHelp === null
+                          [Cancel]  [Reset permission]    freshDaemonAccess === 'denied'
+                          [Cancel]  [Restart]             freshDaemonAccess === 'allowed'
+             [Open System Settings]  [Restart]            freshDaemonAccess === 'unknown'
                                      [Done]               after a successful restart
 ```
 
-- `true`: step 1 is already green; the footer goes straight to Restart.
-- `false`: a fresh daemon is denied too, so Restart is not offered (it would spend every terminal
+- `allowed`: step 1 is already green; the footer goes straight to Restart.
+- `denied`: a fresh daemon is denied too, so Restart is not offered (it would spend every terminal
   for a predictable no-op). The primary action is **Reset permission**: main runs
   `tccutil reset <SystemPolicy{Documents,Desktop,Downloads}Folder> <app bundle id>`, then reads
   the folder itself (async `opendir`, so the blocking TCC prompt cannot stall main) so macOS
@@ -103,7 +103,7 @@ macOS is blocking Orca's terminal service from this folder.
   Restart appears. Still denied → "Still blocked after the reset." and the buttons stay. Reset
   failed or unsupported → "Couldn't reset the permission. Use System Settings instead." Open
   System Settings remains as the ghost fallback.
-- `null`: step 1 shows "Couldn't verify. Skip if already allowed."; Settings stays reachable as the
+- `unknown`: step 1 shows "Couldn't verify. Skip if already allowed."; Settings stays reachable as the
   ghost button and Restart is offered, because an unanswered probe must not accuse the user.
 - Step 1 also completes itself without the button: the poll re-runs on window focus, main
   re-probes, and the check mark appears when the fresh-daemon child can read the folder.
