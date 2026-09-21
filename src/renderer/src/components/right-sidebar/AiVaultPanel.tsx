@@ -83,10 +83,12 @@ export default function AiVaultPanel(): React.JSX.Element {
   const {
     agents,
     sort,
+    searchSort,
     group,
     hideEmptySessions,
     sessionLimit,
     setSort,
+    setSearchSort,
     setGroup,
     setHideEmptySessions,
     setSessionLimit,
@@ -163,7 +165,7 @@ export default function AiVaultPanel(): React.JSX.Element {
       aiVaultSearchScopeIdentity({ scope, activeWorktreeId: activeWorktree?.id, activeProjectKey }),
     [activeProjectKey, activeWorktree?.id, scope]
   )
-  const search = useAiVaultPanelSearch(query, agents, searchWithin, executionHostScope)
+  const search = useAiVaultPanelSearch(query, agents, searchWithin, executionHostScope, searchSort)
   const { searching, searchHits } = search
   const sessions = searching ? search.sessions : history
   // Deliberately blind to the active repo/worktree: rebuilding these session
@@ -337,6 +339,7 @@ export default function AiVaultPanel(): React.JSX.Element {
         hostScopeOptions={hostScopeOptions}
         agents={agents}
         sort={sort}
+        searchSort={searchSort}
         group={group}
         hideEmptySessions={hideEmptySessions}
         sessionLimit={sessionLimit}
@@ -348,6 +351,7 @@ export default function AiVaultPanel(): React.JSX.Element {
         onAgentEnabledChange={setAgentEnabled}
         onAllAgentsEnabledChange={setAllAgentsEnabled}
         onSortChange={setSort}
+        onSearchSortChange={setSearchSort}
         onGroupChange={setGroup}
         onHideEmptySessionsChange={setHideEmptySessions}
         onSessionLimitChange={setSessionLimit}

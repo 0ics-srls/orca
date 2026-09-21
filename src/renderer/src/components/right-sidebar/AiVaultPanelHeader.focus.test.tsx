@@ -31,6 +31,7 @@ function header(focusSearchRequestId: number) {
       hostScopeOptions={[]}
       agents={[]}
       sort="updated"
+      searchSort="relevance"
       group="project"
       hideEmptySessions={false}
       sessionLimit={250}
@@ -42,6 +43,7 @@ function header(focusSearchRequestId: number) {
       onAgentEnabledChange={vi.fn()}
       onAllAgentsEnabledChange={vi.fn()}
       onSortChange={vi.fn()}
+      onSearchSortChange={vi.fn()}
       onGroupChange={vi.fn()}
       onHideEmptySessionsChange={vi.fn()}
       onSessionLimitChange={vi.fn()}
