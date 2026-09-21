@@ -89,3 +89,82 @@ since permission denial can prevent creation. The rewritten design includes that
 
 The shipping gate remains: affected ordinary terminal denied, final packaged helper denied,
 Electron main succeeds, then terminal/helper reads succeed after explicit restart.
+
+---
+
+# 2026-09-21 live evidence (production adopted daemon)
+
+Scripts: [`live-2026-09-21/`](live-2026-09-21/). Full raw report (TCC rows, ps trees, logs) is
+kept outside the repo at `~/orca-lanes/sta-7948-evidence-20260921/report.md` on the collecting
+machine because it contains account paths.
+
+## A. `access(2)` versus enumeration under TCC (`access_vs_scandir.py`)
+
+Run as a launchd-owned `/usr/bin/python3` via `launchctl submit` (responsible pid = itself, no
+TCC row). No `tccutil`, no window; the job was removed afterwards.
+
+| Target | `access(R_OK\|X_OK)` | `stat` | `scandir` |
+| --- | --- | --- | --- |
+| `~/Documents` | **True** | ok | **EPERM** |
+| `~/Library/Safari` (Full Disk Access class) | False | ok | EPERM |
+| `~/Library/Mail` (Full Disk Access class) | False | ok | EPERM |
+| `/tmp` | True | ok | ok |
+
+The Documents run was executed twice with identical output. Conclusion: for the
+SystemPolicyDocumentsFolder class, `accessSync(R_OK|X_OK)` passes while enumeration is denied, so
+the daemon's current `cwdReadableByDaemon` verdict cannot observe the incident's failure.
+
+## B. Production daemon, healthy state (`probe-daemon.mjs`)
+
+Target: the live adopted daemon (pid 1232, protocol v36, spawned by app 1.4.207-adhoc while the
+running app was 1.4.206; `spawnerExecPath` `/Applications/Orca.app/Contents/MacOS/Orca`). The
+client speaks the real NDJSON protocol on the control and stream sockets with its own `clientId`,
+creates one short-lived session per target with a `sta7948-evidence-*` session id, reads the
+probe line, kills the session, and confirms it is absent from `listSessions`.
+
+| Target | daemon `cwdReadableByDaemon` (accessSync) | login-wrapped shell `scandir` | control shell |
+| --- | --- | --- | --- |
+| `~/Documents` | true | ok (5 entries) | ok |
+| `/tmp` | true | ok | ok |
+| `~/Library/Safari` | true | ok (36 entries) | ok |
+
+Five sessions were created; all exited 0; session count was 43 before and after. No process was
+killed, signalled, or restarted; no window was shown.
+
+## C. TCC responsible-process identity (`resp.c`)
+
+`responsibility_get_pid_responsible_for_pid` (dlsym) for the process tree:
+
+```
+86248 -> 86248   Orca main
+25437 -> 86248   Orca Helper (Renderer), child of Orca main      (probe control: children resolve to main)
+86324 -> 86248   /usr/bin/log forked by Orca main                (probe control)
+1232  -> 1232    production daemon (Orca Helper)
+123   -> -1      /usr/bin/login (root; query not permitted)
+162   -> 162     -/bin/zsh under that login
+73362 -> 73362   -/bin/zsh under another login
+73502 -> 73502   claude under that zsh
+```
+
+The daemon and every login-wrapped shell resolve to themselves, never to Orca main. Yet the
+shells read `~/Library/Safari`, which only `com.stablyai.orca` holds Full Disk Access for
+(`com.stablyai.orca.helper`, the daemon's own identifier, has no TCC row). The shells therefore
+carry Orca's grant through the daemon, not through a pid-level link this API exposes. The
+`ps` tree is `daemon -> /usr/bin/login -> -/bin/zsh -> agent CLIs`; the bash trampoline `exec`s
+away and never appears.
+
+## D. Other facts
+
+- All 1734 `macos-tcc-pty-spawn` events in the local daemon log carry `strategy: "wrapped"`.
+- `daemon_pty_cwd_denied` has never fired on this machine and no `cwdReadableByDaemon=false`
+  appears in `daemon.log` or `main.trace.ndjson`; per section A this is uninformative for the
+  Documents class.
+- `/Applications/Orca.app` and `Orca Helper.app` are signed Developer ID, TeamIdentifier
+  `6CX3WHS9HZ`, hardened runtime.
+
+## What this still does not prove
+
+- The broken state was not observed; sections B and C describe the healthy state only.
+- Whether the daemon's in-process `opendir` and its shells' reads diverge when the lineage is
+  broken (gate G1 in the design).
+- Whether restart alone recovers, or restart plus `tccutil reset` and re-allow is required (G1).
