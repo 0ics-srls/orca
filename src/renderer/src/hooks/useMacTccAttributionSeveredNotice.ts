@@ -115,6 +115,10 @@ export function useMacTccAttributionSeveredNotice(): void {
       observeMismatch(mismatch)
       if (!mismatch) {
         if (visibleFolderScope.current) {
+          // Why forget the scope: main reads a null daemon identity during any reconnect blip and
+          // reports it as "no mismatch". If the same daemon comes back denied, it must show again;
+          // only a user's "Not now" keeps a scope latched.
+          folderScopesShown.current.delete(visibleFolderScope.current)
           visibleFolderScope.current = null
           toast.dismiss(FOLDER_ACCESS_MISMATCH_NOTICE_ID)
         }

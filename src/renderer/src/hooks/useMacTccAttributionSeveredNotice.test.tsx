@@ -444,6 +444,29 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     })
   })
 
+  it('re-shows the same daemon after a poll that briefly reported nothing', async () => {
+    macTccAttribution.mockResolvedValueOnce({ health: 'intact', folderAccessMismatch: SCOPE_A })
+    render(<MacosTccPromptNoticeHost />)
+    await waitFor(() => {
+      expect(folderNoticeCalls()).toHaveLength(1)
+    })
+    macTccAttribution.mockResolvedValueOnce({ health: 'intact', folderAccessMismatch: null })
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => {
+      expect(toast.dismiss).toHaveBeenCalledWith('mac-daemon-folder-access-mismatch')
+    })
+    macTccAttribution.mockResolvedValue({ health: 'intact', folderAccessMismatch: SCOPE_A })
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    await waitFor(() => {
+      expect(folderNoticeCalls()).toHaveLength(2)
+    })
+  })
+
   it('shows again when a replacement daemon is denied too', async () => {
     macTccAttribution.mockResolvedValueOnce({ health: 'intact', folderAccessMismatch: SCOPE_A })
     render(<MacosTccPromptNoticeHost />)
