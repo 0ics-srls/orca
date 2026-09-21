@@ -15,6 +15,7 @@ import {
 import { StatusDot } from '../components/StatusDot'
 import { classifyConnection, type ConnectionVerdict } from '../transport/connection-health'
 import { colors } from '../theme/mobile-theme'
+import { hostPlatformLabel } from '../transport/host-platform-label'
 import { hostScreenStyles as styles } from './host-screen-styles'
 import type { HostScreenController } from './use-host-screen-controller'
 
@@ -30,6 +31,7 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
     floatingWorkspaceEnabled,
     forceReconnectHost,
     hostId,
+    hostPlatform,
     lastConnectedAt,
     onHideSidebar,
     reconnectAttempts,
@@ -61,10 +63,17 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
           return (
             <>
               <View style={styles.hostIdentity}>
-                <StatusDot state={connState} verdict={headerVerdict} />
-                <Text style={styles.hostNameText} numberOfLines={1}>
-                  {state.hostName || 'Host'}
-                </Text>
+                <View style={styles.hostIdentityLine}>
+                  <StatusDot state={connState} verdict={headerVerdict} />
+                  <Text style={styles.hostNameText} numberOfLines={1}>
+                    {state.hostName || 'Host'}
+                  </Text>
+                </View>
+                {hostPlatformLabel(hostPlatform) ? (
+                  <Text style={styles.hostPlatformText} numberOfLines={1}>
+                    {hostPlatformLabel(hostPlatform)}
+                  </Text>
+                ) : null}
               </View>
               {connState !== 'connected' &&
                 (() => {

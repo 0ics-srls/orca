@@ -31,6 +31,11 @@ describe('the host status decodes from every version the gate admits', () => {
     expect(reads(hostStatusSchema, { error: 'refused' })).toMatchObject({ error: 'refused' })
   })
 
+  it('reads the host platform from the existing status reply', () => {
+    expect(reads(hostStatusSchema, { hostPlatform: 'darwin' }).hostPlatform).toBe('darwin')
+    expect(reads(hostStatusSchema, { hostPlatform: 'plan9' }).hostPlatform).toBeUndefined()
+  })
+
   it('names a reply that is not a status object at all', () => {
     expect(refuses(hostStatusSchema, null)).toBe(true)
     expect(refuses(hostStatusSchema, undefined)).toBe(true)

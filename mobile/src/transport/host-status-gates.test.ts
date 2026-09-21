@@ -84,7 +84,8 @@ describe('useHostStatusGates', () => {
       result: {
         appVersion: '1.4.191',
         capabilities: ['browser.screencast.v1'],
-        floatingWorkspaceEnabled: true
+        floatingWorkspaceEnabled: true,
+        hostPlatform: 'darwin'
       }
     })
     const client = { sendRequest } as unknown as RpcClient
@@ -104,7 +105,8 @@ describe('useHostStatusGates', () => {
       expect(gates).toMatchObject({
         desktopAppVersion: '1.4.191',
         hostCapabilities: ['browser.screencast.v1'],
-        floatingWorkspaceEnabled: true
+        floatingWorkspaceEnabled: true,
+        hostPlatform: 'darwin'
       })
 
       expect(sendRequest).toHaveBeenCalledOnce()
