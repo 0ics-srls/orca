@@ -36,7 +36,17 @@ import { useAiVaultOriginalPaneActions } from './ai-vault-original-pane-actions'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
 import { AiVaultPanelHeader } from './AiVaultPanelHeader'
-import { AiVaultSearchResultsBar } from './AiVaultSearchResultsBar'
+import {
+  AiVaultResultCountLabel,
+  AiVaultSessionListBar,
+  AiVaultShownCountLabel
+} from './AiVaultSessionListBar'
+import {
+  aiVaultBrowseSortAriaLabel,
+  aiVaultBrowseSortOptions,
+  aiVaultSearchSortAriaLabel,
+  aiVaultSearchSortOptions
+} from './ai-vault-sort-options'
 import { AiVaultSessionVirtualList } from './AiVaultSessionVirtualList'
 import { useAiVaultSessionRefresh } from './ai-vault-session-refresh'
 import {
@@ -201,7 +211,6 @@ export default function AiVaultPanel(): React.JSX.Element {
   })
   const viewAdjustmentCount = countAiVaultViewAdjustments({
     agents,
-    sort,
     group,
     hideEmptySessions,
     sessionLimit
@@ -296,8 +305,6 @@ export default function AiVaultPanel(): React.JSX.Element {
         query={query}
         searching={searching}
         loading={searching ? search.loading : loading}
-        shownCount={filteredSessions.length}
-        sessionCount={sessions.length}
         hasScanResult={Boolean(scanResult)}
         activeWorktreePath={activeWorktreePath}
         activeProjectKey={activeProjectKey}
@@ -305,7 +312,6 @@ export default function AiVaultPanel(): React.JSX.Element {
         executionHostScope={executionHostScope}
         hostScopeOptions={hostScopeOptions}
         agents={agents}
-        sort={sort}
         group={group}
         hideEmptySessions={hideEmptySessions}
         sessionLimit={sessionLimit}
@@ -316,7 +322,6 @@ export default function AiVaultPanel(): React.JSX.Element {
         onExecutionHostScopeChange={onExecutionHostScopeChange}
         onAgentEnabledChange={setAgentEnabled}
         onAllAgentsEnabledChange={setAllAgentsEnabled}
-        onSortChange={setSort}
         onGroupChange={setGroup}
         onHideEmptySessionsChange={setHideEmptySessions}
         onSessionLimitChange={setSessionLimit}
@@ -332,13 +337,26 @@ export default function AiVaultPanel(): React.JSX.Element {
 
       {!searching && <AiVaultScanIssueBanners scanResult={scanResult} />}
       <AiVaultPanelSearch search={search} noAgents={agents.length === 0}>
-        {searching && filteredSessions.length > 0 && (
-          <AiVaultSearchResultsBar
-            count={filteredSessions.length}
-            sort={searchSort}
-            onSortChange={setSearchSort}
-          />
-        )}
+        {filteredSessions.length > 0 &&
+          (searching ? (
+            <AiVaultSessionListBar
+              label={<AiVaultResultCountLabel count={filteredSessions.length} />}
+              value={searchSort}
+              options={aiVaultSearchSortOptions()}
+              sortAriaLabel={aiVaultSearchSortAriaLabel}
+              onChange={setSearchSort}
+            />
+          ) : (
+            <AiVaultSessionListBar
+              label={
+                <AiVaultShownCountLabel shown={filteredSessions.length} recent={sessions.length} />
+              }
+              value={sort}
+              options={aiVaultBrowseSortOptions()}
+              sortAriaLabel={aiVaultBrowseSortAriaLabel}
+              onChange={setSort}
+            />
+          ))}
         {(!searching || sessions.length > 0 || search.loading) && (
           <AiVaultSessionVirtualList
             key={searching ? search.resetKey : 'history'}

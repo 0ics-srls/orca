@@ -1,9 +1,7 @@
 import type React from 'react'
 import {
   ArchiveRestore,
-  Calendar,
   ChevronRight,
-  Clock3,
   FolderOpen,
   ListFilter,
   PanelsTopLeft,
@@ -28,8 +26,7 @@ import {
   AI_VAULT_AGENTS,
   type AiVaultAgent,
   type AiVaultGroup,
-  type AiVaultScope,
-  type AiVaultSort
+  type AiVaultScope
 } from '../../../../shared/ai-vault-types'
 import { getExecutionHostLabel, type ExecutionHostScope } from '../../../../shared/execution-host'
 import { agentLabel, type AiVaultSessionGroup } from './ai-vault-session-filters'
@@ -37,7 +34,6 @@ import { translate } from '@/i18n/i18n'
 import type { AiVaultHostScopeOption } from './ai-vault-host-scope'
 import { AiVaultSessionLimitMenu } from './AiVaultSessionLimitMenu'
 import type { AiVaultSessionLimit } from './ai-vault-session-limit'
-import { isAiVaultSort } from './ai-vault-view-options-persistence'
 
 const VAULT_HEADER_CONTROL_CLASS = 'size-6 shrink-0'
 
@@ -207,14 +203,12 @@ export function VaultHostScopeMenu({
 export function VaultViewMenu({
   searching = false,
   agents,
-  sort,
   group,
   hideEmptySessions,
   sessionLimit,
   adjustmentCount,
   onAgentEnabledChange,
   onAllAgentsEnabledChange,
-  onSortChange,
   onGroupChange,
   onHideEmptySessionsChange,
   onSessionLimitChange,
@@ -222,14 +216,12 @@ export function VaultViewMenu({
 }: {
   searching?: boolean
   agents: readonly AiVaultAgent[]
-  sort: AiVaultSort
   group: AiVaultGroup
   hideEmptySessions: boolean
   sessionLimit: AiVaultSessionLimit
   adjustmentCount: number
   onAgentEnabledChange: (agent: AiVaultAgent, enabled: boolean) => void
   onAllAgentsEnabledChange: (enabled: boolean) => void
-  onSortChange: (sort: AiVaultSort) => void
   onGroupChange: (group: AiVaultGroup) => void
   onHideEmptySessionsChange: (hideEmptySessions: boolean) => void
   onSessionLimitChange: (limit: AiVaultSessionLimit) => void
@@ -316,26 +308,6 @@ export function VaultViewMenu({
             {agentLabel(agent)}
           </DropdownMenuCheckboxItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>
-          {translate('auto.components.right.sidebar.AiVaultPanelControls.sort', 'Sort')}
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={sort}
-          onValueChange={(value) => isAiVaultSort(value) && onSortChange(value)}
-        >
-          <DropdownMenuRadioItem value="updated">
-            <Clock3 className="size-3.5" />
-            {translate(
-              'auto.components.right.sidebar.AiVaultPanelControls.lastUpdated',
-              'Last updated'
-            )}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="created">
-            <Calendar className="size-3.5" />
-            {translate('auto.components.right.sidebar.AiVaultPanelControls.created', 'Created')}
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
         {!searching && (
           <>
             <DropdownMenuSeparator />

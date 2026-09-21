@@ -172,12 +172,25 @@ it('shows the whole history and no offer while the box is empty', async () => {
   expect(screen.getByText('Fix the foo pipeline')).toBeTruthy()
   expect(screen.getByText('Rename the bar widget')).toBeTruthy()
   expect(searchSessions).not.toHaveBeenCalled()
-  // Browse mode groups its own rows, so the results bar belongs to search alone.
+  // The same bar serves both modes; browsing it reports the history counts and its own sort.
+  expect(screen.getByText('2 shown · 2 recent')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Sort sessions: Last updated' })).toBeTruthy()
   expect(screen.queryByText('2 results')).toBeNull()
   expect(screen.queryByRole('button', { name: /^Sort results:/ })).toBeNull()
 })
 
-it('puts the hit count and the sort menu on a results bar once the index answers', async () => {
+it('keeps sort off the filter menu, which is filters only', async () => {
+  await typeQuery('')
+
+  await userEvent.click(screen.getByRole('button', { name: 'Session History view options' }))
+
+  expect(await screen.findByRole('menuitem', { name: 'Select all' })).toBeTruthy()
+  expect(screen.queryByText('Sort')).toBeNull()
+  expect(screen.queryByRole('menuitemradio', { name: 'Last updated' })).toBeNull()
+  expect(screen.queryByRole('menuitemradio', { name: 'Created' })).toBeNull()
+})
+
+it('puts the hit count and the search sort on the same bar once the index answers', async () => {
   mockState.settings = { aiVaultSearch: { enabled: true } }
   searchSessions.mockResolvedValue({
     kind: 'results',
@@ -205,4 +218,5 @@ it('puts the hit count and the sort menu on a results bar once the index answers
 
   await waitFor(() => expect(screen.getByText('1 result')).toBeTruthy())
   expect(screen.getByRole('button', { name: 'Sort results: Most relevant' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /^Sort sessions:/ })).toBeNull()
 })
