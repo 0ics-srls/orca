@@ -18,7 +18,7 @@ type MobilePanePairingOutputProps = {
   onCodeCopiedChange: (value: boolean) => void
   onClearCodeCopiedTimer: () => void
   connectionMode: MobilePairingConnectionMode
-  selectedAddress: string | null
+  selectedAddress: string | undefined
   devices: readonly PairedMobileDevice[]
   onRevokeDevice: (deviceId: string) => void
   autoRestoreFitMs: number | null
