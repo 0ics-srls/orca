@@ -3,7 +3,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { toast } from 'sonner'
 
 const { trackTelemetry, restart, openSettings } = vi.hoisted(() => ({
   trackTelemetry: vi.fn(),
@@ -11,7 +10,6 @@ const { trackTelemetry, restart, openSettings } = vi.hoisted(() => ({
   openSettings: vi.fn(async () => {})
 }))
 
-vi.mock('sonner', () => ({ toast: { dismiss: vi.fn() } }))
 vi.mock('@/lib/telemetry', () => ({ track: trackTelemetry }))
 vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string, options?: Record<string, string>) =>
@@ -45,8 +43,7 @@ beforeEach(() => {
   trackTelemetry.mockReset()
   restart.mockReset().mockResolvedValue({ success: true })
   openSettings.mockReset().mockResolvedValue(undefined)
-  vi.mocked(toast.dismiss).mockReset()
-  useMacFolderAccessFixStore.setState({ open: false, mismatch: null })
+  useMacFolderAccessFixStore.setState({ open: false, mismatch: null, restartedScope: null })
   Object.defineProperty(window, 'api', {
     configurable: true,
     value: {
@@ -166,7 +163,7 @@ describe('MacFolderAccessFixDialog', () => {
     })
   })
 
-  it('replaces the steps with a done line and takes the toast down', async () => {
+  it('replaces the steps with a done line and hands the toast to the notice hook', async () => {
     openWith(true)
     render(<MacFolderAccessFixDialog />)
 
@@ -178,7 +175,7 @@ describe('MacFolderAccessFixDialog', () => {
       ).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: /^Restart/ })).toBeNull()
-    expect(toast.dismiss).toHaveBeenCalledWith('mac-daemon-folder-access-mismatch')
+    expect(useMacFolderAccessFixStore.getState().restartedScope).toBe('aaaa111122223333')
   })
 
   it('reports a refused restart inline and leaves the button usable', async () => {
@@ -194,7 +191,7 @@ describe('MacFolderAccessFixDialog', () => {
       ).toBeTruthy()
     })
     expect(restartButton().hasAttribute('disabled')).toBe(false)
-    expect(toast.dismiss).not.toHaveBeenCalled()
+    expect(useMacFolderAccessFixStore.getState().restartedScope).toBeNull()
   })
 
   it('reports a rejected restart the same way', async () => {

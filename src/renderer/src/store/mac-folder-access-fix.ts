@@ -9,17 +9,22 @@ export const FOLDER_ACCESS_MISMATCH_NOTICE_ID = 'mac-daemon-folder-access-mismat
 type MacFolderAccessFixState = {
   open: boolean
   mismatch: PtyManagementFolderAccessMismatch | null
+  /** Scope whose daemon the dialog restarted; the notice hook retires the toast for it. */
+  restartedScope: string | null
   openFix: (mismatch: PtyManagementFolderAccessMismatch) => void
   close: () => void
   /** Carries a later poll's verdict into an open dialog so its first step can complete itself. */
   observeMismatch: (mismatch: PtyManagementFolderAccessMismatch | null) => void
+  markRestarted: (daemonScope: string) => void
 }
 
 export const useMacFolderAccessFixStore = create<MacFolderAccessFixState>()((set) => ({
   open: false,
   mismatch: null,
+  restartedScope: null,
   openFix: (mismatch) => set({ open: true, mismatch }),
   close: () => set({ open: false }),
+  markRestarted: (daemonScope) => set({ restartedScope: daemonScope }),
   observeMismatch: (mismatch) =>
     set((state) =>
       // Why the scope compare: a replacement daemon's denial is a different remedy, and the open

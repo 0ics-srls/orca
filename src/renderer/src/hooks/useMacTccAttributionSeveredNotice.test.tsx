@@ -239,6 +239,7 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     duration?: number
     action?: { label?: string; onClick?: () => void }
     cancel?: { label?: string; onClick?: () => void }
+    onDismiss?: () => void
   }
 
   function folderNoticeCalls(): { title: string; options: ToastOptions }[] {
@@ -294,11 +295,11 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
     const notice = folderNoticeCalls()[0]
     expect(notice.title).toMatch(/Terminals can’t read your Documents folder/i)
     // The dialog carries the steps; the toast says what is blocked and what that costs.
-    expect(notice.options.description).toMatch(/Operation not permitted/)
+    expect(notice.options.description).toMatch(/may fail until it’s fixed/)
     expect(notice.options.description).not.toMatch(/Manage Sessions|System Settings/)
     expect(notice.options.duration).toBe(Infinity)
-    expect(notice.options.action?.label).toBe('Fix…')
-    expect(notice.options.cancel?.label).toBe('Not now')
+    expect(notice.options.action?.label).toBe('Fix')
+    expect(notice.options.cancel).toBeUndefined()
   })
 
   it('opens the fix dialog rather than Manage Sessions', async () => {
@@ -413,7 +414,7 @@ describe('useMacTccAttributionSeveredNotice folder-access notice', () => {
       expect(folderNoticeCalls()).toHaveLength(1)
     })
 
-    folderNoticeCalls()[0].options.cancel?.onClick?.()
+    folderNoticeCalls()[0].options.onDismiss?.()
     expect(trackTelemetry).toHaveBeenCalledWith('daemon_folder_access_notice', {
       action: 'dismissed',
       cwd_class: 'documents'

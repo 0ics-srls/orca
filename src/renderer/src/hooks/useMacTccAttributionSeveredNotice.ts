@@ -27,6 +27,7 @@ export function useMacTccAttributionSeveredNotice(): void {
   const setSettingsSearchQuery = useAppStore((s) => s.setSettingsSearchQuery)
   const openFix = useMacFolderAccessFixStore((s) => s.openFix)
   const observeMismatch = useMacFolderAccessFixStore((s) => s.observeMismatch)
+  const restartedScope = useMacFolderAccessFixStore((s) => s.restartedScope)
   const uiLanguage = useAppStore((s) => s.settings?.uiLanguage ?? null)
   const pluginLanguagePacks = usePluginLanguagePackStore((s) => s.packs)
   const pluginLanguagePacksLoaded = usePluginLanguagePackStore((s) => s.loaded)
@@ -48,6 +49,14 @@ export function useMacTccAttributionSeveredNotice(): void {
   // so the remedy can be offered again, while a dismissed scope stays dismissed this session.
   const folderScopesShown = useRef(new Set<string>())
   const visibleFolderScope = useRef<string | null>(null)
+
+  // The fix dialog restarted this daemon: retire its toast before the next poll would.
+  useEffect(() => {
+    if (restartedScope && visibleFolderScope.current === restartedScope) {
+      visibleFolderScope.current = null
+      toast.dismiss(FOLDER_ACCESS_MISMATCH_NOTICE_ID)
+    }
+  }, [restartedScope])
 
   useEffect(() => {
     if (
@@ -139,14 +148,11 @@ export function useMacTccAttributionSeveredNotice(): void {
           id: FOLDER_ACCESS_MISMATCH_NOTICE_ID,
           description: translate(
             'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessDescription',
-            'macOS is blocking Orca’s terminal service from this folder, so commands run there fail with “Operation not permitted” until it’s fixed.'
+            'macOS is blocking Orca’s terminal service from this folder, so commands run there may fail until it’s fixed.'
           ),
           duration: Infinity,
           action: {
-            label: translate(
-              'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessFix',
-              'Fix…'
-            ),
+            label: translate('auto.hooks.useMacTccAttributionSeveredNotice.folderAccessFix', 'Fix'),
             onClick: () => {
               track('daemon_folder_access_notice', {
                 action: 'fix_opened',
@@ -155,18 +161,17 @@ export function useMacTccAttributionSeveredNotice(): void {
               openFix(mismatch)
             }
           },
-          cancel: {
-            label: translate(
-              'auto.hooks.useMacTccAttributionSeveredNotice.folderAccessNotNow',
-              'Not now'
-            ),
-            onClick: () => {
-              visibleFolderScope.current = null
-              track('daemon_folder_access_notice', {
-                action: 'dismissed',
-                cwd_class: mismatch.cwdClass
-              })
+          // Why onDismiss, no cancel button: every other toast dismisses through the X alone.
+          // Sonner also fires it for toast.dismiss(), so a scope already cleared is not the user.
+          onDismiss: () => {
+            if (visibleFolderScope.current !== mismatch.daemonScope) {
+              return
             }
+            visibleFolderScope.current = null
+            track('daemon_folder_access_notice', {
+              action: 'dismissed',
+              cwd_class: mismatch.cwdClass
+            })
           }
         }
       )

@@ -1,14 +1,10 @@
 import React, { useCallback, useState } from 'react'
 import { CircleCheck, CircleDashed, LoaderCircle } from 'lucide-react'
-import { toast } from 'sonner'
 import type { PtyManagementFolderAccessMismatch } from '../../../../preload/api-types'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { translate } from '@/i18n/i18n'
 import { track } from '@/lib/telemetry'
-import {
-  FOLDER_ACCESS_MISMATCH_NOTICE_ID,
-  useMacFolderAccessFixStore
-} from '@/store/mac-folder-access-fix'
+import { useMacFolderAccessFixStore } from '@/store/mac-folder-access-fix'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -131,6 +127,7 @@ export function MacFolderAccessFixDialog(): React.JSX.Element | null {
   const open = useMacFolderAccessFixStore((s) => s.open)
   const mismatch = useMacFolderAccessFixStore((s) => s.mismatch)
   const close = useMacFolderAccessFixStore((s) => s.close)
+  const markRestarted = useMacFolderAccessFixStore((s) => s.markRestarted)
   const [restartState, setRestartState] = useState<RestartState>('idle')
   const mountedRef = useMountedRef()
   const cwdClass = mismatch?.cwdClass ?? null
@@ -153,17 +150,17 @@ export function MacFolderAccessFixDialog(): React.JSX.Element | null {
         return
       }
       setRestartState(success ? 'done' : 'failed')
-      if (success) {
-        // Why dismiss here: the replaced daemon's identity is gone, so the poll that raised this
-        // toast will never mention it again and nothing else would take it down.
-        toast.dismiss(FOLDER_ACCESS_MISMATCH_NOTICE_ID)
+      if (success && mismatch) {
+        // Why via the store: the replaced daemon's identity is gone, so the poll that raised the
+        // toast will never mention it again; the notice hook retires it without logging a dismiss.
+        markRestarted(mismatch.daemonScope)
       }
     } catch {
       if (mountedRef.current) {
         setRestartState('failed')
       }
     }
-  }, [cwdClass, mountedRef])
+  }, [cwdClass, markRestarted, mismatch, mountedRef])
 
   if (!mismatch) {
     return null
