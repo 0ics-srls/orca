@@ -51,6 +51,9 @@ afterEach(async () => {
 // single admission lookup and no migration lookup at all.
 class QueryCountingDatabase implements RelayDatabase {
   readonly sql: string[] = []
+  // Fails the first statement containing this fragment, so a test can roll a
+  // transaction back at a chosen point.
+  failOnce: string | undefined
 
   constructor(private readonly delegate: RelayDatabase) {}
 
@@ -62,8 +65,16 @@ class QueryCountingDatabase implements RelayDatabase {
     return this.sql.filter((statement) => statement.includes(fragment)).length
   }
 
-  async query(sql: string, params?: unknown[]): Promise<SqlRow[]> {
+  record(sql: string): void {
     this.sql.push(sql)
+    if (this.failOnce !== undefined && sql.includes(this.failOnce)) {
+      this.failOnce = undefined
+      throw new Error('injected_placement_write_failure')
+    }
+  }
+
+  async query(sql: string, params?: unknown[]): Promise<SqlRow[]> {
+    this.record(sql)
     return await this.delegate.query(sql, params)
   }
 
@@ -72,7 +83,7 @@ class QueryCountingDatabase implements RelayDatabase {
     params?: unknown[],
     options?: RelayLockOptions
   ): Promise<SqlRow[]> {
-    this.sql.push(sql)
+    this.record(sql)
     return await this.delegate.queryLocked(sql, params, options)
   }
 
@@ -93,15 +104,14 @@ class QueryCountingDatabase implements RelayDatabase {
   // A nested transaction shares this one's tape, so a whole assign() is
   // measured as a unit.
   private recording(inner: RelayDatabase): RelayDatabase {
-    const tape = this.sql
     return {
       dialect: inner.dialect,
       query: async (sql, params) => {
-        tape.push(sql)
+        this.record(sql)
         return await inner.query(sql, params)
       },
       queryLocked: async (sql, params, options) => {
-        tape.push(sql)
+        this.record(sql)
         return await inner.queryLocked(sql, params, options)
       },
       transaction: async (operation, options) => await inner.transaction(operation, options),
@@ -516,6 +526,38 @@ describe('re-placing a host off a cell isolated for a roll', () => {
         [IDENTITY.userId, IDENTITY.relayHostId]
       )
     ).toHaveLength(1)
+  })
+
+  it('emits nothing when the placement rolls back after the decision', async () => {
+    // Why: the decision and the writes share one transaction. A line already on
+    // stdout cannot be rolled back with it, so an event written where it is
+    // decided would have the canary counting moves that never happened.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { store, counter, isolateForRoll } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await isolateForRoll(first.cellId)
+
+    warn.mockClear()
+    // The first write after the event is decided.
+    counter.failOnce = 'INSERT INTO relay_assignments'
+    await expect(store.assign(IDENTITY, 'us-central1')).rejects.toThrow(
+      'injected_placement_write_failure'
+    )
+
+    expect(jsonEvents(warn, 'orca_relay_sticky_replaced_off_isolated_cell')).toEqual([])
+    // The precondition for reading that absence: the move really was rolled
+    // back, so the event would have been a lie rather than merely early.
+    expect(await store.resolve(IDENTITY)).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+
+    // Control: the same dial with nothing injected does emit, so the assertion
+    // above is measuring the rollback and not a broken harness.
+    warn.mockClear()
+    const moved = await store.assign(IDENTITY, 'us-central1')
+    expect(moved.cellId).not.toBe(first.cellId)
+    expect(jsonEvents(warn, 'orca_relay_sticky_replaced_off_isolated_cell')).toHaveLength(1)
   })
 
   it('logs one event naming both cells, the admission state and the region', async () => {

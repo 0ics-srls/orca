@@ -913,7 +913,15 @@ export class RelayAssignmentStore {
     const now = this.now()
     let retryScope: RetriedAssignmentInventoryScope =
       inventoryScope === 'all' ? 'all' : 'general'
-    return await this.database.transaction(async (transaction) => {
+    // Why the events ride back out rather than being written where they are
+    // decided: everything below runs in one transaction, and a reservation or
+    // lease write that fails after the decision rolls the placement back. A
+    // line already on stdout cannot be rolled back with it, so the canary would
+    // count re-placements that never happened. Returning them means only a
+    // committed attempt emits, and a transaction retry cannot leave a stale
+    // line behind either.
+    const outcome = await this.database.transaction(async (transaction) => {
+      const events: string[] = []
       // The retry paths below open with the inventory, so this path takes its
       // host rows before any of them rather than where the others do.
       await this.lockControlConnectionReservations(transaction, identity, lockMode)
@@ -982,7 +990,7 @@ export class RelayAssignmentStore {
             // Keeping the pin is today's behaviour: the host keeps retrying its
             // own cell. Scattering a region across the fleet is worse, and it
             // cannot be undone without the rehome worker.
-            console.warn(
+            events.push(
               JSON.stringify({
                 event: 'orca_relay_sticky_replacement_deferred',
                 reason: 'no_same_region_headroom',
@@ -1023,7 +1031,10 @@ export class RelayAssignmentStore {
                 now
               )
             }
-            return this.result(identity, existing, current, leaseExpiresAt)
+            return {
+              assignment: this.result(identity, existing, current, leaseExpiresAt),
+              events
+            }
           }
           if (requestUnits(existing) > 0) {
             throw new Error('relay_connection_headroom_exhausted')
@@ -1072,7 +1083,7 @@ export class RelayAssignmentStore {
       if (isolatedIncumbent) {
         // The canary's proof that the fix fired: count these against the
         // drained cell's host count.
-        console.warn(
+        events.push(
           JSON.stringify({
             event: 'orca_relay_sticky_replaced_off_isolated_cell',
             fromCellId: isolatedIncumbent.cellId,
@@ -1149,13 +1160,18 @@ export class RelayAssignmentStore {
         assignmentEpoch,
         now
       )
-      return { ...identity, ...target, assignmentEpoch, leaseExpiresAt }
+      return {
+        assignment: { ...identity, ...target, assignmentEpoch, leaseExpiresAt },
+        events
+      }
     }).catch((error: unknown) => {
       if (isDatabaseLockUnavailable(error)) {
         throw new AssignmentInventoryLockUnavailable(retryScope)
       }
       throw error
     })
+    for (const event of outcome.events) console.warn(event)
+    return outcome.assignment
   }
 
   async resolve(identity: AssignmentIdentity): Promise<RelayAssignment | null> {
