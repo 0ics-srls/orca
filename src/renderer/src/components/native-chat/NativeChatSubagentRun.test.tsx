@@ -313,6 +313,6 @@ describe('NativeChatToolRun with a spawn group', () => {
     )
 
     expect(screen.getByText('Ran 1 subagent')).toBeInTheDocument()
-    expect(screen.getByText('shell').closest('button')).toHaveTextContent('shell ls')
+    expect(screen.getByText('ls').closest('button')).toHaveTextContent('ls')
   })
 })
