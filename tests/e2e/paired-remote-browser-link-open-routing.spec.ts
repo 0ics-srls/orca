@@ -204,7 +204,23 @@ async function readHostRowsThroughClient(
       if (!response.ok) {
         return ['<host tab inventory unavailable>']
       }
-      const { tabs } = response.result as { tabs: { type: string; url?: string }[] }
+      const result = response.result
+      if (
+        !result ||
+        typeof result !== 'object' ||
+        !('tabs' in result) ||
+        !Array.isArray(result.tabs)
+      ) {
+        return ['<host tab inventory unavailable>']
+      }
+      const tabs = result.tabs.filter(
+        (tab): tab is { type: string; url?: string } =>
+          typeof tab === 'object' &&
+          tab !== null &&
+          'type' in tab &&
+          typeof tab.type === 'string' &&
+          (!('url' in tab) || typeof tab.url === 'string')
+      )
       return tabs.filter((tab) => tab.type === 'browser').map((tab) => tab.url ?? '')
     },
     { environmentId, worktreeId }
