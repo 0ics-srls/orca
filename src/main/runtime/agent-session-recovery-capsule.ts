@@ -184,12 +184,9 @@ export class AgentSessionRecoveryCapsule {
         }
         bySession.set(marker.sessionId, { state: 'pending', marker })
       }
-      const reopensDismissal =
-        dismissedAt !== undefined &&
-        markers.some((marker) => {
-          return !isExpiredAgentSessionResumeMarker(marker, now) && marker.recordedAt > dismissedAt
-        })
-      await this.publish([...bySession.values()], reopensDismissal ? undefined : dismissedAt)
+      // Keep the fence after a newer interruption. It still admits genuinely newer markers,
+      // while an older delayed writer remains unable to resurrect a dismissed chat later.
+      await this.publish([...bySession.values()], dismissedAt)
     })
   }
 

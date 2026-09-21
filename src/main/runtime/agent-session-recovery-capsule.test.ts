@@ -188,6 +188,10 @@ describe('durable restart offers', () => {
     const newer = marker({ recordedAt: NOW + 2, teardownId: 'teardown-new' })
     await capsule.record([newer], NOW + 2)
     expect(await capsule.list(NOW + 2)).toEqual([newer])
+
+    // A new interruption must not remove the fence before the old callback has finished.
+    await capsule.record([marker()], NOW + 2)
+    expect(await capsule.list(NOW + 2)).toEqual([newer])
   })
 
   it('keeps a legacy v1 file readable until a mutating operation migrates it', async () => {
