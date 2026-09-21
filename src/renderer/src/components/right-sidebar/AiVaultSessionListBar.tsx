@@ -83,7 +83,7 @@ export function AiVaultSessionListBar<Value extends string>({
             <ChevronDown className="text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-0">
           <DropdownMenuRadioGroup
             value={value}
             // Radix hands back a bare string; the option list is what narrows it.
