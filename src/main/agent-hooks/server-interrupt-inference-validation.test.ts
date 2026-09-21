@@ -161,7 +161,7 @@ describe('AgentHookServer listener replay', () => {
     }
   })
 
-  it('keeps the interrupt on a replayed same-prompt working event', () => {
+  it('refuses a replayed same-prompt working event after an inferred interrupt', () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_000)
     try {
@@ -213,14 +213,17 @@ describe('AgentHookServer listener replay', () => {
         'conn-1'
       )
 
-      // Why: a replay re-delivers the stopped turn's own evidence, so it names that turn however
-      // late it lands, and the interrupt rides it.
+      // Why: a replay is re-delivery of evidence the interrupt already superseded, not a new
+      // sighting of the pane. It is dated to the original observation, which is older than the
+      // interrupt, so letting it restate the pane would walk the row backwards in time.
       expect(server.getStatusSnapshot()).toEqual([
         expect.objectContaining({
-          state: 'working',
+          state: 'done',
           prompt: 'retryable task',
           agentType: 'opencode',
-          interrupted: true
+          interrupted: true,
+          receivedAt: 1_500,
+          stateStartedAt: 1_500
         })
       ])
     } finally {

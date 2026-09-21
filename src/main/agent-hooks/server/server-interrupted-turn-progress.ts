@@ -2,10 +2,17 @@ import { INTERRUPTED_TURN_LATE_PROGRESS_MS, TOOL_PROGRESS_HOOK_EVENTS } from './
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 
+/** `hold` names the already-applied row to keep; otherwise `payload` is applied, possibly amended. */
+export type InterruptedTurnProgress =
+  | { hold: EnrichedAgentHookEventPayload }
+  | { hold: null; payload: AgentHookEventPayload }
+
 /**
- * True when `next` is late progress from the turn `previous` already reported stopped, rather than
- * a fresh turn. There is no turn id on this wire, so identity is the pane's prompt and agent plus
- * a short window; a new prompt, a different agent, or a long gap all read as a new turn.
+ * True when `next` reports the same turn `previous` already recorded stopped, rather than a new one.
+ * There is no turn id on this wire, so identity is the pane's agent and prompt plus a short window;
+ * a new prompt, a different agent, or a long gap all read as a new turn. Claude and Codex label
+ * tool lifecycle work, which a same-prompt retry (another UserPromptSubmit) never is, so for them
+ * the label answers it and no clock is needed.
  */
 function reportsTheStoppedTurn(
   previous: EnrichedAgentHookEventPayload,
@@ -18,11 +25,6 @@ function reportsTheStoppedTurn(
   ) {
     return false
   }
-  if (next.isReplay === true) {
-    return true
-  }
-  // Why: a same-prompt retry arrives as another UserPromptSubmit, while late post-Ctrl+C progress
-  // arrives as tool lifecycle work — which Claude and Codex label and other agents do not.
   if (
     (next.payload.agentType === 'claude' || next.payload.agentType === 'codex') &&
     next.hookEventName !== undefined &&
@@ -37,27 +39,38 @@ function reportsTheStoppedTurn(
 }
 
 /**
- * The user stopping a turn is a fact about the turn, not a claim that the pane finished, so a hook
- * still in flight from that turn is published as the work it reports and inherits the fact — a late
- * tool step lands as `working` carrying the interrupt, and the turn's own terminal report lands as
- * `done` carrying it.
+ * What a hook belonging to a turn the user already stopped is allowed to do to that pane's row.
+ * Two arms, because "arrived late" and "was sent again" are different things:
  *
- * This replaced freezing the row on the stopped `done` for the same cases. Freezing hid a tool the
- * agent was genuinely still running and pinned a stale timestamp, and it was only ever needed
- * because `interrupted` could not ride any row but a `done` one. Returns `next` unchanged when
- * nothing is inherited.
+ * - a **replay** is re-delivery of evidence the interrupt already superseded, not a new sighting of
+ *   the pane, so it may not restate the pane's state. It is dated to the original observation
+ *   (`resolveEvidenceObservedAt`), which is older than the interrupt, so letting it through would
+ *   walk the row backwards in time. The held row is the newer one;
+ * - **new evidence** from that turn — a tool step still in flight when the user pressed Ctrl+C, or
+ *   the agent's own terminal report — is published as the work it reports and inherits the fact
+ *   that the user stopped the turn.
+ *
+ * The second arm used to freeze the row on the stopped `done` as well. That hid a tool the agent
+ * was genuinely still running and pinned a stale timestamp, and it was only ever needed because
+ * `interrupted` could not ride any row but a `done` one.
  */
-export function inheritInterruptedTurnFact(
+export function resolveInterruptedTurnProgress(
   previous: EnrichedAgentHookEventPayload | undefined,
   next: AgentHookEventPayload,
   now: number
-): AgentHookEventPayload {
+): InterruptedTurnProgress {
   if (
     previous?.payload.interrupted !== true ||
-    next.payload.interrupted === true ||
-    !reportsTheStoppedTurn(previous, next, now)
+    previous.payload.agentType !== next.payload.agentType ||
+    previous.payload.prompt !== next.payload.prompt
   ) {
-    return next
+    return { hold: null, payload: next }
   }
-  return { ...next, payload: { ...next.payload, interrupted: true } }
+  if (next.isReplay === true) {
+    return { hold: previous }
+  }
+  if (next.payload.interrupted === true || !reportsTheStoppedTurn(previous, next, now)) {
+    return { hold: null, payload: next }
+  }
+  return { hold: null, payload: { ...next, payload: { ...next.payload, interrupted: true } } }
 }

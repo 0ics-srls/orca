@@ -16,7 +16,7 @@ import {
   shouldKeepClaudePermissionVisible
 } from './server-claude-status-rules'
 import { isStaleGrokTurnEnd } from './server-grok-status-rules'
-import { inheritInterruptedTurnFact } from './server-interrupted-turn-progress'
+import { resolveInterruptedTurnProgress } from './server-interrupted-turn-progress'
 import { AgentHookServerStatusApplication } from './server-status-application'
 
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
@@ -164,15 +164,20 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
             payload: { ...rootContextPreservingPayload.payload, agentType: identity.agentType }
           }
     const effectivePayload = attachClaudePermissionToolUseId(previous, identityResolvedPayload)
-    const boundaryAwarePayload = inheritInterruptedTurnFact(
-      previous,
-      attachClaudeChildOnlyBoundary(previous, effectivePayload),
-      now
-    )
     if (previous && shouldKeepClaudePermissionVisible(previous, effectivePayload)) {
       this.commitStatusRowMutation(rowBefore, previous)
       return previous
     }
+    const turnProgress = resolveInterruptedTurnProgress(
+      previous,
+      attachClaudeChildOnlyBoundary(previous, effectivePayload),
+      now
+    )
+    if (turnProgress.hold) {
+      this.commitStatusRowMutation(rowBefore, turnProgress.hold)
+      return turnProgress.hold
+    }
+    const boundaryAwarePayload = turnProgress.payload
     if (
       boundaryAwarePayload.payload.agentType === 'codex' &&
       boundaryAwarePayload.payload.interrupted === true
