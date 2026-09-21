@@ -226,9 +226,14 @@ export class AgentSessionJournal {
     options: JournalTombstoneInput
   ): Promise<AgentJournalCursor> {
     const itemId = agentJournalItemKey(identity)
-    return this.enqueue(journalTombstoneRowBuilder(() => this.state, itemId, options.fence)).then(
-      (row) => ({ epoch: row.epoch, sequence: row.seq })
-    )
+    return this.enqueue(
+      journalTombstoneRowBuilder(
+        () => this.state,
+        itemId,
+        options.fence,
+        options.producedBySubagent
+      )
+    ).then((row) => ({ epoch: row.epoch, sequence: row.seq }))
   }
 
   appendLifecycleBatch(input: JournalLifecycleBatchInput): Promise<AgentJournalCursor> {

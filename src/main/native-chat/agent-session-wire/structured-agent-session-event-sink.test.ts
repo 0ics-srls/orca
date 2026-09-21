@@ -26,6 +26,7 @@ type Recorded = {
   fence?: number
   ordinal?: number
   settlementId?: string
+  producedBySubagent?: true
   activity?: AgentSessionTurnActivity | null
 }
 
@@ -34,6 +35,7 @@ function target(
   log: Recorded[],
   failOn?: number
 ): StructuredAgentSessionEventTarget {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This fake implements every journal method exercised by the sink.
   const journal = {
     appendItem: vi.fn(async (id: AgentJournalItemIdentity, _body: AgentJournalItemBody) => {
       const ordinal = id.provider === 'codex' ? id.ordinal : -1
@@ -43,14 +45,17 @@ function target(
       log.push({ call: 'appendItem', fence, ordinal })
       return { cursor: { epoch: 'e', sequence: ordinal } }
     }),
-    appendTombstone: vi.fn(async (id: AgentJournalItemIdentity) => {
-      log.push({
-        call: 'appendTombstone',
-        fence,
-        ordinal: id.provider === 'codex' ? id.ordinal : -1
-      })
-      return { epoch: 'e', sequence: 0 }
-    }),
+    appendTombstone: vi.fn(
+      async (id: AgentJournalItemIdentity, options: { producedBySubagent?: true }) => {
+        log.push({
+          call: 'appendTombstone',
+          fence,
+          ordinal: id.provider === 'codex' ? id.ordinal : -1,
+          ...(options.producedBySubagent ? { producedBySubagent: options.producedBySubagent } : {})
+        })
+        return { epoch: 'e', sequence: 0 }
+      }
+    ),
     appendLifecycleBatch: vi.fn(async (input: { settlementId: string }) => {
       log.push({ call: 'appendLifecycleBatch', fence, settlementId: input.settlementId })
       return { epoch: 'e', sequence: 0 }
@@ -114,6 +119,18 @@ describe('deferred structured agent-session event sink', () => {
     await deferred.drained()
 
     expect(log).toEqual([{ call: 'appendItem', fence: 2, ordinal: 0 }])
+  })
+
+  it('preserves child attribution on tombstones', async () => {
+    const log: Recorded[] = []
+    const deferred = createDeferredStructuredAgentSessionEventSink()
+    deferred.bind(target(1, log))
+    deferred.sink.appendTombstone(identity(0), { producedBySubagent: true })
+    await deferred.drained()
+
+    expect(log).toEqual([
+      { call: 'appendTombstone', fence: 1, ordinal: 0, producedBySubagent: true }
+    ])
   })
 
   it('resolves a lifecycle transition after journal bind and skips an existing state', async () => {

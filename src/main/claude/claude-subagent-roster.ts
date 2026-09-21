@@ -366,15 +366,15 @@ export class ClaudeSubagentRoster {
     // Child-produced, though it is written from the parent's context and no
     // `parent_tool_use_id` comes near it: every byte of the row is children's state and it
     // is rewritten on every child transition. Unmarked it moves the session's recency
-    // clock by itself. The removal below stays root — it only ever runs once the group
-    // holds no children at all.
+    // clock by itself. Removal is child-produced too: it is the final lifecycle
+    // transition of this child-only row, not activity from the parent.
     const childRow = { ...options, producedBySubagent: true as const }
     if (agents.length === 0) {
       // The row's last child turned out not to be a subagent. An empty roster is
       // not a roster of nothing, so the row goes rather than reading "Ran 0".
       if (group.lastSerialized !== null) {
         group.lastSerialized = null
-        this.deps.sink.appendTombstone(group.identity, options)
+        this.deps.sink.appendTombstone(group.identity, childRow)
         this.deps.sink.publish()
       }
       return

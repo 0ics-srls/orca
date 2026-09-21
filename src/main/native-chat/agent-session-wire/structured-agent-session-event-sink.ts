@@ -270,7 +270,11 @@ export function createDeferredStructuredAgentSessionEventSink(
         queue.submit(
           {
             bytes: Buffer.byteLength(agentJournalItemKey(identity), 'utf8') + 256,
-            run: (bound) => bound.journal.appendTombstone(identity, { fence: bound.fence })
+            run: (bound) =>
+              bound.journal.appendTombstone(identity, {
+                fence: bound.fence,
+                ...(options.producedBySubagent ? { producedBySubagent: true } : {})
+              })
           },
           options
         )
@@ -279,7 +283,11 @@ export function createDeferredStructuredAgentSessionEventSink(
         queue.submit(
           {
             bytes: Buffer.byteLength(agentJournalItemKey(identity), 'utf8') + 256,
-            run: (bound) => bound.journal.appendTombstone(identity, { fence: bound.fence })
+            run: (bound) =>
+              bound.journal.appendTombstone(identity, {
+                fence: bound.fence,
+                ...(options.producedBySubagent ? { producedBySubagent: true } : {})
+              })
           },
           options
         ),

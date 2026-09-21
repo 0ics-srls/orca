@@ -45,7 +45,7 @@ export type JournalItemAppendOptions = {
   recovered?: true
   producedBySubagent?: true
 }
-export type JournalTombstoneInput = { fence: number }
+export type JournalTombstoneInput = { fence: number; producedBySubagent?: true }
 
 export type JournalLifecycleBatchInput = {
   settlementId: string

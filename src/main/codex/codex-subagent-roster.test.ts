@@ -6,7 +6,10 @@ import type {
 } from '../../shared/agent-session-journal-types'
 import { MAX_SUBAGENT_FIELD_CHARS } from '../../shared/native-chat-subagent-summary'
 import { isSubagentGroupBlock, type NativeChatSubagentEntry } from '../../shared/native-chat-types'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import type {
+  StructuredAgentSessionAppendOptions,
+  StructuredAgentSessionEventSink
+} from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import {
   CodexSubagentRoster,
   codexSubagentGroupIdentity,
@@ -22,7 +25,11 @@ import {
 const THREAD = 'thread-parent'
 const TURN = 'turn-1'
 
-type Appended = { identity: AgentJournalItemIdentity; body: AgentJournalItemBody }
+type Appended = {
+  identity: AgentJournalItemIdentity
+  body: AgentJournalItemBody
+  options?: StructuredAgentSessionAppendOptions
+}
 
 function createHarness(options: { threadId?: string | null } = {}): {
   roster: CodexSubagentRoster
@@ -36,8 +43,8 @@ function createHarness(options: { threadId?: string | null } = {}): {
     appendItem: () => {},
     appendTombstone: () => {},
     publish: () => {},
-    tryAppendItem: (identity, body) => {
-      appended.push({ identity, body })
+    tryAppendItem: (identity, body, options) => {
+      appended.push({ identity, body, options })
       return { accepted: true }
     },
     tryPublish: () => ({ accepted: true })
@@ -167,6 +174,15 @@ describe('CodexSubagentRoster', () => {
     // Sharing the append's coalescing key with the publish spliced the append
     // out of the queue, and `lastSerialized` then suppressed every retry.
     expect(appended).toHaveLength(1)
+  })
+
+  it('marks Codex roster rows as child-produced', () => {
+    const { roster, appended } = createHarness()
+    deliver(
+      roster,
+      activity({ kind: 'started', agentThreadId: 'child-1', agentPath: '/root/read' })
+    )
+    expect(appended[0]?.options?.producedBySubagent).toBe(true)
   })
 
   it('counts a /morpheus agent as a child — only /root is the turn itself', () => {

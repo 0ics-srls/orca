@@ -350,7 +350,10 @@ export class CodexSubagentRoster {
     // The publish must NOT reuse that key: the queue coalesces by key alone,
     // with no op-kind check, so a publish carrying it would splice out the
     // still-queued append and the row would never reach the journal.
-    const options = { coalescingKey: `codex-subagents:${group.groupId}` }
+    const options = {
+      coalescingKey: `codex-subagents:${group.groupId}`,
+      producedBySubagent: true as const
+    }
     const admission = this.deps.sink.tryAppendItem
       ? this.deps.sink.tryAppendItem(group.identity, body, options)
       : (this.deps.sink.appendItem(group.identity, body, options), ADMITTED)

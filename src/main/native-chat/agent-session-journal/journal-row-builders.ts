@@ -47,9 +47,11 @@ export function journalItemRowBuilder(
 export function journalTombstoneRowBuilder(
   state: () => JournalReducerState,
   itemId: string,
-  fence: number
+  fence: number,
+  producedBySubagent?: true
 ): RowBuilder<JournalTombstoneRow> {
-  return (seq, ts) => buildJournalTombstoneRow({ state: state(), itemId, seq, fence, ts })
+  return (seq, ts) =>
+    buildJournalTombstoneRow({ state: state(), itemId, seq, fence, ts, producedBySubagent })
 }
 
 export function journalSubmissionRowBuilder(
@@ -193,6 +195,7 @@ export function buildJournalTombstoneRow(input: {
   seq: number
   fence: number
   ts: number
+  producedBySubagent?: true
 }): JournalTombstoneRow {
   const resolved = input.state.aliases.get(input.itemId) ?? input.itemId
   return {
@@ -207,7 +210,8 @@ export function buildJournalTombstoneRow(input: {
         input.state.items.get(resolved)?.revision ?? 0,
         input.state.tombstones.get(resolved) ?? 0
       ) + 1,
-    ...journalRowBase(input.state.epoch, input.seq, input.fence, input.ts)
+    ...journalRowBase(input.state.epoch, input.seq, input.fence, input.ts),
+    ...(input.producedBySubagent ? { producedBySubagent: input.producedBySubagent } : {})
   }
 }
 
