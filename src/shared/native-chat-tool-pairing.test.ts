@@ -19,20 +19,20 @@ describe('pairNativeChatToolResults', () => {
     expect(pairedResults.size).toBe(2)
   })
 
-  it('answers the most recent unanswered call when two are interleaved', () => {
+  it('answers the oldest unanswered call when two are interleaved', () => {
     const [outer, inner, first, second] = [call('a'), call('b'), result('inner'), result('outer')]
     const { resultByCall } = pairNativeChatToolResults([outer, inner, first, second])
 
-    expect(resultByCall.get(inner)).toBe(first)
-    expect(resultByCall.get(outer)).toBe(second)
+    expect(resultByCall.get(outer)).toBe(first)
+    expect(resultByCall.get(inner)).toBe(second)
   })
 
   it('leaves a still-running call without a result', () => {
     const [a, b, only] = [call('a'), call('b'), result('one')]
     const { resultByCall } = pairNativeChatToolResults([a, b, only])
 
-    expect(resultByCall.get(b)).toBe(only)
-    expect(resultByCall.has(a)).toBe(false)
+    expect(resultByCall.get(a)).toBe(only)
+    expect(resultByCall.has(b)).toBe(false)
   })
 
   it('leaves a result with no call to answer unpaired, so it still draws its own row', () => {

@@ -7,9 +7,9 @@
 // as the command that produced it. Pairing lets the call own its output, so the
 // run reads as the work it did.
 //
-// Pairing is positional, the same rule `dropUnattributableToolResults` already
-// uses to decide a result is attributable at all: a result answers the most
-// recent call that has not been answered yet.
+// Pairing is positional, the same FIFO rule `dropUnattributableToolResults`
+// already uses to decide a result is attributable at all: a result answers the
+// oldest call that has not been answered yet.
 
 import {
   isToolCallBlock,
@@ -37,6 +37,7 @@ export function pairNativeChatToolResults(
   const resultByCall = new Map<NativeChatToolCallBlock, NativeChatToolResultBlock>()
   const pairedResults = new Set<NativeChatBlock>()
   const unanswered: NativeChatToolCallBlock[] = []
+  let answered = 0
   for (const block of blocks) {
     if (isToolCallBlock(block)) {
       unanswered.push(block)
@@ -45,12 +46,13 @@ export function pairNativeChatToolResults(
     if (!isToolResultBlock(block)) {
       continue
     }
-    // Last unanswered call wins: a provider that interleaves two calls answers
-    // the inner one first, which is the order these arrive in.
-    const call = unanswered.pop()
+    // Results carry no call id, so the journal's FIFO order is the only stable
+    // attribution available when calls are interleaved.
+    const call = unanswered[answered]
     if (call === undefined) {
       continue
     }
+    answered += 1
     resultByCall.set(call, block)
     pairedResults.add(block)
   }
