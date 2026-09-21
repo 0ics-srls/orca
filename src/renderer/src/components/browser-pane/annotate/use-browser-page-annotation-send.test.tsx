@@ -198,12 +198,7 @@ describe('website annotation delivery', () => {
     const view = mount()
     const delivered = view.result.current.handleBrowserAnnotationsSentToAgent
     act(() => {
-      store
-        .getState()
-        .clearBrowserPageAnnotations(
-          'page-1',
-          store.getState().browserAnnotationsByPageId['page-1'] ?? []
-        )
+      store.getState().clearBrowserPageAnnotations('page-1')
       store.getState().addBrowserPageAnnotation(makeAnnotation('page-1'))
     })
     act(delivered)

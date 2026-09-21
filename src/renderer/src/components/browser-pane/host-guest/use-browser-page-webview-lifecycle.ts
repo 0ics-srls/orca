@@ -141,11 +141,7 @@ export function useBrowserPageWebviewLifecycle({
   )
   const browserAnnotationsRef = useRef(browserAnnotations)
   const clearBrowserPageAnnotations = useAppStore((s) => s.clearBrowserPageAnnotations)
-  const clearBrowserPageAnnotationsForNavigation = useCallback(
-    (pageId: string): void => clearBrowserPageAnnotations(pageId, browserAnnotationsRef.current),
-    [clearBrowserPageAnnotations]
-  )
-  const clearBrowserPageAnnotationsRef = useRef(clearBrowserPageAnnotationsForNavigation)
+  const clearBrowserPageAnnotationsRef = useRef(clearBrowserPageAnnotations)
 
   useLayoutEffect(() => {
     browserTabLoadingRef.current = browserTabLoading
@@ -154,12 +150,12 @@ export function useBrowserPageWebviewLifecycle({
     isActiveRef.current = isActive
     pendingAnnotationPayloadRef.current = pendingAnnotationPayload
     browserAnnotationsRef.current = browserAnnotations
-    clearBrowserPageAnnotationsRef.current = clearBrowserPageAnnotationsForNavigation
+    clearBrowserPageAnnotationsRef.current = clearBrowserPageAnnotations
     isPaintableRef.current = isPaintable
   }, [
     browserAnnotations,
     browserTabLoading,
-    clearBrowserPageAnnotationsForNavigation,
+    clearBrowserPageAnnotations,
     inputLocked,
     isActive,
     isPaintable,

@@ -66,6 +66,9 @@ export function useBrowserPageAnnotationSend({
   const deleteBrowserPageAnnotation = useAppStore((s) => s.deleteBrowserPageAnnotation)
   const updateBrowserPageAnnotation = useAppStore((s) => s.updateBrowserPageAnnotation)
   const clearBrowserPageAnnotations = useAppStore((s) => s.clearBrowserPageAnnotations)
+  const removeDeliveredBrowserPageAnnotations = useAppStore(
+    (s) => s.removeDeliveredBrowserPageAnnotations
+  )
   const recordFeatureInteraction = useAppStore((s) => s.recordFeatureInteraction)
 
   useLayoutEffect(() => {
@@ -91,8 +94,13 @@ export function useBrowserPageAnnotationSend({
 
   const handleBrowserAnnotationsSentToAgent = useCallback((): void => {
     recordFeatureInteraction('browser-annotations-sent-to-agent')
-    clearBrowserPageAnnotations(browserTabId, browserAnnotations)
-  }, [browserAnnotations, browserTabId, clearBrowserPageAnnotations, recordFeatureInteraction])
+    removeDeliveredBrowserPageAnnotations(browserTabId, browserAnnotations)
+  }, [
+    browserAnnotations,
+    browserTabId,
+    recordFeatureInteraction,
+    removeDeliveredBrowserPageAnnotations
+  ])
 
   const handleClearBrowserAnnotations = useCallback((): void => {
     if (browserAnnotationsRef.current.length === 0) {
@@ -101,7 +109,7 @@ export function useBrowserPageAnnotationSend({
     clearTimeout(annotationCopyTimerRef.current)
     setBrowserAnnotationsCopied(false)
     recordFeatureInteraction('browser-annotations')
-    clearBrowserPageAnnotations(browserTabId, browserAnnotationsRef.current)
+    clearBrowserPageAnnotations(browserTabId)
   }, [browserTabId, clearBrowserPageAnnotations, recordFeatureInteraction])
 
   const handleAnnotationSendOpenChange = useCallback(
