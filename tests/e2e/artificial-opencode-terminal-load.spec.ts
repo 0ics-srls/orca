@@ -1,7 +1,4 @@
-import {
-  configureTerminalPerfDiagnostics,
-  withTerminalPerfProfile
-} from './terminal-perf-diagnostics'
+import { presentTerminalPerfWindow } from './terminal-perf-presentation'
 import type { Page, TestInfo } from '@stablyai/playwright-test'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -32,6 +29,10 @@ import type { HiddenPressureOutputMode } from './artificial-opencode-hidden-pres
 import { runMainPressureScenario } from './artificial-opencode-main-pressure-scenario'
 import { runRendererBackpressureRevisitScenario } from './artificial-opencode-revisit-pressure-scenario'
 import { startSyntheticOpenCodeInjection } from './artificial-opencode-synthetic-injection'
+
+test.beforeEach(async ({ electronApp }, testInfo) => {
+  await presentTerminalPerfWindow(electronApp, testInfo)
+})
 
 type TypingMeasurement = {
   latencies: number[]
@@ -240,20 +241,7 @@ function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)] ?? 0
 }
 
-configureTerminalPerfDiagnostics()
-
 async function measureTypingDuringLoad(
-  page: Page,
-  scriptPath: string,
-  ptyId: string,
-  runId: string
-): Promise<TypingMeasurement> {
-  return withTerminalPerfProfile(page, 'typing', runId, () =>
-    measureTypingDuringLoadProfiled(page, scriptPath, ptyId, runId)
-  )
-}
-
-async function measureTypingDuringLoadProfiled(
   page: Page,
   scriptPath: string,
   ptyId: string,

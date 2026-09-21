@@ -58,11 +58,31 @@ this is not a one-second xterm parse or proof of a second of CPU consumption.
 The same throttle is present in Chromium 148.0.7778.218 (Electron 42.3.3) and
 146.0.7680.177. This source comparison does not prove identical runtime behavior.
 
+## Visibility control
+
+[Run 35660847455](https://github.com/stablyai/orca/actions/runs/35660847455)
+compared ten hidden-window samples with ten visible-window samples on the same
+isolated Xvfb runner, using SwiftShader in both modes. Actual window visibility
+was recorded. The background terminal panes remained hidden in both modes.
+
+| Measurement | Hidden window | Visible window |
+| --- | ---: | ---: |
+| Undrawn-frame throttle decisions | 1,251 | 0 |
+| Largest worst-key latency | 3,062.8 ms | 30.5 ms |
+| Largest timer drift | 3,111.8 ms | 67.0 ms |
+| Restore range | 213.8–1,862.2 ms (9 completed) | 223.4–734.3 ms (10 completed) |
+| Electron tests passed | 9/10 | 10/10 |
+
+All ten visible-window samples satisfy the existing latency limits. This isolates
+the never-presented Linux test window as the trigger for the reproduced native
+stalls. It does not establish a newly introduced application-code regression or
+prove that every historical outlier had the same cause.
+
 ## Remaining verification
 
-Compare hidden and visible application windows on an isolated Linux CI Xvfb
-display, retaining the same hidden-terminal workload and graphics flags. Verify
-actual window visibility and native throttling, not only measured restore time.
-A supported correction must then pass the full terminal scale report gate with
-unchanged latency limits. Keep desktop automation windowless and remove temporary
-diagnostic workflow changes before merging a fix.
+Run the full terminal scale report gate with the original graphics flags, no
+profiling, and unchanged latency limits. The correction presents the benchmark
+window only when explicitly enabled on an isolated GitHub Actions Linux display;
+ordinary local automation stays windowless. Terminal workloads, hidden-pane gates,
+and production launch policy are unchanged. Temporary diagnostic hooks and the
+comparison workflow have been removed.
