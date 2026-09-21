@@ -91,15 +91,16 @@ jobs:
       - name: Build Electron app for terminal perf
         run: npx electron-vite build --mode e2e
 
-      - name: Profile baseline and unthrottled control serially
+      - name: Trace native renderer stalls
         env:
           ORCA_BACKGROUND_LAUNCH: '1'
+          ORCA_PERF_DIAGNOSTIC_TRACE: '1'
           SKIP_BUILD: '1'
           ORCA_E2E_OPENCODE_FRAME_COUNT: '60'
           ORCA_E2E_OPENCODE_SCALE_HIDDEN_PRESSURE_PANES: '25'
         run: |
           mkdir -p "$RUNNER_TEMP/perf-evidence"
-          for mode in 0 1; do
+          for mode in 0; do
             export ORCA_PERF_DIAGNOSTIC_UNTHROTTLE="$mode"
             export ORCA_PERF_DIAGNOSTIC_DIR="$RUNNER_TEMP/perf-evidence/mode-$mode"
             mkdir -p "$ORCA_PERF_DIAGNOSTIC_DIR"

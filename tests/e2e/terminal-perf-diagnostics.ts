@@ -1,3 +1,4 @@
+import { withTerminalBrowserTrace } from './terminal-perf-browser-trace'
 import type { Page } from '@stablyai/playwright-test'
 import path from 'node:path'
 import { test } from './helpers/orca-app'
@@ -60,11 +61,18 @@ export async function withTerminalPerfProfile<T>(
     }
   })
   try {
-    const result = await withTypingRendererCpuProfile(
-      page,
-      path.join(directory, `${phase}-${runId}.cpuprofile`),
-      measure
-    )
+    const result =
+      process.env.ORCA_PERF_DIAGNOSTIC_TRACE === '1'
+        ? await withTerminalBrowserTrace(
+            page,
+            path.join(directory, `${phase}-${runId}.trace.json`),
+            measure
+          )
+        : await withTypingRendererCpuProfile(
+            page,
+            path.join(directory, `${phase}-${runId}.cpuprofile`),
+            measure
+          )
     console.error(
       JSON.stringify({
         phase,
