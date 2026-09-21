@@ -252,8 +252,18 @@ export function TerminalThemeCatalogSection({
                   onQueryChange={setThemeSearch}
                   onSelectTheme={(theme) => {
                     rememberTerminalThemeTarget(target)
+                    const hasColorOverrides =
+                      Object.keys(settings.terminalColorOverrides ?? {}).length > 0
                     updateSettings(
-                      isLightTarget ? { terminalThemeLight: theme } : { terminalThemeDark: theme }
+                      isLightTarget
+                        ? {
+                            terminalThemeLight: theme,
+                            ...(hasColorOverrides ? { terminalColorOverrides: undefined } : {})
+                          }
+                        : {
+                            terminalThemeDark: theme,
+                            ...(hasColorOverrides ? { terminalColorOverrides: undefined } : {})
+                          }
                     )
                   }}
                   importedHighlightSignal={importedHighlightSignal}
