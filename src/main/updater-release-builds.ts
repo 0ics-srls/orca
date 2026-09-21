@@ -9,13 +9,76 @@ import {
   type ReleaseBuild,
   type ReleaseChannel
 } from '../shared/release-channel'
+import { parseRelayRetryAfterMs } from '../shared/relay-retry-after-header'
+import { getGhRateLimitBlockedUntilMs, recordGhPrimaryRateLimit } from './git/gh-rate-limit-breaker'
 import { isValidVersion } from './updater-fallback'
+import { rejectReleaseApiToken, resolveReleaseApiToken } from './updater-release-api-token'
 
 const FETCH_TIMEOUT_MS = 8000
 const MAX_LISTED_BUILDS = 100
+const RETRY_AFTER_MAX_MS = 60 * 60_000
 
 function getReleasesApiUrl(repo: string): string {
   return `https://api.github.com/repos/${repo}/releases?per_page=${MAX_LISTED_BUILDS}`
+}
+
+function fetchReleases(repo: string, token: string | null): Promise<Response> {
+  const headers: Record<string, string> = { Accept: 'application/vnd.github+json' }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  return net.fetch(getReleasesApiUrl(repo), {
+    headers,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+  })
+}
+
+/** GitHub answers a spent primary bucket with 403 + `x-ratelimit-remaining: 0`; secondary limits carry Retry-After. */
+function isRateLimited(res: Response): boolean {
+  return (
+    res.status === 429 ||
+    (res.status === 403 &&
+      (res.headers.get('x-ratelimit-remaining') === '0' || res.headers.has('retry-after')))
+  )
+}
+
+/** Primary limits carry the reset epoch; secondary limits carry Retry-After as seconds or an HTTP date. */
+export function rateLimitResetAtMs(headers: Headers, nowMs: number): number | null {
+  const resetEpochSeconds = Number(headers.get('x-ratelimit-reset'))
+  if (resetEpochSeconds > 0) {
+    return resetEpochSeconds * 1000
+  }
+  const retryAfterMs = parseRelayRetryAfterMs(headers.get('retry-after'), RETRY_AFTER_MAX_MS, nowMs)
+  return retryAfterMs === null ? null : nowMs + retryAfterMs
+}
+
+export function describeRateLimitReset(resetAtMs: number | null, nowMs: number): string {
+  if (resetAtMs === null) {
+    return 'in a few minutes'
+  }
+  const minutes = Math.ceil((resetAtMs - nowMs) / 60_000)
+  return minutes <= 1 ? 'in about a minute' : `in about ${minutes} minutes`
+}
+
+function releaseListError(
+  res: Response,
+  repo: string,
+  channel: ReleaseChannel,
+  signedIn: boolean
+): Error {
+  if (res.status === 404) {
+    return new Error(`No releases repository found at ${repo}.`)
+  }
+  if (isRateLimited(res)) {
+    const nowMs = Date.now()
+    const retry = describeRateLimitReset(rateLimitResetAtMs(res.headers, nowMs), nowMs)
+    return new Error(
+      signedIn
+        ? `GitHub rate limit reached. Try again ${retry}.`
+        : `GitHub rate limit reached. Try again ${retry}, or run \`gh auth login\` so Orca can use your account's higher limit.`
+    )
+  }
+  return new Error(`Could not list ${channel} builds (HTTP ${res.status}).`)
 }
 
 export function getReleaseDownloadUrlForRepo(repo: string, tag: string): string {
@@ -89,26 +152,39 @@ function parseReleaseEntry(
  *
  * Why the REST API rather than the atom feed the routine update path uses: the
  * feed caps at the 10 newest entries, which cannot express "jump back to
- * yesterday's hourly". This runs only on explicit dev interaction, so its
- * unauthenticated rate limit never touches background checks.
+ * yesterday's hourly". This runs only on explicit dev interaction, so it never
+ * touches background checks; it sends the local gh token when there is one so
+ * the request spends the user's own quota, not the per-IP bucket every
+ * unauthenticated caller on the network shares.
  */
 export async function listReleaseBuilds(
   channel: ReleaseChannel,
   platform: NodeJS.Platform = process.platform
 ): Promise<ReleaseBuild[]> {
   const repo = getReleaseRepoForChannel(channel)
-  const res = await net.fetch(getReleasesApiUrl(repo), {
-    headers: { Accept: 'application/vnd.github+json' },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-  })
+  // Why: while the gh breaker has the token's core bucket marked spent, an
+  // authenticated request is a guaranteed 403 — go straight to the per-IP bucket.
+  const tokenBucketBlocked = getGhRateLimitBlockedUntilMs('core') !== null
+  const token = tokenBucketBlocked ? null : await resolveReleaseApiToken()
+  let signedIn = tokenBucketBlocked || token !== null
+  let res = await fetchReleases(repo, token)
+  if (token && res.status === 401) {
+    // Why: a revoked or expired keyring token answers 401, and the unauthenticated
+    // request still lists a public repo — fall back instead of failing the picker.
+    rejectReleaseApiToken()
+    signedIn = false
+    res = await fetchReleases(repo, null)
+  } else if (token && isRateLimited(res)) {
+    // Why: the token's bucket and the per-IP bucket are separate, so the other one
+    // may still have quota. Tell the breaker first so gh calls fail fast until the reset.
+    const resetAtMs = rateLimitResetAtMs(res.headers, Date.now())
+    if (resetAtMs !== null) {
+      recordGhPrimaryRateLimit('core', resetAtMs)
+    }
+    res = await fetchReleases(repo, null)
+  }
   if (!res.ok) {
-    if (res.status === 404) {
-      throw new Error(`No releases repository found at ${repo}.`)
-    }
-    if (res.status === 403 || res.status === 429) {
-      throw new Error('GitHub rate limit reached. Try again in a few minutes.')
-    }
-    throw new Error(`Could not list ${channel} builds (HTTP ${res.status}).`)
+    throw releaseListError(res, repo, channel, signedIn)
   }
   const payload: unknown = await res.json()
   if (!Array.isArray(payload)) {
