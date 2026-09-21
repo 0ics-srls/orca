@@ -23,6 +23,8 @@ export function findTerminalTabIdBindingLeafId(
   let unboundCarrierTabId: string | null = null
   for (const [tabId, layout] of Object.entries(state.terminalLayoutsByTabId)) {
     const carriesLeaf = layout.root ? collectLeafIdsInOrder(layout.root).includes(leafId) : null
+    // Why `!== undefined` and not truthiness, unlike the ownership walk: an empty binding still
+    // proves this tab holds the leaf id, and holding it is what forbids re-minting it elsewhere.
     if (layout.ptyIdsByLeafId?.[leafId] !== undefined && carriesLeaf !== false) {
       return tabId
     }
