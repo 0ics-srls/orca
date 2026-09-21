@@ -129,13 +129,38 @@ export function getPiAgentStatusHandlerSourceLines(kind: PiAgentKind): string[] 
     '  if (ownerPid && ownerPid !== selfPid && isStatusOwnerAlive(ownerPid)) return',
     `  process.env.${ownerEnv} = selfPid`,
     '  resetPostQueue()',
+    '  // Keep the pane working until every Pi lifecycle child reaches a terminal state.',
+    '  const activePiSubagents = new Set<string>()',
+    '  let agentEndWaitingForSubagents = false',
+    '  const piEventBus = (pi as { events?: { on?: (name: string, handler: (event: unknown) => void) => void } }).events',
+    "  piEventBus?.on?.('task:subagent:lifecycle', (event: unknown) => {",
+    "    if (!event || typeof event !== 'object') return",
+    "    const id = typeof (event as { id?: unknown }).id === 'string' ? (event as { id: string }).id : ''",
+    '    const status = (event as { status?: unknown }).status',
+    '    if (!id) return',
+    "    if (status === 'started') {",
+    '      activePiSubagents.add(id)',
+    "      post('agent_start')",
+    '      return',
+    '    }',
+    "    if (status !== 'completed' && status !== 'failed' && status !== 'aborted') return",
+    '    activePiSubagents.delete(id)',
+    '    if (activePiSubagents.size === 0 && agentEndWaitingForSubagents) {',
+    '      agentEndWaitingForSubagents = false',
+    '      postAgentEndOnce()',
+    '    }',
+    '  })',
     ...(kind !== 'pi'
-      ? ["  pi.on('session_shutdown', () => { resetPostQueue(); clearPendingAgentEndCheck() })"]
+      ? [
+          "  pi.on('session_shutdown', () => { activePiSubagents.clear(); agentEndWaitingForSubagents = false; resetPostQueue(); clearPendingAgentEndCheck() })"
+        ]
       : []),
     ...(kind !== 'prime-agent'
       ? [
           "  pi.on('session_switch', (_event, ctx) => {",
           '    if (!isOmpRuntime()) return',
+          '    activePiSubagents.clear()',
+          '    agentEndWaitingForSubagents = false',
           '    resetPostQueue()',
           '    clearPendingAgentEndCheck()',
           '    updateRuntimeOmpSessionMetadata(ctx)',
@@ -229,6 +254,10 @@ export function getPiAgentStatusHandlerSourceLines(kind: PiAgentKind): string[] 
     '  // share a guard instead of racing duplicate completion posts — one keyed on the',
     '  // generation of the run that ENDED, so a later run still reports its own end.',
     '  function postAgentEndOnce(): void {',
+    '    if (activePiSubagents.size > 0) {',
+    '      agentEndWaitingForSubagents = true',
+    '      return',
+    '    }',
     '    if (completionPostedGeneration === endedRunGeneration) return',
     '    completionPostedGeneration = endedRunGeneration',
     // Why: distinct from the completion guard, which holds the generation of the posted run
