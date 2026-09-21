@@ -213,6 +213,33 @@ legacy agent-session publications, file or Git RPCs, mobile/E2EE framing, or wha
 Rule 3 surfaces with no pairing yet. A change on those paths still needs its own reasoning
 against the rules above.
 
+## The phone is a client, and this gate is not the one that protects it
+
+The cross-version job answers one question: will a peer from another _version_ still read what
+this build publishes. It does not answer whether the phone can still build against what this
+build declares, and those are separate gates with separate filters.
+
+`Mobile Checks` (`.github/workflows/mobile.yml`) runs mobile's typecheck, tests, lint and the
+RPC recording guard, and it dispatches on a `paths:` filter of its own. That filter already
+explains the mechanism that matters here, in its note on `src/shared/rpc-contract/**`: mobile
+imports desktop types verbatim, so a desktop-only edit can break mobile's typecheck with no
+other mobile signal. The filter does not apply that reasoning to the rest of what mobile
+imports. Measured at `dc8cf30554`:
+
+- `src/shared/runtime-types.ts` is imported by 26 mobile files and is not in the filter;
+- `src/shared/agent-status-types.ts` is imported by 15 and is not in the filter;
+- `src/shared/runtime-worktree-contracts.ts` is imported by 2 and is not in the filter;
+- of 103 host-side modules named `*mobile*` outside `mobile/`, 18 are in the filter and **85 are
+  not**, including `src/main/runtime/runtime-mobile-session-projection.ts`, which builds the tab
+  rows a phone reads.
+
+So a change to host-side mobile-facing output can merge with Mobile Checks never dispatching.
+The first three of those files are gated by `CROSS_VERSION_WIRE_PREFIXES` as of this page's last
+revision — **that does not cover them for mobile**, and reading it that way is the mistake this
+section exists to prevent. The fix belongs in `mobile.yml`'s `paths:`, not here: adding a host
+projection to `CROSS_VERSION_WIRE_PREFIXES` would start a job holding no pairing that can fail
+on it.
+
 Every suite in `tests/e2e/cross-version-wire/` runs in the `cross-version-wire` PR job and
 nowhere else — the unit shards exclude the directory, because a shallow shard clone has no tags
 for an extracted release to skew against. The job's vitest argv is therefore the only thing
