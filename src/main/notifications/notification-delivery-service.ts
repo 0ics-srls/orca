@@ -14,6 +14,7 @@ import type {
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { buildNotificationOptions } from '../ipc/notification-options'
 import { reserveNotificationCooldown } from '../ipc/notification-burst-cooldown'
+import { reserveNotificationEventOnce } from '../../shared/notification-event-dedupe'
 
 export type NotificationDeliveryDependencies = {
   readNotificationSettings: () => NotificationSettings
@@ -48,6 +49,9 @@ export function createNotificationDeliveryService(
 ): NotificationDeliveryService {
   const recentDesktopNotifications = new Map<string, number>()
   const recentMobileNotifications = new Map<string, number>()
+  // Why a second mobile gate: the burst cooldown asks "was this workspace noisy lately" and
+  // expires on a timer, which cannot answer "is this the same completion two windows both saw".
+  const mobileEventsSeen = new Set<string>()
 
   const dedupeKeyFor = (request: NotificationDispatchRequest): string =>
     request.worktreeId ?? request.worktreeLabel ?? 'global'
@@ -71,7 +75,13 @@ export function createNotificationDeliveryService(
       const notificationOptions = buildNotificationOptions(request)
 
       // Why: desktop focus only means this computer sees the worktree; the paired phone may still need the alert.
-      if (deps.dispatchMobileNotification && request.source !== 'test') {
+      // The event gate runs first and is per-event; the cooldown below stays the coarse fallback
+      // for senders with no event identity. Desktop gates are deliberately downstream of both:
+      // each window decides its own banner, but the phone gets one notification per completion.
+      const mobileEventAdmitted =
+        request.mobileDedupeKey === undefined ||
+        reserveNotificationEventOnce(mobileEventsSeen, request.mobileDedupeKey)
+      if (deps.dispatchMobileNotification && request.source !== 'test' && mobileEventAdmitted) {
         if (
           reserveNotificationCooldown(
             recentMobileNotifications,

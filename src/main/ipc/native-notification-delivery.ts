@@ -89,18 +89,30 @@ export function deliverNativeNotification(
         repoId,
         worktreeId: args.worktreeId
       })
-      // Why: focusTerminal targets the pane by stable leafId so split-pane notifications land on the exact pane.
       const paneTarget = args.paneKey ? parsePaneKey(args.paneKey) : null
-      if (paneTarget) {
-        win.webContents.send('ui:focusTerminal', {
+      if (!paneTarget) {
+        return
+      }
+      // Why: a structured chat has no PTY pane. Its pane key's leaf is a synthetic id minted from
+      // the session, so focusTerminal would hunt a split-layout leaf that does not exist; the
+      // unified tab id in the same key is what reveals the chat.
+      if (args.surface === 'agent-session') {
+        win.webContents.send('ui:focusEditorTab', {
           tabId: paneTarget.tabId,
           worktreeId: args.worktreeId,
-          leafId: paneTarget.leafId,
-          ackPaneKeyOnSuccess: args.paneKey,
-          flashFocusedPane: true,
-          scrollToBottomIfOutputSinceLastView: true
+          userInitiated: true
         })
+        return
       }
+      // Why: focusTerminal targets the pane by stable leafId so split-pane notifications land on the exact pane.
+      win.webContents.send('ui:focusTerminal', {
+        tabId: paneTarget.tabId,
+        worktreeId: args.worktreeId,
+        leafId: paneTarget.leafId,
+        ackPaneKeyOnSuccess: args.paneKey,
+        flashFocusedPane: true,
+        scrollToBottomIfOutputSinceLastView: true
+      })
     }
     notification.on('click', clickHandler)
   }
