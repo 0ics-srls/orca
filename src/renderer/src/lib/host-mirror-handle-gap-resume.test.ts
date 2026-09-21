@@ -191,14 +191,58 @@ function seedActiveSleepingRecord(worktreeId: string): string {
   return seedActiveSleepingRecordFor(worktreeId, WEB_TAB_ID, LEAF_ID, 'handle-gap-session')
 }
 
-/** A recorded status entry whose runtime answered nothing: the shape a dropped link leaves behind. */
-function setRuntimeEnvironmentDisconnectedForTests(environmentId: string): void {
-  const disconnected: RuntimeEnvironmentStatus = { status: null, checkedAt: 0 }
+function setRuntimeEnvironmentStatusEntryForTests(
+  environmentId: string,
+  entry: RuntimeEnvironmentStatus
+): void {
   useAppStore.setState({
     runtimeStatusByEnvironmentId: new Map(useAppStore.getState().runtimeStatusByEnvironmentId).set(
       environmentId,
-      disconnected
+      entry
     )
+  })
+}
+
+/** A recorded status entry whose runtime answered nothing: the shape a failed probe leaves behind. */
+function setRuntimeEnvironmentDisconnectedForTests(environmentId: string): void {
+  setRuntimeEnvironmentStatusEntryForTests(environmentId, { status: null, checkedAt: 0 })
+}
+
+/** The shape main's status channel publishes for a dropped transport; it reads `reconnecting`. */
+function setRuntimeEnvironmentTransportDownForTests(environmentId: string): void {
+  setRuntimeEnvironmentStatusEntryForTests(environmentId, {
+    status: null,
+    checkedAt: 1,
+    snapshot: {
+      environmentId,
+      pairingRevision: 1,
+      sequence: 2,
+      checkedAt: 1,
+      status: null,
+      verification: 'unavailable',
+      transport: 'disconnected'
+    }
+  })
+}
+
+/**
+ * Contact regained on the SAME runtime: `runtime-status.ts` bumps `hostContactEpoch` and leaves the
+ * connection generation alone (#19647).
+ */
+function setRuntimeEnvironmentReconnectedForTests(environmentId: string): void {
+  setRuntimeEnvironmentStatusEntryForTests(environmentId, {
+    status: {
+      runtimeId: 'rt-1',
+      rendererGraphEpoch: 0,
+      graphStatus: 'ready',
+      authoritativeWindowId: null,
+      liveTabCount: 0,
+      liveLeafCount: 0,
+      runtimeProtocolVersion: 3,
+      minCompatibleRuntimeClientVersion: 3
+    },
+    checkedAt: 2,
+    hostContactEpoch: 1
   })
 }
 
@@ -458,6 +502,55 @@ describe('resume across the mirror handle gap', () => {
     // evidence, so the next full budget decides — a hold that outlives the outage would be the
     // latch-that-never-releases defect this module exists to avoid.
     clearRuntimeEnvironmentStatusEntryForTests(RUNTIME_ENV_ID)
+    vi.advanceTimersByTime(HOST_MIRROR_HANDLE_GAP_DEADLINE_MS)
+
+    const after = useAppStore.getState()
+    expect(after.sleepingAgentSessionsByPaneKey[paneKey]).toBeUndefined()
+    expect(Object.keys(after.automaticAgentResumeClaimsByTabId)).toHaveLength(1)
+  })
+
+  // The same outage as the shape main actually publishes: a status snapshot with the transport
+  // down, which the shared derivation reads as `reconnecting` rather than `disconnected`. Both
+  // are "we could not ask"; a guard that honoured only one would miss the production path.
+  it('does not turn a transport-down snapshot into a verdict either', () => {
+    const worktree = makeRuntimeOwnedWorktree()
+    seedMirroredWorkspace(worktree)
+    const paneKey = seedActiveSleepingRecord(worktree.id)
+    markHostSessionMirrorHydrated(RUNTIME_ENV_ID)
+    expect(resumeSleepingAgentSessionsForWorktree(worktree.id)).toBe(0)
+
+    vi.advanceTimersByTime(HOST_MIRROR_HANDLE_GAP_DEADLINE_MS / 2)
+    setRuntimeEnvironmentTransportDownForTests(RUNTIME_ENV_ID)
+    vi.advanceTimersByTime(HOST_MIRROR_HANDLE_GAP_DEADLINE_MS)
+
+    const during = useAppStore.getState()
+    expect(during.sleepingAgentSessionsByPaneKey[paneKey]).toBeDefined()
+    expect(Object.keys(during.automaticAgentResumeClaimsByTabId)).toHaveLength(0)
+    expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(1)
+  })
+
+  // The outage begins AND ends inside one budget, on the same runtime. At the deadline contact is
+  // back and the generation never moved, so the two guards above both pass — yet the pane had one
+  // millisecond of contact in which to publish. `hostContactEpoch` is the record that an outage
+  // happened in between; a wait that sees it move measured the outage, not the host.
+  it('does not record a verdict when contact was lost and regained inside the budget', () => {
+    const worktree = makeRuntimeOwnedWorktree()
+    seedMirroredWorkspace(worktree)
+    const paneKey = seedActiveSleepingRecord(worktree.id)
+    markHostSessionMirrorHydrated(RUNTIME_ENV_ID)
+    expect(resumeSleepingAgentSessionsForWorktree(worktree.id)).toBe(0)
+
+    vi.advanceTimersByTime(1000)
+    setRuntimeEnvironmentDisconnectedForTests(RUNTIME_ENV_ID)
+    vi.advanceTimersByTime(HOST_MIRROR_HANDLE_GAP_DEADLINE_MS - 1001)
+    setRuntimeEnvironmentReconnectedForTests(RUNTIME_ENV_ID)
+    vi.advanceTimersByTime(1)
+
+    const during = useAppStore.getState()
+    expect(during.sleepingAgentSessionsByPaneKey[paneKey]).toBeDefined()
+    expect(Object.keys(during.automaticAgentResumeClaimsByTabId)).toHaveLength(0)
+    // Re-armed on the regained contact; the next full budget of real silence decides.
+    expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(1)
     vi.advanceTimersByTime(HOST_MIRROR_HANDLE_GAP_DEADLINE_MS)
 
     const after = useAppStore.getState()
