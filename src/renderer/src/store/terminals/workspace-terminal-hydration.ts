@@ -109,26 +109,11 @@ export function createWorkspaceTerminalHydrationActions(
           runtimeSessionPlaceholders.repos.some((repo) => repo.id === session.activeRepoId)
             ? session.activeRepoId
             : null
-        // Why indexed here: the layout plan looks up a tab per persisted layout, and re-flattening
-        // tabsByWorktree per entry is O(tabs x layouts).
-        const allTabs = Object.values(tabsByWorktree).flat()
-        const tabById = buildByIdIndex(allTabs)
-        // Why the layout plan first: it is what heals a duplicated leaf or pty binding, and the
-        // reconnect plan below reads the healed layout to decide what a row may reattach to.
-        const layoutsByTabId = buildWorkspaceTerminalLayoutPlan({
-          ownershipTransfersByTabId,
-          ownershipTransferTabIds,
-          releasedPtyIdsByTabId,
-          session,
-          tabById,
-          validTabIds
-        })
         const {
           pendingReconnectPtyIdByTabId,
           pendingReconnectTabByWorktree,
           pendingReconnectWorktreeIds
         } = buildWorkspaceTerminalReconnectPlan({
-          layoutsByTabId,
           reconnectPtyIdByRetainedTabId,
           releasedPtyIdsByTabId,
           repos: runtimeSessionPlaceholders.repos,
@@ -174,6 +159,10 @@ export function createWorkspaceTerminalHydrationActions(
         if (activeWorktreeId) {
           nextEverActivated.add(activeWorktreeId)
         }
+        // Why indexed: the layout map below looks up a tab per persisted layout, and
+        // re-flattening tabsByWorktree per entry is O(tabs x layouts).
+        const allTabs = Object.values(tabsByWorktree).flat()
+        const tabById = buildByIdIndex(allTabs)
         const hydrated: WorkspaceHydrationPatch = {
           activeRepoId,
           activeWorktreeId,
@@ -221,7 +210,14 @@ export function createWorkspaceTerminalHydrationActions(
           worktreeNavHistory: activeWorktreeId ? [activeWorktreeId] : [],
           worktreeNavHistoryIndex: activeWorktreeId ? 0 : -1,
           ptyIdsByTabId: Object.fromEntries(allTabs.map((tab) => [tab.id, []] as const)),
-          terminalLayoutsByTabId: layoutsByTabId,
+          terminalLayoutsByTabId: buildWorkspaceTerminalLayoutPlan({
+            ownershipTransfersByTabId,
+            ownershipTransferTabIds,
+            releasedPtyIdsByTabId,
+            session,
+            tabById,
+            validTabIds
+          }),
           localOnlyScrollbackByTabId: Object.fromEntries(
             Object.entries(session.localOnlyScrollbackByTabId ?? {}).filter(([tabId]) =>
               validTabIds.has(tabId)
