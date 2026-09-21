@@ -40,6 +40,8 @@ export type TuiAgentConfig = {
   preflightTrust?: 'cursor' | 'copilot' | 'codex'
   /** Agent-specific signal that the composer is ready for paste, stronger than the default quiet-render window. */
   draftPasteReadySignal?: DraftPasteReadySignal
+  /** Require the execution host to observe an empty composer at the cursor. */
+  draftPasteReadiness?: 'host-composer'
   /** Hard deadline for the agent's composer readiness signal. */
   draftPasteReadyTimeoutMs?: number
   /** Delay before one extra blind submit Enter, for agents that render their composer before Enter is live (codex); a no-op if the first Enter landed. */
@@ -71,6 +73,8 @@ function resolveTuiAgentConfig(source: TuiAgentConfigSource): TuiAgentConfig {
 const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
   claude: {
     detectCmd: 'claude',
+    draftPasteReadiness: 'host-composer',
+    draftPasteReadyTimeoutMs: 60_000,
     promptInjectionMode: 'argv',
     // Why: `claude --prefill <text>` seeds the input without submitting, avoiding the paste-after-ready race (PR https://github.com/stablyai/orca/pull/926).
     draftPromptFlag: '--prefill'
@@ -89,6 +93,8 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
       win32: `${getOrcaCliCommandNameForPlatform('win32')} claude-teams`
     },
     expectedProcess: 'claude',
+    draftPasteReadiness: 'host-composer',
+    draftPasteReadyTimeoutMs: 60_000,
     promptInjectionMode: 'stdin-after-start'
   },
   openclaude: {

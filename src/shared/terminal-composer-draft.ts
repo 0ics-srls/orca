@@ -101,7 +101,8 @@ function isStockPlaceholder(
 }
 
 function detectTerminalComposer(
-  context: TerminalCursorContext | null | undefined
+  context: TerminalCursorContext | null | undefined,
+  allowEmpty = false
 ): TerminalComposerMatch | null {
   if (!context || context.cursorHidden || context.rows.length === 0) {
     return null
@@ -158,7 +159,7 @@ function detectTerminalComposer(
         .join('')
         .trim()
       if (!text) {
-        if (!placeholder) {
+        if (!placeholder && !allowEmpty) {
           return null
         }
       }
@@ -198,4 +199,16 @@ export function hasTerminalComposerPlaceholder(
   context: TerminalCursorContext | null | undefined
 ): boolean {
   return detectTerminalComposer(context)?.placeholder === true
+}
+
+/** Input must own the cursor; a prompt-looking line in scrollback is not readiness. */
+export function hasEmptyTerminalComposer(
+  context: TerminalCursorContext | null | undefined
+): boolean {
+  const match = detectTerminalComposer(context, true)
+  if (!match || match.text || !context) {
+    return false
+  }
+  // Claude's menu selection also uses ❯; its composer has a frame on both sides.
+  return match.promptGlyph !== '❯' || COMPOSER_FRAME_LINE.test(context.rowsBelow[0] ?? '')
 }

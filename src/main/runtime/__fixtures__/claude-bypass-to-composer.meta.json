@@ -1,0 +1,9 @@
+{
+  "capturedAt": "2026-09-21T04:04:59.373Z",
+  "platform": "darwin",
+  "command": ["claude", "--dangerously-skip-permissions"],
+  "cols": 100,
+  "rows": 32,
+  "note": "Claude 2.1.278; isolated profile; accept bypass notice then record composer",
+  "exitCode": 129
+}

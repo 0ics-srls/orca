@@ -1,0 +1,9 @@
+{
+  "capturedAt": "2026-09-21T04:01:23.989Z",
+  "platform": "darwin",
+  "command": ["claude", "--dangerously-skip-permissions"],
+  "cols": 100,
+  "rows": 32,
+  "note": "Claude Code 2.1.278; isolated config; bypass acceptance removed only in copied config",
+  "exitCode": 129
+}

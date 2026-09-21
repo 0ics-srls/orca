@@ -36,6 +36,12 @@ export class OrcaRuntimeWithGetWorktreeTerminalProvisioningHost extends OrcaRunt
         this.ptyController!.hasChildProcesses?.(ptyId) ?? Promise.resolve(false),
       subscribeToData: (ptyId, listener) => this.subscribeToTerminalData(ptyId, listener),
       readRecentOutput: (ptyId) => this.recentPtyOutputById.get(ptyId)?.read(),
+      readComposerReady: async (handle) => {
+        const screen = await this.readTerminal(handle, { screen: true })
+        return (
+          screen.status === 'running' && screen.source === 'screen' && screen.composerReady === true
+        )
+      },
       write: (ptyId, data) => this.ptyController?.write(ptyId, data)
     }
   }

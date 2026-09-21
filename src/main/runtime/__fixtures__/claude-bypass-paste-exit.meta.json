@@ -1,0 +1,9 @@
+{
+  "capturedAt": "2026-09-21T04:01:43.571Z",
+  "platform": "darwin",
+  "command": ["claude", "--dangerously-skip-permissions"],
+  "cols": 100,
+  "rows": 32,
+  "note": "Claude 2.1.278; same isolated profile; bracketed paste then Enter at 6 seconds",
+  "exitCode": 1
+}

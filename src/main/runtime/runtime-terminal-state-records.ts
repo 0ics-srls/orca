@@ -117,6 +117,8 @@ export type RuntimeHeadlessTerminal = {
 export type RuntimeVisibleTerminalState = {
   lines: string[]
   draft?: string
+  /** The host observed an empty composer at the live cursor. */
+  composerReady?: boolean
   isAlternateScreen: boolean
   sequence: number
   generation: number

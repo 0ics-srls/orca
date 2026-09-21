@@ -1,3 +1,4 @@
+import { withTimeout } from './runtime-async-boundaries'
 import { isShellProcess } from '../../shared/agent-detection'
 import { isExpectedAgentProcess } from '../../shared/agent-process-recognition'
 import { createDraftPasteReadyScanner } from '../../shared/draft-paste-ready-scanner'
@@ -19,6 +20,7 @@ export type WorktreeStartupReadinessHost = {
   hasChildProcesses?: (ptyId: string) => Promise<boolean>
   subscribeToData: (ptyId: string, listener: (data: string) => void) => () => void
   readRecentOutput: (ptyId: string) => string | undefined
+  readComposerReady?: (handle: string) => Promise<boolean>
   write: (ptyId: string, data: string) => void
 }
 
@@ -65,6 +67,19 @@ export async function waitForWorktreeStartupFollowup(
   if (!ptyId) {
     return null
   }
+  const composerConfig = Object.values(TUI_AGENT_CONFIG).find(
+    (config) =>
+      config.expectedProcess === expectedProcess && config.draftPasteReadiness === 'host-composer'
+  )
+  if (composerConfig) {
+    return await waitForStartupComposer(
+      host,
+      handle,
+      ptyId,
+      expectedProcess,
+      composerConfig.draftPasteReadyTimeoutMs ?? 60_000
+    )
+  }
   for (let attempt = 0; attempt < 30; attempt += 1) {
     if (attempt > 0) {
       await new Promise((resolve) => setTimeout(resolve, 150))
@@ -94,6 +109,15 @@ export function waitForWorktreeStartupDraft(
   const ptyId = host.getPtyId(handle)
   if (!ptyId) {
     return Promise.resolve(null)
+  }
+  if (TUI_AGENT_CONFIG[agent].draftPasteReadiness === 'host-composer') {
+    return waitForStartupComposer(
+      host,
+      handle,
+      ptyId,
+      TUI_AGENT_CONFIG[agent].expectedProcess,
+      resolveDraftPasteReadyTimeoutMs(agent)
+    )
   }
   const signal =
     TUI_AGENT_CONFIG[agent].draftPasteReadySignal ?? 'render-quiet-after-bracketed-paste'
@@ -136,4 +160,39 @@ export function waitForWorktreeStartupDraft(
     }
     hardTimer = setTimeout(() => finish(null), resolveDraftPasteReadyTimeoutMs(agent))
   })
+}
+
+async function waitForStartupComposer(
+  host: WorktreeStartupReadinessHost,
+  handle: string,
+  ptyId: string,
+  expectedProcess: string,
+  timeoutMs: number
+): Promise<string | null> {
+  if (!host.readComposerReady) {
+    return null
+  }
+  const deadline = Date.now() + timeoutMs
+  while (host.getPtyId(handle) === ptyId && Date.now() < deadline) {
+    try {
+      if (
+        await withTimeout(host.readComposerReady(handle), Math.max(1, deadline - Date.now()), false)
+      ) {
+        const process = await withTimeout(
+          host.getForegroundProcess(ptyId),
+          Math.max(1, deadline - Date.now()),
+          null
+        )
+        return host.getPtyId(handle) === ptyId &&
+          Date.now() < deadline &&
+          isExpectedAgentProcess(process, expectedProcess)
+          ? ptyId
+          : null
+      }
+    } catch {
+      return null
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 250))
+  }
+  return null
 }

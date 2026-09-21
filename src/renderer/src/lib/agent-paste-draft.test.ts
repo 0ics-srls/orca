@@ -27,12 +27,17 @@ const testState = vi.hoisted(() => ({
   storeSubscribers: new Set<(state: { ptyIdsByTabId: Record<string, string[]> }) => void>(),
   ptyObserver: null as ((data: string) => void) | null,
   unsubscribe: vi.fn(),
+  composerReady: vi.fn(),
   subscribeToPtyData: vi.fn(),
   replayPreHandlerPtyData: vi.fn(),
   isRemoteRuntimePtyId: vi.fn(),
   sendRuntimePtyInputVerified: vi.fn(),
   inspectRuntimeTerminalProcess: vi.fn(),
   subscribeToRuntimeTerminalData: vi.fn()
+}))
+
+vi.mock('./agent-composer-readiness', () => ({
+  waitForAgentComposerReady: testState.composerReady
 }))
 
 vi.mock('@/store', () => ({
@@ -80,6 +85,7 @@ describe('pasteDraftWhenAgentReady', () => {
       setTimeout: globalThis.setTimeout,
       clearTimeout: globalThis.clearTimeout
     })
+    testState.composerReady.mockReset().mockResolvedValue(false)
     testState.appState.settings = {}
     testState.appState.ptyIdsByTabId = { 'tab-1': ['pty-1'] }
     testState.appState.runtimePaneTitlesByTabId = {}
@@ -373,7 +379,7 @@ describe('pasteDraftWhenAgentReady', () => {
     )
   })
 
-  it('keeps the existing fallback budget for unrelated markerless agents', async () => {
+  it('does not let process ownership bypass a refused host composer check', async () => {
     testState.inspectRuntimeTerminalProcess.mockResolvedValue({
       foregroundProcess: 'claude',
       hasChildProcesses: false
@@ -384,19 +390,9 @@ describe('pasteDraftWhenAgentReady', () => {
       agent: 'claude',
       forcePaste: true
     })
-    await flushMicrotasks()
-
-    await vi.advanceTimersByTimeAsync(7999)
+    await expect(promise).resolves.toBe(false)
     expect(testState.sendRuntimePtyInputVerified).not.toHaveBeenCalled()
-    await vi.advanceTimersByTimeAsync(1)
-    await flushMicrotasks(5)
-
-    await expect(promise).resolves.toBe(true)
-    expect(testState.sendRuntimePtyInputVerified).toHaveBeenCalledWith(
-      {},
-      'pty-1',
-      PASTED_ISSUE_URL
-    )
+    expect(testState.inspectRuntimeTerminalProcess).not.toHaveBeenCalled()
   })
 
   it('does not paste for agents that already use native draft prefill', async () => {
@@ -413,6 +409,7 @@ describe('pasteDraftWhenAgentReady', () => {
   })
 
   it('submits in a separate write after force-pasting native-prefill agents', async () => {
+    testState.composerReady.mockResolvedValue(true)
     const promise = pasteDraftWhenAgentReady({
       tabId: 'tab-1',
       content: ISSUE_URL,
@@ -422,8 +419,6 @@ describe('pasteDraftWhenAgentReady', () => {
     })
     await flushMicrotasks()
 
-    testState.ptyObserver?.(DECSET_BRACKETED_PASTE)
-    await vi.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
 
     expect(testState.sendRuntimePtyInputVerified).toHaveBeenCalledTimes(1)
@@ -440,6 +435,7 @@ describe('pasteDraftWhenAgentReady', () => {
   })
 
   it('does not submit when the verified paste write fails', async () => {
+    testState.composerReady.mockResolvedValue(true)
     testState.sendRuntimePtyInputVerified.mockResolvedValueOnce(false)
 
     const promise = pasteDraftWhenAgentReady({
@@ -450,9 +446,6 @@ describe('pasteDraftWhenAgentReady', () => {
       forcePaste: true
     })
     await flushMicrotasks()
-
-    testState.ptyObserver?.(DECSET_BRACKETED_PASTE)
-    await vi.advanceTimersByTimeAsync(1500)
 
     await expect(promise).resolves.toBe(false)
     expect(testState.sendRuntimePtyInputVerified).toHaveBeenCalledTimes(1)
