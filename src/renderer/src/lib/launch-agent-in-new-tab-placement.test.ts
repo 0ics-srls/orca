@@ -100,7 +100,7 @@ describe('launchAgentInNewTab terminal tab activation', () => {
     expect(mockSetActiveTabType).toHaveBeenCalledExactlyOnceWith('terminal')
   })
 
-  it('keeps a caller-placed floating launch terminal-only and out of the global selection', async () => {
+  it('honours the chat default in a floating launch while keeping it out of the global selection', async () => {
     store.settings = placementSettings({
       experimentalNativeChat: true,
       experimentalStructuredNativeChat: true,
@@ -128,15 +128,16 @@ describe('launchAgentInNewTab terminal tab activation', () => {
       undefined,
       {
         launchAgent: 'codex',
-        activate: false
+        activate: false,
+        viewMode: 'chat'
       }
     )
     expect(mockSetActiveTabType).not.toHaveBeenCalled()
-    expect(mockQueueTabStartupCommand.mock.calls[0]?.[1]).not.toHaveProperty('sessionOptions')
-    expect(mockSeedNativeChatAppliedSessionOptions).toHaveBeenCalledWith(
-      'tab-1',
-      'codex',
-      undefined
-    )
+    // Why: the panel hosts the chat pane itself, so the launch carries the user's model/effort
+    // preferences the same way a main-window launch does.
+    expect(mockSeedNativeChatAppliedSessionOptions).toHaveBeenCalledWith('tab-1', 'codex', {
+      model: 'gpt-5.2-codex',
+      effort: 'medium'
+    })
   })
 })

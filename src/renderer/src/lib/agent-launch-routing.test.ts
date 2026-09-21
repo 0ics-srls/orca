@@ -105,15 +105,22 @@ describe('resolveAgentLaunchRoute', () => {
   })
 
   it.each(['git-worktree', 'folder'] as const)(
-    'supports a local %s without widening floating-terminal scope',
+    'resolves a structured session for a local %s',
     (workspaceKind) => {
       expect(route({ workspaceKind })).toBe('structured-native-chat')
     }
   )
 
-  it('keeps floating, WSL, and repair-required launches terminal-backed', () => {
-    expect(route({ workspaceKind: 'floating' })).toBe('terminal-tui')
-    expect(route({ agent: 'claude', workspaceKind: 'floating' })).toBe('terminal-tui')
+  // Why: floating has no structured session (it is not a real workspace), but the chat view is a
+  // pane-level rendering the panel already hosts, so the chat default still applies there.
+  it.each(['codex', 'claude'] as const)(
+    'honours the chat default in a floating workspace on the terminal-backed lane for %s',
+    (agent) => {
+      expect(route({ agent, workspaceKind: 'floating' })).toBe('legacy-native-chat')
+    }
+  )
+
+  it('keeps WSL and repair-required launches terminal-backed', () => {
     expect(
       route({
         projectRuntime: {

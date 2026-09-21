@@ -161,8 +161,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     promptDelivery: viewModePromptDelivery,
     launchDraftText: trimmedPrompt,
     nativeChatTranscriptIsLocalReadable:
-      isNativeChatTranscriptLocalReadable(worktreeSshConnectionId),
-    workspaceKind
+      isNativeChatTranscriptLocalReadable(worktreeSshConnectionId)
   }
   const initialViewModeProps = initialAgentTabViewModeProps(store.settings, initialViewModeOptions)
   const startupPlanBase = {
