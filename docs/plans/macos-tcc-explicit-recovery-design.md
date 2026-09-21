@@ -58,27 +58,53 @@ current-protocol adapter only. Daemons that omit the field (pre-#18043) produce 
 `{ health, folderAccessMismatch: { daemonScope: string, cwdClass } | null }`. Mirror the type in
 `src/preload/api/pty-management-api.ts`; the web fallback returns `null`. No new channel.
 
-**Renderer.** In `useMacTccAttributionSeveredNotice.ts` add a second toast
-(`mac-daemon-folder-access-mismatch`) on the same focus-time poll, latched per `daemonScope` per
-app session, dismissable per scope. Copy:
+**Fresh-daemon probe (main).** Once per recorded mismatch, and again on each poll while the
+answer is not "yes", main forks a short-lived child the same way the daemon is launched
+(`process.execPath` with `ELECTRON_RUN_AS_NODE`, via the shared child-process wrapper, not
+detached) and has it enumerate the folder. That child carries the attribution a restarted daemon
+would get, so its verdict answers "will a restart help?" before the user pays for one. 3 s
+deadline, argv only, scrubbed env, single JSON line, anything else is `unknown`. Exposed on the
+same poll as `restartWillHelp: boolean | null`.
 
-> **Orca's terminal service can't read your Documents folder.**
-> Terminals opened in this folder will fail with "Operation not permitted" even though Orca
-> itself can read it. Restart the daemon from Manage Sessions; this closes all running Orca
-> terminals and agents. If it still fails afterwards, re-allow the folder for Orca in System
-> Settings → Privacy & Security → Files and Folders.
+**Renderer: toast.** One line in `useMacTccAttributionSeveredNotice.ts`, once per daemon scope per
+app session, "Not now" latches the scope:
 
-Substitute Desktop/Downloads from `cwdClass`. Action: the existing **Open Manage Sessions** target
-and the existing restart confirmation in `useDaemonActions`. Keep the severed-attribution toast
-separate.
+> **Terminals can't read your Documents folder**
+> [Fix…]  [Not now]
 
-**Recovery and clearing.** Use `restartDaemon()` unchanged. Evidence is keyed by daemon
-identity; a restart replaces the identity, so the next poll returns `null` and the hook dismisses
-the toast. If the replacement daemon is also denied (the 31% case), the next spawn re-records and
-re-toasts, now with the re-allow sentence doing the work. No post-restart probe.
+**Renderer: fix dialog.** Opened by Fix. One place for every step, tracking its own progress:
 
-**Telemetry.** Add `daemon_folder_access_notice` with `{ action: shown | dismissed |
-restart_clicked, cwd_class }`. Keep `daemon_pty_cwd_denied` as the denominator.
+```
+Fix access to your Documents folder
+macOS is blocking Orca's terminal service from this folder.
+  ✓  1. Allow Orca under Files and Folders      [Open System Settings]
+  ○  2. Restart Orca's terminal service          [Restart]
+        Open terminals and agents will restart.
+                                                 [Close]
+```
+
+- Step 1 is pre-checked when `restartWillHelp` is true; open with Restart disabled when false;
+  optional hint when null.
+- Step 1 completes itself: the poll re-runs on window focus, main re-probes, and the check mark
+  appears when the fresh-daemon child can read the folder.
+- Step 2 calls the existing `restartDaemon()` directly. The dialog already states the consequence,
+  so it does not stack the Manage Sessions confirmation. Success shows "Done. Terminals opened in
+  Documents can read it now." Failure shows an inline line pointing at Manage Sessions.
+- Agents come back on their own after the restart: the pane treats the synthetic exit as host
+  loss, keeps its binding, and cold-restore types the agent's `--resume` into the fresh shell.
+  Only a reply in progress is cut off, so the copy says "restart", not "close".
+- The existing Manage Sessions confirmation copy is updated to match ("Open terminals and agents
+  will restart. Terminals on remote hosts are not affected.").
+
+**Recovery and clearing.** Evidence is keyed by daemon identity; a restart replaces the identity,
+so the next poll returns `null` and the toast is dismissed. If the replacement daemon is also
+denied, the next spawn re-records, the toast returns, and the dialog reopens with step 1 unchecked.
+
+**Telemetry.** `daemon_folder_access_notice` with `action: shown | fix_opened | settings_opened |
+restart_clicked | dismissed | restart_outcome_fixed | restart_outcome_still_denied` and
+`cwd_class`. The two outcome actions fire on the replacement daemon's first spawn in the same folder
+class, replacing the PostHog proxy for "does a restart fix it". Keep `daemon_pty_cwd_denied` as
+the denominator.
 
 **Tests.** `terminal-host-cwd-readability.test.ts` for opendir mapping (EPERM, EACCES, ENOENT,
 ENOTDIR, readable, empty). Evidence store: records only on divergence, one per identity, clears
