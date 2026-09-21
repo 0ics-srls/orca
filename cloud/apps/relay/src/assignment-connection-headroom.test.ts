@@ -469,10 +469,10 @@ describe('relay assignment connection headroom', () => {
     expect(await database.query(`SELECT * FROM relay_assignment_activity_leases`)).toEqual([])
   })
 
-  it('re-places a zero-activity assignment off a migration-only cell', async () => {
-    // Why: migration-only is what a roll's isolate step writes. The source's
-    // own headroom is irrelevant — the cell refuses every attach either way.
-    const { database, store, source, target } = await setupHeadroomReassignment()
+  it('keeps a zero-activity assignment pinned on an unstamped migration-only cell', async () => {
+    // Why: an evacuation target is deliberately migration-only and deliberately
+    // full. Without the roll's isolate stamp it must keep the hosts it holds.
+    const { database, store, source } = await setupHeadroomReassignment()
     const identity = { userId: 'pinned-migration-only-user', relayHostId: 'pinnedmigrationonly' }
     await store.setCellAdmissionState(source.id, 'migration-only')
     await database.query(
@@ -484,9 +484,10 @@ describe('relay assignment connection headroom', () => {
       [identity.userId, identity.relayHostId, source.id, 7, 10_000, 100]
     )
 
-    expect(await store.assign(identity)).toMatchObject({
-      cellId: target.id,
-      assignmentEpoch: 8
+    await expect(store.assign(identity)).rejects.toThrow('relay_connection_headroom_exhausted')
+    expect(await store.resolve(identity)).toMatchObject({
+      cellId: source.id,
+      assignmentEpoch: 7
     })
   })
 

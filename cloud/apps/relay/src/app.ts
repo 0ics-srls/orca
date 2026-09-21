@@ -1614,7 +1614,11 @@ const AdminAdmissionSelectorApplySchema = z
     attemptId: AdmissionSelectorAttemptIdSchema,
     expectedGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     expectedMembershipSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-    membership: AdmissionSelectorMembershipSchema
+    membership: AdmissionSelectorMembershipSchema,
+    // Optional so an older caller reaches an updated director unchanged, and an
+    // updated caller reaching an older director is simply ignored: either way
+    // the cell goes unmarked and its hosts stay pinned, today's behaviour.
+    rollIsolatedCells: z.array(CellIdSchema).max(256).optional()
   })
   .strict()
   .refine(

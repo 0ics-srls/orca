@@ -37,6 +37,7 @@ import {
   cellAdmissionState,
   cellAdmissionStates,
   ensureCellAdmission,
+  isCellAdmissionState,
   parseCellAdmissionState,
   RelayCellAdmissionSelector,
   setCellAdmissionBeforeBoundary,
@@ -742,10 +743,24 @@ export class RelayAssignmentStore {
       const activityLeases = await this.lockAssignmentActivities(transaction, identity, true)
       await this.recordRegionPreference(transaction, identity, preferredRegion, now)
       if (mayNormallyReassign(activity(existing), now)) return null
+      // One read serves the stranded rule and the roll-isolation check below;
+      // issuing it twice inside one sticky transaction is pure waste.
+      const pinnedAdmission = await this.pinnedCellAdmission(
+        transaction,
+        text(existing, 'cell_id')
+      )
       // Why: a stranded host must fall through to placement — re-granting the
       // pinned cell here is what refreshes its own activity and sustains the
       // loop (issue #225).
-      if (await this.assignmentStrandedOnUnservedCell(transaction, identity, existing, now)) {
+      if (
+        await this.assignmentStrandedOnUnservedCell(
+          transaction,
+          identity,
+          existing,
+          now,
+          pinnedAdmission?.state
+        )
+      ) {
         return null
       }
 
@@ -786,7 +801,15 @@ export class RelayAssignmentStore {
       // what an isolated incumbent needs — and the only way out, because
       // re-granting the pin refreshes the host's own activity and sustains the
       // loop. The placement lane re-places it on a cell that will take it.
-      if (await this.incumbentCellIsolatedForRoll(transaction, identity, existing)) {
+      if (
+        await this.incumbentCellIsolatedForRoll(
+          transaction,
+          identity,
+          existing,
+          undefined,
+          pinnedAdmission
+        )
+      ) {
         return null
       }
 
@@ -839,7 +862,9 @@ export class RelayAssignmentStore {
     transaction: RelayDatabase,
     identity: AssignmentIdentity,
     existing: SqlRow,
-    now: number
+    now: number,
+    // Read by the caller when it needs the same row for another question.
+    admissionState?: CellAdmissionState
   ): Promise<boolean> {
     const lastActivityAt = integer(existing, 'last_activity_at')
     if (
@@ -848,14 +873,11 @@ export class RelayAssignmentStore {
     ) {
       return false
     }
-    const admissionRow = (
-      await transaction.query(
-        `SELECT admission_state FROM relay_cell_admission WHERE cell_id = ?`,
-        [text(existing, 'cell_id')]
-      )
-    )[0]
+    const state =
+      admissionState ??
+      (await this.pinnedCellAdmission(transaction, text(existing, 'cell_id')))?.state
     // Unknown or missing admission fails safe: the pin stays.
-    if (admissionRow?.['admission_state'] !== 'existing-only') {
+    if (state !== 'existing-only') {
       return false
     }
     const liveLeases = (
@@ -916,6 +938,7 @@ export class RelayAssignmentStore {
       let connectionHeadroomReassignment = false
       let strandedReassignment = false
       let isolatedIncumbent: CellRow | undefined
+      let isolatedTarget: CellRow | undefined
       if (existing && !mayNormallyReassign(activity(existing), now)) {
         lockedCells ??= await this.lockCellInventory(transaction, 'nowait')
         const admission = await cellAdmissionStates(transaction)
@@ -936,20 +959,40 @@ export class RelayAssignmentStore {
           existing,
           now
         )
+        const currentIsLive =
+          strandedReassignment ||
+          !this.requireLiveCells ||
+          (await this.cellIsLive(transaction, current.cellId, now))
         // Why: the sticky lane sends an isolated incumbent here, and the gate
         // below would hand the pin straight back — the cell is live and, being
-        // emptied, has more headroom than anyone.
+        // emptied, has more headroom than anyone. A cell that is *not* live is
+        // left to the dead-cell path below, whose fence is the only proof that
+        // an unreachable cell has stopped serving the sockets it still holds.
         if (
           !strandedReassignment &&
+          currentIsLive &&
           (await this.incumbentCellIsolatedForRoll(transaction, identity, existing, admission))
         ) {
-          isolatedIncumbent = current
+          isolatedTarget =
+            (await this.leastLoadedCell(transaction, lockedCells, current.region, 'require')) ??
+            undefined
+          if (isolatedTarget) {
+            isolatedIncumbent = current
+          } else {
+            // Keeping the pin is today's behaviour: the host keeps retrying its
+            // own cell. Scattering a region across the fleet is worse, and it
+            // cannot be undone without the rehome worker.
+            console.warn(
+              JSON.stringify({
+                event: 'orca_relay_sticky_replacement_deferred',
+                reason: 'no_same_region_headroom',
+                cellId: current.cellId,
+                region: current.region
+              })
+            )
+          }
         }
-        if (
-          !strandedReassignment &&
-          !isolatedIncumbent &&
-          (!this.requireLiveCells || (await this.cellIsLive(transaction, current.cellId, now)))
-        ) {
+        if (!strandedReassignment && !isolatedIncumbent && currentIsLive) {
           const hadControl = holdsControlLease(
             activityLeases,
             current.cellId,
@@ -990,12 +1033,13 @@ export class RelayAssignmentStore {
           }
           connectionHeadroomReassignment = true
         }
-        // Why no fence for an isolated cell: a fence proves a cell we cannot
+        // Why no fence for a live isolated cell: a fence proves a cell we cannot
         // contact has stopped serving a host. This one is contactable and
         // enforces the invariant itself — verifyCellAssignment reads
         // relay_assignments live, so the epoch bump below makes it close any
-        // attach naming the old epoch with 4409. Taking the branch below would
-        // instead 503 the host for the whole drain.
+        // attach naming the old epoch with 4409. `isolatedIncumbent` is only set
+        // when the cell is live, so a cell that stopped heartbeating while still
+        // holding sockets still takes this branch.
         if (!strandedReassignment && !connectionHeadroomReassignment && !isolatedIncumbent) {
           if (
             (await this.deadCellRequiresCommittedFence(
@@ -1018,11 +1062,12 @@ export class RelayAssignmentStore {
       lockedCells ??= existing
         ? await this.lockCellInventory(transaction, 'nowait')
         : await this.lockGeneralCellInventory(transaction, 'nowait')
-      const target = await this.leastLoadedCell(
-        transaction,
-        lockedCells,
-        placementRegion
-      )
+      // The isolated target was chosen under the same inventory lock, with
+      // region required rather than preferred; re-picking here would reopen the
+      // cross-region spill it exists to refuse.
+      const target =
+        isolatedTarget ??
+        (await this.leastLoadedCell(transaction, lockedCells, placementRegion))
       if (!target) throw new Error('relay_capacity_exhausted')
       if (isolatedIncumbent) {
         // The canary's proof that the fix fired: count these against the
@@ -1158,6 +1203,7 @@ export class RelayAssignmentStore {
     expectedGeneration: number
     expectedMembershipSha256?: string
     membership: CellAdmissionMembership
+    rollIsolatedCells?: string[]
   }): Promise<{
     changed: boolean
     selector: {
@@ -7191,7 +7237,12 @@ export class RelayAssignmentStore {
     // Required: the one caller has already locked the inventory it selects from,
     // and an optional parameter left a second fleet-wide lock reachable here.
     rows: SqlRow[],
-    preferredRegion: RelayRegion
+    preferredRegion: RelayRegion,
+    // Ordinary placement treats region as a preference and spills globally
+    // rather than refuse a host a cell. Re-placing off an isolated cell is the
+    // one caller that must not: a whole region parked migration-only would send
+    // every one of its hosts to the fallback region, permanently.
+    regionMode: 'prefer' | 'require' = 'prefer'
   ): Promise<CellRow | null> {
     const regions = new Map(
       (await database.query(`SELECT cell_id, region FROM relay_cell_regions`)).map((row) => [
@@ -7237,7 +7288,7 @@ export class RelayAssignmentStore {
       (candidate) =>
         (regions.get(text(candidate, 'cell_id')) ?? RELAY_DEFAULT_REGION) === preferredRegion
     )
-    const selected = preferred[0] ?? candidates[0]
+    const selected = regionMode === 'require' ? preferred[0] : (preferred[0] ?? candidates[0])
     return selected
       ? cell(selected, regions.get(text(selected, 'cell_id')) ?? RELAY_DEFAULT_REGION)
       : null
@@ -7363,19 +7414,30 @@ export class RelayAssignmentStore {
   // cannot see that the host's home has stopped taking it. Re-granting the pin
   // is what turns a roll into 13-16 minutes of retry loop; returning true here
   // sends the host down the ordinary placement lane on its next dial instead.
+  //
+  // The stamp, not the admission state, is the signal. 'migration-only' is an
+  // admission class that evacuation targets, Asia `--mode rollback`, a failed
+  // wave's re-isolate and newly registered cells all occupy durably while
+  // holding hosts; moving those would undo an evacuation or scatter a region.
   private async incumbentCellIsolatedForRoll(
     database: RelayDatabase,
     identity: AssignmentIdentity,
     existing: SqlRow,
     // Placement has already read the whole table; sticky has not, and a single
     // pinned cell does not justify a second fleet-wide read.
-    admission?: ReadonlyMap<string, CellAdmissionState>
+    admission?: ReadonlyMap<string, CellAdmissionState>,
+    // Sticky has already read the pinned row for the stranded rule.
+    pinnedAdmission?: PinnedCellAdmission
   ): Promise<boolean> {
     const cellId = text(existing, 'cell_id')
-    const state = admission
-      ? admission.get(cellId)
-      : await this.pinnedCellAdmissionState(database, cellId)
-    if (state !== ROLL_ISOLATED_ADMISSION) return false
+    // Placement's map answers the common "not parked at all" case for free; the
+    // stamp itself is only on the row, so a migration-only incumbent still pays
+    // the single-row read.
+    if (admission && admission.get(cellId) !== ROLL_ISOLATED_ADMISSION) return false
+    const pinned = pinnedAdmission ?? (await this.pinnedCellAdmission(database, cellId))
+    if (pinned?.state !== ROLL_ISOLATED_ADMISSION || pinned.rollIsolatedAt === undefined) {
+      return false
+    }
     if (integer(existing, 'migration_leases') > 0) return false
     // A migration owns this assignment's epoch on both sides, and its durable
     // row outlives the 15-minute lease that the counter above tracks, so the
@@ -7391,18 +7453,26 @@ export class RelayAssignmentStore {
     return integer(open!, 'open') === 0
   }
 
-  private async pinnedCellAdmissionState(
+  // One read for both the class and the roll stamp, so the sticky hot path pays
+  // a single indexed row lookup rather than one per question.
+  private async pinnedCellAdmission(
     database: RelayDatabase,
     cellId: string
-  ): Promise<CellAdmissionState | undefined> {
+  ): Promise<PinnedCellAdmission | undefined> {
     const row = (
       await database.query(
-        `SELECT admission_state FROM relay_cell_admission WHERE cell_id = ?`,
+        `SELECT admission_state, roll_isolated_at FROM relay_cell_admission WHERE cell_id = ?`,
         [cellId]
       )
     )[0]
-    // Unknown or missing admission fails safe: the pin stays.
-    return row ? parseCellAdmissionState(text(row, 'admission_state')) : undefined
+    // Unknown, missing or unrecognised admission fails safe: the pin stays. This
+    // reader must not throw — it now sits on the sticky path every dial takes,
+    // and the rule it feeds is "move the host", so silence has to mean "don't".
+    if (!row || !isCellAdmissionState(row['admission_state'])) return undefined
+    return {
+      state: row['admission_state'],
+      rollIsolatedAt: optionalInteger(row, 'roll_isolated_at')
+    }
   }
 
   // Reports which of `cellIsLive`'s conditions failed, so the rejection log
@@ -7987,6 +8057,13 @@ export class RelayAssignmentStore {
       leaseExpiresAt
     }
   }
+}
+
+type PinnedCellAdmission = {
+  state: CellAdmissionState
+  // Set only by the same-cap roll's isolate step; cleared by any write that
+  // moves the cell out of 'migration-only'.
+  rollIsolatedAt: number | undefined
 }
 
 type CellRow = { cellId: string; cellUrl: string; region: RelayRegion }

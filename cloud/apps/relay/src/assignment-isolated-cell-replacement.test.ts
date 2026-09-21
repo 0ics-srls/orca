@@ -1,5 +1,11 @@
+import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RelayAssignmentStore, RelayHomeCellUnavailableError } from './assignment-store.js'
+import {
+  encodeMembership,
+  type CellAdmissionMembership,
+  type CellAdmissionState
+} from './cell-admission-selector.js'
 import type { RelayCellConfig } from './config.js'
 import {
   openInMemoryRelayDatabase,
@@ -9,17 +15,20 @@ import {
   type SqlRow
 } from './database.js'
 
-// A roll's isolate step writes 'migration-only' and its restore writes
-// 'general' (cloud/dev/scripts/prepare-relay-production-capacity-canary.mjs:136,
-// driven from cloud-deploy-relay-production-same-cap-job.yml:551-566 and
-// cloud-deploy-relay-production-capacity-job.yml:768). 'existing-only' is C3's
-// decommission posture and is never written by a roll.
+// `migration-only` alone says nothing about a roll: it is the admission class
+// (cloud/docs/orca-relay-operations.md:229-233) that evacuation targets, Asia
+// `--mode rollback`, a failed wave's re-isolate and newly registered cells all
+// occupy durably while holding hosts. The same-cap roll's isolate step is the
+// only writer of the roll stamp, via `rollIsolatedCells` on the selector apply
+// (cloud/dev/scripts/prepare-relay-production-capacity-canary.mjs isolate mode);
+// restore moves the cell to 'general', which clears the stamp in the same
+// statement that writes the state.
 const HEARTBEAT_TTL_MS = 45_000
 const START_MS = 100
 const IDENTITY = { userId: 'user-a', relayHostId: 'host000000000001' }
 
 // A connection-limited cell is what makes deadCellRequiresCommittedFence true,
-// which is the branch that used to answer 503 relay_home_cell_unavailable.
+// which is the branch that answers 503 relay_home_cell_unavailable.
 const CAPPED = {
   capacityRequests: 1_000,
   connectionHardCap: 600,
@@ -72,7 +81,7 @@ class QueryCountingDatabase implements RelayDatabase {
     options?: RelayTransactionOptions
   ): Promise<T> {
     return await this.delegate.transaction(
-      async (inner) => await operation(new QueryCountingDatabase(this.recording(inner))),
+      async (inner) => await operation(this.recording(inner)),
       options
     )
   }
@@ -81,8 +90,8 @@ class QueryCountingDatabase implements RelayDatabase {
     await this.delegate.close()
   }
 
-  // Nested transactions get their own wrapper; share this one's tape so a whole
-  // assign() is measured as a unit.
+  // A nested transaction shares this one's tape, so a whole assign() is
+  // measured as a unit.
   private recording(inner: RelayDatabase): RelayDatabase {
     const tape = this.sql
     return {
@@ -105,8 +114,15 @@ interface Harness {
   store: RelayAssignmentStore
   database: RelayDatabase
   counter: QueryCountingDatabase
-  heartbeat: (cell: RelayCellConfig) => Promise<void>
+  heartbeat: (cell: RelayCellConfig, at?: number) => Promise<void>
   setNow: (value: number) => void
+  /** The real isolate path: one selector apply that names the cell it stamps. */
+  isolateForRoll: (cellId: string) => Promise<void>
+  /** The real restore path: back to 'general', which clears the stamp. */
+  restore: (cellId: string) => Promise<void>
+  /** An admission move with no stamp — every flow that is not a same-cap roll. */
+  park: (cellId: string, state: CellAdmissionState) => Promise<void>
+  rollIsolatedAt: (cellId: string) => Promise<number | null>
 }
 
 async function setup(cells: RelayCellConfig[] = CELLS): Promise<Harness> {
@@ -119,37 +135,105 @@ async function setup(cells: RelayCellConfig[] = CELLS): Promise<Harness> {
     heartbeatTtlMs: HEARTBEAT_TTL_MS
   })
   await store.reconcileCells(cells, true)
-  const heartbeat = async (cell: RelayCellConfig): Promise<void> => {
-    await store.recordCellHeartbeat({
-      cellId: cell.id,
-      cellUrl: cell.url,
-      cellIncarnation: `1111111${cells.indexOf(cell)}-1111-4111-8111-111111111111`,
-      startedAt: 50,
-      ready: true,
-      observedRequests: 0,
-      region: cell.region,
-      totalConnections: 0,
-      inFlightConnections: 0,
-      reservedConnectionUnits: 0,
-      enforcedConnectionUnits: 0,
-      connectionHardCap: cell.connectionHardCap ?? 600,
-      connectionUnobservedBound: cell.connectionUnobservedBound ?? 50
-    })
+  const heartbeat = async (cell: RelayCellConfig, at?: number): Promise<void> => {
+    const previous = now
+    if (at !== undefined) now = at
+    try {
+      await store.recordCellHeartbeat({
+        cellId: cell.id,
+        cellUrl: cell.url,
+        cellIncarnation: `1111111${cells.indexOf(cell)}-1111-4111-8111-111111111111`,
+        startedAt: 50,
+        ready: true,
+        observedRequests: 0,
+        region: cell.region,
+        totalConnections: 0,
+        inFlightConnections: 0,
+        reservedConnectionUnits: 0,
+        enforcedConnectionUnits: 0,
+        connectionHardCap: cell.connectionHardCap ?? 600,
+        connectionUnobservedBound: cell.connectionUnobservedBound ?? 50
+      })
+    } finally {
+      if (at !== undefined) now = previous
+    }
   }
   for (const cell of cells) await heartbeat(cell)
-  return { store, database: inner, counter, heartbeat, setNow: (value: number) => (now = value) }
+
+  const applySelector = async (
+    states: Record<string, CellAdmissionState>,
+    rollIsolatedCells?: string[]
+  ): Promise<void> => {
+    const current = await store.inspectCellAdmissionSelector()
+    const membership: CellAdmissionMembership = {
+      existingOnly: [],
+      migrationOnly: [],
+      general: []
+    }
+    for (const cell of cells) {
+      const state =
+        states[cell.id] ??
+        (current.selector.membership.migrationOnly.includes(cell.id)
+          ? 'migration-only'
+          : current.selector.membership.existingOnly.includes(cell.id)
+            ? 'existing-only'
+            : 'general')
+      if (state === 'migration-only') membership.migrationOnly.push(cell.id)
+      else if (state === 'existing-only') membership.existingOnly.push(cell.id)
+      else membership.general.push(cell.id)
+    }
+    await store.applyCellAdmissionSelector({
+      attemptId: `attempt-${current.selector.generation}-${Object.keys(states).join('-')}`,
+      expectedGeneration: current.selector.generation,
+      ...(current.selector.generation === 0
+        ? {
+            expectedMembershipSha256: createHash('sha256')
+              .update(encodeMembership(current.selector.membership))
+              .digest('hex')
+          }
+        : {}),
+      membership,
+      ...(rollIsolatedCells ? { rollIsolatedCells } : {})
+    })
+  }
+
+  return {
+    store,
+    database: inner,
+    counter,
+    heartbeat,
+    setNow: (value: number) => (now = value),
+    isolateForRoll: async (cellId) =>
+      await applySelector({ [cellId]: 'migration-only' }, [cellId]),
+    restore: async (cellId) => await applySelector({ [cellId]: 'general' }),
+    park: async (cellId, state) => await applySelector({ [cellId]: state }),
+    rollIsolatedAt: async (cellId) => {
+      const rows = await inner.query(
+        `SELECT roll_isolated_at FROM relay_cell_admission WHERE cell_id = ?`,
+        [cellId]
+      )
+      const value = rows[0]?.['roll_isolated_at']
+      return value === undefined || value === null ? null : Number(value)
+    }
+  }
 }
 
-async function openMigration(
+async function insertMigration(
   database: RelayDatabase,
-  input: { sourceCellId: string; targetCellId: string; assignmentEpoch: number; leases: number }
+  input: {
+    sourceCellId: string
+    targetCellId: string
+    assignmentEpoch: number
+    leases: number
+    settled?: 'completed' | 'aborted'
+  }
 ): Promise<void> {
   await database.query(
     `INSERT INTO relay_assignment_migrations
      (user_id, relay_host_id, source_cell_id, target_cell_id, previous_epoch,
       assignment_epoch, source_request_units, target_reserved_units, expires_at,
       target_registered_at, completed_at, aborted_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, NULL, NULL, NULL, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, NULL, ?, ?, ?, ?)`,
     [
       IDENTITY.userId,
       IDENTITY.relayHostId,
@@ -158,6 +242,8 @@ async function openMigration(
       input.assignmentEpoch - 1,
       input.assignmentEpoch,
       START_MS + 900_000,
+      input.settled === 'completed' ? START_MS : null,
+      input.settled === 'aborted' ? START_MS : null,
       START_MS,
       START_MS
     ]
@@ -169,6 +255,15 @@ async function openMigration(
   )
 }
 
+type ConsoleWarnSpy = { mock: { calls: unknown[][] } }
+
+function jsonEvents(warn: ConsoleWarnSpy, event: string): unknown[] {
+  return warn.mock.calls
+    .map((call) => (typeof call[0] === 'string' ? call[0] : ''))
+    .filter((line) => line.includes(`"${event}"`))
+    .map((line) => JSON.parse(line) as unknown)
+}
+
 describe('re-placing a host off a cell isolated for a roll', () => {
   it('leaves a host on a live general cell untouched, at one added admission read', async () => {
     const { store, counter } = await setup()
@@ -177,21 +272,37 @@ describe('re-placing a host off a cell isolated for a roll', () => {
     counter.sql.length = 0
     const second = await store.assign(IDENTITY, 'us-central1')
 
-    // The grant is identical, not merely same-celled: the clock has not moved,
-    // so every field including the lease deadline must match.
+    // Identical, not merely same-celled: the clock has not moved, so every
+    // field including the lease deadline must match.
     expect(second).toEqual(first)
+    // One row read answers both the stranded rule and the roll-stamp check.
     expect(counter.count('relay_cell_admission')).toBe(1)
-    // The isolation guard's second read never runs for a general incumbent.
     expect(counter.count('relay_assignment_migrations')).toBe(0)
     // No placement: the sticky lane never reaches the fleet-wide inventory.
     expect(counter.count('ORDER BY cell_id ASC')).toBe(0)
   })
 
-  it('re-places a host off a migration-only cell on its next dial', async () => {
-    const { store, counter } = await setup()
+  it('keeps a host pinned to a migration-only cell with no roll stamp', async () => {
+    // The guard for every non-roll flow that parks a loaded cell: an Asia
+    // `--mode rollback`, an evacuation target awaiting promotion, a failed
+    // wave's re-isolate. Moving these hosts would undo the operator's intent.
+    const { store, park, rollIsolatedAt } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
+    await park(first.cellId, 'migration-only')
 
+    expect(await rollIsolatedAt(first.cellId)).toBeNull()
+    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  })
+
+  it('re-places a host once the roll stamp is set', async () => {
+    const { store, counter, isolateForRoll, rollIsolatedAt } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await isolateForRoll(first.cellId)
+
+    expect(await rollIsolatedAt(first.cellId)).toBe(START_MS)
     counter.sql.length = 0
     const moved = await store.assign(IDENTITY, 'us-central1')
 
@@ -206,13 +317,26 @@ describe('re-placing a host off a cell isolated for a roll', () => {
     })
   })
 
+  it('stops re-placing once restore clears the stamp', async () => {
+    const { store, isolateForRoll, restore, rollIsolatedAt } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await isolateForRoll(first.cellId)
+    await restore(first.cellId)
+
+    expect(await rollIsolatedAt(first.cellId)).toBeNull()
+    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  })
+
   it('keeps a host pinned to an existing-only cell that still serves it', async () => {
     // Why: existing-only cells serve the hosts they already hold (PR #194). Only
     // assignmentStrandedOnUnservedCell may release that pin, and only on proof
     // the cell stopped serving this host.
-    const { store, database, heartbeat, setNow } = await setup()
+    const { store, database, heartbeat, park, setNow } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
-    await store.setCellAdmissionState(first.cellId, 'existing-only')
+    await park(first.cellId, 'existing-only')
     await database.query(
       `INSERT INTO relay_assignment_activity_leases
        (user_id, relay_host_id, activity_id, activity_kind, cell_id,
@@ -223,69 +347,147 @@ describe('re-placing a host off a cell isolated for a roll', () => {
 
     // Past the stranded rule's minimum grant age, which outlives the heartbeat TTL.
     setNow(START_MS + 61_000)
-    for (const cell of CELLS) await heartbeat(cell)
+    for (const cell of CELLS) await heartbeat(cell, START_MS + 61_000)
     expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
       cellId: first.cellId,
       assignmentEpoch: first.assignmentEpoch
     })
   })
 
-  it('never re-places onto the isolated cell or any other non-general cell', async () => {
-    const { store } = await setup()
+  it('keeps a host pinned on an unstamped cell whose migration has completed', async () => {
+    // The terminal state of a successful evacuation: the host's row points at
+    // the target, the migration is completed, and the cell waits migration-only
+    // for a separate promote dispatch. Re-placing here undoes the evacuation.
+    const { store, database, park } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await insertMigration(database, {
+      sourceCellId: 'us-c2',
+      targetCellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch,
+      leases: 0,
+      settled: 'completed'
+    })
+    await park(first.cellId, 'migration-only')
+
+    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  })
+
+  it('re-places a stamped cell whose migration has completed', async () => {
+    const { store, database, isolateForRoll } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await insertMigration(database, {
+      sourceCellId: 'us-c2',
+      targetCellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch,
+      leases: 0,
+      settled: 'completed'
+    })
+    await isolateForRoll(first.cellId)
+
+    expect((await store.assign(IDENTITY, 'us-central1')).cellId).not.toBe(first.cellId)
+  })
+
+  it('keeps the pin while a migration lease is outstanding', async () => {
+    const { store, database, isolateForRoll } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await insertMigration(database, {
+      sourceCellId: first.cellId,
+      targetCellId: 'us-c2',
+      assignmentEpoch: first.assignmentEpoch,
+      leases: 1
+    })
+    await isolateForRoll(first.cellId)
+
+    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  })
+
+  it('keeps the pin while a migration row is open but its lease has lapsed', async () => {
+    // Why: the durable relay_assignment_migrations row outlives the 15-minute
+    // lease the counter tracks, and rollBackStalledRegionalRehomes refuses to
+    // unwind it while the source is not general. Re-placing would strand it.
+    const { store, database, isolateForRoll } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await insertMigration(database, {
+      sourceCellId: first.cellId,
+      targetCellId: 'us-c2',
+      assignmentEpoch: first.assignmentEpoch,
+      leases: 0
+    })
+    await isolateForRoll(first.cellId)
+
+    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
+    })
+  })
+
+  it('never re-places across a region boundary, and says so', async () => {
+    // Both US cells parked and only Asia general: ordinary placement would spill
+    // to asia-east2 through `preferred[0] ?? candidates[0]`. This path refuses.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { store, isolateForRoll, park } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
     const other = CELLS.find((cell) => cell.region === 'us-central1' && cell.id !== first.cellId)!
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
-    await store.setCellAdmissionState(other.id, 'migration-only')
+    await park(other.id, 'migration-only')
+    await isolateForRoll(first.cellId)
 
-    // The only general cell left is out of region, so the fallback is forced.
+    warn.mockClear()
     expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
-      cellId: 'asia-c1',
-      region: 'asia-east2'
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
     })
+    expect(jsonEvents(warn, 'orca_relay_sticky_replacement_deferred')).toEqual([
+      {
+        event: 'orca_relay_sticky_replacement_deferred',
+        reason: 'no_same_region_headroom',
+        cellId: first.cellId,
+        region: 'us-central1'
+      }
+    ])
+    expect(jsonEvents(warn, 'orca_relay_sticky_replaced_off_isolated_cell')).toEqual([])
   })
 
-  it('keeps a re-placed host in its own region when that region has a general cell', async () => {
-    const { store } = await setup()
+  it('keeps a re-placed host in its own region', async () => {
+    const { store, isolateForRoll } = await setup()
     const first = await store.assign(IDENTITY, 'asia-east2')
     expect(first.region).toBe('asia-east2')
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
-    // asia-c1 is the only Asia cell, so a region-honouring placement has to fall
-    // back to US; give Asia a second cell and it must stay.
-    const asiaSpare: RelayCellConfig = {
-      id: 'asia-c2',
-      url: 'https://asia-c2.example.com',
-      region: 'asia-east2',
-      ...CAPPED
-    }
-    await store.configureCell(asiaSpare, 'general')
-    await store.recordCellHeartbeat({
-      cellId: asiaSpare.id,
-      cellUrl: asiaSpare.url,
-      cellIncarnation: '99999999-9999-4999-8999-999999999999',
-      startedAt: 50,
-      ready: true,
-      observedRequests: 0,
-      region: 'asia-east2',
-      totalConnections: 0,
-      inFlightConnections: 0,
-      reservedConnectionUnits: 0,
-      enforcedConnectionUnits: 0,
-      connectionHardCap: 600,
-      connectionUnobservedBound: 50
-    })
+    await isolateForRoll(first.cellId)
 
+    // asia-c1 is the only Asia cell, so the only in-region candidate is gone.
     expect(await store.assign(IDENTITY, 'asia-east2')).toMatchObject({
-      cellId: 'asia-c2',
-      region: 'asia-east2'
+      cellId: first.cellId,
+      assignmentEpoch: first.assignmentEpoch
     })
   })
 
-  it('does not demand a committed fence for a live isolated cell', async () => {
-    // §1.8's regression guard: the isolated cell is capped, so the dead-cell
-    // fence branch would reject with 503 relay_home_cell_unavailable.
-    const { store } = await setup()
+  it('takes the dead-cell path when a stamped cell stops heartbeating', async () => {
+    // Why: the fence is the only proof that a cell we cannot reach has stopped
+    // serving the sockets it still holds. A stamp does not make it reachable.
+    const { store, heartbeat, isolateForRoll, setNow } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
+    await isolateForRoll(first.cellId)
+
+    const stale = START_MS + HEARTBEAT_TTL_MS + 1_000
+    setNow(stale)
+    for (const cell of CELLS) {
+      if (cell.id !== first.cellId) await heartbeat(cell, stale)
+    }
+
+    await expect(store.assign(IDENTITY, 'us-central1')).rejects.toBeInstanceOf(
+      RelayHomeCellUnavailableError
+    )
+  })
+
+  it('does not demand a committed fence while the stamped cell is live', async () => {
+    const { store, isolateForRoll } = await setup()
+    const first = await store.assign(IDENTITY, 'us-central1')
+    await isolateForRoll(first.cellId)
 
     const moved = await store.assign(IDENTITY, 'us-central1').catch((error: unknown) => error)
     expect(moved).not.toBeInstanceOf(RelayHomeCellUnavailableError)
@@ -295,7 +497,7 @@ describe('re-placing a host off a cell isolated for a roll', () => {
   it('leaves the source cell activity leases in place', async () => {
     // Contrast with the fence and stranded paths, which delete them: an isolated
     // cell is alive and still owns drainable work behind those leases.
-    const { store, database } = await setup()
+    const { store, database, isolateForRoll } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
     await database.query(
       `INSERT INTO relay_assignment_activity_leases
@@ -304,7 +506,7 @@ describe('re-placing a host off a cell isolated for a roll', () => {
        VALUES (?, ?, 'splice:keep-1', 'splice', ?, 1, ?, ?)`,
       [IDENTITY.userId, IDENTITY.relayHostId, first.cellId, START_MS + 600_000, START_MS]
     )
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
+    await isolateForRoll(first.cellId)
 
     await store.assign(IDENTITY, 'us-central1')
     expect(
@@ -316,82 +518,24 @@ describe('re-placing a host off a cell isolated for a roll', () => {
     ).toHaveLength(1)
   })
 
-  it('keeps the pin while a migration lease is outstanding', async () => {
-    const { store, database } = await setup()
-    const first = await store.assign(IDENTITY, 'us-central1')
-    await openMigration(database, {
-      sourceCellId: first.cellId,
-      targetCellId: 'us-c2',
-      assignmentEpoch: first.assignmentEpoch,
-      leases: 1
-    })
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
-
-    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
-      cellId: first.cellId,
-      assignmentEpoch: first.assignmentEpoch
-    })
-  })
-
-  it('keeps the pin while a migration row is open but its lease has lapsed', async () => {
-    // Why: the durable relay_assignment_migrations row outlives the 15-minute
-    // lease the counter tracks, and rollBackStalledRegionalRehomes refuses to
-    // unwind it while the source is not general. Re-placing here would strand it.
-    const { store, database } = await setup()
-    const first = await store.assign(IDENTITY, 'us-central1')
-    await openMigration(database, {
-      sourceCellId: first.cellId,
-      targetCellId: 'us-c2',
-      assignmentEpoch: first.assignmentEpoch,
-      leases: 0
-    })
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
-
-    expect(await store.assign(IDENTITY, 'us-central1')).toMatchObject({
-      cellId: first.cellId,
-      assignmentEpoch: first.assignmentEpoch
-    })
-  })
-
-  it('re-places once a settled migration is no longer open', async () => {
-    const { store, database } = await setup()
-    const first = await store.assign(IDENTITY, 'us-central1')
-    await openMigration(database, {
-      sourceCellId: first.cellId,
-      targetCellId: 'us-c2',
-      assignmentEpoch: first.assignmentEpoch,
-      leases: 0
-    })
-    await database.query(
-      `UPDATE relay_assignment_migrations SET aborted_at = ?
-       WHERE user_id = ? AND relay_host_id = ?`,
-      [START_MS, IDENTITY.userId, IDENTITY.relayHostId]
-    )
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
-
-    expect((await store.assign(IDENTITY, 'us-central1')).cellId).not.toBe(first.cellId)
-  })
-
   it('logs one event naming both cells, the admission state and the region', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const { store } = await setup()
+    const { store, isolateForRoll } = await setup()
     const first = await store.assign(IDENTITY, 'us-central1')
-    await store.setCellAdmissionState(first.cellId, 'migration-only')
+    await isolateForRoll(first.cellId)
 
     warn.mockClear()
     const moved = await store.assign(IDENTITY, 'us-central1')
 
-    const events = warn.mock.calls
-      .map(([line]) => (typeof line === 'string' ? line : ''))
-      .filter((line) => line.includes('orca_relay_sticky_replaced_off_isolated_cell'))
-    expect(events).toHaveLength(1)
-    expect(JSON.parse(events[0]!)).toEqual({
-      event: 'orca_relay_sticky_replaced_off_isolated_cell',
-      fromCellId: first.cellId,
-      fromRegion: 'us-central1',
-      admissionState: 'migration-only',
-      toCellId: moved.cellId,
-      region: moved.region
-    })
+    expect(jsonEvents(warn, 'orca_relay_sticky_replaced_off_isolated_cell')).toEqual([
+      {
+        event: 'orca_relay_sticky_replaced_off_isolated_cell',
+        fromCellId: first.cellId,
+        fromRegion: 'us-central1',
+        admissionState: 'migration-only',
+        toCellId: moved.cellId,
+        region: moved.region
+      }
+    ])
   })
 })
