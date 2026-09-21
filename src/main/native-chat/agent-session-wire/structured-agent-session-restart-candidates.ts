@@ -1,8 +1,8 @@
 // Which of a set of markers the predicate would still act on, read off the host's own live journals.
 //
 // A different question from the claim's: the claim decides which markers are still OWED, this
-// decides which of those describe work a resume may touch. It lives apart because both the offer,
-// the click and the teardown write-back ask it, each with a different lease expectation.
+// decides which of those describe work a resume may touch. The offer, the click and the teardown
+// write-back all ask it, each with a different lease expectation.
 //
 // The per-session journal snapshot is cached for the length of one call: the predicate asks the
 // same session for its items four times, and a snapshot that moved between those reads would let
@@ -29,13 +29,17 @@ import {
 /** The only part of a live session this reads. */
 export type StructuredAgentSessionRestartJournalSource = { journal: AgentSessionJournal }
 
+export type StructuredAgentSessionRestartCandidateOptions = {
+  /** Only teardown may judge before it rewrites the stopped child's running turn. */
+  providerStopped?: boolean
+  /** A continuation already in flight; its own submission is not newer user work. */
+  pendingContinuationId?: string
+}
+
 export type StructuredAgentSessionRestartCandidateReader = (
   markers: readonly AgentSessionResumeMarker[],
   leaseState: 'must-be-released' | 'may-be-held',
-  /** Only teardown may judge before it rewrites the stopped child's running turn. */
-  providerStopped?: boolean,
-  /** A continuation already in flight; its own submission is not newer user work. */
-  pendingContinuationId?: string
+  options?: StructuredAgentSessionRestartCandidateOptions
 ) => StructuredAgentSessionResumeCandidate[]
 
 export function createStructuredAgentSessionRestartCandidateReader(deps: {
@@ -45,14 +49,14 @@ export function createStructuredAgentSessionRestartCandidateReader(deps: {
   adapter: StructuredAgentSessionAdapter
   now: () => number
 }): StructuredAgentSessionRestartCandidateReader {
-  return (markers, leaseState, providerStopped = false, pendingContinuationId) => {
+  return (markers, leaseState, options = {}) => {
     const items = new Map<string, AgentJournalRenderItem[]>()
     const itemsFor = (sessionId: string): AgentJournalRenderItem[] => {
       let snapshot = items.get(sessionId)
       if (!snapshot) {
         snapshot = deps.sessions.get(sessionId)?.journal.snapshot().items ?? []
-        if (pendingContinuationId) {
-          const ownItemId = agentJournalSubmissionKey(pendingContinuationId)
+        if (options.pendingContinuationId) {
+          const ownItemId = agentJournalSubmissionKey(options.pendingContinuationId)
           snapshot = snapshot.filter((item) => item.itemId !== ownItemId)
         }
         items.set(sessionId, snapshot)
@@ -65,7 +69,7 @@ export function createStructuredAgentSessionRestartCandidateReader(deps: {
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
       waitingOnUser: (sessionId) =>
         projectStructuredAgentSessionStatus(itemsFor(sessionId)) === 'attention',
-      providerStopped,
+      providerStopped: options.providerStopped === true,
       journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
       journalSubmission: (sessionId, clientMessageId) =>
         deps.sessions

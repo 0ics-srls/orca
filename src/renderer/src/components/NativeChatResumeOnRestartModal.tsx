@@ -13,7 +13,6 @@ import {
 import { useAppStore } from '../store'
 import { translate } from '@/i18n/i18n'
 import { ResumeOnRestartGroups } from './NativeChatResumeOnRestartGroups'
-import { selectedResumeSessionIds } from './native-chat-resume-on-restart-grouping'
 import {
   consumeNativeChatResumeOnRestartDialogRequest,
   getNativeChatResumeOnRestartDialogRequest,
@@ -28,14 +27,12 @@ import {
 /**
  * What would be resumed, shown before anything runs.
  *
- * The list is the point. Resuming a chat that was not working starts a provider the user never
- * asked for and puts a misleading row in front of them, so they see exactly which chats the last
- * teardown recorded as mid-turn and decide. The checkbox removes the PROMPT, never a safety check:
- * automatic mode calls the same RPC, which re-derives the same predicate and staggers the same way.
+ * Resuming reattaches a chat AND asks the agent to carry on, so the list is the point: the user
+ * sees which chats the last teardown recorded as mid-turn before a message goes anywhere. Every
+ * string here has to say that a message is sent and that the user's own prompt is not re-sent.
  *
- * Resuming reattaches each session where it stopped AND asks that agent to carry on, which is the
- * only reason the prompt is worth showing: reattaching alone is what simply opening the chat does.
- * The user's own prompt is never re-sent, and every string here has to keep saying so.
+ * The "don't ask again" box removes the PROMPT, never a safety check — an opted-in launch calls
+ * the same RPC, which re-derives the same predicate and staggers the same way.
  *
  * Closing is a SNOOZE, so looking around before deciding cannot cost the recovery. Dismiss all is
  * the only path that spends the offer.
@@ -60,15 +57,15 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
    *  the list is the host's and arrives — and shrinks — under an open dialog; a stored selection
    *  would need seeding from an effect every time it changed. */
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(() => new Set())
-  const selected = useMemo(
+  /** Derived from the host's own list, so an action can never name a chat it did not offer. */
+  const chosen = useMemo(
     () =>
-      new Set(
-        candidates
-          .map((candidate) => candidate.sessionId)
-          .filter((sessionId) => !excluded.has(sessionId))
-      ),
+      candidates
+        .map((candidate) => candidate.sessionId)
+        .filter((sessionId) => !excluded.has(sessionId)),
     [candidates, excluded]
   )
+  const selected = useMemo(() => new Set(chosen), [chosen])
 
   const toggleSelected = useCallback((sessionId: string, checked: boolean) => {
     setExcluded((current) => {
@@ -110,16 +107,11 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   }, [persistPreference])
 
   const dismissAll = useCallback(async (): Promise<void> => {
-    setBusy(true)
     void persistPreference()
     // Bookkeeping never gates the user's own action: the dialog closes here whatever the host
     // answers, rather than being trapped open behind a rejected promise.
     consumeNativeChatResumeOnRestartDialogRequest()
-    try {
-      await dismissNativeChatRestartOffer()
-    } finally {
-      setBusy(false)
-    }
+    await dismissNativeChatRestartOffer()
   }, [persistPreference])
 
   if (!structuredEnabled || !open || candidates.length === 0) {
@@ -127,8 +119,6 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   }
 
   const interruptedByUpdate = candidates.some((candidate) => candidate.trigger === 'update')
-  // Intersected against what the host offered, so an action can never name a chat it did not.
-  const chosen = selectedResumeSessionIds(candidates, selected)
 
   return (
     <Dialog
@@ -153,8 +143,6 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
               )}
             </span>
           </DialogTitle>
-          {/* The transparency, in the copy rather than behind a disclosure: what the agent is
-              told, and what is NOT re-sent. */}
           <DialogDescription>
             {interruptedByUpdate
               ? translate(
@@ -199,7 +187,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
                 "Don't ask again (resume automatically)"
               )}
             </span>
-            {/* Where to undo it. What it does is the body copy's job, not a second retelling. */}
+            {/* Where to undo it; what it does is the body copy's job. */}
             <span className="block text-xs text-muted-foreground">
               {translate(
                 'auto.components.NativeChatResumeOnRestartModal.dontAskAgainHint',
@@ -209,10 +197,9 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           </span>
         </label>
 
-        {/* Two controls, and they are opposites: one spends the offer, one acts on it. Closing is
-            neither — it snoozes, so it needs no button of its own. */}
+        {/* Two controls: one spends the offer, one acts on it. Closing snoozes, so it needs none. */}
         <DialogFooter className="sm:justify-between">
-          {/* Quiet, not destructive: this spends an offer, and opening a chat still reattaches it. */}
+          {/* Quiet, not destructive: opening a chat still reattaches it. */}
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => void dismissAll()}>
             {translate('auto.components.NativeChatResumeOnRestartModal.dismissAll', 'Dismiss all')}
           </Button>

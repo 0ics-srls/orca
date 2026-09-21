@@ -186,10 +186,8 @@ export function createStructuredAgentSessionRestartResume(
                 ...input,
                 // The pending continuation itself is not newer user work.
                 beforeRun: () => {
-                  if (
-                    derive([marker], 'may-be-held', false, input.envelope.clientOperationId)
-                      .length !== 1
-                  ) {
+                  const options = { pendingContinuationId: input.envelope.clientOperationId }
+                  if (derive([marker], 'may-be-held', options).length !== 1) {
                     throw new RestartContinuationSupersededError()
                   }
                 }
@@ -249,7 +247,7 @@ export function createStructuredAgentSessionRestartResume(
       // Eviction has stopped the provider and drained its tail, but has not cancelled prompts yet.
       teardownMarkers.delete(sessionId)
       try {
-        if (marker && derive([marker], 'may-be-held', true).length === 1) {
+        if (marker && derive([marker], 'may-be-held', { providerStopped: true }).length === 1) {
           confirmedMarkers.set(sessionId, marker)
         }
       } catch {
@@ -257,32 +255,27 @@ export function createStructuredAgentSessionRestartResume(
       }
     },
     recordMarkers: async () => {
-      // A snoozed offer survives quit, but only as something this host would still offer: it is
-      // RE-DERIVED here rather than round-tripped, so a marker the predicate has come to refuse is
-      // not handed to the next launch to refuse again.
-      //
-      // A launch that never claimed the offer is the exception, and the reason this reads the
-      // capsule instead of just replacing it: those sessions were never revealed, so the predicate
-      // has no journal to judge them by and would refuse every one. Answering for an offer nobody
-      // read is how it gets deleted unseen, so it carries forward untouched.
-      //
-      // A take that FAILED is the third case. The durable copy is then intact and unknowable, so
-      // only this teardown's own witnesses may go out — and when it has none, writing at all would
-      // delete an offer no one here could even see.
+      // A snoozed offer survives quit, which is why this reads the capsule instead of replacing it.
       let carried: AgentSessionResumeMarker[] = []
       try {
         const owed = await claim.owed()
         if (owed.unreadable) {
+          // The durable copy is intact and unknowable, so only this teardown's own witnesses may go
+          // out — and with none of those, writing at all would delete an offer nobody here can see.
           if (confirmedMarkers.size === 0) {
             return
           }
-        } else if (!owed.claimed) {
-          carried = owed.markers
-        } else {
+        } else if (owed.claimed) {
+          // RE-DERIVED rather than round-tripped, so a marker the predicate has come to refuse is
+          // not handed to the next launch to refuse again.
           const stillResumable = new Set(
             derive(owed.markers, 'must-be-released').map((candidate) => candidate.sessionId)
           )
           carried = owed.markers.filter((marker) => stillResumable.has(marker.sessionId))
+        } else {
+          // Nothing here read the offer, so no journal was opened to judge it by and re-deriving
+          // would refuse every marker — deleting a recovery the user was never shown.
+          carried = owed.markers
         }
       } catch {
         console.warn('[structured-agent-session] re-deriving the snoozed offer failed')
@@ -301,14 +294,11 @@ export function createStructuredAgentSessionRestartResume(
     list,
     recoveredByHold: claim.recover,
     /**
-     * Turning the offer down for good, which spends the claim.
+     * Turning the offer down for good. Closing the dialog is a snooze — those markers stay claimed
+     * and are written back at quit — so this is the only path that abandons them outright.
      *
-     * Closing the dialog is a snooze — those markers stay claimed and are written back at quit — so
-     * this is the only path that abandons them outright. Nothing is lost either way: the first
-     * resume-capable hold on a childless session re-acquires the provider at the same proved
-     * cursor, so opening the chat still reconnects it, and that acquisition retires the claim. The
-     * durable markers are already gone — the claim deleted them — so this only has to empty the
-     * launch-scoped set.
+     * Nothing is lost either way: the first resume-capable hold on a childless session re-acquires
+     * the provider at the same proved cursor, and that acquisition retires the claim too.
      */
     dismiss: claim.abandon,
     resume: (sessionIds, owner) => run(sessionIds, owner),

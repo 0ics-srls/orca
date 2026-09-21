@@ -165,7 +165,7 @@ export function NativeChatExperimentalSetting({
                 <p className="text-xs text-muted-foreground">
                   {translate(
                     'auto.components.settings.ExperimentalPane.nativeChat.resumeCopy',
-                    'When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. On, they are resumed without asking and Orca tells you afterwards — the same thing as ticking "Don\'t ask again" in that prompt. Off, you choose from the list each time. Resuming restores a chat where it stopped and asks the agent to check its last action before carrying on; your own prompt is not re-sent.'
+                    'When Orca quits or installs an update, chats that were mid-turn are automatically resumed when Orca is reopened.'
                   )}
                 </p>
               </div>

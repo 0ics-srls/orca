@@ -113,9 +113,7 @@ it('keeps next-launch preference out of the current resume action', async () => 
 
 // One primary action and one way out of it; the body copy carries the transparency.
 it('offers exactly Dismiss all and the resume action', async () => {
-  rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
-  )
+  rpc.mockResolvedValue({ sessions: offered })
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   // Row and preference checkboxes are buttons too; the controls are what is left after them.
   const controls = document.querySelectorAll('[role="dialog"] button:not([role="checkbox"])')
@@ -129,9 +127,7 @@ it('offers exactly Dismiss all and the resume action', async () => {
 // Closing is the only snooze, so it carries the whole of one: saves the preference like every
 // other way out, and calls NOTHING — the offer is the host's and stays exactly where it was.
 it('snoozes to the status-bar offer when the dialog is closed', async () => {
-  rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
-  )
+  rpc.mockResolvedValue({ sessions: offered })
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(2).click())
   await act(async () => button('Close').click())
@@ -306,7 +302,12 @@ it('dispatches the selected action while a future preference save is still pendi
   const saved = Promise.withResolvers<void>()
   useAppStore.setState({ updateSettings: () => saved.promise })
   rpc.mockImplementation(async (_target, method) =>
-    method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
+    method === 'agentSession.restartResumable'
+      ? { sessions: offered }
+      : {
+          resumed: [{ sessionId: 'a', outcome: 'resumed' }],
+          continued: [{ sessionId: 'a', outcome: 'continued' }]
+        }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
@@ -344,6 +345,19 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
     expect(rpc).toHaveBeenCalledTimes(2)
   }
 )
+
+// The response is not validated, so a payload this side cannot read is treated like a lost one: the
+// message may well have gone out, and the offer must not shrink over chats nothing confirmed.
+it('reports an unreadable resume response as an unconfirmed delivery', async () => {
+  rpc.mockImplementation(async (_target, method) =>
+    method === 'agentSession.restartResumable' ? { sessions: offered } : {}
+  )
+  await act(async () => root.render(<NativeChatResumeOnRestartModal />))
+  await act(async () => button('Resume 2 chats').click())
+  expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
+  expect(offerIds()).toEqual(['a', 'b'])
+  expect(document.querySelector('[role="dialog"]')).toBeNull()
+})
 
 it('reports a lost resume response without retrying the action', async () => {
   rpc.mockImplementation(async (_target, method) => {

@@ -5,7 +5,7 @@ import {
   announceRestartDismissUnconfirmed,
   announceRestartResults,
   announceRestartUnconfirmed,
-  type RestartActionOutcome
+  type RestartContinuationOutcome
 } from './native-chat-restart-action-notifications'
 import { allResumeSessionIds, type ResumeCandidate } from './native-chat-resume-on-restart-grouping'
 import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-restart-dialog'
@@ -13,10 +13,9 @@ import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-
 /**
  * Which interrupted chats the host is still offering to resume, and every action that moves that.
  *
- * The offer is the HOST's answer, not a list whichever surface rendered first happens to be
- * holding. It has to be, because the host retires an offer for reasons no renderer can see — simply
- * reopening a chat re-acquires its provider at the same cursor, which is the reattach half of a
- * resume. So both surfaces read this one answer, and every action asks the host again first.
+ * The offer is the HOST's answer, shared by the dialog and the status bar rather than held by
+ * whichever rendered first: the host retires an offer for reasons no renderer can see — simply
+ * reopening a chat re-acquires its provider at the same cursor. So every action asks it again.
  *
  * What stays on this side is the user's own facts: the snooze, and the preference that decides
  * whether the launch asks at all.
@@ -117,7 +116,7 @@ export async function continueNativeChatRestartOffer(
     const result = await callStructuredAgentSession<{
       /** Which chats the host reattached, and so which claims it spent. */
       resumed?: { sessionId: string }[]
-      continued: RestartActionOutcome[]
+      continued: RestartContinuationOutcome[]
     }>(LOCAL, 'agentSession.restartContinue', sessionIds ? { sessionIds } : {})
     announceRestartResults(reported, result.continued)
     settle((result.resumed ?? []).map((entry) => entry.sessionId))
@@ -145,10 +144,8 @@ export async function dismissNativeChatRestartOffer(): Promise<void> {
  * This launch's single read of the offer, and the one decision the preference makes: ask, or
  * resume without asking.
  *
- * "Resume automatically" has to mean the same thing the button means, or the preference is a lie:
- * the identical call, reattaching AND asking each agent to carry on. Reattaching on its own is
- * what opening the chat already does, so a silent version of that would recover nothing. It is
- * never silent either — the toasts are where an opted-in user learns a message went out.
+ * "Resume automatically" runs the identical call the button runs — reattach AND ask each agent to
+ * carry on — because reattaching on its own is what opening the chat already does.
  *
  * Runs once however many surfaces mount, so the count and the dialog describe the same answer and
  * an opted-in launch cannot dispatch twice.

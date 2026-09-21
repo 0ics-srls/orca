@@ -4,13 +4,12 @@ import { translate } from '@/i18n/i18n'
 /**
  * What Orca tells the user after acting on a restart offer.
  *
- * Resuming reattaches AND asks each agent to carry on, so every message here has to say a message
- * went out. An opted-in launch runs with no dialog in front of it, and these toasts are the only
- * place that user learns it happened.
+ * Resuming sends a message, so every string here has to say one went out — and an opted-in launch
+ * has no dialog in front of it, which makes these toasts the only place that user learns it did.
  */
 
 /** One `continued` row as the host reports it. */
-export type RestartActionOutcome = {
+export type RestartContinuationOutcome = {
   sessionId: string
   outcome: 'continued' | 'pending' | 'unknown' | 'refused'
 }
@@ -59,7 +58,7 @@ export function announceRestartDismissUnconfirmed(): void {
 
 export function announceRestartResults(
   requested: readonly string[],
-  results: readonly RestartActionOutcome[]
+  results: readonly RestartContinuationOutcome[]
 ): void {
   const bySession = new Map(results.map((result) => [result.sessionId, result.outcome]))
   let succeeded = 0

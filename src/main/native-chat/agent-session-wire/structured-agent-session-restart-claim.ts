@@ -2,16 +2,13 @@
 //
 // The take IS the deletion — the capsule is emptied in the same step it is read — so everything
 // after it lives here in memory, and whatever the offer still owes when Orca exits is written back.
-// That makes the claim a durable obligation, and a durable obligation needs a way to die:
-// reconnecting SPENDS it, an explicit dismiss ABANDONS it, and reopening the chat RECOVERS it — a
-// resume-capable hold hands the provider back at the same proved cursor, which is the whole of what
-// the offer would have done. The marker TTL is the backstop behind all three, not the exit.
+// That makes the claim a durable obligation, and it needs a way to die: resuming SPENDS it, an
+// explicit dismiss ABANDONS it, and reopening the chat RECOVERS it, because a resume-capable hold
+// hands the provider back at the same proved cursor. The marker TTL is the backstop, not the exit.
 //
-// Recovery ends the OFFER, not the EVIDENCE. The markers say what the last teardown interrupted,
-// and that stays true after the chat is reopened: a user looking at a recovered chat can still ask
-// the agent to carry on, and the predicate — never this set — is what authorizes that. What
-// recovery ends is the advertising, and with it the write-back that would otherwise re-offer a chat
-// the user has already got back at every launch from here on.
+// Recovery ends the OFFER, not the EVIDENCE: the markers still describe what the last teardown
+// interrupted, and the predicate — never this set — is what authorizes acting on them. What ends
+// is the advertising, and the write-back that would otherwise re-offer a recovered chat forever.
 
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 
