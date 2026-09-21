@@ -96,7 +96,7 @@ it('keeps next-launch preference out of the current resume action', async () => 
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
   await act(async () => checkbox(2).click())
-  await act(async () => button('Resume 1').click())
+  await act(async () => button('Resume 1 chat').click())
   expect(useAppStore.getState().settings?.nativeChatResumeWorkOnRestart).toBe(true)
   expect(rpc.mock.calls.map((call) => [call[1], call[2]])).toEqual([
     ['agentSession.restartResumable', undefined],
@@ -122,7 +122,7 @@ it('offers exactly Dismiss all and the resume action', async () => {
   const controls = document.querySelectorAll('[role="dialog"] button:not([role="checkbox"])')
   expect([...controls].map((entry) => entry.textContent?.trim())).toEqual([
     'Dismiss all',
-    'Resume all',
+    'Resume 2 chats',
     'Close'
   ])
 })
@@ -207,7 +207,7 @@ it('never re-offers a resumed chat when the status entry reopens the dialog', as
     )
   )
   await act(async () => checkbox(1).click())
-  await act(async () => button('Resume 1').click())
+  await act(async () => button('Resume 1 chat').click())
   expect(offerIds()).toEqual(['b'])
   // The action closes the dialog itself; the status entry is the way back to what is left.
   expect(document.querySelector('[role="dialog"]')).toBeNull()
@@ -233,7 +233,7 @@ it('settles the offer for the chats a resume reattached', async () => {
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
-  await act(async () => button('Resume 1').click())
+  await act(async () => button('Resume 1 chat').click())
   expect(offerIds()).toEqual(['b'])
 })
 
@@ -313,7 +313,7 @@ it('dispatches the selected action while a future preference save is still pendi
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
   await act(async () => checkbox(1).click())
   await act(async () => checkbox(2).click())
-  await act(async () => button('Resume 1').click())
+  await act(async () => button('Resume 1 chat').click())
   expect(rpc.mock.calls.at(-1)?.slice(1)).toEqual([
     'agentSession.restartContinue',
     { sessionIds: ['a'] }
@@ -334,7 +334,7 @@ it.each(['pending', 'unknown', 'refused', 'missing'])(
           }
     )
     await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-    await act(async () => button('Resume all').click())
+    await act(async () => button('Resume 2 chats').click())
     const notices = vi
       .mocked(toast)
       .mock.calls.map(([text]) => text)
@@ -355,7 +355,7 @@ it('reports a lost resume response without retrying the action', async () => {
     throw new Error('response lost')
   })
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-  await act(async () => button('Resume all').click())
+  await act(async () => button('Resume 2 chats').click())
   expect(toast).toHaveBeenCalledWith(expect.stringContaining('unconfirmed'))
   expect(rpc).toHaveBeenCalledTimes(2)
   expect(document.querySelector('[role="dialog"]')).toBeNull()
@@ -373,7 +373,7 @@ it('keeps an unconfirmed delivery visible when another chat was refused', async 
         }
   )
   await act(async () => root.render(<NativeChatResumeOnRestartModal />))
-  await act(async () => button('Resume all').click())
+  await act(async () => button('Resume 2 chats').click())
   expect(toast).toHaveBeenCalledWith('1 chat could not be continued. Open it to continue manually.')
   expect(vi.mocked(toast).mock.calls.at(-1)?.[0]).toBe(
     'Continuation delivery is unconfirmed for 1 chat. Open it to check before sending another message.'

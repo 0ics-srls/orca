@@ -265,14 +265,14 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           >
             {busy
               ? translate('auto.components.NativeChatResumeOnRestartModal.resuming', 'Resuming…')
-              : chosen.length === candidates.length
+              : chosen.length === 1
                 ? translate(
-                    'auto.components.NativeChatResumeOnRestartModal.resumeAll',
-                    'Resume all'
+                    'auto.components.NativeChatResumeOnRestartModal.resumeSelectedOne',
+                    'Resume 1 chat'
                   )
                 : translate(
                     'auto.components.NativeChatResumeOnRestartModal.resumeSelected',
-                    'Resume {{value0}}',
+                    'Resume {{value0}} chats',
                     { value0: chosen.length }
                   )}
           </Button>
