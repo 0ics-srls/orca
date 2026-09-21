@@ -72,9 +72,9 @@ export default function PaletteFilterChips({
                   value0: chip.label
                 }
               )}
-              className="group flex h-5 max-w-[140px] shrink-0 items-center gap-1 rounded-sm px-1 text-foreground transition-colors hover:bg-accent focus-visible:bg-accent"
+              className="group flex h-6 max-w-[140px] shrink-0 items-center gap-1 rounded-sm px-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
             >
-              <span className="truncate">{chip.label}</span>
+              <span className="min-w-0 truncate">{chip.label}</span>
               {/* Space stays reserved so revealing the dismiss does not shift the row. */}
               <X
                 className="size-2.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70"
