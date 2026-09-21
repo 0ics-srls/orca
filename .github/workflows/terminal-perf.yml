@@ -102,9 +102,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/perf-evidence"
           for mode in hidden visible; do
             export ORCA_PERF_DIAGNOSTIC_RENDERER=swiftshader
-            export ORCA_E2E_FORCE_HEADFUL=0
+            export ORCA_PERF_DIAGNOSTIC_XVFB_VISIBLE=0
             if [ "$mode" = visible ]; then
-              export ORCA_E2E_FORCE_HEADFUL=1
+              export ORCA_PERF_DIAGNOSTIC_XVFB_VISIBLE=1
             fi
             export ORCA_PERF_DIAGNOSTIC_DIR="$RUNNER_TEMP/perf-evidence/mode-$mode"
             mkdir -p "$ORCA_PERF_DIAGNOSTIC_DIR"

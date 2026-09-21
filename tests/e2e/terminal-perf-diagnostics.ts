@@ -11,6 +11,17 @@ export function configureTerminalPerfDiagnostics(): void {
     }
     const visibility = await orcaPage.evaluate(() => document.visibilityState)
     const unthrottle = process.env.ORCA_PERF_DIAGNOSTIC_UNTHROTTLE === '1'
+    const visibleOnXvfb = process.env.ORCA_PERF_DIAGNOSTIC_XVFB_VISIBLE === '1'
+    if (visibleOnXvfb) {
+      if (process.platform !== 'linux' || !process.env.GITHUB_ACTIONS || !process.env.DISPLAY) {
+        throw new Error('Visible diagnostic requires an isolated GitHub Actions Xvfb display')
+      }
+      await electronApp.evaluate(({ BrowserWindow }) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          window.showInactive()
+        }
+      })
+    }
     const windows = await electronApp.evaluate(({ BrowserWindow }, unthrottle) => {
       return BrowserWindow.getAllWindows().map((window) => {
         if (unthrottle) {
