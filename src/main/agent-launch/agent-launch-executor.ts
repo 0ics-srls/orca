@@ -77,7 +77,9 @@ export type AgentLaunchSurfaceFactory = {
     cwd?: string
     /** The one member of the `agent_started` triple the host cannot derive for itself. */
     launchSource?: string
-  }): Promise<{ handle: string; warning?: string }>
+    /** `paneKey` names the pane this create minted, for a caller that presents its own tabs; a
+     *  factory whose runtime does not report one omits it rather than inventing a key. */
+  }): Promise<{ handle: string; paneKey?: string; warning?: string }>
   /**
    * Commits the launch text as the session's first turn, answering with the transcript row's id.
    *
@@ -380,7 +382,11 @@ async function createTerminalSurface(
     ...(intent.launchSource ? { launchSource: intent.launchSource } : {})
   })
   return {
-    outcome: { kind: 'terminal', handle: terminal.handle },
+    outcome: {
+      kind: 'terminal',
+      handle: terminal.handle,
+      ...(terminal.paneKey ? { paneKey: terminal.paneKey } : {})
+    },
     ...(terminal.warning ? { warning: terminal.warning } : {}),
     ...(startupPrompt ? { promptRodeLaunchCommand: true } : {})
   }

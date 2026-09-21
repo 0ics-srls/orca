@@ -27,6 +27,9 @@ export type AgentLaunchRuntimeStubOptions = {
   createWarning?: string
   /** What `createTerminal` reports when the surface itself came up degraded. */
   terminalWarning?: string
+  /** The pane `createTerminal` minted. Off by default so the existing outcome assertions keep
+   *  modelling a runtime that reports none — the arm `RuntimeTerminalCreate.paneKey?` allows. */
+  terminalPaneKey?: string
 }
 
 export function runtimeStub(options: AgentLaunchRuntimeStubOptions = {}) {
@@ -67,6 +70,7 @@ export function runtimeStub(options: AgentLaunchRuntimeStubOptions = {}) {
     // Args are declared so a test can assert what the launch asked for, not merely that it asked.
     createTerminal: vi.fn(async (_selector: string, _options?: Record<string, unknown>) => ({
       handle: 'term_1',
+      ...(options.terminalPaneKey ? { paneKey: options.terminalPaneKey } : {}),
       ...(options.terminalWarning ? { warning: options.terminalWarning } : {})
     })),
     showTerminal: vi.fn(async (handle: string) => ({ handle, worktreeId: 'wt-7' })),
