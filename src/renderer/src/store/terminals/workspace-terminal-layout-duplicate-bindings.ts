@@ -57,7 +57,9 @@ function collectClaimablePtyIds(layout: TerminalLayoutSnapshot): string[] {
   return [
     ...new Set(
       Object.entries(layout.ptyIdsByLeafId ?? {})
-        .filter(([leafId]) => claimableLeafIds.has(leafId))
+        // Why the truthiness check: an empty persisted value is not a binding, and grouping on
+        // it would make two layouts that bind nothing collide on the empty id.
+        .filter(([leafId, ptyId]) => Boolean(ptyId) && claimableLeafIds.has(leafId))
         .map(([, ptyId]) => ptyId)
     )
   ]

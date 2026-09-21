@@ -8,6 +8,17 @@ export type TerminalLayoutLeafClaims = {
 }
 
 /**
+ * Leaf ids a rootless layout actually binds. The persisted map types its values as a plain
+ * string, so an empty one survives the schema and is not a binding: counting it would let a
+ * layout look like it holds a leaf no session is attached to.
+ */
+function boundLeafIds(layout: TerminalLayoutLeafClaims): string[] {
+  return Object.entries(layout.ptyIdsByLeafId ?? {})
+    .filter(([, ptyId]) => Boolean(ptyId))
+    .map(([leafId]) => leafId)
+}
+
+/**
  * Leaf ids this layout holds, read generously: its tree, or — for a rootless layout, which binds
  * its sole pane off-tree — every leaf it binds. Use this to ask "does some pane already hold
  * this?", where over-counting only costs a reveal that adopts instead of minting.
@@ -15,9 +26,7 @@ export type TerminalLayoutLeafClaims = {
  * A binding whose leaf has left a rooted tree reattaches nothing, so it is excluded either way.
  */
 export function collectOwnedLeafIds(layout: TerminalLayoutLeafClaims): Set<string> {
-  return new Set(
-    layout.root ? collectLeafIdsInOrder(layout.root) : Object.keys(layout.ptyIdsByLeafId ?? {})
-  )
+  return new Set(layout.root ? collectLeafIdsInOrder(layout.root) : boundLeafIds(layout))
 }
 
 /**
@@ -31,7 +40,7 @@ export function collectClaimableLeafIds(layout: TerminalLayoutLeafClaims): Set<s
   if (layout.root) {
     return new Set(collectLeafIdsInOrder(layout.root))
   }
-  const boundLeafIds = Object.keys(layout.ptyIdsByLeafId ?? {})
-  const provenLeafId = boundLeafIds.length === 1 ? boundLeafIds[0] : layout.activeLeafId
-  return new Set(boundLeafIds.filter((leafId) => leafId === provenLeafId))
+  const leafIds = boundLeafIds(layout)
+  const provenLeafId = leafIds.length === 1 ? leafIds[0] : layout.activeLeafId
+  return new Set(leafIds.filter((leafId) => leafId === provenLeafId))
 }

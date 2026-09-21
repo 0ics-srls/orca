@@ -53,6 +53,20 @@ describe('resolveTerminalPtyPaneOwnership', () => {
     })
   })
 
+  it('does not let an empty binding make a rootless layout look like an owner', () => {
+    // The persisted map types its values as a plain string, so '' survives the schema. Counting
+    // it would hand a reveal a tab whose named leaf has no session, and adopting it shows nothing.
+    const s = state({
+      layouts: { 'tab-a': { ptyIdsByLeafId: { 'leaf-empty': '', 'leaf-a': PTY_ID } } }
+    })
+
+    expect(resolveTerminalPtyPaneOwnership(s, PTY_ID)).toEqual({
+      kind: 'owned',
+      owner: { tabId: 'tab-a', leafId: 'leaf-a', tier: 'recorded' }
+    })
+    expect(resolveTerminalPtyPaneOwnership(s, '')).toEqual({ kind: 'none' })
+  })
+
   it('skips a stranded binding whose leaf already left the tree', () => {
     // The pane was detached; the map entry it left behind reattaches nothing (#13098).
     const s = state({

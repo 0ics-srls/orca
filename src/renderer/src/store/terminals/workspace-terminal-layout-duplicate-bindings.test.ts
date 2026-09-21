@@ -243,6 +243,39 @@ describe('resolveDuplicateTerminalLayoutBindings', () => {
     expect(healed[SINGLE_TAB]).toBe(overreaching)
   })
 
+  it('reads past an empty binding when proving a rootless layout\u2019s sole pane', () => {
+    // '' is not a binding, so the real one beside it is still the sole proven pane. Counting the
+    // empty one would push the proof onto activeLeafId and claim nothing, failing closed.
+    const rootless: TerminalLayoutSnapshot = {
+      root: null,
+      activeLeafId: null,
+      expandedLeafId: null,
+      ptyIdsByLeafId: { 'leaf-empty': '', [SHARED_LEAF]: SHARED_PTY }
+    }
+    const healed = heal({ [SPLIT_TAB]: splitLayout(), [SINGLE_TAB]: rootless }, [
+      tab(SPLIT_TAB, 0),
+      tab(SINGLE_TAB, 1)
+    ])
+
+    expect(healed[SPLIT_TAB]!.ptyIdsByLeafId?.[SHARED_LEAF]).toBe(SHARED_PTY)
+    expect(healed[SINGLE_TAB]!.ptyIdsByLeafId).toEqual({ 'leaf-empty': '' })
+  })
+
+  it('never groups two layouts together on an empty pty id', () => {
+    const emptyBound = (leafId: string): TerminalLayoutSnapshot => ({
+      root: { type: 'leaf', leafId },
+      activeLeafId: leafId,
+      expandedLeafId: null,
+      ptyIdsByLeafId: { [leafId]: '' }
+    })
+    const layoutsByTabId = {
+      [SPLIT_TAB]: emptyBound(OTHER_LEAF),
+      [SINGLE_TAB]: emptyBound(SHARED_LEAF)
+    }
+
+    expect(heal(layoutsByTabId, [tab(SPLIT_TAB, 0), tab(SINGLE_TAB, 1)])).toBe(layoutsByTabId)
+  })
+
   it('returns the same object when no tab collides', () => {
     const layoutsByTabId = {
       [SPLIT_TAB]: splitLayout(),
