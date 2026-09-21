@@ -28,7 +28,6 @@ type Recorded = {
   settlementId?: string
   producedBySubagent?: true
   activity?: AgentSessionTurnActivity | null
-  producedBySubagent?: true
 }
 
 function target(
