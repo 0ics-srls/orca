@@ -4,31 +4,15 @@ import { translate } from '@/i18n/i18n'
 /**
  * What Orca tells the user after acting on a restart offer.
  *
- * `continue` is the only action a surface takes now — resuming always reattaches AND sends. The
- * `reconnect` wording belongs to the host's plain-reattach RPC, which is still published on the
- * wire, so its vocabulary stays here rather than being reinvented if anything calls it again.
+ * Resuming reattaches AND asks each agent to carry on, so every message here has to say a message
+ * went out. An opted-in launch runs with no dialog in front of it, and these toasts are the only
+ * place that user learns it happened.
  */
 
+/** One `continued` row as the host reports it. */
 export type RestartActionOutcome = {
   sessionId: string
-  outcome: 'resumed' | 'continued' | 'pending' | 'unknown' | 'refused'
-}
-
-function announceResumed(count: number): void {
-  if (count <= 0) {
-    return
-  }
-  toast(
-    count === 1
-      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Resumed 1 chat')
-      : translate(
-          'auto.components.NativeChatResumeOnRestartModal.resumedMany',
-          'Resumed {{value0}} chats',
-          {
-            value0: count
-          }
-        )
-  )
+  outcome: 'continued' | 'pending' | 'unknown' | 'refused'
 }
 
 function announceContinued(count: number): void {
@@ -49,22 +33,17 @@ function announceContinued(count: number): void {
   )
 }
 
-export function announceRestartUnconfirmed(count: number, action: 'reconnect' | 'continue'): void {
+/** Delivery the host never confirmed. Reported, never retried — a second send is the user's call. */
+export function announceRestartUnconfirmed(count: number): void {
   if (count <= 0) {
     return
   }
   toast(
-    action === 'continue'
-      ? translate(
-          'auto.components.NativeChatResumeOnRestartModal.continueUnconfirmed',
-          'Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.',
-          { value0: count, count }
-        )
-      : translate(
-          'auto.components.NativeChatResumeOnRestartModal.reconnectUnconfirmed',
-          'Resuming is unconfirmed for {{value0}} chats. You can still open them normally.',
-          { value0: count, count }
-        )
+    translate(
+      'auto.components.NativeChatResumeOnRestartModal.continueUnconfirmed',
+      'Continuation delivery is unconfirmed for {{value0}} chats. Open them to check before sending another message.',
+      { value0: count, count }
+    )
   )
 }
 
@@ -80,8 +59,7 @@ export function announceRestartDismissUnconfirmed(): void {
 
 export function announceRestartResults(
   requested: readonly string[],
-  results: readonly RestartActionOutcome[],
-  action: 'reconnect' | 'continue'
+  results: readonly RestartActionOutcome[]
 ): void {
   const bySession = new Map(results.map((result) => [result.sessionId, result.outcome]))
   let succeeded = 0
@@ -89,7 +67,7 @@ export function announceRestartResults(
   let refused = 0
   for (const sessionId of new Set(requested)) {
     const outcome = bySession.get(sessionId)
-    if (outcome === (action === 'continue' ? 'continued' : 'resumed')) {
+    if (outcome === 'continued') {
       succeeded += 1
     } else if (outcome === 'pending' || outcome === 'unknown') {
       unconfirmed += 1
@@ -98,25 +76,15 @@ export function announceRestartResults(
       refused += 1
     }
   }
-  if (action === 'continue') {
-    announceContinued(succeeded)
-  } else {
-    announceResumed(succeeded)
-  }
+  announceContinued(succeeded)
   if (refused > 0) {
     toast(
-      action === 'continue'
-        ? translate(
-            'auto.components.NativeChatResumeOnRestartModal.continueRefused',
-            '{{value0}} chats could not be continued. Open them to continue manually.',
-            { value0: refused, count: refused }
-          )
-        : translate(
-            'auto.components.NativeChatResumeOnRestartModal.reconnectRefused',
-            '{{value0}} chats could not be resumed. You can still open them normally.',
-            { value0: refused, count: refused }
-          )
+      translate(
+        'auto.components.NativeChatResumeOnRestartModal.continueRefused',
+        '{{value0}} chats could not be continued. Open them to continue manually.',
+        { value0: refused, count: refused }
+      )
     )
   }
-  announceRestartUnconfirmed(unconfirmed, action)
+  announceRestartUnconfirmed(unconfirmed)
 }

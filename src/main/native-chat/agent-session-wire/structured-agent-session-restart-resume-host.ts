@@ -40,11 +40,9 @@ export type StructuredAgentSessionRestartResumeSurfaces = {
   /** The resume-capable hold; see the runner for why a hold and not a send. */
   hold: (sessionId: string, holderId: string) => Promise<void>
   release: (sessionId: string, holderId: string) => void
-  /** The host's own send. Reached ONLY from `continueAfterRestart`; `resume` still never calls it,
-   *  so reattaching on its own sends nothing. That is no longer a guarantee about SETTINGS, though:
-   *  a launch the user opted into calls `continueAfterRestart` directly, which is acceptable
-   *  because the work is the user's own, the message asks the agent to verify its last action
-   *  before repeating it, and the launch toast reports what happened.
+  /** The host's own send. Reached ONLY from `continueAfterRestart`, so reattaching on its own sends
+   *  nothing — but an opted-in launch calls `continueAfterRestart` too, so this is not a guarantee
+   *  about settings; see the continuation module for why that is acceptable.
    *
    *  Typed against the wire result rather than a hand-written subset: a narrower local shape hid
    *  `value.submission` here once, and the continuation reads it. */

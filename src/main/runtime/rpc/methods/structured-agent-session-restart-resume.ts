@@ -1,8 +1,9 @@
-// `agentSession.restartResumable` / `agentSession.restartResume` — the restart-resume offer.
+// The restart-resume offer: list it, act on it, or turn it down.
 //
-// Both reach for records on disk this process may not have opened yet, so they build the host the
-// way hold and reveal do. Listing is read-only and takes nothing live; resuming goes through the
-// host's single resume path, which re-derives eligibility rather than trusting the ids it is given.
+// Each method reaches for records on disk this process may not have opened yet, so each builds the
+// host the way hold and reveal do. Listing is read-only and takes nothing live; acting goes through
+// the host's single resume path, which re-derives eligibility rather than trusting the ids it is
+// given.
 
 import { defineMethod } from '../core'
 import {
@@ -32,9 +33,9 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     }
   }),
   defineMethod({
-    // Reattach AND ask each reattached agent to carry on — what the desktop prompt now calls
-    // resuming, and what an opted-in launch runs without asking. Still a separate method from
-    // `restartResume`, which sends nothing, but no longer one that only a button can reach.
+    // Reattach AND ask each reattached agent to carry on — what the desktop prompt calls resuming,
+    // and what an opted-in launch runs without asking. Separate from `restartResume`, which sends
+    // nothing, but reachable from a setting rather than only from a button.
     name: 'agentSession.restartContinue',
     params: RestartResumeParams,
     handler: async (params, ctx) => {
@@ -47,9 +48,9 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     }
   }),
   defineMethod({
-    // Reattach only, no send. The desktop prompt stopped calling this once its single action became
-    // resume-and-continue, but it stays: it is a published wire method, and its absence is what an
-    // older or non-desktop client would be met with.
+    // Reattach only, no send. No Orca surface calls it now — the desktop prompt's single action is
+    // resume-and-continue — but it is a PUBLISHED wire method, so dropping it is a wire removal an
+    // older or non-desktop client would meet as an unknown method.
     name: 'agentSession.restartResume',
     params: RestartResumeParams,
     handler: async (params, ctx) => {

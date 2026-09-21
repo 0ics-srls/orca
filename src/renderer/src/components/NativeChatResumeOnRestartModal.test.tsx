@@ -111,8 +111,7 @@ it('keeps next-launch preference out of the current resume action', async () => 
   expect(rpc).toHaveBeenCalledTimes(2)
 })
 
-// One primary action and one way out of it. The vacuous plain-reconnect button, the Not now button
-// and the "what gets sent" popover are gone; the body copy carries the transparency now.
+// One primary action and one way out of it; the body copy carries the transparency.
 it('offers exactly Dismiss all and the resume action', async () => {
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }
@@ -127,9 +126,8 @@ it('offers exactly Dismiss all and the resume action', async () => {
   ])
 })
 
-// Snoozing saves the preference like every other way out of the dialog, and calls NOTHING: the
-// offer is the host's and stays exactly where it was. Closing the dialog is the only snooze left
-// now that Not now is gone, so it has to keep doing all of that.
+// Closing is the only snooze, so it carries the whole of one: saves the preference like every
+// other way out, and calls NOTHING — the offer is the host's and stays exactly where it was.
 it('snoozes to the status-bar offer when the dialog is closed', async () => {
   rpc.mockImplementation(async (_target, method) =>
     method === 'agentSession.restartResumable' ? { sessions: offered } : { results: [] }

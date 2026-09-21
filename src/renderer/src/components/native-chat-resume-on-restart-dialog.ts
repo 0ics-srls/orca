@@ -1,13 +1,17 @@
 let pendingOpen = false
 const listeners = new Set<() => void>()
 
+function notify(): void {
+  for (const listener of listeners) {
+    listener()
+  }
+}
+
 // Why: the launch load and the status-bar entry both open this dialog, and either can fire before
 // it subscribes. Keeping the request as an external snapshot prevents mount ordering from losing it.
 export function requestNativeChatResumeOnRestartDialog(): void {
   pendingOpen = true
-  for (const listener of listeners) {
-    listener()
-  }
+  notify()
 }
 
 export function consumeNativeChatResumeOnRestartDialogRequest(): void {
@@ -15,9 +19,7 @@ export function consumeNativeChatResumeOnRestartDialogRequest(): void {
     return
   }
   pendingOpen = false
-  for (const listener of listeners) {
-    listener()
-  }
+  notify()
 }
 
 export function getNativeChatResumeOnRestartDialogRequest(): boolean {

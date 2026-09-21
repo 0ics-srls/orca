@@ -1,11 +1,9 @@
 // Asking an interrupted agent to carry on, on the user's opt-in.
 //
-// Reattaching and continuing are still SEPARATE operations: `resume` reattaches and sends nothing;
-// this adds one message on top of it. What changed is WHO may ask. Resuming from the restart prompt
-// comes here, and so does an opted-in launch, so this module is no longer unreachable from a
-// setting — do not restate that old guarantee. It is acceptable because the work is the user's own,
-// the message asks the agent to verify its last action before repeating it, and the launch toast
-// reports what happened.
+// Reattaching and continuing are SEPARATE operations: `resume` reattaches and sends nothing; this
+// adds one message on top of it. Both the restart prompt and an opted-in launch come here, so a
+// SETTING can reach this send — acceptable because the work is the user's own, the message asks the
+// agent to verify its last action before repeating it, and the launch toast reports what happened.
 
 import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
 import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'

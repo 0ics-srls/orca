@@ -11,15 +11,8 @@ import {
   DialogTitle
 } from './ui/dialog'
 import { useAppStore } from '../store'
-import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { translate } from '@/i18n/i18n'
 import { ResumeOnRestartGroups } from './NativeChatResumeOnRestartGroups'
-import {
-  announceRestartDismissUnconfirmed,
-  announceRestartResults,
-  announceRestartUnconfirmed,
-  type RestartActionOutcome
-} from './native-chat-restart-action-notifications'
 import { selectedResumeSessionIds } from './native-chat-resume-on-restart-grouping'
 import {
   consumeNativeChatResumeOnRestartDialogRequest,
@@ -27,8 +20,8 @@ import {
   subscribeNativeChatResumeOnRestartDialog
 } from './native-chat-resume-on-restart-dialog'
 import {
-  clearNativeChatRestartOffer,
-  settleNativeChatRestartOffer,
+  continueNativeChatRestartOffer,
+  dismissNativeChatRestartOffer,
   useNativeChatRestartOffer
 } from './native-chat-resume-on-restart-store'
 
@@ -37,23 +30,16 @@ import {
  *
  * The list is the point. Resuming a chat that was not working starts a provider the user never
  * asked for and puts a misleading row in front of them, so they see exactly which chats the last
- * teardown recorded as mid-turn and decide. The checkbox is the opt-in to skipping this prompt in
- * future — it removes the PROMPT, never a safety check: automatic mode calls the same RPC, which
- * re-derives the same predicate and staggers the same way.
+ * teardown recorded as mid-turn and decide. The checkbox removes the PROMPT, never a safety check:
+ * automatic mode calls the same RPC, which re-derives the same predicate and staggers the same way.
  *
  * Resuming reattaches each session where it stopped AND asks that agent to carry on, which is the
  * only reason the prompt is worth showing: reattaching alone is what simply opening the chat does.
  * The user's own prompt is never re-sent, and every string here has to keep saying so.
  *
- * Closing is a SNOOZE: the host keeps the offer and the status bar keeps a way back to it, so
- * looking around before deciding cannot cost the recovery. Dismiss all is the only path that spends
- * it, and even that loses nothing — opening a chat takes a resume-capable hold, which re-acquires
- * the provider at the same cursor and retires the offer for it.
+ * Closing is a SNOOZE, so looking around before deciding cannot cost the recovery. Dismiss all is
+ * the only path that spends the offer.
  */
-
-// Structured sessions run on the machine hosting the runtime; both launch resolvers refuse anything
-// else, so there is no remote target to aim this at.
-const LOCAL = { kind: 'local' } as const
 
 export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   const structuredEnabled = useAppStore(
@@ -70,14 +56,9 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   const updateSettings = useAppStore((store) => store.updateSettings)
   const [dontAskAgain, setDontAskAgain] = useState(false)
   const [busy, setBusy] = useState(false)
-  /**
-   * Which of the OFFERED chats to leave out. Tracked as EXCLUSIONS rather than a selection because
-   * the list is the host's and arrives — and shrinks — under an open dialog; a stored selection
-   * would need seeding from an effect every time it changed.
-   *
-   * This changes which eligible chats are acted on, never what is eligible: the ids below are
-   * intersected back against the host's own list, and the host re-derives the predicate regardless.
-   */
+  /** Which of the OFFERED chats to leave out. Tracked as EXCLUSIONS rather than a selection because
+   *  the list is the host's and arrives — and shrinks — under an open dialog; a stored selection
+   *  would need seeding from an effect every time it changed. */
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(() => new Set())
   const selected = useMemo(
     () =>
@@ -108,30 +89,12 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     }
   }, [dontAskAgain, updateSettings])
 
-  /**
-   * The one action: reattach, then ask each agent to carry on.
-   *
-   * `restartContinue` is the host method behind it — reattaching without a send is a separate RPC
-   * this surface no longer calls, because opening the chat already does exactly that.
-   */
   const resume = useCallback(
     async (sessionIds: string[]): Promise<void> => {
       setBusy(true)
       try {
         void persistPreference()
-        const result = await callStructuredAgentSession<{
-          /** Which chats the host actually reattached, and so which claims it spent. Optional
-           *  because the payload is unvalidated: a shape this side did not expect must not turn a
-           *  delivered continuation into a failure report. */
-          resumed?: RestartActionOutcome[]
-          continued: RestartActionOutcome[]
-        }>(LOCAL, 'agentSession.restartContinue', { sessionIds })
-        announceRestartResults(sessionIds, result.continued, 'continue')
-        // Resuming spends the claims, so the offer has to shrink with it — otherwise the status bar
-        // keeps counting chats the host has already handed back.
-        settleNativeChatRestartOffer((result.resumed ?? []).map((entry) => entry.sessionId))
-      } catch {
-        announceRestartUnconfirmed(sessionIds.length, 'continue')
+        await continueNativeChatRestartOffer(sessionIds)
       } finally {
         setBusy(false)
         consumeNativeChatResumeOnRestartDialogRequest()
@@ -146,18 +109,14 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     void persistPreference()
   }, [persistPreference])
 
-  /** The only path that spends the markers. */
   const dismissAll = useCallback(async (): Promise<void> => {
     setBusy(true)
     void persistPreference()
-    // The dismissal is the user's and lands here, whatever the host answers. A write Orca cannot
-    // confirm is reported rather than allowed to trap the dialog open behind a rejected promise.
+    // Bookkeeping never gates the user's own action: the dialog closes here whatever the host
+    // answers, rather than being trapped open behind a rejected promise.
     consumeNativeChatResumeOnRestartDialogRequest()
     try {
-      await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {})
-      clearNativeChatRestartOffer()
-    } catch {
-      announceRestartDismissUnconfirmed()
+      await dismissNativeChatRestartOffer()
     } finally {
       setBusy(false)
     }
@@ -180,8 +139,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         }
       }}
     >
-      {/* Height is capped, never the data: seeing WHICH chats would be resumed is the whole
-          point, so the list scrolls inside the dialog while the header and primary action stay. */}
+      {/* Height is capped, never the data: the list scrolls inside the dialog so the header and
+          the primary action stay put however many chats were interrupted. */}
       <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto_auto] sm:max-w-xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>
@@ -194,8 +153,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
               )}
             </span>
           </DialogTitle>
-          {/* Carries the transparency an explainer popover used to hide behind an icon: what the
-              agent is told, and what is NOT re-sent. */}
+          {/* The transparency, in the copy rather than behind a disclosure: what the agent is
+              told, and what is NOT re-sent. */}
           <DialogDescription>
             {interruptedByUpdate
               ? translate(
@@ -250,8 +209,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           </span>
         </label>
 
-        {/* Two controls, and they are opposites: one spends the offer, one acts on it. Closing the
-            dialog is neither — it snoozes, so it needs no button of its own. */}
+        {/* Two controls, and they are opposites: one spends the offer, one acts on it. Closing is
+            neither — it snoozes, so it needs no button of its own. */}
         <DialogFooter className="sm:justify-between">
           {/* Quiet, not destructive: this spends an offer, and opening a chat still reattaches it. */}
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => void dismissAll()}>

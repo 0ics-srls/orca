@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { useAppStore } from '../store'
 import {
+  announceRestartDismissUnconfirmed,
   announceRestartResults,
   announceRestartUnconfirmed,
   type RestartActionOutcome
@@ -10,13 +11,12 @@ import { allResumeSessionIds, type ResumeCandidate } from './native-chat-resume-
 import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-restart-dialog'
 
 /**
- * Which interrupted chats the host is still offering to resume.
+ * Which interrupted chats the host is still offering to resume, and every action that moves that.
  *
  * The offer is the HOST's answer, not a list whichever surface rendered first happens to be
- * holding. It has to be, because the host retires an offer for reasons no renderer can see —
- * simply reopening a chat re-acquires its provider at the same cursor, which is the reattach half
- * of a resume. So this fetches the list and both surfaces read it, and anything about to ACT on
- * the offer asks the host again first.
+ * holding. It has to be, because the host retires an offer for reasons no renderer can see — simply
+ * reopening a chat re-acquires its provider at the same cursor, which is the reattach half of a
+ * resume. So both surfaces read this one answer, and every action asks the host again first.
  *
  * What stays on this side is the user's own facts: the snooze, and the preference that decides
  * whether the launch asks at all.
@@ -81,7 +81,7 @@ export async function refreshNativeChatRestartOffer(): Promise<readonly ResumeCa
 }
 
 /** Drops the chats the host reports it has settled, leaving the ones it did not. */
-export function settleNativeChatRestartOffer(sessionIds: readonly string[]): void {
+function settle(sessionIds: readonly string[]): void {
   const settled = new Set(sessionIds)
   const remaining = offer.candidates.filter((candidate) => !settled.has(candidate.sessionId))
   if (remaining.length === offer.candidates.length) {
@@ -91,11 +91,54 @@ export function settleNativeChatRestartOffer(sessionIds: readonly string[]): voi
 }
 
 /** The offer was abandoned outright; the host has already spent the markers. */
-export function clearNativeChatRestartOffer(): void {
+function clear(): void {
   if (offer.candidates.length === 0) {
     return
   }
   publish({ ...offer, candidates: [] })
+}
+
+/**
+ * Reattach the offered chats, ask each agent to carry on, then shrink the offer by what the host
+ * says it spent — otherwise the status bar keeps counting chats already handed back.
+ *
+ * `sessionIds` is the dialog's selection. An opted-in launch names nothing, so the host acts on
+ * whatever it still offers rather than on a list this side captured a moment earlier, and passes
+ * `reported` instead: the chats the user was shown, which is what the toasts count.
+ *
+ * Never rejects. The payload is unvalidated, and a shape this side did not expect is reported as
+ * an unconfirmed delivery — the message may well have gone out.
+ */
+export async function continueNativeChatRestartOffer(
+  sessionIds: readonly string[] | undefined,
+  reported: readonly string[] = sessionIds ?? []
+): Promise<void> {
+  try {
+    const result = await callStructuredAgentSession<{
+      /** Which chats the host reattached, and so which claims it spent. */
+      resumed?: { sessionId: string }[]
+      continued: RestartActionOutcome[]
+    }>(LOCAL, 'agentSession.restartContinue', sessionIds ? { sessionIds } : {})
+    announceRestartResults(reported, result.continued)
+    settle((result.resumed ?? []).map((entry) => entry.sessionId))
+  } catch {
+    announceRestartUnconfirmed(reported.length)
+  }
+}
+
+/**
+ * Turning the offer down for good, which is the only path that spends the markers.
+ *
+ * Nothing is lost: opening a chat takes a resume-capable hold, which re-acquires the provider at
+ * the same cursor. A write the host never confirmed leaves the offer standing and says so.
+ */
+export async function dismissNativeChatRestartOffer(): Promise<void> {
+  try {
+    await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {})
+    clear()
+  } catch {
+    announceRestartDismissUnconfirmed()
+  }
 }
 
 /**
@@ -104,7 +147,8 @@ export function clearNativeChatRestartOffer(): void {
  *
  * "Resume automatically" has to mean the same thing the button means, or the preference is a lie:
  * the identical call, reattaching AND asking each agent to carry on. Reattaching on its own is
- * what opening the chat already does, so a silent version of that would recover nothing.
+ * what opening the chat already does, so a silent version of that would recover nothing. It is
+ * never silent either — the toasts are where an opted-in user learns a message went out.
  *
  * Runs once however many surfaces mount, so the count and the dialog describe the same answer and
  * an opted-in launch cannot dispatch twice.
@@ -120,21 +164,7 @@ async function loadLaunchOffer(): Promise<void> {
     requestNativeChatResumeOnRestartDialog()
     return
   }
-  // Identical call to the dialog's own button; the host re-derives eligibility either way.
-  const result = await callStructuredAgentSession<{
-    /** Which chats the host reattached, and so which claims it spent. Optional because the payload
-     *  is unvalidated, exactly as the dialog reads it. */
-    resumed?: RestartActionOutcome[]
-    continued: RestartActionOutcome[]
-  }>(LOCAL, 'agentSession.restartContinue', {}).catch(() => null)
-  if (!result) {
-    announceRestartUnconfirmed(offered.length, 'continue')
-    return
-  }
-  // Automatic must never be silent: someone who ticked the box months ago still sees this, and
-  // this is the only place they learn a message went out on their behalf.
-  announceRestartResults(allResumeSessionIds(offered), result.continued, 'continue')
-  settleNativeChatRestartOffer((result.resumed ?? []).map((entry) => entry.sessionId))
+  await continueNativeChatRestartOffer(undefined, allResumeSessionIds(offered))
 }
 
 /**
