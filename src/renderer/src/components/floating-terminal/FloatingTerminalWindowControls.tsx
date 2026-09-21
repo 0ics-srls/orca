@@ -64,15 +64,17 @@ export function FloatingTerminalWindowControls({
     if (!defaultAgent) {
       return
     }
-    // Why: the shared launcher owns the startup plan, the route (floating always resolves a
-    // terminal) and the tab-bar order, so this button stays one more caller of it rather than a
-    // second copy of new-agent-tab startup.
+    // Why: the shared launcher owns the startup plan, the route and the tab identity, so this
+    // button stays one more caller of it rather than a second copy of new-agent-tab startup.
+    // Floating resolves the terminal-backed lane: a chat view over a PTY when the chat default is
+    // on, never a structured session.
     const result = launchAgentInNewTab({
       agent: defaultAgent,
       worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
       launchSource: 'shortcut',
-      // Why: the floating panel must not move the main window's selection; it selects in its own
-      // group below, matching the other floating tab creators.
+      // Why: `agent-auto-ack-targets` relies on the floating panel's active tab never becoming the
+      // global `activeTabId`; activating here would also flip the main view off an open editor.
+      // This selects within the floating group below instead.
       activate: false
     })
     if (!result) {

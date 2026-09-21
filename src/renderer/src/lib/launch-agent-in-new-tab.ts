@@ -31,7 +31,10 @@ import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/na
 import { launchAgentInStructuredNewTab } from '@/lib/launch-agent-in-new-tab-structured'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { workspaceKindForWorktreeId } from '@/lib/agent-launch-route-input'
-import { planAgentSessionLaunch, type AgentSessionLaunchPlan } from './agent-session-launch-plan'
+import {
+  planAgentSessionLaunch,
+  type AgentSessionLaunchPlan
+} from '@/lib/agent-session-launch-plan'
 
 export type LaunchAgentInNewTabArgs = {
   agent: TuiAgent
