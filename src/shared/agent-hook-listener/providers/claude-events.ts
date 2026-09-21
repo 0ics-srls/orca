@@ -70,10 +70,18 @@ export function normalizeClaudeEvent(
     })
   }
   const previousLead = state.claudeLeadStateByPaneKey.get(paneKey)
-  // Why: only a turn boundary may declare an interrupt, and only from its own report.
   const isTurnBoundary = eventName === 'Stop' || eventName === 'StopFailure'
+  // A stopped turn may still be holding background work, and the boundary that reports that work
+  // drained is the SAME turn ending — it just carries no `is_interrupt` of its own. Carry the fact
+  // onto it so the turn completes as what it was. Scoped to a lead record already sitting at the
+  // boundary (`interrupted` is only ever set there), and every other lead event overwrites that
+  // record without it, so the next prompt ends the carry.
+  const carriesEndedTurnInterrupt =
+    previousLead?.state === 'done' && previousLead.interrupted === true
   const interrupted =
-    isTurnBoundary && eventAgentId === undefined && hookPayload['is_interrupt'] === true
+    isTurnBoundary &&
+    ((eventAgentId === undefined && hookPayload['is_interrupt'] === true) ||
+      carriesEndedTurnInterrupt)
       ? true
       : undefined
   const backgroundTasks = readClaudeBackgroundAgentTasks(hookPayload)

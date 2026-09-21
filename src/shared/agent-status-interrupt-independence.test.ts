@@ -71,6 +71,52 @@ describe('interrupted is a turn fact, not a state claim', () => {
     expect(state.claudeActiveSessionCronPaneKeys.has(PANE)).toBe(true)
   })
 
+  it('carries the stop through to the turn it belongs to, then lets it go', () => {
+    const state = createHookListenerState()
+    claudeEvent(state, { hook_event_name: 'UserPromptSubmit', prompt: 'build it' })
+
+    // The user stops the turn; the shell it started keeps running.
+    expect(
+      claudeEvent(state, {
+        hook_event_name: 'Stop',
+        is_interrupt: true,
+        background_tasks: [RUNNING_SHELL]
+      })
+    ).toMatchObject({ state: 'working', workingMode: 'monitoring', interrupted: true })
+
+    // The shell drains. This boundary is the SAME turn ending and carries no `is_interrupt` of
+    // its own, so without the carry the turn would report as a clean completion — which is also
+    // what the OS notification is worded from ('stopped' vs 'finished').
+    expect(claudeEvent(state, { hook_event_name: 'Stop', background_tasks: [] })).toMatchObject({
+      state: 'done',
+      interrupted: true
+    })
+
+    // A new prompt is a new turn: the fact dies here rather than latching.
+    expect(
+      claudeEvent(state, { hook_event_name: 'UserPromptSubmit', prompt: 'try again' })
+    ).toMatchObject({ state: 'working', interrupted: undefined })
+    expect(claudeEvent(state, { hook_event_name: 'Stop', background_tasks: [] })).toMatchObject({
+      state: 'done',
+      interrupted: undefined
+    })
+  })
+
+  it('does not carry a stop across a mid-turn lead event', () => {
+    const state = createHookListenerState()
+    claudeEvent(state, { hook_event_name: 'UserPromptSubmit', prompt: 'build it' })
+    claudeEvent(state, { hook_event_name: 'Stop', is_interrupt: true })
+
+    // A resumed turn can start at a tool event; that is a live turn, not the stopped one.
+    expect(claudeEvent(state, { hook_event_name: 'PreToolUse' })).toMatchObject({
+      state: 'working',
+      interrupted: undefined
+    })
+    expect(
+      claudeEvent(state, { hook_event_name: 'Stop', background_tasks: [RUNNING_SHELL] })
+    ).toMatchObject({ state: 'working', interrupted: undefined })
+  })
+
   it('names the interrupted-completion outcome in one predicate', () => {
     expect(isInterruptedAgentCompletion({ state: 'done', interrupted: true })).toBe(true)
     expect(isInterruptedAgentCompletion({ state: 'done' })).toBe(false)
