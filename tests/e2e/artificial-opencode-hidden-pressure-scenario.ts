@@ -1,3 +1,4 @@
+import { withTerminalPerfProfile } from './terminal-perf-diagnostics'
 import type { Page, TestInfo } from '@stablyai/playwright-test'
 import { expect } from '@stablyai/playwright-test'
 import { randomUUID } from 'node:crypto'
@@ -216,10 +217,8 @@ export async function runHiddenRealPtyPressureScenario<
     expect(measurement.maxTimerDriftMs).toBeLessThan(MAX_HIDDEN_PRESSURE_TIMER_DRIFT_MS)
 
     await deps.releaseTerminalAckGate(orcaPage)
-    const restoreLatencyMs = await measureHiddenOutputRestoreLatency(
-      orcaPage,
-      secondWorktreeId,
-      runId
+    const restoreLatencyMs = await withTerminalPerfProfile(orcaPage, 'restore', runId, () =>
+      measureHiddenOutputRestoreLatency(orcaPage, secondWorktreeId, runId)
     )
     testInfo.annotations.push({
       type: `opencode-hidden-real-pty-restore${annotationSuffix ?? ''}`,

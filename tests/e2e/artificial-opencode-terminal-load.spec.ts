@@ -1,3 +1,7 @@
+import {
+  configureTerminalPerfDiagnostics,
+  withTerminalPerfProfile
+} from './terminal-perf-diagnostics'
 import type { Page, TestInfo } from '@stablyai/playwright-test'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -236,7 +240,20 @@ function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)] ?? 0
 }
 
+configureTerminalPerfDiagnostics()
+
 async function measureTypingDuringLoad(
+  page: Page,
+  scriptPath: string,
+  ptyId: string,
+  runId: string
+): Promise<TypingMeasurement> {
+  return withTerminalPerfProfile(page, 'typing', runId, () =>
+    measureTypingDuringLoadProfiled(page, scriptPath, ptyId, runId)
+  )
+}
+
+async function measureTypingDuringLoadProfiled(
   page: Page,
   scriptPath: string,
   ptyId: string,
