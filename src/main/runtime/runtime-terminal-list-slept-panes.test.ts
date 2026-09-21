@@ -11,7 +11,7 @@ import { RuntimeTerminalList } from './runtime-terminal-list'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 
-function terminalListFixture<T>(value: object): T {
+function terminalListFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RuntimeTerminalList reads only the explicitly populated fields in these focused fixtures.
   return value as T
 }

@@ -24,7 +24,7 @@ const harness = vi.hoisted(() => ({
   } satisfies HarnessState
 }))
 
-function mountEventFixture<T>(value: object): T {
+function mountEventFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each partial pane fixture implements every member reached by installTerminalPaneMountEvents in this test.
   return value as T
 }

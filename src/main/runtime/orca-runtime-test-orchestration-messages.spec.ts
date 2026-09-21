@@ -241,6 +241,10 @@ export class InMemoryOrchestrationMessages {
     return []
   }
 
+  retainReplacedWorkerTerminalResources(): number {
+    return 0
+  }
+
   hasUndeliveredDirectMessageForRun(runId: string, directHandle: string): boolean {
     return this.messages.some(
       (message) =>

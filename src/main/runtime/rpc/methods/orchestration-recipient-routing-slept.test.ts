@@ -10,7 +10,7 @@ import { resolveBareOrchestrationRecipient } from './orchestration/messaging/rec
 const HANDLE = 'term_slept'
 const PANE_KEY = 'tab-1:leaf-1'
 
-function routingFixture<T>(value: object): T {
+function routingFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recipient routing reads only the runtime and database lookup methods supplied by each fixture.
   return value as T
 }

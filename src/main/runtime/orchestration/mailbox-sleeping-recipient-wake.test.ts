@@ -18,7 +18,7 @@ import { WRITE_ACCEPTED } from '../../../shared/pty-write-settlement'
 
 const MAILBOX = 'run:run-1'
 
-function mailboxFixture<T>(value: object): T {
+function mailboxFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each dependency double implements every member reached by the isolated delivery path under test.
   return value as T
 }

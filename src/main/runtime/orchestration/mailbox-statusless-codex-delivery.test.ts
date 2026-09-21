@@ -12,7 +12,7 @@ const TERMINAL_HANDLE = 'term-1'
 const STALE_TERMINAL_HANDLE = 'term-slept'
 const PANE_KEY = 'tab-1:leaf-1'
 
-function statuslessDeliveryFixture<T>(value: object): T {
+function statuslessDeliveryFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the harness supplies every dependency the statusless delivery scenarios exercise.
   return value as T
 }

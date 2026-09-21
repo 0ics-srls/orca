@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { getDefaultWorkspaceSession } from '../../shared/constants'
 import { AGENT_PROMPT_BRACKETED_PASTE_START } from '../../shared/agent-prompt-injection'
 import type { SleepingAgentSessionRecord } from '../../shared/agent-session-resume'
+import { WRITE_ACCEPTED } from '../../shared/pty-write-settlement'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
 import {
   InMemoryOrchestrationMessages,
@@ -85,7 +86,7 @@ async function sleptPaneRuntime(record: SleepingAgentSessionRecord): Promise<{
   const runtime = new OrcaRuntimeService(sleepWakeFixture(runtimeStore))
   const db = new InMemoryOrchestrationMessages()
   setInMemoryOrchestrationMessages(runtime, db)
-  const write = vi.fn().mockReturnValue(true)
+  const write = vi.fn().mockReturnValue(WRITE_ACCEPTED)
   let foregroundProcess: string | null = null
   let confirmedForegroundProcess: string | null | undefined
   let foregroundConfirmationSupported = true
@@ -95,6 +96,10 @@ async function sleptPaneRuntime(record: SleepingAgentSessionRecord): Promise<{
   runtime.setPtyController(
     sleepWakeFixture({
       write,
+      writeWithSettlement: (ptyId: string, data: string) => {
+        write(ptyId, data)
+        return WRITE_ACCEPTED
+      },
       kill: vi.fn(),
       getForegroundProcess: async () => foregroundProcess,
       confirmForegroundProcess,
@@ -179,6 +184,11 @@ async function sleptPaneRuntime(record: SleepingAgentSessionRecord): Promise<{
     // What the renderer does with `terminal:requestTabMount`: the tab remounts and
     // its agent cold-restores into a fresh PTY that then reports a finished turn.
     remountWithPty: (ptyId: string) => {
+      runtime.registerPty(ptyId, TEST_WORKTREE_ID, null, {
+        tabId: TAB_ID,
+        leafId: LEAF_ID,
+        incarnationId: 'claude-reattach-incarnation'
+      })
       syncGraph(ptyId)
       runtime.onPtyData(ptyId, '\x1b]0;Claude working\x07', 100)
       runtime.onPtyData(ptyId, '\x1b]0;Claude done\x07', 101)
@@ -363,30 +373,37 @@ describe('mail addressed to a listed slept pane', () => {
   })
 
   it('delivers the queued run mail once the woken pane is back and idle', async () => {
-    const { runtime, db, handle, tabMountSends, write, remountWithPty } =
-      await sleptPaneRuntime(sleepingRecord())
-    db.setRun({ id: 'run_test', coordinator_handle: handle, coordinator_pane_key: PANE_KEY })
-    const message = db.insertMessage({
-      from: 'term_worker',
-      to: 'run:run_test',
-      subject: 'worker done',
-      type: 'worker_done'
-    })
-    runtime.notifyMessageArrived('run:run_test', 'worker_done')
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(tabMountSends).toHaveLength(1)
+    vi.useFakeTimers()
+    try {
+      const { runtime, db, handle, tabMountSends, write, remountWithPty } =
+        await sleptPaneRuntime(sleepingRecord())
+      db.setRun({ id: 'run_test', coordinator_handle: handle, coordinator_pane_key: PANE_KEY })
+      const message = db.insertMessage({
+        from: 'term_worker',
+        to: 'run:run_test',
+        subject: 'worker done',
+        type: 'worker_done'
+      })
+      runtime.notifyMessageArrived('run:run_test', 'worker_done')
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(tabMountSends).toHaveLength(1)
 
-    // The wake is only half the promise: the mail must actually reach the agent.
-    remountWithPty('pty-woken')
-    await Promise.resolve()
+      // The wake is only half the promise: the mail must actually reach the agent.
+      remountWithPty('pty-woken')
+      await flushMicrotasks()
 
-    expect(write).toHaveBeenCalledWith(
-      'pty-woken',
-      expect.stringContaining('You have 1 orchestration message')
-    )
-    expect(message.delivered_at).toEqual(expect.any(String))
-    db.close()
+      expect(write).toHaveBeenCalledWith(
+        'pty-woken',
+        expect.stringContaining('You have 1 orchestration message')
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      expect(write).toHaveBeenCalledWith('pty-woken', '\r')
+      expect(message.delivered_at).toEqual(expect.any(String))
+      db.close()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it.each([

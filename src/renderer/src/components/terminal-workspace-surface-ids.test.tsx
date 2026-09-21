@@ -14,7 +14,7 @@ import type { TerminalParkingFoundation } from './use-terminal-parking-foundatio
 
 const initialState = useAppStore.getInitialState()
 
-function terminalParkingFixture<T>(value: object): T {
+function terminalParkingFixture<T>(value: unknown): T {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: these fixtures populate every TerminalParkingFoundation field read by the isolated cold-activation and parking-pass functions.
   return value as T
 }
