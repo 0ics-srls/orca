@@ -4,11 +4,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   createHarnessStoreState,
+  createStoreWithOwnerFiledElsewhere,
   loadIpcEventsHarness,
+  OWNER_ELSEWHERE_EVENT_WORKTREE_ID as WORKTREE_ID,
   type HarnessStoreState
 } from './ipc-events-test-harness'
-
-const WORKTREE_ID = 'wt-1'
 const SHARED_LEAF_ID = 'leaf-shared'
 const SHARED_PTY_ID = 'pty-shared'
 
@@ -43,12 +43,7 @@ describe('terminal reveal must not mint a tab that reuses a bound leaf id (STA-7
   it('leaves the leaf id bound to one tab when the owning row is filed under another workspace key', async () => {
     // terminalLayoutsByTabId is keyed by tab id alone, so it still records tab-a's
     // split leaf while the reveal's worktree key lists entirely different rows.
-    const storeState: HarnessStoreState = createHarnessStoreState({
-      tabsByWorktree: {
-        [WORKTREE_ID]: [{ id: 'tab-other', ptyId: 'pty-other', title: 'Terminal 3' }],
-        'wt-other': [{ id: 'tab-a', ptyId: 'pty-a', title: 'Terminal 1' }]
-      },
-      ptyIdsByTabId: {},
+    const storeState: HarnessStoreState = createStoreWithOwnerFiledElsewhere({
       terminalLayoutsByTabId: {
         'tab-a': { ptyIdsByLeafId: { 'leaf-a': 'pty-a', [SHARED_LEAF_ID]: SHARED_PTY_ID } }
       }

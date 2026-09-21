@@ -2,6 +2,7 @@
 // it mounts the tab under the requested worktree and a row filed elsewhere cannot be mounted there.
 import { describe, expect, it, vi } from 'vitest'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
+import { makeTerminalTab } from '@/store/slices/worktrees-slice-test-fixtures'
 import {
   planMobileTerminalTabMount,
   type MobileTerminalTabMountState
@@ -13,16 +14,7 @@ function state(tabCount = 1): MobileTerminalTabMountState {
   const terminalLayoutsByTabId: Record<string, TerminalLayoutSnapshot> = {}
   for (let index = 0; index < tabCount; index += 1) {
     const leafId = `leaf-${index}`
-    tabs.push({
-      id: `tab-${index}`,
-      ptyId: null,
-      worktreeId: 'wt',
-      title: 'Terminal',
-      customTitle: null,
-      color: null,
-      sortOrder: index,
-      createdAt: index
-    })
+    tabs.push(makeTerminalTab({ id: `tab-${index}`, worktreeId: 'wt', sortOrder: index }))
     terminalLayoutsByTabId[`tab-${index}`] = {
       root: { type: 'leaf', leafId },
       activeLeafId: leafId,

@@ -2,39 +2,28 @@
 // than the event's (STA-7961). Looking the hint up in the event worktree's list alone failed the
 // whole reveal, so the split pane never appeared.
 import { describe, expect, it } from 'vitest'
-import { collectLeafIdsInOrder } from '@/components/terminal-pane/layout-serialization'
+import { collectLeafIdsInOrder } from '@/components/terminal-pane/terminal-layout-leaf-ids'
 import {
   resolveTerminalRevealTabAdoption,
   type TerminalRevealAdoptionState
 } from '@/lib/terminal-reveal-tab-adoption'
 import {
-  createHarnessStoreState,
+  createStoreWithOwnerFiledElsewhere,
   loadIpcEventsHarness,
+  OWNER_ELSEWHERE_EVENT_WORKTREE_ID as EVENT_WORKTREE_ID,
+  OWNER_ELSEWHERE_OWNER_WORKTREE_ID as OWNER_WORKTREE_ID,
   type HarnessStoreState
 } from './ipc-events-test-harness'
+import { makeTerminalTab } from '@/store/slices/worktrees-slice-test-fixtures'
 
-const EVENT_WORKTREE_ID = 'wt-1'
-const OWNER_WORKTREE_ID = 'wt-other'
-
-function storeWithOwnerFiledElsewhere(): HarnessStoreState {
-  return createHarnessStoreState({
-    tabsByWorktree: {
-      [EVENT_WORKTREE_ID]: [{ id: 'tab-other', ptyId: 'pty-other', title: 'Terminal 3' }],
-      [OWNER_WORKTREE_ID]: [{ id: 'tab-a', ptyId: 'pty-a', title: 'Terminal 1' }]
-    },
-    ptyIdsByTabId: { 'tab-a': ['pty-a'] },
-    terminalLayoutsByTabId: {
-      'tab-a': {
-        root: { type: 'leaf', leafId: 'leaf-a' },
-        ptyIdsByLeafId: { 'leaf-a': 'pty-a' }
-      }
-    }
-  })
+/** The owner tab is also mounted here, so the split adopts a pty with a live pane. */
+function storeWithMountedOwnerFiledElsewhere(): HarnessStoreState {
+  return createStoreWithOwnerFiledElsewhere({ ptyIdsByTabId: { 'tab-a': ['pty-a'] } })
 }
 
 describe('split reveal whose target tab is filed under another worktree key', () => {
   it('splits the owner tab instead of failing the reveal', async () => {
-    const storeState = storeWithOwnerFiledElsewhere()
+    const storeState = storeWithMountedOwnerFiledElsewhere()
     const harness = await loadIpcEventsHarness(storeState)
     harness.useIpcEvents()
 
@@ -62,18 +51,7 @@ describe('split reveal whose target tab is filed under another worktree key', ()
     // instead of looking the hint up a second time.
     const state: TerminalRevealAdoptionState = {
       tabsByWorktree: {
-        [OWNER_WORKTREE_ID]: [
-          {
-            id: 'tab-a',
-            ptyId: null,
-            worktreeId: OWNER_WORKTREE_ID,
-            title: 'Terminal 1',
-            customTitle: null,
-            color: null,
-            sortOrder: 0,
-            createdAt: 1
-          }
-        ]
+        [OWNER_WORKTREE_ID]: [makeTerminalTab({ id: 'tab-a', worktreeId: OWNER_WORKTREE_ID })]
       },
       terminalLayoutsByTabId: {
         'tab-a': {
@@ -92,7 +70,7 @@ describe('split reveal whose target tab is filed under another worktree key', ()
   })
 
   it('still fails a split reveal whose parent row exists under no worktree key', async () => {
-    const storeState = storeWithOwnerFiledElsewhere()
+    const storeState = storeWithMountedOwnerFiledElsewhere()
     const harness = await loadIpcEventsHarness(storeState)
     harness.useIpcEvents()
 

@@ -4,30 +4,12 @@
 import { describe, expect, it } from 'vitest'
 import { BACKGROUND_MOUNT_TERMINAL_WORKTREE_EVENT } from '@/constants/terminal'
 import {
-  createHarnessStoreState,
+  createStoreWithOwnerFiledElsewhere,
   loadIpcEventsHarness,
-  type HarnessStoreState,
+  OWNER_ELSEWHERE_EVENT_WORKTREE_ID as EVENT_WORKTREE_ID,
+  OWNER_ELSEWHERE_OWNER_WORKTREE_ID as OWNER_WORKTREE_ID,
   type IpcEventsHarness
 } from './ipc-events-test-harness'
-
-const EVENT_WORKTREE_ID = 'wt-1'
-const OWNER_WORKTREE_ID = 'wt-other'
-
-function storeWithOwnerFiledElsewhere(): HarnessStoreState {
-  return createHarnessStoreState({
-    tabsByWorktree: {
-      [EVENT_WORKTREE_ID]: [{ id: 'tab-other', ptyId: 'pty-other', title: 'Terminal 3' }],
-      [OWNER_WORKTREE_ID]: [{ id: 'tab-a', ptyId: 'pty-a', title: 'Terminal 1' }]
-    },
-    ptyIdsByTabId: {},
-    terminalLayoutsByTabId: {
-      'tab-a': {
-        root: { type: 'leaf', leafId: 'leaf-a' },
-        ptyIdsByLeafId: { 'leaf-a': 'pty-a' }
-      }
-    }
-  })
-}
 
 function revealOwnedPane(harness: IpcEventsHarness, presentation: 'background' | 'focused'): void {
   harness.createTerminal({
@@ -42,7 +24,7 @@ function revealOwnedPane(harness: IpcEventsHarness, presentation: 'background' |
 
 describe('a reveal surfaces its owner under the owner’s worktree key', () => {
   it('activates, reveals and focuses the owner workspace, not the event’s', async () => {
-    const storeState = storeWithOwnerFiledElsewhere()
+    const storeState = createStoreWithOwnerFiledElsewhere()
     const harness = await loadIpcEventsHarness(storeState)
     harness.useIpcEvents()
 
@@ -58,7 +40,7 @@ describe('a reveal surfaces its owner under the owner’s worktree key', () => {
   })
 
   it('attests the identity under the owner key, so the reply carries one instead of an error', async () => {
-    const storeState = storeWithOwnerFiledElsewhere()
+    const storeState = createStoreWithOwnerFiledElsewhere()
     const harness = await loadIpcEventsHarness(storeState)
     harness.useIpcEvents()
 
@@ -78,7 +60,7 @@ describe('a reveal surfaces its owner under the owner’s worktree key', () => {
   })
 
   it('background-mounts the owner workspace rather than the event’s', async () => {
-    const storeState = storeWithOwnerFiledElsewhere()
+    const storeState = createStoreWithOwnerFiledElsewhere()
     const harness = await loadIpcEventsHarness(storeState)
     harness.useIpcEvents()
 
