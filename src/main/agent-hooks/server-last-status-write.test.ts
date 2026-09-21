@@ -154,7 +154,7 @@ describe('Last-status persistence', () => {
     }
   })
 
-  it('persists SSH authority through transient clears until explicit retirement', async () => {
+  it('persists SSH authority through a status-row clear until explicit retirement', async () => {
     mkdirSync(join(userDataPath, 'agent-hooks'), { recursive: true })
     const receivedAt = recentTs()
     const launchToken = 'retained-ssh-launch-bearer'
@@ -185,7 +185,7 @@ describe('Last-status persistence', () => {
 
     const first = new AgentHookServer()
     await first.start({ env: 'production', userDataPath })
-    first.clearStatusEntriesForConnection('ssh-target')
+    first.dropStatusEntry(PANE)
     first.flushStatusPersistSync()
     first.stop()
 
