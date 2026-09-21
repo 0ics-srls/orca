@@ -131,11 +131,17 @@ off the host arch kept it: unreached in the normal case, but still the binary th
 loader takes if `build/Release` ever fails to load for an unrelated reason — an
 AV quarantine, a missing dependency — which is the silent fall-through this whole
 gate exists to close. Rows two and four keep the prebuild because it is the only
-thing there the target could load.
+thing there the target could load. Measured on Windows 11 x64 with the VS 2022
+ARM64 cross toolset: `node-gyp rebuild --arch=arm64` does emit a `conpty.node`
+with machine `0xaa64`, so row three is a real package shape — but as of this
+writing no release produces it, because `electron-builder --win` is run without
+an arch and packages x64 only.
 
-So presence alone cannot separate row three from row four, and failing on any
-unmarked file present would reject a correct package with advice its builder
-could not act on. `verifyPackagedConptyBreakawayMarker` instead resolves the
+The verifier still does not key on presence: the prune is the step it is
+checking, and `build/Debug` is never pruned, so an unmarked file beside a
+correct `build/Release` cannot by itself separate row three from row four, and
+failing on one would reject a correct package with advice its builder could not
+act on. `verifyPackagedConptyBreakawayMarker` instead resolves the
 addon the way the loader does — first candidate whose PE `IMAGE_FILE_HEADER`
 machine matches the target — and checks the marker on that one. A package with
 no candidate at all, or none of the target's architecture, is refused: it has no
