@@ -132,7 +132,7 @@ describe('resolveTerminalPtyPaneOwnership', () => {
         'tab-b': { root: leaf('leaf-b'), ptyIdsByLeafId: { 'leaf-b': PTY_ID } }
       }
     })
-    expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, { preferTabId: 'tab-b' })).toEqual({
+    expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, 'tab-b')).toEqual({
       kind: 'owned',
       owner: { tabId: 'tab-b', tier: 'recorded' }
     })
@@ -145,18 +145,17 @@ describe('resolveTerminalPtyPaneOwnership', () => {
         'tab-detached-to': { root: leaf('leaf-a'), ptyIdsByLeafId: { 'leaf-a': PTY_ID } }
       }
     })
-    expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, { preferTabId: 'tab-minted-in' })).toEqual({
+    expect(resolveTerminalPtyPaneOwnership(s, PTY_ID, 'tab-minted-in')).toEqual({
       kind: 'owned',
       owner: { tabId: 'tab-detached-to', tier: 'recorded' }
     })
   })
 
-  it('falls back to the pre-minted tab id when nothing records the pty (#10486)', () => {
-    // Why its own tier: nothing recorded this, so a reader must be able to tell a binding
-    // from the tab id the PTY's env was stamped with at spawn.
-    expect(
-      resolveTerminalPtyPaneOwnership(state({}), PTY_ID, { preferTabId: 'tab-hinted' })
-    ).toEqual({ kind: 'owned', owner: { tabId: 'tab-hinted', tier: 'hinted' } })
+  it('leaves a pty nothing holds unowned, however the hint names it', () => {
+    // The hint is a tie-break among holders, not a holder: adopting on it is the reveal's policy.
+    expect(resolveTerminalPtyPaneOwnership(state({}), PTY_ID, 'tab-hinted')).toEqual({
+      kind: 'none'
+    })
   })
 
   it('owns a pty whose only holder is filed under a foreign worktree key', () => {

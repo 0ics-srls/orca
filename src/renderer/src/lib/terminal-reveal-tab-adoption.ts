@@ -10,10 +10,6 @@ import { findTerminalTabRow } from './terminal-tab-row-lookup'
 export type TerminalRevealAdoptionState = TerminalPtyPaneOwnerState &
   Pick<AppState, 'tabsByWorktree'>
 
-export type TerminalRevealTabAdoption =
-  | { kind: 'adopt'; tabId: string; via: 'pty-owner' | 'bound-leaf' }
-  | { kind: 'mint' }
-
 /**
  * The tab whose layout owns a leaf id. Bound-and-in-tree beats in-tree-unbound, because a pane
  * keeps its leaf after its PTY exits or is cleared, and such a tab has no session to adopt.
@@ -38,29 +34,34 @@ export function findTerminalTabIdBindingLeafId(
 }
 
 /**
- * Whether a reveal should adopt an existing tab or mint one. Adoption never rejects and never
- * mints for a PTY or a leaf id some layout still holds — a second tab bound to a live PTY starves
- * a pane, while a slightly wrong tab does not.
+ * The tab a reveal should land on, or null to mint one. Adoption never rejects and never mints
+ * for a PTY or a leaf id some layout still holds — a second tab bound to a live PTY starves a
+ * pane, while a slightly wrong tab does not.
  */
 export function resolveTerminalRevealTabAdoption(
   state: TerminalRevealAdoptionState,
   request: { ptyId: string; leafId?: string; hintTabId?: string }
-): TerminalRevealTabAdoption {
+): string | null {
   // Why: a hint naming no row is a stale baked-in paneKey, not a binding.
-  const preferTabId =
+  const hintTabId =
     request.hintTabId !== undefined && findTerminalTabRow(state, request.hintTabId)
-      ? { preferTabId: request.hintTabId }
-      : {}
-  const ownership = resolveTerminalPtyPaneOwnership(state, request.ptyId, preferTabId)
+      ? request.hintTabId
+      : undefined
+  const ownership = resolveTerminalPtyPaneOwnership(state, request.ptyId, hintTabId)
   if (ownership.kind === 'owned') {
-    return { kind: 'adopt', tabId: ownership.owner.tabId, via: 'pty-owner' }
+    return ownership.owner.tabId
+  }
+  // Why: nothing holds the PTY yet, so the tab it was minted against is the only thing left that
+  // keeps paneKey hook attribution intact (#10486), and a split names its parent by that id.
+  if (ownership.kind === 'none' && hintTabId !== undefined) {
+    return hintTabId
   }
   // STA-7961: the PTY is unowned here, but the leaf id may already be someone's pane.
   const leafOwnerTabId = request.leafId
     ? findTerminalTabIdBindingLeafId(state, request.leafId)
     : null
   if (leafOwnerTabId !== null) {
-    return { kind: 'adopt', tabId: leafOwnerTabId, via: 'bound-leaf' }
+    return leafOwnerTabId
   }
   // Why mint even when claimants exist: no layout carries this leaf id, so the bridge would
   // replace the adopted tab's whole layout with a single pane and orphan its other panes' PTYs.
@@ -71,7 +72,7 @@ export function resolveTerminalRevealTabAdoption(
           .join(', ')}, and no layout carries leafId ${request.leafId ?? 'none'}`
       : `no pane owns ptyId ${request.ptyId} (tabId hint ${request.hintTabId ?? 'none'}, leafId ${request.leafId ?? 'none'})`
   console.warn(`[terminal-reveal] ${claim}; minting a tab`)
-  return { kind: 'mint' }
+  return null
 }
 
 export type TerminalRevealTargetRequest = {
@@ -98,17 +99,17 @@ export function resolveTerminalRevealTarget(
   state: TerminalRevealAdoptionState,
   request: TerminalRevealTargetRequest
 ): TerminalRevealTarget {
-  const adoption = request.ptyId
+  const adoptedTabId = request.ptyId
     ? resolveTerminalRevealTabAdoption(state, {
         ptyId: request.ptyId,
         ...(request.leafId ? { leafId: request.leafId } : {}),
         ...(request.tabId !== undefined ? { hintTabId: request.tabId } : {})
       })
-    : ({ kind: 'mint' } as const)
-  const adoptedRow = adoption.kind === 'adopt' ? findTerminalTabRow(state, adoption.tabId) : null
-  if (adoption.kind === 'adopt' && !adoptedRow) {
+    : null
+  const adoptedRow = adoptedTabId !== null ? findTerminalTabRow(state, adoptedTabId) : null
+  if (adoptedTabId !== null && !adoptedRow) {
     // Why: minting instead would re-bind a leaf id the orphan layout still holds.
-    throw new Error(`terminal_reveal_owner_row_missing: tab ${adoption.tabId}`)
+    throw new Error(`terminal_reveal_owner_row_missing: tab ${adoptedTabId}`)
   }
   const isSplitReveal = Boolean(
     request.ptyId && request.tabId && request.leafId && request.splitFromLeafId

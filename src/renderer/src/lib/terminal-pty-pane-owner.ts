@@ -4,21 +4,16 @@ import type { AppState } from '@/store/types'
 /** No `tabsByWorktree`: ownership is tab-keyed, so no worktree key participates. */
 export type TerminalPtyPaneOwnerState = Pick<AppState, 'terminalLayoutsByTabId' | 'ptyIdsByTabId'>
 
+/** Every member is a real holder: a tab this PTY is mounted in, or one whose layout binds it. */
 export type TerminalPtyPaneOwner = {
   tabId: string
-  /** `hinted` is the PTY's baked-in tab id standing in for a binding nothing has written yet. */
-  tier: 'mounted' | 'recorded' | 'hinted'
+  tier: 'mounted' | 'recorded'
 }
 
 export type TerminalPtyPaneOwnership =
   | { kind: 'owned'; owner: TerminalPtyPaneOwner }
   | { kind: 'ambiguous'; owners: TerminalPtyPaneOwner[] }
   | { kind: 'none' }
-
-export type TerminalPtyPaneOwnerOptions = {
-  /** Tab id baked into the PTY's env; a tie-break and a last resort, never a binding. */
-  preferTabId?: string
-}
 
 /**
  * Whether this tab's layout binds `ptyId` to a leaf it still holds. A rootless layout binds its
@@ -66,11 +61,13 @@ export function listTerminalPtyPaneOwners(
 /**
  * Which pane owns a ptyId. The tab row's own `ptyId` is deliberately not a tier: the layout
  * is the binding, and a row that disagrees with it is what hands two panes one PTY (STA-7961).
+ * `preferTabId` is the tab id baked into the PTY's env — a tie-break among holders, never a
+ * binding, so a PTY nothing holds stays unowned however the hint names it.
  */
 export function resolveTerminalPtyPaneOwnership(
   state: TerminalPtyPaneOwnerState,
   ptyId: string,
-  options: TerminalPtyPaneOwnerOptions = {}
+  preferTabId?: string
 ): TerminalPtyPaneOwnership {
   const owners = listTerminalPtyPaneOwners(state, ptyId)
   const mounted = owners.filter((owner) => owner.tier === 'mounted')
@@ -80,12 +77,8 @@ export function resolveTerminalPtyPaneOwnership(
   }
   if (deciding.length > 1) {
     // Why: stale duplicate ownership must not attach whichever hidden tab persisted order lists first.
-    const preferred = deciding.find((owner) => owner.tabId === options.preferTabId)
+    const preferred = deciding.find((owner) => owner.tabId === preferTabId)
     return preferred ? { kind: 'owned', owner: preferred } : { kind: 'ambiguous', owners: deciding }
   }
-  // Why: nothing records the PTY yet, so the tab it was minted against is the only thing left
-  // that keeps paneKey hook attribution intact (#10486).
-  return options.preferTabId !== undefined
-    ? { kind: 'owned', owner: { tabId: options.preferTabId, tier: 'hinted' } }
-    : { kind: 'none' }
+  return { kind: 'none' }
 }

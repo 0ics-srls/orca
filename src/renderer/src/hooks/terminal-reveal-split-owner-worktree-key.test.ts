@@ -88,7 +88,7 @@ describe('split reveal whose target tab is filed under another worktree key', ()
 
     expect(
       resolveTerminalRevealTabAdoption(state, { ptyId: 'pty-split', hintTabId: 'tab-a' })
-    ).toEqual({ kind: 'adopt', tabId: 'tab-a', via: 'pty-owner' })
+    ).toBe('tab-a')
   })
 
   it('still fails a split reveal whose parent row exists under no worktree key', async () => {
