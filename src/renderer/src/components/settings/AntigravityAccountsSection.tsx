@@ -13,7 +13,8 @@ export function AntigravityAccountsSection({
 }): React.JSX.Element {
   const [state, setState] = useState<AntigravityAccountState>({
     accounts: [],
-    activeAccountId: null
+    activeAccountId: null,
+    detectedAccount: null
   })
   const [busy, setBusy] = useState(false)
 
@@ -73,6 +74,29 @@ export function AntigravityAccountsSection({
                   'Unavailable'
                 ))}
           </p>
+        )}
+        {state.detectedAccount && (
+          <div
+            className="flex items-center justify-between gap-3 rounded-md border border-dashed border-border px-3 py-2"
+            data-detected-account={state.detectedAccount.id}
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm">
+                {state.detectedAccount.email ??
+                  state.detectedAccount.subject ??
+                  translate(
+                    'auto.components.settings.AccountsPane.antigravitySignedIn',
+                    'Signed-in Antigravity account'
+                  )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {translate(
+                  'auto.components.settings.AccountsPane.antigravityDetected',
+                  'Detected on this computer; add it to enable switching'
+                )}
+              </p>
+            </div>
+          </div>
         )}
         {state.accounts.map((account) => (
           <div
