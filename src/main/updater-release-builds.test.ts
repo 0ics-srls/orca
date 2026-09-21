@@ -313,6 +313,33 @@ describe('listReleaseBuilds', () => {
     expect(requestHeaders(1)).toEqual({ Accept: 'application/vnd.github+json' })
   })
 
+  // Why: GitHub attaches `x-ratelimit-remaining: 0` to some secondary limits too, and
+  // those carry Retry-After. Tripping the primary breaker on one would block every
+  // unrelated core gh command until the hourly reset over a short abuse-throttle.
+  it('does not trip the gh breaker for a secondary limit carrying retry-after', async () => {
+    tokenMock.mockResolvedValue('gho_abc')
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(null, {
+          ok: false,
+          status: 403,
+          headers: {
+            'x-ratelimit-remaining': '0',
+            'x-ratelimit-reset': '1800000600',
+            'retry-after': '60'
+          }
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse([release('v1.4.159')]))
+
+    await expect(
+      listReleaseBuilds('stable', 'darwin').then((builds) => builds.map((build) => build.version))
+    ).resolves.toEqual(['1.4.159'])
+
+    expect(recordRateLimitMock).not.toHaveBeenCalled()
+    expect(requestHeaders(1)).toEqual({ Accept: 'application/vnd.github+json' })
+  })
+
   it('skips the token while the gh breaker has the core bucket blocked', async () => {
     blockedUntilMock.mockReturnValue(Date.now() + 60_000)
     tokenMock.mockResolvedValue('gho_abc')

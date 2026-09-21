@@ -42,6 +42,16 @@ function isRateLimited(res: Response): boolean {
   )
 }
 
+/**
+ * Only a spent primary bucket may trip the shared gh breaker. GitHub also sends
+ * `x-ratelimit-remaining: 0` on some secondary 403/429s, and those carry Retry-After —
+ * blocking every core gh command until the primary reset would be far wider than the
+ * limit GitHub actually applied.
+ */
+function isPrimaryRateLimited(res: Response): boolean {
+  return res.headers.get('x-ratelimit-remaining') === '0' && !res.headers.has('retry-after')
+}
+
 /** Primary limits carry the reset epoch; secondary limits carry Retry-After as seconds or an HTTP date. */
 export function rateLimitResetAtMs(headers: Headers, nowMs: number): number | null {
   const resetEpochSeconds = Number(headers.get('x-ratelimit-reset'))
@@ -176,8 +186,9 @@ export async function listReleaseBuilds(
     res = await fetchReleases(repo, null)
   } else if (token && isRateLimited(res)) {
     // Why: the token's bucket and the per-IP bucket are separate, so the other one
-    // may still have quota. Tell the breaker first so gh calls fail fast until the reset.
-    const resetAtMs = rateLimitResetAtMs(res.headers, Date.now())
+    // may still have quota. Tell the breaker first — only for a primary limit — so gh
+    // calls fail fast until the reset.
+    const resetAtMs = isPrimaryRateLimited(res) ? rateLimitResetAtMs(res.headers, Date.now()) : null
     if (resetAtMs !== null) {
       recordGhPrimaryRateLimit('core', resetAtMs)
     }
