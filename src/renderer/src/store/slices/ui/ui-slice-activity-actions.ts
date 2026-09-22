@@ -1,5 +1,4 @@
 import type { StoredAgentAttentionUnread } from '@/attention/agent-attention-contract'
-import { takeDispatchedAgentNotificationIds } from '@/attention/dispatched-agent-notification-ids'
 import type { UISlice, UISliceGet, UISliceSet } from './ui-slice-contract'
 import {
   collectAcknowledgedAgentNotificationId,
@@ -87,16 +86,10 @@ export function createUiActivityActions(set: UISliceSet, _get: UISliceGet): Acti
           ...(nextManual ? { manuallyUnreadTurnsByPaneKey: nextManual } : {})
         }
       })
-      // Why: the rebuild above reads the row as it stands now; what was actually dispatched is the
-      // authority for banners raised before the row's start moved.
-      for (const key of paneKeys) {
-        for (const id of takeDispatchedAgentNotificationIds(key)) {
-          notificationIdsToDismiss.add(id)
-        }
-      }
-      const ids = [...notificationIdsToDismiss]
-      if (ids.length > 0 && typeof window !== 'undefined') {
-        void window.api?.notifications?.dismiss?.(ids)
+      // Why: main retires what it announced for these subjects; the ids rebuilt above from the row
+      // as it stands now are the fallback after a restart emptied that record.
+      if (paneKeys.length > 0 && typeof window !== 'undefined') {
+        void window.api?.notifications?.dismiss?.([...notificationIdsToDismiss], paneKeys)
       }
     },
     unacknowledgeAgents: (paneKeys) =>

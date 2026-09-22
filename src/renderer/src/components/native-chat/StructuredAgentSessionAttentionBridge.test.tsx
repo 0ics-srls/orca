@@ -63,7 +63,6 @@ vi.mock('@/runtime/structured-agent-session-client', () => ({
 
 import { StructuredAgentSessionAttentionBridge } from './StructuredAgentSessionAttentionBridge'
 import { resetStructuredAgentSessionTurnCompletionFeedsForTests } from '@/runtime/structured-agent-session-turn-completion-feed'
-import { resetDispatchedAgentNotificationIdsForTests } from '@/attention/dispatched-agent-notification-ids'
 import {
   makeTabGroup,
   makeUnifiedTab,
@@ -125,8 +124,8 @@ function completionFrameWithoutOutcome(): AgentSessionTurnCompletionEvent {
 
 /** Every request the renderer handed the preload notification bridge, in order. */
 const dispatched: NotificationDispatchRequest[] = []
-/** Every id batch an acknowledgement asked main to retire, in order. */
-const dismissed: string[][] = []
+/** Every retirement an acknowledgement asked main for, in order. */
+const dismissed: { ids: string[]; paneKeys?: string[] }[] = []
 
 /** The single dispatch a settled turn is allowed to make. */
 function onlyDispatch(): NotificationDispatchRequest {
@@ -161,16 +160,17 @@ describe('StructuredAgentSessionAttentionBridge', () => {
     vi.clearAllMocks()
     dispatched.length = 0
     dismissed.length = 0
-    resetDispatchedAgentNotificationIdsForTests()
     // happy-dom makes globalThis the window, so this is `window.api` as the delivery tail reads it.
     vi.stubGlobal('api', {
+      // Settling a working row queues a PR refresh that reads this.
+      gh: {},
       notifications: {
         dispatch: (request: NotificationDispatchRequest) => {
           dispatched.push(request)
           return Promise.resolve({ delivered: true })
         },
-        dismiss: (ids: string[]) => {
-          dismissed.push(ids)
+        dismiss: (ids: string[], paneKeys?: string[]) => {
+          dismissed.push({ ids, paneKeys })
           return Promise.resolve({ dismissed: 0 })
         }
       }
@@ -277,8 +277,8 @@ describe('StructuredAgentSessionAttentionBridge', () => {
       await waitFor(() => expect(mocks.subscribeCompletions).toHaveBeenCalledOnce())
 
       act(() => hostStream()(completionFrame(SESSION, 'cancellation')))
-      const raised = onlyDispatch().notificationId
-      expect(raised).toBeTruthy()
+      const raised = onlyDispatch()
+      expect(raised).toMatchObject({ paneKey: CHAT_SUBJECT, notificationId: expect.any(String) })
       mocks.store
         ?.getState()
         .setAgentStatus(
@@ -292,7 +292,10 @@ describe('StructuredAgentSessionAttentionBridge', () => {
 
       mocks.store?.getState().acknowledgeAgents([CHAT_SUBJECT])
 
-      expect(dismissed.flat()).toContain(raised)
+      // The id rebuilt from the moved row can no longer name the banner; main retires it by the
+      // subject it was announced under, which is what this request must carry.
+      expect(dismissed.flatMap(({ ids }) => ids)).not.toContain(raised.notificationId)
+      expect(dismissed.flatMap(({ paneKeys }) => paneKeys ?? [])).toContain(CHAT_SUBJECT)
     }
   )
 

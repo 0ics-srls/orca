@@ -77,8 +77,8 @@ export function dispatchStructuredTurnCompletionAttention(
   }
   const row = state.agentStatusByPaneKey[paneKey]
   // Minted from the row as it stands; the row's start can move afterwards (this can outrun the
-  // settled re-projection), so acknowledgement retires the id the delivery tail recorded rather
-  // than rebuilding it. Null only when no row has landed at all; delivery still goes out then,
+  // settled re-projection), so acknowledgement retires by subject: main keeps the ids it announced
+  // per pane. Null only when no row has landed at all; delivery still goes out then,
   // undismissible, rather than being held back for bookkeeping.
   const notificationId = buildAgentNotificationId({
     worktreeId: tab.worktreeId,
