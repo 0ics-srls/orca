@@ -1,6 +1,23 @@
-import { killWithDescendantSweep } from '../pty-descendant-termination'
-import { terminateShutdownDescendants } from './terminal-descendant-shutdown'
+import { killWithDescendantSweep, type DescendantSnapshot } from '../pty-descendant-termination'
+import { sweepTerminalSessionDescendants } from './terminal-session-descendant-sweep'
+import { markPtySessionRootExited, rememberPtySessionPgids } from '../pty-session-identity'
 import type { Session } from './session'
+
+/**
+ * Hands a pre-kill walk's process groups to the session identity, then sweeps
+ * from that identity. The walk is the one moment a live root can teach Orca the
+ * job groups its shell created; nothing rediscovers them afterwards.
+ */
+function sweepSessionFromSnapshot(
+  session: Session,
+  snapshot: DescendantSnapshot
+): Promise<unknown> {
+  rememberPtySessionPgids(
+    session.processIdentity,
+    snapshot.descendants.map((row) => row.pgid)
+  )
+  return sweepTerminalSessionDescendants(session.processIdentity)
+}
 
 type TeardownOperation = {
   promise: Promise<void>
@@ -16,6 +33,9 @@ type TeardownOperation = {
  * finish, even when the root exits and its Session is reaped. */
 export class TerminalSessionTeardown {
   private operations = new Map<string, TeardownOperation>()
+  /** Why not an `operations` entry: a natural exit frees the id immediately, and a
+   *  create landing on it must not queue behind a sweep of the previous session. */
+  private exitSweeps = new Set<Promise<unknown>>()
 
   constructor(private sessions: ReadonlyMap<string, Session>) {}
 
@@ -70,6 +90,32 @@ export class TerminalSessionTeardown {
     await Promise.all(this.requestImmediateAll())
   }
 
+  /**
+   * Sweeps a session whose root exited on its own.
+   *
+   * Nothing signalled that root, so nothing signalled what it left behind: a
+   * descendant that had already reparented to pid 1, or that sits outside the
+   * terminal's foreground group, never receives the kernel's hang-up either. The
+   * session's recorded identity is what still names that work (#22346).
+   */
+  sweepExitedSession(sessionId: string, session: Session): void {
+    if (this.operations.has(sessionId)) {
+      // A tracked teardown already owns this session's descendants.
+      return
+    }
+    // Closes the window in which this session could still have gained members on
+    // its terminal, so a later tty match cannot be a new session's process.
+    markPtySessionRootExited(session.processIdentity)
+    const sweep = sweepTerminalSessionDescendants(session.processIdentity).catch(() => {})
+    this.exitSweeps.add(sweep)
+    void sweep.finally(() => this.exitSweeps.delete(sweep))
+  }
+
+  /** Lets daemon shutdown wait out sweeps started by sessions that exited on their own. */
+  async settleExitSweeps(): Promise<void> {
+    await Promise.all(this.exitSweeps)
+  }
+
   killSession(sessionId: string, session: Session, immediate: boolean): void | Promise<void> {
     if (session.launchAgent) {
       return this.killAgentSession(sessionId, session, immediate)
@@ -122,7 +168,7 @@ export class TerminalSessionTeardown {
     await killWithDescendantSweep(session.pid, () => {}, {
       ownsRoot: () => this.sessions.get(sessionId) === session && session.isAlive,
       terminateOwnedTree: () => session.terminateOwnedTree(),
-      terminateDescendants: terminateShutdownDescendants,
+      terminateDescendants: (snapshot) => sweepSessionFromSnapshot(session, snapshot),
       awaitEscalation: true
     })
     await session.forceKillAndWaitForExit()
@@ -176,7 +222,7 @@ export class TerminalSessionTeardown {
             ownsRoot: () => this.sessions.get(sessionId) === session && session.isAlive,
             terminateOwnedTree: () => session.terminateOwnedTree(),
             terminateDescendants: (snapshot) => {
-              entry.descendantVerification = terminateShutdownDescendants(snapshot)
+              entry.descendantVerification = sweepSessionFromSnapshot(session, snapshot)
               return entry.descendantVerification
             },
             awaitEscalation: () => entry.immediate

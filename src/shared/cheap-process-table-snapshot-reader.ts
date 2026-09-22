@@ -11,6 +11,7 @@ import {
   createProcessTableSnapshotReader,
   withEvidenceBudget
 } from './process-table-snapshot-reader'
+import { notifyProcessTableCapture } from './process-table-capture-observers'
 
 /**
  * The cheap-tier sibling of the strict evidence reader: same coalescing and TTL, a
@@ -35,7 +36,9 @@ const cheapProcessTableReader = createProcessTableSnapshotReader<CheapProcessTab
     if (result.code !== 0) {
       throw new ProcessTableCaptureError(`ps_exit_${result.code ?? result.signal ?? 'unknown'}`)
     }
-    return parseCheapProcessTableRows(result.stdout)
+    const rows = parseCheapProcessTableRows(result.stdout)
+    notifyProcessTableCapture(() => rows)
+    return rows
   },
   now: () => Date.now()
 })

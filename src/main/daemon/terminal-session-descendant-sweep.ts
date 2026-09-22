@@ -1,12 +1,14 @@
 import * as descendantTermination from '../pty-descendant-termination'
-import type { ProcessTableReader, DescendantSnapshot } from '../pty-descendant-termination'
+import type { ProcessTableReader } from '../pty-descendant-termination'
+import type { DescendantTreeVerdict } from '../pty-descendant-exit-verification'
 import {
-  terminateDescendantSnapshotWithVerdict,
-  type DescendantTreeVerdict
-} from '../pty-descendant-exit-verification'
+  sweepSessionDescendants,
+  type SessionDescendantSweepDeps
+} from '../pty-session-descendant-sweep'
+import type { PtySessionProcessIdentity } from '../pty-session-identity'
 
-// Keep one fresh table for the short burst of verifier polls that follows a shutdown signal.
-// This bounds process-table fanout without reusing a completed capture for a later polling round.
+// Keep one fresh table for the short burst of sweep rounds that follows a teardown signal.
+// This bounds process-table fanout without reusing a completed capture for a later round.
 let sharedShutdownCapture: {
   promise: ReturnType<ProcessTableReader>
   expires?: ReturnType<typeof setTimeout>
@@ -33,18 +35,22 @@ const readShutdownProcessTable: ProcessTableReader = (timeoutMs) => {
   return promise
 }
 
-export function terminateShutdownDescendants(
-  snapshot: DescendantSnapshot
+/**
+ * The one sweep every terminal-session teardown runs — kill, daemon shutdown,
+ * and natural PTY exit alike. Each drives it from the same session identity, so
+ * what is reachable no longer depends on whether a live root survived to be
+ * walked.
+ */
+export function sweepTerminalSessionDescendants(
+  identity: PtySessionProcessIdentity,
+  deps: SessionDescendantSweepDeps = {}
 ): Promise<DescendantTreeVerdict> {
-  if (snapshot.descendants.length === 0) {
-    return Promise.resolve('exited')
-  }
-  return terminateDescendantSnapshotWithVerdict(snapshot, {
+  return sweepSessionDescendants(identity, {
     // Leave room for capture and root exit within daemon-entry's 5s shutdown budget.
     verifyMs: 2500,
     timeoutMs: 250,
     keepAlive: true,
-    requireIdentityBeforeSignal: true,
-    readTable: readShutdownProcessTable
+    readTable: readShutdownProcessTable,
+    ...deps
   })
 }

@@ -27,6 +27,8 @@ const DEFAULT_SNAPSHOT_TTL_MS = PROCESS_TABLE_SNAPSHOT_MAX_STALENESS_MS
 
 type Snapshot<T> = { value: T; capturedAtMs: number; completedAtMs: number }
 
+import { notifyProcessTableCapture } from './process-table-capture-observers'
+
 type ProcessTableSnapshotReaderDeps<T> = {
   runPs: () => Promise<T>
   now: () => number
@@ -275,7 +277,9 @@ const processTableReader = createProcessTableSnapshotReader<ProcessTableCapture>
     const stdout = await captureProcessTable(PS_ARGS)
     const baseCapture = createProcessTableCapture(stdout)
     const startTimesByPid = await readLinuxProcessStartTimes(baseCapture.lenient())
-    return createProcessTableCapture(stdout, startTimesByPid, process.platform === 'linux')
+    const capture = createProcessTableCapture(stdout, startTimesByPid, process.platform === 'linux')
+    notifyProcessTableCapture(() => capture.lenient())
+    return capture
   },
   now: () => Date.now()
 })
