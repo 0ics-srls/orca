@@ -103,8 +103,8 @@ export type AgentLaunchOutcome =
        * One field rather than a `tabId`/`leafId` pair, because the key already carries both and two
        * copies of one fact can disagree.
        *
-       * Absent when this launch minted no pane: a reused terminal was already running, and a
-       * worktree-create startup terminal is built by the create, which reports only a handle.
+       * Absent when this launch minted no pane, such as a reused terminal that was already running,
+       * or when the runtime could not report the pane it created.
        */
       paneKey?: string
     }

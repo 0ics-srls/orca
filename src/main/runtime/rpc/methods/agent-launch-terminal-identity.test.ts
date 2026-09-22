@@ -108,10 +108,11 @@ describe('the pane a terminal launch created', () => {
     expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_live' })
   })
 
-  it('omits the pane key for a worktree-create startup terminal', async () => {
-    // Agent-first creation builds the agent inside the create, which reports only a handle.
-    // Reporting the pane of a terminal this launch never created would name the wrong surface.
-    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalPaneKey: PANE_KEY })
+  it('reports the pane key for a worktree-create startup terminal', async () => {
+    const runtime = runtimeStub({
+      settings: TERMINAL_ONLY,
+      startupTerminalPaneKey: PANE_KEY
+    })
 
     const result = await launch(
       {
@@ -121,8 +122,29 @@ describe('the pane a terminal launch created', () => {
       runtime
     )
 
-    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_agent_first' })
+    expect(result.outcome).toEqual({
+      kind: 'terminal',
+      handle: 'term_agent_first',
+      paneKey: PANE_KEY
+    })
   })
+
+  it.each([undefined, ''])(
+    'omits an absent or empty startup-terminal pane key (%s)',
+    async (startupTerminalPaneKey) => {
+      const runtime = runtimeStub({ settings: TERMINAL_ONLY, startupTerminalPaneKey })
+
+      const result = await launch(
+        {
+          agent: 'claude',
+          target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
+        },
+        runtime
+      )
+
+      expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_agent_first' })
+    }
+  )
 })
 
 describe('reading a recorded launch back', () => {

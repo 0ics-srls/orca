@@ -142,6 +142,8 @@ export type AgentLaunchWorkspaceFactory = {
   }): Promise<{
     worktreeId: string
     startupTerminalHandle: string | undefined
+    /** The pane minted with the startup terminal, when the runtime reported one. */
+    startupTerminalPaneKey?: string
     /** Created, but incomplete — surfaced on the launch result rather than dropped. */
     warning?: string
   }>
@@ -192,7 +194,11 @@ export async function executeAgentLaunch(
   // Agent-first creation already produced the agent, so the pre-flight verdict is final.
   if (placed.startupTerminalHandle) {
     return {
-      outcome: { kind: 'terminal', handle: placed.startupTerminalHandle },
+      outcome: {
+        kind: 'terminal',
+        handle: placed.startupTerminalHandle,
+        ...(placed.startupTerminalPaneKey ? { paneKey: placed.startupTerminalPaneKey } : {})
+      },
       worktreeId: placed.worktreeId,
       receipt: preflight,
       ...(placed.warning ? { warning: placed.warning } : {}),
@@ -270,6 +276,7 @@ async function resolveWorkspace(
 ): Promise<{
   worktreeId: string
   startupTerminalHandle: string | undefined
+  startupTerminalPaneKey?: string
   warning?: string
   /** True when this create folded the prompt into the agent's startup command. */
   promptRodeLaunchCommand?: boolean

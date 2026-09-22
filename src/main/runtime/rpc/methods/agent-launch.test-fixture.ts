@@ -30,6 +30,8 @@ export type AgentLaunchRuntimeStubOptions = {
   /** The pane `createTerminal` minted. Off by default so the existing outcome assertions keep
    *  modelling a runtime that reports none — the arm `RuntimeTerminalCreate.paneKey?` allows. */
   terminalPaneKey?: string
+  /** The pane minted with an agent-first worktree's startup terminal. */
+  startupTerminalPaneKey?: string
 }
 
 export function runtimeStub(options: AgentLaunchRuntimeStubOptions = {}) {
@@ -63,7 +65,12 @@ export function runtimeStub(options: AgentLaunchRuntimeStubOptions = {}) {
     showRepo: vi.fn(async () => ({ id: 'repo-1' })),
     createManagedWorktree: vi.fn(async (args: Record<string, unknown>) => ({
       worktree: { id: 'wt-new' },
-      startupTerminal: args.startupAgent ? { handle: 'term_agent_first' } : undefined,
+      startupTerminal: args.startupAgent
+        ? {
+            handle: 'term_agent_first',
+            ...(options.startupTerminalPaneKey ? { paneKey: options.startupTerminalPaneKey } : {})
+          }
+        : undefined,
       ...(options.setupReceipt ? { setupReceipt: options.setupReceipt } : {}),
       ...(options.createWarning ? { warning: options.createWarning } : {})
     })),
