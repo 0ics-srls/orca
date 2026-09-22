@@ -23,7 +23,14 @@ describe('relay readiness', () => {
     const readiness = createRelayReadiness(database(async () => [{ ready: 1 }]), 'https://jwks', {
       fetch: async () => {
         activeBodies++
-        return new Response(new ReadableStream({ cancel: () => { activeBodies-- } }), { status })
+        return new Response(
+          new ReadableStream({
+            cancel() {
+              activeBodies--
+            }
+          }),
+          { status }
+        )
       },
       cacheMs: 0
     })

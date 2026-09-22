@@ -11,7 +11,9 @@ describe('relay authentication and trust response lifetime', () => {
     let activeResponses = 0
     const server = createServer((_request, response) => {
       activeResponses++
-      response.once('close', () => { activeResponses-- })
+      response.once('close', () => {
+        activeResponses--
+      })
       response.writeHead(status, { 'content-type': 'application/json' })
       response.write('{')
     })
@@ -37,7 +39,7 @@ describe('relay authentication and trust response lifetime', () => {
     } finally {
       server.closeAllConnections()
       await new Promise<void>((resolve, reject) => {
-        server.close((error) => error ? reject(error) : resolve())
+        server.close((error) => (error ? reject(error) : resolve()))
       })
     }
   })
@@ -63,21 +65,28 @@ describe('relay authentication and trust response lifetime', () => {
 
   it('cancels a rejected trust probe response before returning its status error', async () => {
     const cancel = vi.fn()
-    await expect(probeRegionalRehomeTrust({
-      sourceCellUrl: 'https://cell.example.test',
-      sourceCellId: 'cell-a',
-      sourceCellIncarnation: 'incarnation',
-      audience: 'audience',
-      identityToken: async () => 'identity-token',
-      fetch: async () => new Response(new ReadableStream({ cancel }), { status: 503 })
-    })).rejects.toThrow('regional_rehome_trust_probe_source_503')
+    await expect(
+      probeRegionalRehomeTrust({
+        sourceCellUrl: 'https://cell.example.test',
+        sourceCellId: 'cell-a',
+        sourceCellIncarnation: 'incarnation',
+        audience: 'audience',
+        identityToken: async () => 'identity-token',
+        fetch: async () => new Response(new ReadableStream({ cancel }), { status: 503 })
+      })
+    ).rejects.toThrow('regional_rehome_trust_probe_source_503')
     expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('preserves the status error when the discarded body has already errored', async () => {
-    const response = new Response(new ReadableStream({
-      start(controller) { controller.error(new Error('response stream failed')) }
-    }), { status: 503 })
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.error(new Error('response stream failed'))
+        }
+      }),
+      { status: 503 }
+    )
 
     await expect(googleMetadataIdentityToken('audience', async () => response)).rejects.toThrow(
       'metadata_identity_503'
