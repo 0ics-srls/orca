@@ -260,9 +260,12 @@ export type AgentJournalProducerKind = 'agent' | 'background'
  * One journal is the durable record of one agent SESSION, and a session that
  * runs subagents journals their rows into it too. Absence is a positive claim
  * and never "unknown": no `agentId` means the session's own agent wrote the row.
- * Repeated per row rather than held once on a start row, so a reader holding
- * only a late row — after compaction dropped the start row, or on the far side
- * of a pagination boundary — still knows who produced it.
+ * Repeated per row rather than held once on a start row, so a row answers for
+ * itself: every reader here scans backwards from the tail and stops at the
+ * turn, so one that had to find a start row first would have to scan past that
+ * stop to attribute anything. Repetition is near-free — absent on the session's
+ * own rows, which are most of them — and it is what keeps the field correct
+ * without a second lookup.
  */
 export type AgentJournalProducerLinkage = {
   /** The producing subagent's canonical id. Absent ⇒ the session's own agent. */

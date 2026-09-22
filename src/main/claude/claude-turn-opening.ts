@@ -59,9 +59,13 @@ export function isRootClaudeFrame(frame: Record<string, unknown>): boolean {
   return typeof frame.parent_tool_use_id !== 'string'
 }
 
-/** The parent this frame names, or null on a root frame. Reads the same field
- *  by the same rule as above, so nothing can disagree with it about which
- *  frames are a child's. An empty string names no parent and is not one. */
+/** The parent this frame names, or null when it names none.
+ *
+ *  Deliberately STRICTER than `isRootClaudeFrame` above, which asks only whether
+ *  the field is a string: an empty string is a string but names no parent, and
+ *  attribution must not mint a producer out of it. The two therefore disagree on
+ *  `''` — and this is the side that decides who produced a row, where treating
+ *  `''` as a parent would stamp an id no reader could ever resolve. */
 export function claudeFrameParentRef(frame: Record<string, unknown>): string | null {
   return typeof frame.parent_tool_use_id === 'string' && frame.parent_tool_use_id.length > 0
     ? frame.parent_tool_use_id

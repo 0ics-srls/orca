@@ -595,11 +595,12 @@ describe("producer linkage — a subagent's output never speaks for the parent",
     expect(summary.toolName).toBe('Task')
   })
 
-  it('keeps attribution across a pagination boundary that dropped the start row', () => {
-    // Retention compacted everything before the child's own rows, so the spawn
-    // call and the turn record are both gone from the loaded window. Each row
-    // still says who produced it, so nothing is re-derived from neighbours —
-    // which is the whole reason linkage repeats on every row.
+  it('attributes rows without reading their neighbours', () => {
+    // A window holding only the child's own rows: no spawn call, no turn record.
+    // Nothing here is re-derived from a start row, so attribution does not
+    // depend on how much of the timeline a reader happens to hold. (This store
+    // has no compaction and paginates complete-or-reset, so such a window is not
+    // reachable today — the point is that the rule does not rely on that.)
     const windowed = [childProse, childCall]
     expect(latestStructuredAgentSessionAssistantMessage(windowed)).toBe('')
     expect(activeStructuredAgentSessionToolCall(windowed)).toBeNull()
