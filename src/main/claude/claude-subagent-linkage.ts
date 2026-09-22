@@ -18,8 +18,9 @@ import type { ClaudeSubagentIds } from './claude-subagent-id-aliases'
 export type ClaudeSubagentLinkageVerdict =
   /** A subagent produced them, under an identity that will not change. */
   | { kind: 'linked'; linkage: AgentJournalProducerLinkage }
-  /** A subagent produced them, but its identity is still provisional, so the
-   *  rows wait for the announcement rather than persisting a rotating id. */
+  /** A subagent produced them under an identity that is not final yet. The rows
+   *  are still written now — with `settledLinkageFor`'s stamp — and this is what
+   *  marks them as owing a correction once the announcement lands. */
   | { kind: 'pending' }
   /** Read them as the session's own. Only for a CLI release that announces no
    *  tasks at all, where nothing stable is ever reachable for these children. */
@@ -99,18 +100,20 @@ export class ClaudeSubagentLinkage implements ClaudeSubagentLinkageSource {
       !excluded && !announced && this.deps.isForwardedParentTool?.(parentToolUseId) === true
     if (!settled && awaitingOwnAnnouncement) {
       // A top-level spawn call whose `task_started` has not landed yet. Its rows
-      // wait: the spawn call's id is re-minted by a resume, and there is no
-      // backfill to repair a row written under it. Ahead of the release check
-      // below because that one reads "no announcement SO FAR", which is also
-      // what the session's FIRST child looks like before its own lands.
+      // are written immediately under the id it already has and re-attributed
+      // when the announcement names it; `pending` is what marks them as owing
+      // that correction. Ahead of the release check below because that one
+      // reads "no announcement SO FAR", which is also what the session's FIRST
+      // child looks like before its own lands.
       return { kind: 'pending' }
     }
-    if (!excluded && !announced && !this.deps.announcesTasks()) {
-      // This release has announced no task at all, so nothing stable is ever
-      // reachable for any child it runs. An id that rotates is worse than no id
-      // — silently wrong rather than visibly absent — so these rows read as the
-      // session's own, exactly as they do today. A forwarded spawn call reaches
-      // here only once it can wait no longer, having never been announced.
+    if (!excluded && !announced && !awaitingOwnAnnouncement && !this.deps.announcesTasks()) {
+      // Nothing this release runs is ever named, and this reference is not even
+      // a spawn call the transcript shows — a nested sidechain id. There is no
+      // handle to stamp, so the rows read as the session's own, as they do
+      // today. A forwarded spawn call does NOT come here: it reaches this point
+      // only when it can wait no longer, and its own id is a real handle, which
+      // beats claiming the parent wrote the row.
       return { kind: 'root' }
     }
     // A row names its parent as well as its producer, and it persists only once

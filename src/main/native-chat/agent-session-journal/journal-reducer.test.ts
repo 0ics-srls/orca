@@ -702,6 +702,70 @@ describe('producer linkage round-trips through the reducer', () => {
     expect(renderJournalState(state).items[0]).toMatchObject(linkage)
   })
 
+  it('lets a correction win over the provisional row, without moving the bubble', () => {
+    // Write-through then correct: the row is written under the spawn call's own
+    // id, then re-appended under the canonical one. Revision is assigned inside
+    // the journal's serialized write step, so the later append always outranks
+    // — and `sequence`/`observedAt` stay pinned, so re-attributing a row does
+    // not relocate it in the timeline.
+    const state = createJournalReducerState('session-1', EPOCH)
+    const provisional = { agentId: 'toolu_1', providerParentRef: 'toolu_1' }
+    applyJournalRow(
+      state,
+      buildJournalItemRow({
+        state,
+        identity,
+        body: text('looking'),
+        seq: 1,
+        fence: 1,
+        ts: 1_001,
+        linkage: provisional
+      })
+    )
+    applyJournalRow(
+      state,
+      buildJournalItemRow({
+        state,
+        identity,
+        body: text('looking'),
+        seq: 9,
+        fence: 1,
+        ts: 9_999,
+        linkage
+      })
+    )
+
+    const items = renderJournalState(state).items
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ revision: 2, ...linkage })
+    expect(items[0]).toMatchObject({ sequence: 1, observedAt: 1_001 })
+  })
+
+  it('does not let a stale checkpoint undo a correction that already landed', () => {
+    // A text checkpoint carrying the OLD stamp, submitted after the correction,
+    // would re-root the row. It cannot: revision is read at write time, so the
+    // last write wins and the lane resolves linkage fresh on every checkpoint.
+    const state = createJournalReducerState('session-1', EPOCH)
+    applyJournalRow(
+      state,
+      buildJournalItemRow({ state, identity, body: text('a'), seq: 1, fence: 1, ts: 1, linkage })
+    )
+    applyJournalRow(
+      state,
+      buildJournalItemRow({
+        state,
+        identity,
+        body: text('a and more'),
+        seq: 2,
+        fence: 1,
+        ts: 2,
+        linkage
+      })
+    )
+    const items = renderJournalState(state).items
+    expect(items[0]).toMatchObject({ revision: 2, ...linkage })
+  })
+
   it('keeps linkage when a later revision rewrites the row', () => {
     // The resolved-append path lost the marker once before by rebuilding the
     // row without it, so the SECOND write is the one that matters here.

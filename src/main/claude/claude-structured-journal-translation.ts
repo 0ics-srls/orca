@@ -19,7 +19,7 @@ import {
 import { taskFrameSentence } from './claude-background-task-frames'
 import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import { ClaudeToolOriginRegistry } from './claude-tool-origin-registry'
-import { ClaudePendingChildRows } from './claude-pending-child-rows'
+import { ClaudeProvisionalRowCorrections } from './claude-provisional-row-corrections'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
@@ -94,11 +94,15 @@ export function createClaudeJournalTranslator(
     currentGroupKey: () => turn.groupKey,
     isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
     childOwnerRefOf: (toolUseId) => toolOrigins.childOwnerRef(toolUseId),
-    // A settled group can receive no further announcement, so anything still
-    // waiting on one has to be written now rather than held for ever.
-    onIdentitiesFinal: () => pendingChildRows.drain()
+    // A settled group can receive no further announcement, so a correction
+    // still owed is never coming; the rows keep the stamp they already have.
+    onIdentitiesFinal: () => corrections.abandon()
   })
-  const pendingChildRows = new ClaudePendingChildRows(subagents.linkage)
+  const corrections = new ClaudeProvisionalRowCorrections({
+    ...subagents.linkage,
+    rewrite: (identity, body, options) => deps.sink.appendItem(identity, body, options),
+    publish: () => deps.sink.publish()
+  })
   const backgroundTasks = new ClaudeBackgroundTaskRows({
     sink: deps.sink,
     isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
@@ -153,7 +157,7 @@ export function createClaudeJournalTranslator(
     toolOrigins,
     backgroundTasks,
     providerFallback,
-    pendingChildRows,
+    corrections,
     turn
   }
 
@@ -181,7 +185,15 @@ export function createClaudeJournalTranslator(
       if (event.type === 'message' && handleStream(event.message, event.observedAt ?? Date.now())) {
         return
       }
+      // Ahead of the flush: a forced checkpoint resolves attribution as it
+      // writes, so an announcement landing in this same pass has to be visible
+      // to it or the row is stamped provisionally one line too early.
+      const announced = event.type === 'message' && subagents.observeSystemFrame(event.message)
       streamedText.flush()
+      if (announced) {
+        corrections.retry()
+        streamedText.reattribute()
+      }
       if (event.type === 'prompt') {
         prompts.handle(event)
       } else if (event.type === 'prompt-cancelled') {
@@ -217,16 +229,10 @@ export function createClaudeJournalTranslator(
             undefined,
             // A result that settles no turn is a CHILD's result: this
             // translator only ever opens root turns.
-            settlesTurn
-              ? undefined
-              : pendingChildRows.admissionFor(claudeFrameParentRef(event.message))
+            settlesTurn ? undefined : corrections.stampFor(claudeFrameParentRef(event.message))
           )
         }
       } else if (event.type === 'message') {
-        if (subagents.observeSystemFrame(event.message)) {
-          // An announcement may have just fixed an identity rows are waiting on.
-          pendingChildRows.retry()
-        }
         const backgroundTaskCovered = backgroundTasks.observe(
           event.message,
           event.observedAt ?? Date.now()
@@ -246,7 +252,7 @@ export function createClaudeJournalTranslator(
             taskFrameSentence(event.message),
             undefined,
             { coveredByTypedTranslator: backgroundTaskCovered },
-            pendingChildRows.admissionFor(claudeFrameParentRef(event.message))
+            corrections.stampFor(claudeFrameParentRef(event.message))
           )
         }
         publishActivity(kind, event.message)

@@ -15,7 +15,7 @@ import {
   type ClaudeMessageEnvelope
 } from './claude-structured-item-translation'
 import { claudeResultOutcome } from './claude-result-outcome'
-import { rootClaudeRowAdmission, type ClaudeRowAdmission } from './claude-pending-child-rows'
+import { rootClaudeRowStamp, type ClaudeRowStamp } from './claude-provisional-row-corrections'
 
 export function claudeProviderFrameKind(message: Record<string, unknown>): string {
   const type = claudeText(message.type) ?? 'unknown'
@@ -117,12 +117,12 @@ export function createClaudeProviderFrameFallback(
     options?: UnhandledProviderFrameJournalItemOptions,
     /** Attributes the row to the agent that produced the frame. Omitted for a
      *  frame the session's own agent produced. */
-    admit?: ClaudeRowAdmission
+    stamp?: ClaudeRowStamp
   ) => boolean
 } {
   let sequence = 0
   return {
-    append: (kind, payload, displayText, beforeAppend, options, admit) => {
+    append: (kind, payload, displayText, beforeAppend, options, stamp) => {
       sequence += 1
       const translated = unhandledProviderFrameJournalItem(
         'claude',
@@ -143,9 +143,7 @@ export function createClaudeProviderFrameFallback(
         clientMessageId: `provider-frame:claude:${acquisitionId}:${sequence}`
       } as const
       const body = bounded ? { ...translated.body, text: bounded } : translated.body
-      ;(admit ?? rootClaudeRowAdmission)((appendOptions) =>
-        sink.appendItem(identity, body, appendOptions)
-      )
+      sink.appendItem(identity, body, (stamp ?? rootClaudeRowStamp)(identity, body))
       sink.publish()
       return true
     }
@@ -162,7 +160,7 @@ export function appendUnmodeledContent(
   envelope: ClaudeMessageEnvelope,
   message: Record<string, unknown>,
   beforeAppend: () => void,
-  admit: ClaudeRowAdmission
+  stamp: ClaudeRowStamp
 ): boolean {
   let changed = false
   for (const part of envelope.content.filter((part) => !isModeledClaudeContent(part))) {
@@ -174,7 +172,7 @@ export function appendUnmodeledContent(
         readableProviderFrameText(part) ?? CLAUDE_UNRENDERABLE_CONTENT_TEXT,
         beforeAppend,
         undefined,
-        admit
+        stamp
       ) || changed
   }
   if (envelope.content.length === 0 && envelope.role === 'assistant') {
@@ -187,7 +185,7 @@ export function appendUnmodeledContent(
         undefined,
         undefined,
         undefined,
-        admit
+        stamp
       ) || changed
   }
   return changed

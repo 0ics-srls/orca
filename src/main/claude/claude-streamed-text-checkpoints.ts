@@ -30,6 +30,10 @@ export type ClaudeStreamedTextCheckpoints = {
   ) => void
   /** Write every block whose row is behind the text received for it. */
   flush: () => void
+  /** Rewrite every block whose producer now resolves differently. A block that
+   *  stopped streaming before its announcement is never revisited otherwise,
+   *  and would keep a provisional id no later checkpoint comes to correct. */
+  reattribute: () => void
   /** Drop one block's state, for a block whose final frame has now landed. */
   forget: (key: string) => void
   /**
@@ -49,6 +53,19 @@ export type ClaudeStreamedTextCheckpoints = {
  * The row is rewritten on a widening interval rather than per delta: a 200-line
  * reply would otherwise rewrite the same journal row once per token.
  */
+function sameLinkage(
+  left: StructuredAgentSessionAppendOptions,
+  right: StructuredAgentSessionAppendOptions
+): boolean {
+  return (
+    left.agentId === right.agentId &&
+    left.parentAgentId === right.parentAgentId &&
+    left.providerParentRef === right.providerParentRef &&
+    left.producerKind === right.producerKind &&
+    left.attempt === right.attempt
+  )
+}
+
 export function createClaudeStreamedTextCheckpoints(
   deps: ClaudeStreamedTextCheckpointDeps
 ): ClaudeStreamedTextCheckpoints {
@@ -56,39 +73,24 @@ export function createClaudeStreamedTextCheckpoints(
   /** The scope a block streamed under, kept because the persist callback has no
    *  frame to re-read it from. */
   const scopes = new Map<string, string | null>()
-  /** Attribution, once it is final. Every checkpoint rewrites the SAME row, so
-   *  it is resolved once and then fixed: a block whose rows changed producer
-   *  part-way through would be one agent's prose filed under two identities. */
-  const producers = new Map<string, StructuredAgentSessionAppendOptions>()
+  /** What each block's row was last written WITH — never a latch on resolving
+   *  it again. Every checkpoint rewrites the same identity, so a block has one
+   *  row and re-resolving can only revise it; this exists so a re-attribution
+   *  that would change nothing does not burn a revision. */
+  const writtenLinkage = new Map<string, StructuredAgentSessionAppendOptions>()
   const latestText = new Map<string, string>()
   const checkpointLengths = new Map<string, number>()
 
-  /** Null while the producing agent's identity is still provisional, which
-   *  holds this checkpoint back rather than writing a rotating id or, worse,
-   *  writing the child's prose as the parent's. The text stays in `latestText`,
-   *  so the next checkpoint or the forced flush writes it. */
-  const producerOptions = (
-    key: string,
-    force: boolean
-  ): StructuredAgentSessionAppendOptions | null => {
-    const settled = producers.get(key)
-    if (settled) {
-      return settled
-    }
+  /** Resolved FRESH on every checkpoint. A provisional producer is stamped with
+   *  the handle it has rather than holding the prose back: the next checkpoint,
+   *  or `reattribute` once the announcement lands, revises the same row. */
+  const producerOptions = (key: string): StructuredAgentSessionAppendOptions => {
     const scope = scopes.get(key) ?? null
     if (scope === null) {
-      producers.set(key, {})
       return {}
     }
-    const verdict = force ? deps.producer.settledLinkageFor(scope) : deps.producer.linkageFor(scope)
-    if (verdict.kind === 'pending') {
-      return null
-    }
-    const options = agentJournalLinkageFields(
-      verdict.kind === 'linked' ? verdict.linkage : undefined
-    )
-    producers.set(key, options)
-    return options
+    const verdict = deps.producer.settledLinkageFor(scope)
+    return agentJournalLinkageFields(verdict.kind === 'linked' ? verdict.linkage : undefined)
   }
 
   const persist = (key: string, text: string, force: boolean): void => {
@@ -102,11 +104,9 @@ export function createClaudeStreamedTextCheckpoints(
     if (!identity) {
       return
     }
-    const options = producerOptions(key, force)
-    if (options === null) {
-      return
-    }
+    const options = producerOptions(key)
     checkpointLengths.set(key, text.length)
+    writtenLinkage.set(key, options)
     deps.persist(identity, text, options)
   }
 
@@ -120,7 +120,7 @@ export function createClaudeStreamedTextCheckpoints(
     coalescer.forget(key)
     identities.delete(key)
     scopes.delete(key)
-    producers.delete(key)
+    writtenLinkage.delete(key)
     latestText.delete(key)
     checkpointLengths.delete(key)
   }
@@ -140,6 +140,22 @@ export function createClaudeStreamedTextCheckpoints(
         }
       }
     },
+    reattribute: () => {
+      for (const [key, identity] of identities) {
+        const text = latestText.get(key)
+        if (text === undefined) {
+          continue
+        }
+        const options = producerOptions(key)
+        const written = writtenLinkage.get(key)
+        // Nothing resolved differently: a duplicate must not burn a revision.
+        if (written && sameLinkage(written, options)) {
+          continue
+        }
+        writtenLinkage.set(key, options)
+        deps.persist(identity, text, options)
+      }
+    },
     forget: drop,
     settle: () => {
       // Map iteration tolerates deletion of the entry just visited.
@@ -154,7 +170,7 @@ export function createClaudeStreamedTextCheckpoints(
       coalescer.dispose()
       identities.clear()
       scopes.clear()
-      producers.clear()
+      writtenLinkage.clear()
       latestText.clear()
       checkpointLengths.clear()
     }

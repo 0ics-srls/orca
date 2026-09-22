@@ -34,7 +34,23 @@ function harness() {
     appendTombstone: vi.fn(),
     publish: vi.fn()
   }
-  const translator = createClaudeJournalTranslator({ sink, fallbackIdPrefix: 'test' })
+  let scheduled: (() => void) | null = null
+  const translator = createClaudeJournalTranslator({
+    sink,
+    fallbackIdPrefix: 'test',
+    // Drives the streamed coalescer by hand, so a test can place an
+    // announcement precisely before or after a checkpoint lands.
+    schedule: (run) => {
+      scheduled = run
+      return () => {
+        scheduled = null
+      }
+    }
+  })
+  const runStreamWindow = (): void => {
+    const run = scheduled as (() => void) | null
+    run?.()
+  }
   const groupRows = () =>
     items.filter((item) => orcaClientMessageId(item.identity) === GROUP_ITEM_ID)
   const agentsOf = (body: AgentJournalItemBody | undefined): NativeChatSubagentEntry[] => {
@@ -62,13 +78,29 @@ function harness() {
       .map((item) => item.body)
   /** Attribution stamped on a row, found by the text it carries, so a test
    *  names the row it means instead of indexing into the append order. */
-  const linkageOfProse = (text: string): StructuredAgentSessionAppendOptions | undefined =>
-    items.find(
+  const writesOfProse = (text: string) =>
+    items.filter(
       (entry) =>
         entry.body.kind === 'message' &&
         entry.body.blocks.some((block) => block.type === 'text' && block.text === text)
-    )?.options
-  return { translator, items, groupRows, roster, rosterIn, rosterOf, fallbackRows, linkageOfProse }
+    )
+  /** Attribution a row ENDS UP with. Rows are written immediately and
+   *  re-attributed in place, so the newest write is the one that renders —
+   *  reading the first would assert against a stamp already superseded. */
+  const linkageOfProse = (text: string): StructuredAgentSessionAppendOptions | undefined =>
+    writesOfProse(text).at(-1)?.options
+  return {
+    translator,
+    items,
+    groupRows,
+    roster,
+    rosterIn,
+    rosterOf,
+    fallbackRows,
+    linkageOfProse,
+    writesOfProse,
+    runStreamWindow
+  }
 }
 
 function userTurn(uuid: string) {
@@ -406,56 +438,59 @@ describe('claude journal translation — which agent produced a row', () => {
     translator.handle(announce('task-other', 'toolu_other'))
     translator.handle(childProse('child-1', 'toolu_1', 'arrived early'))
 
-    // Held: nothing may be written under the spawn call's own rotating id.
-    expect(linkageOfProse('arrived early')).toBeUndefined()
+    // Written at once, under the only handle that exists yet — never withheld,
+    // and never the parent's.
+    expect(linkageOfProse('arrived early')).toMatchObject({ agentId: 'toolu_1' })
 
     translator.handle(announce('task-1', 'toolu_1'))
 
-    // Released under the canonical id — not dropped, and not the parent's.
+    // Re-attributed in place once the announcement names it.
     expect(linkageOfProse('arrived early')).toMatchObject({
       agentId: 'task-1',
       providerParentRef: 'toolu_1'
     })
   })
 
-  it('writes a held row rather than losing it when no announcement ever comes', () => {
-    // Anti-swallow: the turn ends with the identity still provisional. The row
-    // is written under the only handle there is, and still as a child's.
-    const { translator, linkageOfProse } = harness()
+  it('burns no revision correcting a row whose producer was never named', () => {
+    // The turn ends with the identity still provisional. The row already says
+    // what settle would say, so the correction must be DROPPED: a duplicate
+    // rewrite would cost a revision and change nothing.
+    const { translator, linkageOfProse, writesOfProse } = harness()
     translator.handle(userTurn('user-1'))
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
     translator.handle(announce('task-other', 'toolu_other'))
     translator.handle(childProse('child-1', 'toolu_1', 'never announced'))
-    expect(linkageOfProse('never announced')).toBeUndefined()
+    expect(writesOfProse('never announced')).toHaveLength(1)
 
     translator.handle(resultFrame())
 
+    expect(writesOfProse('never announced')).toHaveLength(1)
     expect(linkageOfProse('never announced')).toMatchObject({
       agentId: 'toolu_1',
       providerParentRef: 'toolu_1'
     })
   })
 
-  it("reads a release that announces no task at all as the session's own", () => {
-    // Settled behaviour for older CLI releases: nothing stable is reachable for
-    // their children, and an id that rotates is worse than no id. These rows
-    // read exactly as they do today, so the defect persists on those releases.
-    // Paired with the nested-sidechain case below, which shows the SAME kind of
-    // never-announced reference IS stamped once a release has announced one.
+  it('stamps a spawn call a release never announces with the call\u2019s own id', () => {
+    // Older releases name nothing they spawn. The spawn call is still in the
+    // transcript, so its id is a real handle — and stamping it keeps the child's
+    // prose off the parent, which reading these rows as root would not.
     const { translator, linkageOfProse } = harness()
     translator.handle(userTurn('user-1'))
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
     translator.handle(childProse('child-1', 'toolu_1', 'unannounced release'))
-    // A forwarded spawn call is held first — "no announcement so far" is also
-    // what the session's first child looks like — so the release verdict is
-    // only reachable once the turn settles.
-    expect(linkageOfProse('unannounced release')).toBeUndefined()
 
-    translator.handle(resultFrame())
+    expect(linkageOfProse('unannounced release')).toMatchObject({ agentId: 'toolu_1' })
+  })
 
-    // `{}`, not `undefined`: the row WAS written, and written as the session's
-    // own. An absent row would satisfy any assertion phrased on `?.agentId`.
-    expect(linkageOfProse('unannounced release')).toEqual({})
+  it("reads a sidechain id no release will ever name as the session's own", () => {
+    // No spawn call forwarded it, so there is no handle at all: nothing to
+    // stamp, and the row reads as it always did on these releases.
+    const { translator, linkageOfProse } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(childProse('child-1', 'toolu_nested', 'no handle at all'))
+
+    expect(linkageOfProse('no handle at all')).toEqual({})
   })
 
   it("attributes a tool result naming its own call to the call's own agent", () => {
@@ -489,7 +524,96 @@ describe('claude journal translation — which agent produced a row', () => {
     expect(row?.options).toEqual({})
   })
 
-  it("holds the session's FIRST child, whose spawn is unannounced only so far", () => {
+  /** One streamed text block, as the SDK sends it: a message start, then deltas.
+   *  Streamed prose has no envelope when it is persisted, so its producer has to
+   *  travel with the delta. */
+  function streamStart(uuid: string, parentToolUseId: string) {
+    return {
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'stream_event',
+        uuid,
+        session_id: 'claude-session',
+        parent_tool_use_id: parentToolUseId,
+        event: { type: 'message_start', message: { id: 'msg-1' } }
+      }
+    }
+  }
+
+  function streamDelta(uuid: string, parentToolUseId: string, text: string) {
+    return {
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'stream_event',
+        uuid,
+        session_id: 'claude-session',
+        parent_tool_use_id: parentToolUseId,
+        event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } }
+      }
+    }
+  }
+
+  it('re-attributes streamed prose that stopped before its announcement', () => {
+    // The primary prose path, and the shape nothing revisits: the child streams,
+    // stops, and no final envelope ever arrives — so only re-attribution can
+    // move the row off the id it was written under.
+    const { translator, items, runStreamWindow } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(streamStart('stream-1', 'toolu_1'))
+    translator.handle(streamDelta('stream-1', 'toolu_1', 'thinking out loud'))
+    runStreamWindow()
+
+    const streamed = () =>
+      items.filter(
+        (entry) =>
+          entry.body.kind === 'message' &&
+          entry.body.blocks.some(
+            (block) => block.type === 'text' && block.text === 'thinking out loud'
+          )
+      )
+    // Written at once, and never as the parent's.
+    expect(streamed().at(-1)?.options).toMatchObject({ agentId: 'toolu_1' })
+
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    expect(streamed().at(-1)?.options).toMatchObject({
+      agentId: 'task-1',
+      providerParentRef: 'toolu_1'
+    })
+    expect(streamed().at(-1)?.options?.agentId).not.toBeUndefined()
+  })
+
+  it('keeps a long pre-announcement burst on ONE id, with no row left at root', () => {
+    // The burst that outruns the announcement. Every row must name the same
+    // producer: a row at `{}` is the parent claiming the child's words, and a
+    // burst split across two ids is one child appearing as two.
+    const { translator, items } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    for (let index = 0; index < 70; index += 1) {
+      translator.handle(childProse(`child-${index}`, 'toolu_1', `line ${index}`))
+    }
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    const finalAgentIds = new Set<string | undefined>()
+    for (let index = 0; index < 70; index += 1) {
+      const writes = items.filter(
+        (entry) =>
+          entry.body.kind === 'message' &&
+          entry.body.blocks.some((block) => block.type === 'text' && block.text === `line ${index}`)
+      )
+      expect(writes.length).toBeGreaterThan(0)
+      finalAgentIds.add(writes.at(-1)?.options?.agentId)
+    }
+    // The canonical id, not merely a consistent one: 70 is inside the bound, so
+    // every row is actually corrected rather than given up on.
+    expect(finalAgentIds).toEqual(new Set(['task-1']))
+  })
+
+  it("corrects the session's FIRST child, whose spawn is unannounced only so far", () => {
     // The release check reads "no task announced yet", which every session looks
     // like before its first `task_started`. Without the spawn call outranking
     // it, the first child's pre-announcement rows persist as the PARENT's — the
@@ -499,7 +623,8 @@ describe('claude journal translation — which agent produced a row', () => {
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
     translator.handle(childProse('child-1', 'toolu_1', 'first child prose'))
 
-    expect(linkageOfProse('first child prose')).toBeUndefined()
+    // Never the parent's, not even for the window before the announcement.
+    expect(linkageOfProse('first child prose')).toMatchObject({ agentId: 'toolu_1' })
 
     translator.handle(announce('task-1', 'toolu_1'))
 
@@ -547,11 +672,11 @@ describe('claude journal translation — which agent produced a row', () => {
     })
   })
 
-  it('holds a grandchild until the child that spawned it has an identity', () => {
-    // Both halves of a row have to be final before it persists: the grandchild's
-    // own reference resolves at once, but naming its parent has to wait for the
-    // child's announcement. The row is written linked to both, not written twice
-    // and not written with a parent that later turns out to be a different id.
+  it('keeps a grandchild and its parent on the same id, before and after', () => {
+    // A row names its parent as well as its producer, and the parent's identity
+    // can still be provisional. It is written with whatever the parent's own
+    // rows carry AT THAT MOMENT, so the two never disagree, and the
+    // announcement corrects both together.
     const { translator, linkageOfProse } = harness()
     translator.handle(userTurn('user-1'))
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
@@ -559,7 +684,13 @@ describe('claude journal translation — which agent produced a row', () => {
     translator.handle(announce('task-other', 'toolu_other'))
     translator.handle(childSpawnCall('child-1', 'toolu_1', 'toolu_nested'))
     translator.handle(childProse('grandchild-1', 'toolu_nested', 'held deeper'))
-    expect(linkageOfProse('held deeper')).toBeUndefined()
+    // Written at once, naming the parent by the same handle the parent's own
+    // rows carry right now — not left blank, which would claim the session's
+    // own agent spawned it.
+    expect(linkageOfProse('held deeper')).toMatchObject({
+      agentId: 'toolu_nested',
+      parentAgentId: 'toolu_1'
+    })
 
     translator.handle(announce('task-1', 'toolu_1'))
 
@@ -569,20 +700,21 @@ describe('claude journal translation — which agent produced a row', () => {
     })
   })
 
-  it('writes every held row as a child’s when the session is torn down', () => {
-    // Anti-swallow at teardown, and the reason dispose settles the roster before
-    // it forgets what the session announced: resolving these rows after that
-    // reset would read them as the session's own agent's output.
-    const { translator, linkageOfProse } = harness()
+  it('leaves a row a child’s when the session is torn down mid-flight', () => {
+    // Teardown cannot improve the stamp and must not undo it: the row was
+    // already written as this child's, and dispose leaves it that way rather
+    // than re-resolving after the roster forgets what the session announced.
+    const { translator, linkageOfProse, writesOfProse } = harness()
     translator.handle(userTurn('user-1'))
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
     translator.handle(announce('task-other', 'toolu_other'))
-    translator.handle(childProse('child-1', 'toolu_1', 'still held at teardown'))
-    expect(linkageOfProse('still held at teardown')).toBeUndefined()
+    translator.handle(childProse('child-1', 'toolu_1', 'still open at teardown'))
+    expect(writesOfProse('still open at teardown')).toHaveLength(1)
 
     translator.dispose()
 
-    expect(linkageOfProse('still held at teardown')).toMatchObject({
+    expect(writesOfProse('still open at teardown')).toHaveLength(1)
+    expect(linkageOfProse('still open at teardown')).toMatchObject({
       agentId: 'toolu_1',
       providerParentRef: 'toolu_1'
     })

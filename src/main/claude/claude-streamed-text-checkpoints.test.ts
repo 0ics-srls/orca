@@ -148,21 +148,29 @@ describe('claude streamed text checkpoints', () => {
     expect(stamps).toEqual([{}])
   })
 
-  it('holds a checkpoint while the producing agent is still provisional', () => {
-    // Streamed text has no frame of its own to re-read, so a block that checkpointed
-    // early under a rotating id could not be repaired. The text is not lost: it waits
-    // in the block's accumulated state until the identity is final.
+  it('writes a checkpoint at once while the producing agent is provisional', () => {
+    // The prose reaches the user immediately, stamped with the handle that
+    // exists. Every checkpoint rewrites the same row, so the announcement can
+    // correct it in place — holding the text back buys nothing and costs the
+    // user sight of what the child is saying.
     const producer = scriptedProducer()
-    const { store, rows, runWindow } = checkpoints(producer.source)
+    const { store, rows, stamps, runWindow } = checkpoints(producer.source)
 
     store.append(identityOf('block-1'), 'partial', 'toolu_1')
     runWindow()
-    expect(rows).toEqual([])
+    expect(rows).toEqual([{ uuid: 'block-1', text: 'partial' }])
+    expect(stamps.at(-1)).toMatchObject({ agentId: 'toolu_1' })
 
+    // `flush` rewrites a row whose TEXT moved on; correcting a stamp on text
+    // that did not is what re-attribution is for, and the translator runs both.
     producer.resolve(CHILD_LINKAGE)
     store.flush()
+    expect(stamps.at(-1)).toMatchObject({ agentId: 'toolu_1' })
 
-    expect(rows).toEqual([{ uuid: 'block-1', text: 'partial' }])
+    store.reattribute()
+
+    expect(rows.at(-1)).toEqual({ uuid: 'block-1', text: 'partial' })
+    expect(stamps.at(-1)).toEqual(CHILD_LINKAGE)
   })
 
   it('writes a held block under the raw reference when no announcement comes', () => {
@@ -173,19 +181,22 @@ describe('claude streamed text checkpoints', () => {
 
     store.append(identityOf('block-1'), 'never announced', 'toolu_1')
     runWindow()
-    expect(rows).toEqual([])
-
-    store.flush()
 
     expect(rows).toEqual([{ uuid: 'block-1', text: 'never announced' }])
     expect(stamps).toEqual([
       { agentId: 'toolu_1', providerParentRef: 'toolu_1', producerKind: 'agent' }
     ])
+
+    // Nothing ever names it, so re-attribution has nothing better to say and
+    // must not burn a revision repeating itself.
+    store.reattribute()
+    expect(rows).toHaveLength(1)
   })
 
-  it('resolves a block’s producer once and keeps it for every later checkpoint', () => {
-    // Every checkpoint rewrites the SAME row. A block that changed producer
-    // part-way would file one agent's prose under two identities.
+  it('re-resolves a block’s producer on every checkpoint', () => {
+    // Every checkpoint rewrites the SAME row, so there is only ever one row per
+    // block and re-resolving can only revise it. Latching the first verdict is
+    // what made an announcement arriving mid-stream unable to correct it.
     const producer = scriptedProducer()
     producer.resolve(CHILD_LINKAGE)
     const { store, stamps, runWindow } = checkpoints(producer.source)
@@ -196,7 +207,24 @@ describe('claude streamed text checkpoints', () => {
     store.append(identityOf('block-1'), 'first and more', 'toolu_1')
     store.flush()
 
-    expect(stamps).toEqual([CHILD_LINKAGE, CHILD_LINKAGE])
+    expect(stamps).toEqual([CHILD_LINKAGE, { ...CHILD_LINKAGE, agentId: 'task-2' }])
+  })
+
+  it('re-attributes a block that stopped streaming before its announcement', () => {
+    // Nothing revisits such a block: no later checkpoint, no final envelope.
+    // Without this it keeps the provisional id for the life of the journal.
+    const producer = scriptedProducer()
+    const { store, rows, stamps, runWindow } = checkpoints(producer.source)
+
+    store.append(identityOf('block-1'), 'said once', 'toolu_1')
+    runWindow()
+    expect(stamps.at(-1)).toMatchObject({ agentId: 'toolu_1' })
+
+    producer.resolve(CHILD_LINKAGE)
+    store.reattribute()
+
+    expect(rows.at(-1)).toEqual({ uuid: 'block-1', text: 'said once' })
+    expect(stamps.at(-1)).toEqual(CHILD_LINKAGE)
   })
 
   it('stops persisting once disposed', () => {
