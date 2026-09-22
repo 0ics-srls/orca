@@ -17,6 +17,7 @@ import {
 } from './native-chat-composer-state'
 import type { NativeChatSendLifecycle } from './use-native-chat-send-lifecycle'
 import type { NativeChatPtySessionOptionsSurface } from './native-chat-pty-session-options'
+import type { NativeChatLocalCommandAnswer } from './use-native-chat-local-command-answer'
 
 export function useNativeChatPickerCommandDispatch(args: {
   agent: AgentType
@@ -24,8 +25,7 @@ export function useNativeChatPickerCommandDispatch(args: {
   isDispatchingSessionOption: boolean
   resolveTarget: () => NativeChatResolvedTarget | null
   onSlashCommand?: (command: string, output?: string) => void
-  /** The host's own answer to a command the agent must not see, or null to send it. */
-  answerCommandLocally?: (command: string) => string | null
+  answerCommandLocally?: NativeChatLocalCommandAnswer
   sessionOptionsSurface: NativeChatPtySessionOptionsSurface | null
   trackPendingSend: NativeChatSendLifecycle['trackPendingSend']
   setHistory: Dispatch<SetStateAction<HistoryState>>
@@ -60,10 +60,11 @@ export function useNativeChatPickerCommandDispatch(args: {
       if (!target || disabled || isDispatchingSessionOption) {
         return
       }
-      const localAnswer = answerCommandLocally?.(text) ?? null
+      const localAnswer =
+        answerCommandLocally?.(text, sessionOptionsSurface?.resolvedSessionModel() ?? null) ?? null
       if (localAnswer !== null) {
-        // Why: the host answers in place of the PTY, so the composer resets as
-        // after a send but nothing is written to the terminal.
+        // Why: the host answers in place of the PTY, so nothing is written to the
+        // terminal and attachments stay armed, matching the typed path.
         emitNativeChatPickerItemAccepted({ agent, itemKind: 'command' })
         emitNativeChatSendClassified({ agent, outcome: 'command' })
         onSlashCommand?.(text, localAnswer)

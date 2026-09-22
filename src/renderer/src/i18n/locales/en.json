@@ -17559,7 +17559,8 @@
       "copyCode": "Copy code",
       "context": {
         "unavailable": "Context usage is not known yet. It becomes available once the agent has answered in this session.",
-        "summary": "Context: {{used}} / {{window}} tokens ({{percent}}%), estimated from the last response."
+        "summary": "Context: {{used}} / {{window}} tokens ({{percent}}%), estimated from the last response.",
+        "used": "Context: {{used}} tokens used, estimated from the last response."
       }
     },
     "tab": {

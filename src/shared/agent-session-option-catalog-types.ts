@@ -50,6 +50,8 @@ export type CatalogModel = {
   label: string
   description?: string
   isDefault?: boolean
+  /** The id the host CLI runs for this value (e.g. `claude-opus-5-5[1m]`), when it reports one. */
+  resolvedModel?: string
   options: CatalogOption[]
 }
 

@@ -57,10 +57,15 @@ describe('parseClaudeModelList', () => {
       id: 'opus[1m]',
       label: 'Opus (1M context)',
       description: 'Opus 5 with 1M context · Best for everyday, complex tasks · $5/$25 per Mtok',
+      resolvedModel: 'claude-opus-5[1m]',
       effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
       supportsFastMode: true
     })
-    expect(parsed[2]).toMatchObject({ effortLevels: [], supportsFastMode: false })
+    expect(parsed[2]).toMatchObject({
+      resolvedModel: 'claude-haiku-4-5-20251001',
+      effortLevels: [],
+      supportsFastMode: false
+    })
   })
 
   it('skips init noise, CRLF endings, and duplicate values', () => {

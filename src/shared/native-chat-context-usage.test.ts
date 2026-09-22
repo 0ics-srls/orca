@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { claudeContextWindowTokens } from './claude-context-window'
 import { deriveNativeChatContextUsage, formatContextTokenCount } from './native-chat-context-usage'
 import type { NativeChatMessage } from './native-chat-types'
 
+// Transcripts record the model without its `[1m]` suffix, even for a 1M session.
 function assistant(
   id: string,
   usage: NativeChatMessage['usage'],
-  model = 'claude-fable-5-1',
+  model = 'claude-opus-5-5',
   timestamp: number | null = 100
 ): NativeChatMessage {
   return {
@@ -19,81 +21,85 @@ function assistant(
   }
 }
 
+function usage(inputTokens: number, cacheRead = 0): NativeChatMessage['usage'] {
+  return {
+    inputTokens,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: cacheRead,
+    outputTokens: 1
+  }
+}
+
+describe('claudeContextWindowTokens', () => {
+  it('reads 1M from the resolved `[1m]` id when the transcript names the same model', () => {
+    expect(claudeContextWindowTokens('claude-opus-5-5[1m]', 'claude-opus-5-5')).toBe(1_000_000)
+    expect(claudeContextWindowTokens('claude-fable-5-1[1m]', 'claude-fable-5-1')).toBe(1_000_000)
+  })
+
+  it('does not guess a window for an id without the suffix', () => {
+    // The CLI sizes these by account, provider and environment.
+    expect(claudeContextWindowTokens('claude-sonnet-5', 'claude-sonnet-5')).toBeNull()
+    expect(
+      claudeContextWindowTokens('claude-haiku-4-5-20251001', 'claude-haiku-4-5-20251001')
+    ).toBe(null)
+  })
+
+  it('is unknown without a resolved session model', () => {
+    expect(claudeContextWindowTokens(null, 'claude-opus-5-5')).toBeNull()
+  })
+
+  it('distrusts a tracked model the transcript contradicts', () => {
+    expect(claudeContextWindowTokens('claude-opus-5-5[1m]', 'claude-sonnet-5')).toBeNull()
+    expect(claudeContextWindowTokens('claude-fable-5-1[1m]', 'claude-fable-5')).toBeNull()
+    expect(claudeContextWindowTokens('claude-opus-5-5[1m]', null)).toBeNull()
+  })
+})
+
 describe('deriveNativeChatContextUsage', () => {
-  it('sums input and both cache counts of the newest response against the standard window', () => {
+  it('sums input and both cache counts of the newest response against the resolved window', () => {
     const messages = [
-      assistant('older', {
-        inputTokens: 5,
-        cacheCreationInputTokens: 1_000,
-        cacheReadInputTokens: 0,
-        outputTokens: 10
-      }),
+      assistant('older', usage(5)),
       assistant(
         'newest',
         {
           inputTokens: 2,
           cacheCreationInputTokens: 24_615,
-          cacheReadInputTokens: 30_000,
+          cacheReadInputTokens: 425_383,
           outputTokens: 4
         },
-        'claude-fable-5-1',
+        'claude-opus-5-5',
         200
       )
     ]
-    expect(deriveNativeChatContextUsage(messages, 'claude')).toEqual({
-      usedTokens: 54_617,
-      windowTokens: 200_000,
-      percentage: 27,
-      model: 'claude-fable-5-1',
+    expect(deriveNativeChatContextUsage(messages, 'claude', 'claude-opus-5-5[1m]')).toEqual({
+      usedTokens: 450_000,
+      windowTokens: 1_000_000,
+      percentage: 45,
+      model: 'claude-opus-5-5',
       estimated: true,
       observedAt: 200
     })
   })
 
-  it('reads the 1M window from the [1m] model suffix', () => {
-    const usage = deriveNativeChatContextUsage(
-      [
-        assistant(
-          'a',
-          {
-            inputTokens: 18_600,
-            cacheCreationInputTokens: 0,
-            cacheReadInputTokens: 0,
-            outputTokens: 1
-          },
-          'claude-fable-5-1[1m]'
-        )
-      ],
+  it('reports the used figure alone when the window is unknown', () => {
+    const derived = deriveNativeChatContextUsage(
+      [assistant('a', usage(450_000), 'claude-opus-5-5')],
       'claude'
     )
-    expect(usage?.windowTokens).toBe(1_000_000)
-    expect(usage?.percentage).toBe(2)
+    expect(derived).toMatchObject({ usedTokens: 450_000, windowTokens: null, percentage: null })
   })
 
   it('skips responses without usage, such as a synthesized local command reply', () => {
     const messages = [
-      assistant('real', {
-        inputTokens: 100,
-        cacheCreationInputTokens: 0,
-        cacheReadInputTokens: 0,
-        outputTokens: 1
-      }),
-      assistant('synthetic', undefined, '<synthetic>', 300)
+      assistant('real', usage(100)),
+      assistant('synthetic', undefined, '<synthetic>')
     ]
     expect(deriveNativeChatContextUsage(messages, 'claude')?.usedTokens).toBe(100)
   })
 
-  it('is null before any response carried usage, and for agents without a known window', () => {
+  it('is null before any response carried usage, and for agents it does not cover', () => {
     expect(deriveNativeChatContextUsage([], 'claude')).toBeNull()
-    const codex = [
-      assistant('c', {
-        inputTokens: 10,
-        cacheCreationInputTokens: 0,
-        cacheReadInputTokens: 0,
-        outputTokens: 1
-      })
-    ]
-    expect(deriveNativeChatContextUsage(codex, 'codex')).toBeNull()
+    expect(deriveNativeChatContextUsage([assistant('c', usage(10))], 'codex')).toBeNull()
   })
 })
 

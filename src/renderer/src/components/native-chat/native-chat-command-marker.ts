@@ -70,14 +70,18 @@ export function clearCommandMarkerCacheForTests(): void {
   commandMarkerCounter = 0
 }
 
-function isClearCommand(command: string): boolean {
-  return command.trim().toLowerCase().split(/\s+/)[0] === '/clear'
+function commandName(command: string): string {
+  return command.trim().toLowerCase().split(/\s+/)[0] ?? ''
 }
 
-function latestClearSentAt(markers: readonly NativeChatCommandMarker[]): number | null {
+/** When this pane last sent `name` (e.g. `/compact`), or null if it has not. */
+export function latestCommandSentAt(
+  markers: readonly NativeChatCommandMarker[],
+  name: string
+): number | null {
   let latest: number | null = null
   for (const marker of markers) {
-    if (isClearCommand(marker.command) && (latest === null || marker.sentAt > latest)) {
+    if (commandName(marker.command) === name && (latest === null || marker.sentAt > latest)) {
       latest = marker.sentAt
     }
   }
@@ -88,7 +92,7 @@ export function applyCommandMarkerBoundaries(
   messages: readonly NativeChatMessage[],
   markers: readonly NativeChatCommandMarker[]
 ): NativeChatMessage[] {
-  const clearSentAt = latestClearSentAt(markers)
+  const clearSentAt = latestCommandSentAt(markers, '/clear')
   if (clearSentAt === null) {
     return messages as NativeChatMessage[]
   }

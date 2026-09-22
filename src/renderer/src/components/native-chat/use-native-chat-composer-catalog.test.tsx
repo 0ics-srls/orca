@@ -17,7 +17,14 @@ function transport(sessionCommands?: NativeChatStructuredComposerTransport['sess
 describe('composer catalog authority', () => {
   it('keeps PTY and unsupported structured providers on their original catalogs', () => {
     const pty = renderHook(() => useNativeChatComposerCatalog('claude'))
-    expect(pty.result.current.agentCommands).toEqual(getVerifiedNativeChatCommands('claude'))
+    // The terminal lane adds the commands this host answers itself; mobile's catalog does not.
+    expect(pty.result.current.agentCommands).toEqual([
+      ...getVerifiedNativeChatCommands('claude'),
+      { name: 'context', description: 'Show context usage' }
+    ])
+    expect(
+      renderHook(() => useNativeChatComposerCatalog('codex')).result.current.agentCommands
+    ).toBe(getVerifiedNativeChatCommands('codex'))
     expect(pty.result.current.sessionSkillNames).toBeUndefined()
     const oldHost = renderHook(() => useNativeChatComposerCatalog('claude', transport()))
     expect(oldHost.result.current.agentCommands).toEqual(structuredSlashCommands())

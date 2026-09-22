@@ -12,6 +12,14 @@ export function formatNativeChatContextUsageAnswer(usage: NativeChatContextUsage
       'Context usage is not known yet. It becomes available once the agent has answered in this session.'
     )
   }
+  // Why: a guessed window would print a plausible but wrong percentage.
+  if (usage.windowTokens === null || usage.percentage === null) {
+    return translate(
+      'components.native-chat.context.used',
+      'Context: {{used}} tokens used, estimated from the last response.',
+      { used: formatContextTokenCount(usage.usedTokens) }
+    )
+  }
   return translate(
     'components.native-chat.context.summary',
     'Context: {{used}} / {{window}} tokens ({{percent}}%), estimated from the last response.',

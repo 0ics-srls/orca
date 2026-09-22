@@ -18,6 +18,7 @@ import { isSlashCommandDraft } from '../../../../shared/native-chat-slash-comman
 import type { NativeChatPickerState } from './use-native-chat-picker-state'
 import type { NativeChatSendLifecycle } from './use-native-chat-send-lifecycle'
 import type { NativeChatPtySessionOptionsSurface } from './native-chat-pty-session-options'
+import type { NativeChatLocalCommandAnswer } from './use-native-chat-local-command-answer'
 
 export function useNativeChatPtyComposerSend(args: {
   agent: AgentType
@@ -32,8 +33,7 @@ export function useNativeChatPtyComposerSend(args: {
   classifySend: NativeChatPickerState['classifySend']
   onOptimisticSend?: (text: string, imagePaths?: string[]) => string | undefined
   onSlashCommand?: (command: string, output?: string) => void
-  /** The host's own answer to a command the agent must not see, or null to send it. */
-  answerCommandLocally?: (command: string) => string | null
+  answerCommandLocally?: NativeChatLocalCommandAnswer
   sessionOptionsSurface: NativeChatPtySessionOptionsSurface | null
   terminalTabId: string
   trackPendingSend: NativeChatSendLifecycle['trackPendingSend']
@@ -60,10 +60,13 @@ export function useNativeChatPtyComposerSend(args: {
     }
     const classification = args.classifySend(text)
     // Why: a host-answered command never reaches the PTY; its answer is the
-    // marker, and the composer resets exactly as it would after a send.
+    // marker. Attachments stay armed for the next prompt rather than being dropped.
     const localAnswer =
-      classification === 'command' && imagePaths.length === 0
-        ? (args.answerCommandLocally?.(text.trim()) ?? null)
+      classification === 'command'
+        ? (args.answerCommandLocally?.(
+            text.trim(),
+            args.sessionOptionsSurface?.resolvedSessionModel() ?? null
+          ) ?? null)
         : null
     if (localAnswer !== null) {
       args.onSlashCommand?.(text.trim(), localAnswer)

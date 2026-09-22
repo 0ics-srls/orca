@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { AgentType } from '../../../../shared/agent-status-types'
 import { getVerifiedNativeChatCommands } from '../../../../shared/native-chat-agent-profiles'
+import { getNativeChatLocalCommands } from '../../../../shared/native-chat-local-commands'
 import {
   sessionReportedSkillNames,
   sessionSlashCommandSuggestions,
@@ -14,12 +15,19 @@ export type NativeChatComposerCatalog = {
   sessionSkillNames: readonly string[] | undefined
 }
 
+function ptyLaneCommands(agent: AgentType): readonly SlashCommandSuggestion[] {
+  const local = getNativeChatLocalCommands(agent)
+  const verified = getVerifiedNativeChatCommands(agent)
+  return local.length === 0 ? verified : [...verified, ...local]
+}
+
 /**
  * What the `/` menu offers. A structured session reports the surface it actually
  * loaded — the only list that includes this repo's own commands and the skills
  * that reach the session through plugin roots — so it wins whenever it is
- * present. The curated per-agent catalog remains the answer for the PTY lane and
- * for a host that predates the report.
+ * present. The curated per-agent catalog, plus the commands this host answers over
+ * the terminal, remains the answer for the PTY lane and for a host that predates
+ * the report.
  */
 export function useNativeChatComposerCatalog(
   agent: AgentType,
@@ -31,7 +39,7 @@ export function useNativeChatComposerCatalog(
   const agentCommands = useMemo(
     () =>
       !structured
-        ? getVerifiedNativeChatCommands(agent)
+        ? ptyLaneCommands(agent)
         : reported !== undefined
           ? sessionSlashCommandSuggestions(agent, reported)
           : structuredSlashCommands(conversationCommands, agent),

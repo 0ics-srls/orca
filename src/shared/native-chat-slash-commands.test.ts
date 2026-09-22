@@ -21,7 +21,8 @@ describe('getAgentSlashCommands', () => {
     const names = getAgentSlashCommands('claude').map((c) => c.name)
     expect(names).toContain('clear')
     expect(names).toContain('compact')
-    expect(names).toContain('context')
+    // Host-answered on desktop only; mobile shares this catalog and cannot answer it.
+    expect(names).not.toContain('context')
     expect(names).not.toContain('model')
   })
 

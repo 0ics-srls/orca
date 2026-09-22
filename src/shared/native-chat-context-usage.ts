@@ -9,9 +9,10 @@ import type { NativeChatMessage, NativeChatTokenUsage } from './native-chat-type
 
 export type NativeChatContextUsage = {
   usedTokens: number
-  windowTokens: number
-  /** Rounded and never clamped: an over-limit turn reads above 100. */
-  percentage: number
+  /** Null when the session's window cannot be established. */
+  windowTokens: number | null
+  /** Rounded and never clamped: an over-limit turn reads above 100. Null with the window. */
+  percentage: number | null
   model: string | null
   /** Derived from the last response rather than counted by the provider. */
   estimated: true
@@ -24,16 +25,17 @@ export function contextTokensFromUsage(usage: NativeChatTokenUsage): number {
   return usage.inputTokens + usage.cacheCreationInputTokens + usage.cacheReadInputTokens
 }
 
-function contextWindowTokens(agent: AgentType, model: string | null): number | null {
-  return agent === 'claude' || agent === 'openclaude' ? claudeContextWindowTokens(model) : null
-}
-
 /** The newest assistant response that carried usage decides; rows the CLI
- *  synthesizes (local command output) carry none and are skipped. */
+ *  synthesizes (local command output, API errors) carry none and are skipped.
+ *  @param resolvedSessionModel the host CLI's resolved id for the session's model. */
 export function deriveNativeChatContextUsage(
   messages: readonly NativeChatMessage[],
-  agent: AgentType
+  agent: AgentType,
+  resolvedSessionModel: string | null = null
 ): NativeChatContextUsage | null {
+  if (agent !== 'claude' && agent !== 'openclaude') {
+    return null
+  }
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]!
     if (message.role !== 'assistant' || !message.usage) {
@@ -44,14 +46,11 @@ export function deriveNativeChatContextUsage(
       continue
     }
     const model = message.model ?? null
-    const windowTokens = contextWindowTokens(agent, model)
-    if (windowTokens === null) {
-      return null
-    }
+    const windowTokens = claudeContextWindowTokens(resolvedSessionModel, model)
     return {
       usedTokens,
       windowTokens,
-      percentage: Math.round((usedTokens / windowTokens) * 100),
+      percentage: windowTokens === null ? null : Math.round((usedTokens / windowTokens) * 100),
       model,
       estimated: true,
       observedAt: message.timestamp

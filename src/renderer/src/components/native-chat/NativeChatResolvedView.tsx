@@ -229,7 +229,7 @@ export function NativeChatResolvedView({
     },
     [commandMarkerScope]
   )
-  const answerCommandLocally = useNativeChatLocalCommandAnswer(agent, session.messages)
+  const answerLocally = useNativeChatLocalCommandAnswer(agent, session.messages, commandMarkers)
 
   const launchPromptMessage = useMemo(
     () => launchPromptAsMessage(paneLaunchPrompt, session.messages),
@@ -442,7 +442,7 @@ export function NativeChatResolvedView({
           onOptimisticSend={onOptimisticSend}
           onOptimisticSendCanceled={onOptimisticSendCanceled}
           onSlashCommand={onSlashCommand}
-          answerCommandLocally={answerCommandLocally}
+          answerCommandLocally={answerLocally}
           onSwitchToTerminal={onSwitchToTerminal}
           readTerminalScreen={readTerminalScreen}
           launchSeed={{ ...launchDraftSignal, ownsTabWideLaunchDraft }}
