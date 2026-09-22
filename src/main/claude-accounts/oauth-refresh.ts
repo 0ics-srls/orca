@@ -150,6 +150,7 @@ export async function refreshClaudeOauthCredentials(
       signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS)
     })
     if (!res.ok) {
+      await res.body?.cancel()
       // Why: surface the status (never the token) so a throttle (429) or a
       // dead refresh token (400/401 invalid_grant) is diagnosable in the
       // field, instead of a silent null that looks identical to success.

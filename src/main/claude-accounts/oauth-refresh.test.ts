@@ -173,9 +173,16 @@ describe('refreshClaudeOauthCredentials', () => {
 
   it('returns null on a non-ok response and logs the status for diagnosability', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    netFetchMock.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    netFetchMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      body: { cancel },
+      json: async () => ({})
+    })
     expect(await refreshClaudeOauthCredentials(credentials(), NOW)).toBeNull()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('429'))
+    expect(cancel).toHaveBeenCalledTimes(1)
     warn.mockRestore()
   })
 
