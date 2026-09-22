@@ -16,6 +16,7 @@ export const MODEL_PRICING: Record<string, CodexModelPricing> = {
   'gpt-5.1-codex': { input: 1.25, cachedInput: 0.125, output: 10 },
   'gpt-5.1-codex-max': { input: 1.25, cachedInput: 0.125, output: 10 },
   'gpt-5.2': { input: 1.75, cachedInput: 0.175, output: 14 },
+  'gpt-5.2-pro': { input: 21, cachedInput: 21, output: 168 },
   'gpt-5.2-codex': { input: 1.75, cachedInput: 0.175, output: 14 },
   'gpt-5.3': { input: 1.75, cachedInput: 0.175, output: 14 },
   'gpt-5.3-codex': { input: 1.75, cachedInput: 0.175, output: 14 },
@@ -106,6 +107,8 @@ export const MODEL_PRICING: Record<string, CodexModelPricing> = {
 }
 
 const REASONING_TIER_SUFFIXES = ['minimal', 'low', 'medium', 'high', 'xhigh', 'auto', 'none']
+// Why: `max`/`ultra` only in parentheses — as a dash suffix `max` would strip `gpt-5.1-codex-max`.
+const PARENTHESIZED_REASONING_TIERS = [...REASONING_TIER_SUFFIXES, 'max', 'ultra']
 
 function stripParenthesizedReasoningTier(model: string): string | null {
   const match = model.match(/^(.*)\(([^()]*)\)$/)
@@ -113,7 +116,7 @@ function stripParenthesizedReasoningTier(model: string): string | null {
     return model
   }
   const tier = match[2].trim().toLowerCase()
-  if (!REASONING_TIER_SUFFIXES.includes(tier)) {
+  if (!PARENTHESIZED_REASONING_TIERS.includes(tier)) {
     return null
   }
   return match[1]
@@ -153,6 +156,9 @@ export function normalizeModelForPricing(model: string | null): string | null {
   }
   if (normalized === 'gpt-5.1' || normalized.startsWith('gpt-5.1-')) {
     return 'gpt-5.1'
+  }
+  if (normalized === 'gpt-5.2-pro' || normalized.startsWith('gpt-5.2-pro-')) {
+    return 'gpt-5.2-pro'
   }
   if (normalized === 'gpt-5.2-codex' || normalized.startsWith('gpt-5.2-codex-')) {
     return 'gpt-5.2-codex'

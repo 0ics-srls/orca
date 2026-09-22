@@ -114,14 +114,15 @@ function normalizeModelForPricing(model: string | null): string | null {
     return alias
   }
   const normalized = lower.replace(/\./g, '-')
-  // Why: point releases must match before their major, whose pattern also accepts `-5-1`/`-5-5`.
-  if (/fable-5-1(?:$|[^0-9])/.test(normalized)) {
+  // Why: point releases must match before their major, whose pattern also accepts `-5-1`/`-5-5`;
+  // a trailing letter (e.g. `-1m`) is not a point release.
+  if (/fable-5-1(?:$|[^0-9a-z])/.test(normalized)) {
     return 'claude-fable-5-1'
   }
   if (/fable-5(?:$|[^0-9])/.test(normalized)) {
     return 'claude-fable-5'
   }
-  if (/opus-5-5(?:$|[^0-9])/.test(normalized)) {
+  if (/opus-5-5(?:$|[^0-9a-z])/.test(normalized)) {
     return 'claude-opus-5-5'
   }
   if (/opus-5(?:$|[^0-9])/.test(normalized)) {
