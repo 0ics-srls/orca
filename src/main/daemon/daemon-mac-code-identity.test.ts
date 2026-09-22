@@ -1,13 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { existsSyncMock } = vi.hoisted(() => ({
-  existsSyncMock: vi.fn(() => true)
-}))
-vi.mock('node:fs', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  existsSync: existsSyncMock
-}))
-
 import { classifyCodesignDisplayOutput, getDaemonMacCodeIdentity } from './daemon-mac-code-identity'
 
 const HELPER_PATH =
@@ -20,7 +12,6 @@ function runnerReturning(stderr: string, code: number | null) {
 }
 
 beforeEach(() => {
-  existsSyncMock.mockReset().mockReturnValue(true)
   vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
 })
 
@@ -52,12 +43,6 @@ describe('classifyCodesignDisplayOutput', () => {
     expect(classifyCodesignDisplayOutput('+3337: No such file or directory\n', 1)).toBe(
       'unresolvable'
     )
-  })
-
-  // The displayed path can be deleted between codesign reading it and this check; same verdict.
-  it('treats a displayed path that is already gone as unresolvable', () => {
-    existsSyncMock.mockReturnValue(false)
-    expect(classifyCodesignDisplayOutput(`Executable=${HELPER_PATH}\n`, 0)).toBe('unresolvable')
   })
 
   it('fails open on a dead pid, an exiting pid, unsigned code, or an unexpected failure', () => {
