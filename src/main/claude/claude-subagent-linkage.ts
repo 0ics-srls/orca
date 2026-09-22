@@ -95,11 +95,22 @@ export class ClaudeSubagentLinkage implements ClaudeSubagentLinkageSource {
     // settled — including the case where the two ids are the same string, which
     // comparing them could not tell from never having been announced.
     const announced = this.deps.ids.isAnnounced(parentToolUseId)
+    const awaitingOwnAnnouncement =
+      !excluded && !announced && this.deps.isForwardedParentTool?.(parentToolUseId) === true
+    if (!settled && awaitingOwnAnnouncement) {
+      // A top-level spawn call whose `task_started` has not landed yet. Its rows
+      // wait: the spawn call's id is re-minted by a resume, and there is no
+      // backfill to repair a row written under it. Ahead of the release check
+      // below because that one reads "no announcement SO FAR", which is also
+      // what the session's FIRST child looks like before its own lands.
+      return { kind: 'pending' }
+    }
     if (!excluded && !announced && !this.deps.announcesTasks()) {
       // This release has announced no task at all, so nothing stable is ever
       // reachable for any child it runs. An id that rotates is worse than no id
       // — silently wrong rather than visibly absent — so these rows read as the
-      // session's own, exactly as they do today.
+      // session's own, exactly as they do today. A forwarded spawn call reaches
+      // here only once it can wait no longer, having never been announced.
       return { kind: 'root' }
     }
     // A row names its parent as well as its producer, and it persists only once
@@ -121,14 +132,8 @@ export class ClaudeSubagentLinkage implements ClaudeSubagentLinkageSource {
         parent.agentId
       )
     }
-    if (!settled && this.deps.isForwardedParentTool?.(parentToolUseId) === true) {
-      // A top-level spawn call whose `task_started` has not landed yet. Its
-      // rows wait: the spawn call's id is re-minted by a resume, and there is
-      // no backfill to repair a row written under it.
-      return { kind: 'pending' }
-    }
-    // This CLI announces what it spawns and never named this id, so nothing is
-    // coming: nested tool traffic, or a grandchild inside a sidechain. The raw
+    // Nothing is coming for this id: nested tool traffic, a grandchild inside a
+    // sidechain, or a forwarded spawn call that can wait no longer. The raw
     // reference is the only handle there will ever be for it.
     return linked(
       parentToolUseId,
@@ -173,8 +178,11 @@ function linked(
     linkage: {
       agentId,
       // Absent means the session's own agent spawned this one, so it is only
-      // ever written when another agent is known to have.
-      ...(parentAgentId === undefined ? {} : { parentAgentId }),
+      // ever written when ANOTHER agent is known to have. A malformed chain
+      // that loops back names the agent its own ancestor; the depth guard
+      // bounds that walk but cannot make its answer mean anything, and absence
+      // is the truthful claim rather than a self-parent persisted for ever.
+      ...(parentAgentId === undefined || parentAgentId === agentId ? {} : { parentAgentId }),
       providerParentRef: parentToolUseId,
       producerKind,
       // The first run is the absence of an attempt, like every other field
