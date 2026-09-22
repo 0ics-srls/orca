@@ -66,9 +66,12 @@ async function probe(
 let inFlight: { pid: number; pending: Promise<DaemonCodeIdentity> } | null = null
 
 /**
- * Where macOS says the daemon pid's code lives, read fresh at every ask. The verdict is not
- * stable for a pid: Squirrel keeps the parked bundle until the next update, so `parked` becomes
- * `unresolvable` mid-run, and that crossover is the whole point of measuring this.
+ * Where macOS says the daemon pid's code lives, read fresh at every ask.
+ *
+ * Why never cached: one pid's verdict is not stable. An install moves the outgoing bundle aside
+ * and logs no removal of it, yet the parked copies are gone within a day or two, so `parked`
+ * turns into `unresolvable` on a schedule we have not pinned down and can cross over inside a
+ * single app run. Dating that crossover is the point, so a retained verdict would be the bug.
  */
 export function getDaemonMacCodeIdentity(
   pid: number | null | undefined,

@@ -81,7 +81,7 @@ describe('getDaemonMacCodeIdentity', () => {
     ).resolves.toBe('unresolvable')
   })
 
-  // No verdict is retained: a daemon's parked bundle becomes unlinked later in the same run.
+  // No verdict is retained: a daemon's parked bundle can vanish partway through the same run.
   it('reprobes on every ask rather than reporting an earlier verdict', async () => {
     const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
     await getDaemonMacCodeIdentity(3337, runCommand)

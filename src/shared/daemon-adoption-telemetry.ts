@@ -30,9 +30,11 @@ export const DAEMON_TCC_ATTRIBUTION_VALUES = ['intact', 'severed', 'unknown'] as
  * pid record's spawner path, and acting on where the code lives is #21826's proposal, not this
  * measurement.
  * `parked`: the executable resolves inside a `…ShipIt…` directory, the copy Squirrel moves the
- * outgoing bundle to during an update.
+ * outgoing bundle to during an update. How long that copy survives is not known: the install
+ * logs the move and no removal, yet the parked bundles do disappear within a day or two.
  * `unresolvable`: macOS cannot map the pid to on-disk code at all, which is where tccd stops
- * being able to resolve the daemon's code identity.
+ * being able to resolve the daemon's code identity. One daemon can report `parked` and later
+ * `unresolvable` without restarting, which is why the probe never reuses an earlier answer.
  * `probe-failed`: the probe could not answer — not macOS, no pid, no codesign, timeout, or
  * output it could not parse.
  *
