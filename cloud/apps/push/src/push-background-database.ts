@@ -22,6 +22,7 @@ export function reserveRequestConnection(database: PushDatabase, poolMax: number
     transaction: (operation) => admit(() => database.transaction(operation)),
     lockQuotaScope: (key) => database.lockQuotaScope(key),
     tryLockScope: (key) => database.tryLockScope(key),
+    tryLockSharedScope: (key) => database.tryLockSharedScope(key),
     close: () => database.close()
   }
 }

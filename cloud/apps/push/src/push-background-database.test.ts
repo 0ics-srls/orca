@@ -17,6 +17,7 @@ function concurrencyProbe() {
     transaction: (operation) => hold(undefined).then(() => operation(database)),
     lockQuotaScope: async () => undefined,
     tryLockScope: async () => true,
+    tryLockSharedScope: async () => true,
     close: async () => undefined
   }
   return { database, peak: () => peak }

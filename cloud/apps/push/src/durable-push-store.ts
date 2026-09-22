@@ -99,6 +99,9 @@ export class DurablePushStore {
 
   async claim(): Promise<QueuedPushDelivery | null> {
     return this.background.transaction(async (tx) => {
+      // The previous revision's claim holds this key exclusively; sharing it makes that claim snapshot
+      // only after our leases commit. Drop one release after every worker runs this revision.
+      if (!(await tx.tryLockSharedScope('push-worker-claim'))) return null
       const now = this.now()
       // SQLite already serializes the whole transaction.
       const lockRow = tx.dialect === 'postgres' ? ' FOR UPDATE SKIP LOCKED' : ''

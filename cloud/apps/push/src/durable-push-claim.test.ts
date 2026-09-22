@@ -8,64 +8,15 @@ import {
 } from './durable-push-store.js'
 import {
   cleanupDurablePushFixtures,
+  DEVICE_HEAD_SQL,
   durablePushTestDatabaseUrl,
   fixture,
-  notification
+  notification,
+  pauseAfter,
+  within
 } from './durable-push-store.test-fixture.js'
 
 afterEach(cleanupDurablePushFixtures)
-
-const CANDIDATE_SQL = "SELECT * FROM push_delivery_batches WHERE state = 'pending'"
-const DEVICE_HEAD_SQL = 'SELECT (SELECT batch_id'
-
-// Parks the first claim transaction right after the matching statement, locks still held.
-function pauseAfter(database: PushDatabase, prefix = CANDIDATE_SQL) {
-  let reached!: () => void
-  const atCandidate = new Promise<void>((resolve) => (reached = resolve))
-  let release!: () => void
-  const released = new Promise<void>((resolve) => (release = resolve))
-  let paused = false
-  const wrapped: PushDatabase = {
-    dialect: database.dialect,
-    query: (sql, params) => database.query(sql, params),
-    close: () => database.close(),
-    lockQuotaScope: (key) => database.lockQuotaScope(key),
-    tryLockScope: (key) => database.tryLockScope(key),
-    transaction: (run) =>
-      database.transaction((tx) =>
-        run({
-          ...tx,
-          dialect: tx.dialect,
-          close: () => tx.close(),
-          transaction: (inner) => tx.transaction(inner),
-          lockQuotaScope: (key) => tx.lockQuotaScope(key),
-          tryLockScope: (key) => tx.tryLockScope(key),
-          query: async (sql, params) => {
-            const rows = await tx.query(sql, params)
-            if (!paused && sql.startsWith(prefix)) {
-              paused = true
-              reached()
-              await released
-            }
-            return rows
-          }
-        })
-      )
-  }
-  return { wrapped, atCandidate, release }
-}
-
-async function within<T>(operation: Promise<T>, ms: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined
-  try {
-    return await Promise.race([
-      operation,
-      new Promise<T>((_, reject) => (timer = setTimeout(() => reject(new Error('claim_blocked')), ms)))
-    ])
-  } finally {
-    clearTimeout(timer)
-  }
-}
 
 async function batchCount(db: PushDatabase): Promise<number> {
   const [row] = await db.query('SELECT COUNT(*) AS total FROM push_delivery_batches')

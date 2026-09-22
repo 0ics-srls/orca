@@ -24,6 +24,8 @@ export interface PushDatabase {
   lockQuotaScope(key: string): Promise<void>
   // Non-blocking variant: false means another transaction holds the scope.
   tryLockScope(key: string): Promise<boolean>
+  // Shared try-lock: holders of one key coexist, and an exclusive holder excludes them all.
+  tryLockSharedScope(key: string): Promise<boolean>
   close(): Promise<void>
 }
 
@@ -58,6 +60,10 @@ class SqliteTransaction implements PushDatabase {
   async lockQuotaScope(): Promise<void> {}
 
   async tryLockScope(): Promise<boolean> {
+    return true
+  }
+
+  async tryLockSharedScope(): Promise<boolean> {
     return true
   }
 
@@ -123,6 +129,14 @@ class PostgresTransaction implements PushDatabase {
     const [row] = await this.query('SELECT pg_try_advisory_xact_lock(hashtext(?::text)) AS locked', [
       key
     ])
+    return row?.locked === true
+  }
+
+  async tryLockSharedScope(key: string): Promise<boolean> {
+    const [row] = await this.query(
+      'SELECT pg_try_advisory_xact_lock_shared(hashtext(?::text)) AS locked',
+      [key]
+    )
     return row?.locked === true
   }
 
@@ -196,6 +210,10 @@ class PostgresDatabase implements PushDatabase {
   }
 
   async tryLockScope(): Promise<boolean> {
+    throw new Error('lock_quota_scope_requires_transaction')
+  }
+
+  async tryLockSharedScope(): Promise<boolean> {
     throw new Error('lock_quota_scope_requires_transaction')
   }
 

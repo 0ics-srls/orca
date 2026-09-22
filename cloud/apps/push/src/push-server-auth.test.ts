@@ -33,6 +33,7 @@ describe('push gateway authentication and device routes', () => {
       transaction: async (operation) => await operation(unreachable),
       lockQuotaScope: async () => undefined,
       tryLockScope: async () => true,
+      tryLockSharedScope: async () => true,
       close: async () => undefined
     }
     const broken = createPushServer(testPushConfig(), unreachable, {

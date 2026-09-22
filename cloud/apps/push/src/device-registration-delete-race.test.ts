@@ -26,6 +26,7 @@ it.skipIf(!databaseUrl)(
       close: database.close.bind(database),
       lockQuotaScope: database.lockQuotaScope.bind(database),
       tryLockScope: database.tryLockScope.bind(database),
+      tryLockSharedScope: database.tryLockSharedScope.bind(database),
       transaction: (run) =>
         database.transaction((tx) =>
           run({
@@ -34,6 +35,7 @@ it.skipIf(!databaseUrl)(
             transaction: tx.transaction.bind(tx),
             lockQuotaScope: tx.lockQuotaScope.bind(tx),
             tryLockScope: tx.tryLockScope.bind(tx),
+            tryLockSharedScope: tx.tryLockSharedScope.bind(tx),
             query: async (sql, params) => {
               const rows = await tx.query(sql, params)
               if (pause && sql.startsWith('SELECT registration_id FROM push_devices')) {

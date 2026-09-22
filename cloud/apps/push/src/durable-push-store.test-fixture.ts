@@ -21,7 +21,8 @@ export const notification = (seq: number, kind: 'alert' | 'dismiss' = 'alert'): 
   body: '',
   kind
 })
-export async function fixture() {
+// ownDatabase: advisory locks are database-wide, so a test that holds a global key must not share one.
+export async function fixture({ ownDatabase = false } = {}) {
   const databaseUrl = durablePushTestDatabaseUrl
   if (databaseUrl && !process.env.CI && new URL(databaseUrl).port !== '55440')
     throw new Error('isolated_postgres_port_required')
@@ -29,22 +30,29 @@ export async function fixture() {
   if (databaseUrl) {
     const admin = new pg.Client({ connectionString: databaseUrl })
     await admin.connect()
-    const schema = `durable_${randomUUID().replaceAll('-', '')}`
+    const name = `durable_${randomUUID().replaceAll('-', '')}`
     let scoped: PushDatabase | undefined
     cleanups.push(async () => {
       try {
         await scoped?.close()
       } finally {
         try {
-          await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`)
+          await admin.query(
+            ownDatabase ? `DROP DATABASE IF EXISTS ${name}` : `DROP SCHEMA IF EXISTS ${name} CASCADE`
+          )
         } finally {
           await admin.end()
         }
       }
     })
-    await admin.query(`CREATE SCHEMA ${schema}`)
     const url = new URL(databaseUrl)
-    url.searchParams.set('options', `-c search_path=${schema}`)
+    if (ownDatabase) {
+      await admin.query(`CREATE DATABASE ${name}`)
+      url.pathname = `/${name}`
+    } else {
+      await admin.query(`CREATE SCHEMA ${name}`)
+      url.searchParams.set('options', `-c search_path=${name}`)
+    }
     db = scoped = await openPushDatabase({ databaseUrl: url.toString(), dataDir: '', poolMax: 4 })
   } else {
     db = await openInMemoryPushDatabase()
@@ -59,5 +67,59 @@ export async function fixture() {
     advance: (ms: number) => {
       now += ms
     }
+  }
+}
+
+export const CANDIDATE_SQL = "SELECT * FROM push_delivery_batches WHERE state = 'pending'"
+export const DEVICE_HEAD_SQL = 'SELECT (SELECT batch_id'
+
+// Parks the first claim transaction right after the matching statement, locks still held.
+export function pauseAfter(database: PushDatabase, prefix = CANDIDATE_SQL) {
+  let reached!: () => void
+  const atCandidate = new Promise<void>((resolve) => (reached = resolve))
+  let release!: () => void
+  const released = new Promise<void>((resolve) => (release = resolve))
+  let paused = false
+  const wrapped: PushDatabase = {
+    dialect: database.dialect,
+    query: (sql, params) => database.query(sql, params),
+    close: () => database.close(),
+    lockQuotaScope: (key) => database.lockQuotaScope(key),
+    tryLockScope: (key) => database.tryLockScope(key),
+    tryLockSharedScope: (key) => database.tryLockSharedScope(key),
+    transaction: (run) =>
+      database.transaction((tx) =>
+        run({
+          ...tx,
+          dialect: tx.dialect,
+          close: () => tx.close(),
+          transaction: (inner) => tx.transaction(inner),
+          lockQuotaScope: (key) => tx.lockQuotaScope(key),
+          tryLockScope: (key) => tx.tryLockScope(key),
+          tryLockSharedScope: (key) => tx.tryLockSharedScope(key),
+          query: async (sql, params) => {
+            const rows = await tx.query(sql, params)
+            if (!paused && sql.startsWith(prefix)) {
+              paused = true
+              reached()
+              await released
+            }
+            return rows
+          }
+        })
+      )
+  }
+  return { wrapped, atCandidate, release }
+}
+
+export async function within<T>(operation: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => (timer = setTimeout(() => reject(new Error('claim_blocked')), ms)))
+    ])
+  } finally {
+    clearTimeout(timer)
   }
 }
