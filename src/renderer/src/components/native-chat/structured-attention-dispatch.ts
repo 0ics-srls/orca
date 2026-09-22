@@ -23,7 +23,6 @@
  * in main's `suppressWhenFocused`; there is no second suppression path here.
  */
 import { AGENT_JOURNAL_TURN_OUTCOMES } from '../../../../shared/agent-session-journal-types'
-import { agentSessionTurnCompletionKey } from '../../../../shared/agent-session-wire'
 import type { AgentSessionTurnCompletion } from '../../../../shared/agent-session-wire'
 import { buildAgentNotificationId } from '../../../../shared/agent-notification-id'
 import { structuredAgentSessionPaneKey } from '../../../../shared/structured-agent-session-projection'
@@ -106,9 +105,6 @@ export function dispatchStructuredTurnCompletionAttention(
           ...getNotificationWorkspaceLabels(state, request.workspaceId, tab.label),
           terminalTitle: tab.label,
           isActiveWorktree: request.workspaceIsActive,
-          // One mobile notification per completion however many windows dispatched it. Scoped by
-          // host and session, never the bare turn id, which is only unique within its provider.
-          mobileDedupeKey: agentSessionTurnCompletionKey(completion),
           ...(row?.agentType ? { agentType: row.agentType } : {}),
           // 'done' is what the host told us, not an inference from the row — the row's own state
           // can still read 'working' when the completion outruns the status re-projection, and

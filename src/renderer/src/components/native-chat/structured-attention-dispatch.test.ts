@@ -273,16 +273,6 @@ describe('dispatchStructuredTurnCompletionAttention', () => {
     expect(onlyDispatch()).toMatchObject({ agentState: 'done', agentInterrupted: false })
   })
 
-  it('addresses mobile dedupe by host scope, session and turn — never the bare turn id', () => {
-    dispatchStructuredTurnCompletionAttention(structuredTab(), completion())
-    const key = onlyDispatch().mobileDedupeKey
-    expect(key).toContain(SESSION)
-    expect(key).toContain('turn-1')
-    // The host-side scope, which is what separates the same provider turn id on two hosts.
-    expect(key).toContain('host-side-workspace')
-    expect(key).not.toBe('turn-1')
-  })
-
   it('delivers an id the acknowledgement round trip dismisses when the user reads the chat', () => {
     const paneKey = structuredAgentSessionPaneKey(CHAT_TAB, SESSION)
     store.setState({
@@ -377,11 +367,5 @@ describe('dispatchStructuredTurnCompletionAttention', () => {
     dispatchStructuredTurnCompletionAttention(structuredTab(), completion())
     dispatchStructuredTurnCompletionAttention(structuredTab(), completion())
     expect(indicators().paneDot).toBe('agent-completion')
-    // Two dispatches with one dedupe key: the host is what collapses them, not this lane, because
-    // only the host can see the other windows that dispatched the same completion.
-    expect(dispatched.map((request) => request.mobileDedupeKey)).toEqual([
-      dispatched[0]?.mobileDedupeKey,
-      dispatched[0]?.mobileDedupeKey
-    ])
   })
 })

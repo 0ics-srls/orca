@@ -49,12 +49,6 @@ export type NotificationDispatchRequest = {
    * terminal lane, which is every sender that predates structured chat.
    */
   surface?: 'terminal' | 'agent-session'
-  /**
-   * Exact identity of the event behind this dispatch, when the sender has one, so mobile fan-out
-   * is at most once per event no matter how many windows dispatched it. Additive: without it the
-   * coarse per-workspace burst dedupe is the only mobile gate, exactly as before.
-   */
-  mobileDedupeKey?: string
 }
 
 export type NotificationDispatchResult = {

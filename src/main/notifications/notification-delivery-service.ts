@@ -14,10 +14,6 @@ import type {
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { buildNotificationOptions } from '../ipc/notification-options'
 import { reserveNotificationCooldown } from '../ipc/notification-burst-cooldown'
-import {
-  rememberNotificationEvent,
-  wasNotificationEventSeen
-} from '../../shared/notification-event-dedupe'
 
 export type NotificationDeliveryDependencies = {
   readNotificationSettings: () => NotificationSettings
@@ -52,9 +48,6 @@ export function createNotificationDeliveryService(
 ): NotificationDeliveryService {
   const recentDesktopNotifications = new Map<string, number>()
   const recentMobileNotifications = new Map<string, number>()
-  // Why a second mobile gate: the burst cooldown asks "was this workspace noisy lately" and
-  // expires on a timer, which cannot answer "is this the same completion two windows both saw".
-  const mobileEventsSeen = new Set<string>()
 
   const dedupeKeyFor = (request: NotificationDispatchRequest): string =>
     request.worktreeId ?? request.worktreeLabel ?? 'global'
@@ -78,19 +71,7 @@ export function createNotificationDeliveryService(
       const notificationOptions = buildNotificationOptions(request)
 
       // Why: desktop focus only means this computer sees the worktree; the paired phone may still need the alert.
-      // The event gate is per-event; the cooldown below stays the coarse fallback for senders with
-      // no event identity. Desktop gates are deliberately downstream of both: each window decides
-      // its own banner, but the phone gets one notification per completion.
-      //
-      // Each gate only spends itself when it acts. The peek here keeps a known duplicate from
-      // burning the workspace's cooldown slot, and the reservation is committed at dispatch below
-      // rather than here, because a completion the cooldown turns away was never announced — a
-      // later dispatch of it from another window must still be able to reach the phone.
-      const mobileEventAlreadySeen = wasNotificationEventSeen(
-        mobileEventsSeen,
-        request.mobileDedupeKey
-      )
-      if (deps.dispatchMobileNotification && request.source !== 'test' && !mobileEventAlreadySeen) {
+      if (deps.dispatchMobileNotification && request.source !== 'test') {
         if (
           reserveNotificationCooldown(
             recentMobileNotifications,
@@ -103,7 +84,6 @@ export function createNotificationDeliveryService(
             deps.now()
           )
         ) {
-          rememberNotificationEvent(mobileEventsSeen, request.mobileDedupeKey)
           deps.dispatchMobileNotification({
             type: 'notification',
             emittedAt: deps.now(),

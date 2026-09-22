@@ -166,6 +166,47 @@ describe('registerNotificationHandlers', () => {
     expect(webContentsSend).not.toHaveBeenCalledWith('ui:focusTerminal', expect.anything())
   })
 
+  it('reveals a chat in a folder workspace, whose id carries no repo to activate', async () => {
+    const webContentsSend = vi.fn()
+    getTrustedUIRendererWindowMock.mockReturnValue({
+      isDestroyed: () => false,
+      isFocused: () => false,
+      isMinimized: () => false,
+      restore: vi.fn(),
+      show: vi.fn(),
+      focus: vi.fn(),
+      webContents: { send: webContentsSend }
+    })
+    registerNotificationHandlers({
+      getSettings: () => ({
+        notifications: {
+          enabled: true,
+          agentTaskComplete: true,
+          terminalBell: true,
+          suppressWhenFocused: true
+        }
+      })
+    } as never)
+
+    await getDispatchHandler()(
+      {},
+      {
+        source: 'agent-task-complete',
+        surface: 'agent-session',
+        worktreeId: 'folder:fw-1',
+        paneKey: structuredAgentSessionPaneKey('chat-tab', 'session-abc')
+      }
+    )
+    getNotificationEventHandler('click')()
+
+    expect(webContentsSend).toHaveBeenCalledWith('ui:focusEditorTab', {
+      tabId: 'chat-tab',
+      worktreeId: 'folder:fw-1',
+      userInitiated: true
+    })
+    expect(webContentsSend).not.toHaveBeenCalledWith('ui:activateWorktree', expect.anything())
+  })
+
   it('clears the retained notification fallback timer when the native notification closes', async () => {
     registerNotificationHandlers({
       getSettings: () => ({
