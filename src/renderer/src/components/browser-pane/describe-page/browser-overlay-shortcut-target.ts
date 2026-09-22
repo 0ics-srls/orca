@@ -17,11 +17,11 @@ export function browserOverlayOwnsShortcutTarget(
 export function browserChromeShortcutOwnsEvent(
   chromeShortcutScope: BrowserChromeShortcutScope,
   event: Event,
-  overlayTabId: string
+  workspaceId: string
 ): boolean {
   return (
     chromeShortcutScope === 'focused' ||
     (chromeShortcutScope === 'owned-target' &&
-      browserOverlayOwnsShortcutTarget(event.target, overlayTabId))
+      browserOverlayOwnsShortcutTarget(event.target, workspaceId))
   )
 }

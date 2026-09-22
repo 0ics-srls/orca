@@ -9,6 +9,7 @@ import {
   addBrowserPageZoomEventListener,
   applyBrowserPageZoom,
   rememberExplicitBrowserPageZoomLevel,
+  type BrowserPageZoomCommand,
   type BrowserPageZoomDirection
 } from './browser-page-zoom'
 
@@ -45,7 +46,6 @@ export function useBrowserPageWebviewShortcuts({
   // Browser history shortcuts (renderer path: focus on browser chrome)
   // Why: macOS can't deliver Logitech side-buttons to Electron; Logi Options+ remaps them to history chords, handled here when chrome is focused.
   useEffect(() => {
-    // Why: scope, not isActive — every split has an active tab.
     if (chromeShortcutScope === 'inactive') {
       return
     }
@@ -168,17 +168,13 @@ export function useBrowserPageWebviewShortcuts({
         showBrowserZoomFeedback(nextLevel)
       }
     }
-    const removeGuestListener = window.api.ui.onZoomBrowserPage(({ browserPageId, direction }) => {
+    const handleZoom = ({ browserPageId, direction }: BrowserPageZoomCommand): void => {
       if (browserPageId === browserTabId) {
         applyActivePageZoom(direction)
       }
-    })
-    const removeLocalListener = addBrowserPageZoomEventListener((detail) => {
-      if (detail.browserPageId !== browserTabId) {
-        return
-      }
-      applyActivePageZoom(detail.direction)
-    })
+    }
+    const removeGuestListener = window.api.ui.onZoomBrowserPage(handleZoom)
+    const removeLocalListener = addBrowserPageZoomEventListener(handleZoom)
     return () => {
       removeGuestListener()
       removeLocalListener()

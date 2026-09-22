@@ -4,9 +4,9 @@ import { useRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type {
   BrowserHistoryNavigateCommand,
-  BrowserPageCommandTarget,
-  BrowserPageZoomCommand
+  BrowserPageCommandTarget
 } from '../../../../../shared/browser-page-command-target'
+import type { BrowserPageZoomCommand } from '../../../../../shared/browser-page-zoom'
 import { paneChannel } from '../client-hosted-browser-pane-test-rig'
 import type { BrowserChromeShortcutScope, GrabIntent } from '../describe-page/browser-page-types'
 import { useBrowserPageKeyboardShortcuts } from './use-browser-page-keyboard-shortcuts'

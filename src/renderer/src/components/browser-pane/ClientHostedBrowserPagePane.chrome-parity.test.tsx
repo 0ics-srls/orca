@@ -12,9 +12,9 @@ import type {
 } from '../../../../shared/browser-guest-events'
 import type {
   BrowserHistoryNavigateCommand,
-  BrowserPageCommandTarget,
-  BrowserPageZoomCommand
+  BrowserPageCommandTarget
 } from '../../../../shared/browser-page-command-target'
+import type { BrowserPageZoomCommand } from '../../../../shared/browser-page-zoom'
 
 const toastMocks = vi.hoisted(() => ({
   loading: vi.fn(),

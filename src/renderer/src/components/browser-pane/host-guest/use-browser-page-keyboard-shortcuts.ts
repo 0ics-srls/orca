@@ -55,7 +55,6 @@ export function useBrowserPageKeyboardShortcuts({
 
   // Why: Cmd+C is repurposed as the grab-mode gesture; native text copy in the guest is handled by Chromium and never reaches here.
   useEffect(() => {
-    // Why: scope, not isActive — every split has an active tab.
     if (chromeShortcutScope === 'inactive') {
       return
     }
@@ -65,8 +64,8 @@ export function useBrowserPageKeyboardShortcuts({
       if (isEditableKeyboardTarget(e.target)) {
         return
       }
-      // Why: don't start the in-guest picker behind an open markup overlay (matches the disabled toolbar buttons).
       if (
+        // Why: don't start the in-guest picker behind an open markup overlay (matches the disabled toolbar buttons).
         markupIsActive ||
         !keybindingMatchesAction('browser.grabElement', e, shortcutPlatform, keybindings) ||
         !browserChromeShortcutOwnsEvent(chromeShortcutScope, e, workspaceId) ||

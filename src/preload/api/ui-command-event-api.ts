@@ -11,9 +11,9 @@ import type { KeybindingActionId } from '../../shared/keybindings'
 import type { BrowserFindSource } from '../../shared/browser-find-source'
 import type {
   BrowserHistoryNavigateCommand,
-  BrowserPageCommandTarget,
-  BrowserPageZoomCommand
+  BrowserPageCommandTarget
 } from '../../shared/browser-page-command-target'
+import type { BrowserPageZoomCommand } from '../../shared/browser-page-zoom'
 import type {
   AgentProviderSessionMetadata,
   SleepingAgentLaunchConfig

@@ -3,9 +3,9 @@ import { admitCloseActiveTabPayload } from '../close-active-tab-payload-admissio
 import type { CloseActiveTabPayload } from '../api/ui-command-event-api'
 import type {
   BrowserHistoryNavigateCommand,
-  BrowserPageCommandTarget,
-  BrowserPageZoomCommand
+  BrowserPageCommandTarget
 } from '../../shared/browser-page-command-target'
+import type { BrowserPageZoomCommand } from '../../shared/browser-page-zoom'
 import type {
   WorktreeDefaultTabsLaunch,
   WorktreeSetupLaunch
