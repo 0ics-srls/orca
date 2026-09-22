@@ -9,10 +9,7 @@
 
 import type { AgentType } from './agent-status-types'
 import type { NativeChatToolMetadata } from './native-chat-tool-identity'
-import type {
-  AgentSessionContextUsage,
-  AgentSessionTokenUsage
-} from './agent-session-context-usage'
+import type { AgentSessionContextUsage } from './agent-session-context-usage'
 import type { NativeChatBlock, NativeChatRole } from './native-chat-types'
 
 export { type AgentType }
@@ -93,9 +90,6 @@ export type AgentJournalMessageItem = {
   kind: 'message'
   role: NativeChatRole
   blocks: NativeChatBlock[]
-  /** The API's accounting on a main-thread assistant response; the newest one
-   *  is the session's live context size. A subagent's measures its own window. */
-  usage?: AgentSessionTokenUsage
 }
 
 export type AgentJournalToolCallState = 'running' | 'completed' | 'failed'

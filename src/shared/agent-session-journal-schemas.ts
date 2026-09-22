@@ -192,14 +192,20 @@ const ContextUsage = z.object({
       capturedAt: z.number().finite()
     })
     .optional(),
+  response: z
+    .object({
+      usage: TokenUsage,
+      model: z.string().min(1).optional(),
+      capturedAt: z.number().finite()
+    })
+    .optional(),
   resetAt: z.number().finite().optional()
 })
 
 const MessageBody = z.object({
   kind: z.literal('message'),
   role: z.string().min(1),
-  blocks: z.array(Block),
-  usage: TokenUsage.optional()
+  blocks: z.array(Block)
 })
 
 export const AgentJournalItemBodySchema = z.discriminatedUnion('kind', [
