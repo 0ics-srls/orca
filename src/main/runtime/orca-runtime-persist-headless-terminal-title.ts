@@ -15,6 +15,8 @@ import {
 } from '../../shared/execution-host'
 import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import { resolveWorktreeHostRouting } from './worktree-launch-host-repo'
+import { isFloatingWorkspaceSelector } from '../../shared/floating-workspace-worktree'
+import { resolveFloatingTerminalCwd } from '../ipc/floating-workspace-directory'
 
 export class OrcaRuntimeWithPersistHeadlessTerminalTitle extends OrcaRuntimeWithMoveHeadlessMobileSessionTab {
   // Persist a manual terminal rename so a headless rebuild keeps the title
@@ -197,6 +199,17 @@ export class OrcaRuntimeWithPersistHeadlessTerminalTitle extends OrcaRuntimeWith
     worktree: ResolvedWorktree
     executionHostId: ExecutionHostId
   }> {
+    // The floating workspace has no row to resolve. Answering here rather than at each caller
+    // keeps one resolver authoritative for "where does this workspace live".
+    if (isFloatingWorkspaceSelector(worktreeSelector)) {
+      const store = this.requireStore()
+      return {
+        worktree: this.floatingWorkspaceToResolvedWorktree(
+          await resolveFloatingTerminalCwd(store, { path: store.getSettings().floatingTerminalCwd })
+        ),
+        executionHostId: LOCAL_EXECUTION_HOST_ID
+      }
+    }
     const folderScope = await this.resolveFolderWorkspaceLaunchScope(worktreeSelector)
     if (folderScope?.folderWorkspace) {
       // A folder workspace has no repo row to disagree with; its own inference already threw on an

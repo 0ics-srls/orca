@@ -34,7 +34,7 @@ describe('agent.launch with the real floating workspace resolver', () => {
   })
 
   describe.each([true, false])('structured preference %s', (structuredPreference) => {
-    it.each(selectors)('launches a terminal through %s', async (selector) => {
+    it.each(selectors)('routes %s by preference, not by workspace kind', async (selector) => {
       const runtime = new OrcaRuntimeService()
       vi.spyOn(runtime, 'getClientSettings').mockReturnValue(
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the launch reads only these preferences and optional agentCmdOverrides; no other settings consumer runs because terminal creation is stubbed.
@@ -60,20 +60,23 @@ describe('agent.launch with the real floating workspace resolver', () => {
       )
 
       expect(scope).toHaveBeenCalledExactlyOnceWith(selector)
-      expect(createSupport).not.toHaveBeenCalled()
-      expect(structuredHost).not.toHaveBeenCalled()
-      expect(createTerminal).toHaveBeenCalledExactlyOnceWith(
-        `id:${FLOATING_TERMINAL_WORKTREE_ID}`,
-        { startupAgent: 'claude' }
-      )
-      expect(result).toMatchObject({
-        worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
-        outcome: { kind: 'terminal', handle: 'term_floating' },
-        receipt: {
-          mode: 'terminal',
-          reason: structuredPreference ? 'structured_unsupported_on_host' : 'user_default'
-        }
-      })
+      if (structuredPreference) {
+        // Why this changed: the floating workspace resolves to its configured directory, so the
+        // structured path is consulted for it like any other workspace. Kind no longer refuses.
+        expect(createSupport).toHaveBeenCalledWith(`id:${FLOATING_TERMINAL_WORKTREE_ID}`, 'claude')
+      } else {
+        expect(createSupport).not.toHaveBeenCalled()
+        expect(structuredHost).not.toHaveBeenCalled()
+        expect(createTerminal).toHaveBeenCalledExactlyOnceWith(
+          `id:${FLOATING_TERMINAL_WORKTREE_ID}`,
+          { startupAgent: 'claude' }
+        )
+        expect(result).toMatchObject({
+          worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
+          outcome: { kind: 'terminal', handle: 'term_floating' },
+          receipt: { mode: 'terminal', reason: 'user_default' }
+        })
+      }
     })
   })
 })
