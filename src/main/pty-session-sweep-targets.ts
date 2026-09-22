@@ -128,7 +128,8 @@ function verifyRecordedGroup(
  *
  * The tty claim needs a boundary too. Once the root exits the kernel can hand
  * that terminal to a brand-new session, so afterwards a tty row counts only if
- * it was born before the second the root died.
+ * it was born before the second the root died — and not at all when the root is
+ * gone with no recorded exit time.
  *
  * Group membership alone never teaches the sweep another group: only a row
  * reached by descent or by the terminal extends what the session is known to own.
@@ -183,9 +184,11 @@ export function collectSessionSweepTargets(input: SessionSweepTargetInput): Sess
   }
   const claimsTty = (row: ProcessTableRow): boolean =>
     ttyPids.has(row.pid) &&
-    // While the root holds the terminal open, nobody else can have acquired it.
-    (identity.rootExitedAtMs === null ||
-      hasUnambiguousStartTime(row.startedAt, identity.rootExitedAtMs))
+    // While the root holds the terminal open, nobody else can have acquired it. A
+    // kill never records an exit time, so a root merely absent proves no boundary.
+    (rootAlive ||
+      (identity.rootExitedAtMs !== null &&
+        hasUnambiguousStartTime(row.startedAt, identity.rootExitedAtMs)))
 
   const accepted = new Map<number, ProcessTableRow>()
   const ownedPgids = new Set<number>()

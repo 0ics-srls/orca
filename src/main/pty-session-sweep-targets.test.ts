@@ -145,6 +145,31 @@ describe('collectSessionSweepTargets', () => {
     expect(targets.rows).toEqual([])
   })
 
+  it('trusts no terminal row once the root is gone without a recorded exit time', () => {
+    const targets = collectSessionSweepTargets({
+      // A kill path: the root was reaped, but nothing marked when.
+      identity: identityFor({ tty: 'ttys003' }),
+      rows: [...SELF_ROWS, row(6000, 1, 6000, AFTER)],
+      // The terminal was reassigned, and a new session's shell now holds it.
+      ttyRows: [row(6000, 1, 6000, AFTER)],
+      selfPid: SELF
+    })
+
+    expect(targets.rootAlive).toBe(false)
+    expect(targets.rows).toEqual([])
+  })
+
+  it('trusts every terminal row while the root is alive in the capture', () => {
+    const targets = collectSessionSweepTargets({
+      identity: identityFor({ tty: 'ttys003' }),
+      rows: [...SELF_ROWS, row(ROOT, 1, ROOT), row(6000, 1, 6000, AFTER)],
+      ttyRows: [row(ROOT, 1, ROOT), row(6000, 1, 6000, AFTER)],
+      selfPid: SELF
+    })
+
+    expect(pidsOf(targets.rows)).toEqual([6000])
+  })
+
   it('still claims a post-exit child of a process it recognizes', () => {
     const targets = collectSessionSweepTargets({
       identity: identityFor({ tty: 'ttys003', exited: true }),
