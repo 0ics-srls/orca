@@ -4,7 +4,6 @@ import type {
   AgentJournalItemIdentity
 } from '../../../shared/agent-session-journal-types'
 import type { AgentSessionTurnActivity } from '../../../shared/agent-session-wire'
-import { agentJournalLinkageFields } from '../../../shared/agent-session-journal-producer'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type {
   JournalItemAppendOptions,
@@ -72,7 +71,9 @@ function target(
       return { epoch: 'e', sequence: 0 }
     }),
     appendLifecycleBatch: vi.fn(async (input: JournalLifecycleBatchInput) => {
-      journalAppendOptions.push({ fence: input.fence, ...agentJournalLinkageFields(input) })
+      // A batch carries no producer linkage by design, so the fence is all
+      // there is to record — see the batch row builder.
+      journalAppendOptions.push({ fence: input.fence })
       log.push({ call: 'appendLifecycleBatch', fence, settlementId: input.settlementId })
       return { epoch: 'e', sequence: 0 }
     }),

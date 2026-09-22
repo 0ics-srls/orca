@@ -287,8 +287,12 @@ describe('producer linkage on the persisted row', () => {
     expect(row?.v).toBe(AGENT_SESSION_JOURNAL_SCHEMA_VERSION)
   })
 
-  /** A row this host did not write: a remote peer's, or a corrupted line. */
-  function parseForeign(overrides: Record<string, unknown>): JournalRow | null {
+  /** A row this host did not write: a remote peer's, or a corrupted line.
+   *  Narrowed to the item arm it always builds, so a caller can read `body`
+   *  without re-discriminating a union of six. */
+  function parseForeign(
+    overrides: Record<string, unknown>
+  ): Extract<JournalRow, { kind: 'item' }> | null {
     const parsed = parseJournalRow(
       JSON.stringify({
         v: AGENT_SESSION_JOURNAL_SCHEMA_VERSION,
@@ -303,7 +307,7 @@ describe('producer linkage on the persisted row', () => {
         ...overrides
       })
     )
-    return parsed.ok ? parsed.row : null
+    return parsed.ok && parsed.row.kind === 'item' ? parsed.row : null
   }
 
   it('keeps the row but drops an empty agentId, which would read as a subagent', () => {
