@@ -57,10 +57,15 @@ describe('readRelayAuthContext session-read taxonomy', () => {
     })
     coordinator.reconcile()
 
-    const result = await coordinator.waitForLiveBrokerResult()
+    // Budget 0: the classification is published before any retry is waited on, and the
+    // default budget would park this test through the whole backoff ladder.
+    const result = await coordinator.waitForLiveBrokerResult(0)
     expect(result).toEqual({ broker: null, offlineReason: 'auth_unavailable' })
     expect(result.broker).toBeNull()
     // The wire close reason is what the phone latches on; it must not be spent here.
     expect(broker.closeNow).not.toHaveBeenCalledWith(RELAY_HOST_CLOSE_REASON.SIGNED_OUT)
+    // Why stop(): a transient read arms a retry, and an escaped timer fires inside whatever
+    // test runs next in this worker.
+    coordinator.stop()
   })
 })
