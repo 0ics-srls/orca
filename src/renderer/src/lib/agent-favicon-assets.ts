@@ -1,4 +1,5 @@
 import type { TuiAgent } from '../../../shared/tui-agent'
+import museUrl from '../../../shared/agent-icons/muse.png?url'
 import grokUrl from '../../../shared/agent-icons/grok.png?url'
 import mimoCodeUrl from '../../../shared/agent-icons/mimo-code.png?url'
 import anteUrl from '../../../shared/agent-icons/ante.png?url'
@@ -59,5 +60,6 @@ export const AGENT_FAVICON_ASSETS: Partial<Record<TuiAgent, string>> = {
   rovo: rovoUrl,
   hermes: hermesUrl,
   devin: devinUrl,
-  openclaw: openclawUrl
+  openclaw: openclawUrl,
+  muse: museUrl
 }

@@ -119,9 +119,26 @@ export type TuiIdleSatisfactionInput = {
    *  (~11us and a multi-KB string on a full tail); the title check below usually answers
    *  first, and then none of that has to happen at all. */
   readPositiveBodyEvidence: () => boolean
+  /** Muse body evidence; optional for callers that do not have terminal text. */
+  readMuseReadyBodyEvidence?: () => boolean
   agent: TuiAgent | null | undefined
   firstPartyStatus: FirstPartyAgentStatus
   quiescenceMs: number
+}
+
+function hasQuietMuseReadyPrompt(
+  record: TuiIdleEvidenceRecord,
+  agent: TuiAgent | null | undefined,
+  readBody: (() => boolean) | undefined,
+  quiescenceMs: number
+): boolean {
+  if (agent !== null && agent !== undefined && agent !== 'muse') {
+    return false
+  }
+  if (!readBody?.() || record.lastOutputAt === null) {
+    return false
+  }
+  return Date.now() - record.lastOutputAt >= quiescenceMs
 }
 
 /** The one place the three tiers are combined; every satisfaction site routes here. */
@@ -133,6 +150,16 @@ export function isTuiIdleSatisfied(input: TuiIdleSatisfactionInput): boolean {
   }
   if (hasFreshWorkingFirstPartyStatus(input.firstPartyStatus)) {
     return false
+  }
+  if (
+    hasQuietMuseReadyPrompt(
+      input.record,
+      input.agent,
+      input.readMuseReadyBodyEvidence,
+      input.quiescenceMs
+    )
+  ) {
+    return true
   }
   return hasSustainedTitleIdle(input.record, input.agent, input.quiescenceMs)
 }

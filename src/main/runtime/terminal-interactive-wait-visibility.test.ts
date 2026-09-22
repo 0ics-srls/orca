@@ -39,6 +39,16 @@ const CLAUDE_TRUST = [
   '  2. No, exit\n'
 ].join('')
 
+const MUSE_USER_INPUT = [
+  'Request user input Favorite — running (12s)',
+  'Which of these 4 colors is your favorite?',
+  '1. Red',
+  '2. Blue',
+  '3. Green',
+  '4. None of the above',
+  'Enter to select · ↑/↓ to move · Tab for an optional note · Esc to interrupt'
+].join('\n')
+
 function agentStatusOsc(state: string): string {
   return `]9999;${JSON.stringify({ state, prompt: 'ship it', agentType: 'claude' })}`
 }
@@ -57,6 +67,27 @@ async function createPane(
 const CURSOR_TITLE = '⠇ Cursor Agent'
 
 describe('terminal interactive-wait visibility (STA-4513, STA-3714)', () => {
+  it('detects Muse request_user_input when no hook reports it', async () => {
+    const { runtime, handle } = await createPane({
+      paneTitle: '~/orca/workspaces/orca/muse-question',
+      foregroundProcess: 'muse-bin-1.3.0',
+      data: MUSE_USER_INPUT
+    })
+
+    await expect(runtime.showTerminal(handle)).resolves.toMatchObject({
+      agentWait: { source: 'prompt-text', reason: 'agent-interactive-prompt' }
+    })
+    await expect(runtime.getTerminalInteractiveWait(handle)).resolves.toMatchObject({
+      source: 'prompt-text',
+      reason: 'agent-interactive-prompt',
+      since: expect.any(Number)
+    })
+    await expect(runtime.getTerminalAgentStatus(handle)).resolves.toMatchObject({
+      isRunningAgent: true,
+      status: 'permission'
+    })
+  })
+
   describe('cursor-agent approval menu, the case no hook reports', () => {
     it('names the pending approval on the pane a coordinator inspects', async () => {
       const { runtime, handle } = await createPane({

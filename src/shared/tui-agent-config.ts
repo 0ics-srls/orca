@@ -307,6 +307,15 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
     detectCmd: 'devin',
     // Why: `devin -- <prompt>` auto-submits immediately (docs.devin.ai/cli), so start the REPL with no argv prompt.
     promptInjectionMode: 'stdin-after-start'
+  },
+  muse: {
+    detectCmd: 'muse',
+    launchCmd: 'muse --trust-workspace',
+    // Why: the Windows installer places muse.cmd under LocalAppData, which Git Bash
+    // panes do not inherit from the Windows user PATH. PowerShell resolves that user
+    // install path and preserves the same interactive PTY stdin contract.
+    launchCmdByPlatform: { win32: 'powershell.exe -NoProfile -Command muse --trust-workspace' },
+    promptInjectionMode: 'stdin-after-start'
   }
 }
 

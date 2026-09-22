@@ -79,9 +79,12 @@ export function SkillInstallAgentPicker({
   const [open, setOpen] = useState(false)
   const { canonical, selectable } = groupSkillInstallProviders(scope, detectedAgents)
   const installed = detectedAgents ? new Set(detectedAgents) : null
+  const visibleCanonical = canonical.filter(
+    (provider) => provider.id !== 'muse' || installed === null || installed.has(provider.id)
+  )
   const canonicalRoot = scope === 'global' ? '~/.agents/skills' : '.agents/skills'
   const chosen = [
-    ...canonical.map((provider) => provider.displayName),
+    ...visibleCanonical.map((provider) => provider.displayName),
     ...selectable
       .filter((choice) => selected.has(choice.provider.id))
       .map((choice) => choice.provider.displayName)
@@ -171,7 +174,7 @@ export function SkillInstallAgentPicker({
           align="start"
           className="popover-wheel-scroll w-[var(--radix-popover-trigger-width)] min-w-[22rem] p-0 shadow-lg"
         >
-          {canonical.length > 0 ? (
+          {visibleCanonical.length > 0 ? (
             <div className="border-b border-border/50 bg-muted/20 px-3 py-2.5">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                 <Sparkles className="size-3 text-primary shrink-0" />
@@ -190,7 +193,7 @@ export function SkillInstallAgentPicker({
                 )}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {canonical.map((provider) => (
+                {visibleCanonical.map((provider) => (
                   <span
                     key={provider.id}
                     className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-background/90 px-2 py-0.5 text-xs font-medium text-foreground shadow-xs"

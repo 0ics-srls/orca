@@ -13,6 +13,19 @@ import type { ProcessedAgentStatusChunk } from '../../shared/agent-status-osc'
 import { mapExplicitAgentStateToRuntimeTerminalStatus } from './runtime-worktree-status-projection'
 
 export class OrcaRuntimeWithCreateTerminalSideEffectCommandCodeDetector extends OrcaRuntimeWithApplyTrackedPtyTitle {
+  protected emitInferredAgentStatusEvent(
+    ptyId: string,
+    payload: ProcessedAgentStatusChunk['payloads'][number]
+  ): void {
+    // TUI agents without hooks still need the same renderer status row when the terminal itself
+    // proves that they are waiting for a human.
+    this.emitTerminalAgentStatusEvents(ptyId, {
+      cleanData: '',
+      payloads: [payload],
+      lastPayloadCleanOffset: null
+    })
+  }
+
   protected createTerminalSideEffectCommandCodeDetector(
     ptyId: string
   ): NonNullable<RuntimePtyTitleTrackerEntry['commandCodeDetector']> {

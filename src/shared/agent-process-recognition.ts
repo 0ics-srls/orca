@@ -5,6 +5,8 @@ import type { TuiAgent } from './tui-agent'
 import { filterHeadlessOneShotAgentCommand } from './agent-headless-command'
 import { getFirstCommandToken } from './command-token-scanner'
 import { isFreshOmpLaunchCommand } from './omp-fresh-launch'
+import { isMuseExpectedProcess, isMuseVersionedBinary } from './muse-process-recognition'
+import { isAgentForegroundWrapperProcessName } from './agent-foreground-process'
 
 export type RecognizedAgentProcess = { agent: TuiAgent; processName: string }
 
@@ -40,7 +42,6 @@ const STATIC_INTERPRETER_PROCESS_NAMES = new Set([
   'powershell'
 ])
 
-const FOREGROUND_AGENT_WRAPPER_PROCESS_NAMES = new Set(['node', 'python', 'python3'])
 const PYTHON_PROCESS_RE = /^python(?:\d+(?:\.\d+)*)?$/
 const INTERPRETER_OPTIONS_WITH_VALUE = new Set([
   '-r',
@@ -94,12 +95,15 @@ function agentForNormalizedProcess(normalized: string): TuiAgent | undefined {
   if (normalized.startsWith('grok-')) {
     return PROCESS_TO_AGENT.get('grok')
   }
+  if (isMuseVersionedBinary(normalized)) {
+    return PROCESS_TO_AGENT.get('muse')
+  }
   return undefined
 }
 
-function recognizedAgentForProcess(normalized: string): RecognizedAgentProcess | null {
+const recognizedAgentForProcess = (normalized: string): RecognizedAgentProcess | null => {
   const agent = agentForNormalizedProcess(normalized)
-  return agent ? { agent, processName: normalized } : null
+  return agent === undefined ? null : { agent, processName: normalized }
 }
 
 function tokenizeCommandLine(commandLine: string): string[] {
@@ -162,8 +166,6 @@ function isInterpreterProcessName(normalized: string): boolean {
   return STATIC_INTERPRETER_PROCESS_NAMES.has(normalized) || PYTHON_PROCESS_RE.test(normalized)
 }
 
-const isPythonProcessName = (normalized: string): boolean => PYTHON_PROCESS_RE.test(normalized)
-
 const optionName = (token: string): string => token.split('=', 1)[0] ?? ''
 
 function findInterpreterEntrypointToken(tokens: string[], firstNormalized: string): string | null {
@@ -175,7 +177,7 @@ function findInterpreterEntrypointToken(tokens: string[], firstNormalized: strin
     if (token === '--') {
       continue
     }
-    if (isPythonProcessName(firstNormalized) && token === '-m') {
+    if (PYTHON_PROCESS_RE.test(firstNormalized) && token === '-m') {
       return tokens[index + 1] ?? null
     }
     if (token.startsWith('-')) {
@@ -266,7 +268,8 @@ export function isExpectedAgentProcess(
   }
   return (
     normalizedProcess === normalizedExpected ||
-    normalizedProcess.startsWith(`${normalizedExpected}.`)
+    normalizedProcess.startsWith(`${normalizedExpected}.`) ||
+    isMuseExpectedProcess(normalizedProcess, normalizedExpected)
   )
 }
 
@@ -306,7 +309,7 @@ export function recognizeAgentProcessFromCommandLine(
   if (!entrypoint) {
     return null
   }
-  const viaEntrypoint = isPythonProcessName(firstNormalized)
+  const viaEntrypoint = PYTHON_PROCESS_RE.test(firstNormalized)
     ? recognizePythonEntrypoint(tokens, entrypoint)
     : (recognizeAgentProcess(entrypoint) ?? recognizeNodeScriptEntrypoint(entrypoint))
   if (
@@ -319,9 +322,7 @@ export function recognizeAgentProcessFromCommandLine(
 }
 export function isAgentForegroundWrapperProcess(processName: string | null | undefined): boolean {
   const normalized = normalizeProcessName(processName)
-  return (
-    FOREGROUND_AGENT_WRAPPER_PROCESS_NAMES.has(normalized) || PYTHON_PROCESS_RE.test(normalized)
-  )
+  return isAgentForegroundWrapperProcessName(normalized)
 }
 
 export function isRecognizedAgentType(agentType: AgentType | null | undefined): boolean {

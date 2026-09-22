@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TUI_AGENT_CONFIG } from './tui-agent-config'
+import { getTuiAgentLaunchCommand, TUI_AGENT_CONFIG } from './tui-agent-config'
 import type { TuiAgent } from './tui-agent'
 
 describe('TUI_AGENT_CONFIG', () => {
@@ -16,6 +16,12 @@ describe('TUI_AGENT_CONFIG', () => {
       launchCmd: 'codex',
       expectedProcess: 'codex'
     })
+  })
+
+  it('uses the Windows PowerShell bridge for Muse installs outside Git Bash PATH', () => {
+    expect(getTuiAgentLaunchCommand(TUI_AGENT_CONFIG.muse, 'win32')).toBe(
+      'powershell.exe -NoProfile -Command muse --trust-workspace'
+    )
   })
 
   it('keeps explicit overrides where the launch line or process differs from the binary', () => {

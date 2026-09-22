@@ -154,6 +154,19 @@ const LIVE_CODEX_PROMPTS: { name: string; lines: string[]; reason: string }[] = 
       'Reject'
     ],
     reason: 'agent-interactive-prompt'
+  },
+  {
+    name: 'Muse request user input',
+    lines: [
+      'Request user input Favorite — running (12s)',
+      'Which of these 4 colors is your favorite?',
+      '1. Red',
+      '2. Blue',
+      '3. Green',
+      '4. None of the above',
+      'Enter to select · ↑/↓ to move · Tab for an optional note · Esc to interrupt'
+    ],
+    reason: 'agent-interactive-prompt'
   }
 ]
 
@@ -292,6 +305,30 @@ describe('detectTerminalWaitBlockedReason on non-Codex agents', () => {
       expect(reason?.startsWith('codex-')).toBe(false)
     })
   }
+
+  it('does not treat Muse narration without a live menu as a question', () => {
+    const waitText = waitTextFor([
+      'I will use the request user input tool after I finish checking the files.',
+      'The terminal is still working.'
+    ])
+
+    expect(detectTerminalWaitBlockedReason(waitText)).toBeNull()
+  })
+
+  it('does not keep a stale Muse question after the ready screen is redrawn', () => {
+    const waitText = waitTextFor([
+      'Request user input Favorite — running (12s)',
+      'Which color?',
+      '1. Red',
+      '2. Blue',
+      'Enter to select · Esc to interrupt',
+      'Muse Code',
+      'Skills: 36 loaded',
+      '❯'
+    ])
+
+    expect(detectTerminalWaitBlockedReason(waitText)).toBeNull()
+  })
 })
 
 // Antigravity readiness, and what this file does NOT claim about it.
@@ -505,4 +542,13 @@ describe('Antigravity readiness does not absorb its own startup dialog', () => {
       expect(isKnownReadyPromptPreview(waitText)).toBe(false)
     })
   }
+})
+
+describe('Muse readiness', () => {
+  it('requires the Muse banner, skills summary, and composer', async () => {
+    const { isMuseReadyPromptPreview } = await import('./terminal-wait-detection')
+    expect(isMuseReadyPromptPreview('Muse Code\nSkills: 36 loaded\n❯')).toBe(true)
+    expect(isMuseReadyPromptPreview('Muse Code\nSkills: 36 loaded')).toBe(false)
+    expect(isMuseReadyPromptPreview('Muse Code\n❯')).toBe(false)
+  })
 })

@@ -10,6 +10,9 @@ import {
   startOfLastLines,
   startOfLastNonBlankLines
 } from './terminal-wait-tail-window'
+import { findMuseInteractiveQuestionIndex } from '../../shared/muse-interactive-question'
+
+export { isMuseReadyPromptPreview } from '../../shared/muse-ready-prompt'
 
 const EXPLICIT_IDLE_TITLE_RE = /(^|\s)(ready|idle|done)(\s|$|[.!?])/i
 const CLAUDE_IDLE_PREFIX = '\u2733'
@@ -190,7 +193,7 @@ function findActiveAntigravityModelPickerIndex(normalized: string): number | nul
 }
 
 export const TERMINAL_WAIT_BLOCKED_SENTINEL_RE =
-  /update available|choose working directory to|codex just got an upgrade|hooks need review|do you trust|trust this|trusted workspace|press enter to (?:confirm|continue|view|insert)|press t to trust|permission required|requires permission|allow once|allow always|run this command\?/i
+  /update available|choose working directory to|codex just got an upgrade|hooks need review|do you trust|trust this|trusted workspace|request user input|enter to select|press enter to (?:confirm|continue|view|insert)|press t to trust|permission required|requires permission|allow once|allow always|run this command\?/i
 
 // Why text at all: cursor-agent has no approval hook, so the key-bound menu is the only authority.
 const CURSOR_APPROVAL_CHOICE_MARKERS = [
@@ -347,6 +350,10 @@ function findBlockedSignalInLiveWindow(
       // mixed-version clients -- an older host still publishes codex-* on this path.
       candidates.push({ reason: 'agent-interactive-prompt', index: permissionPromptIndex })
     }
+  }
+  const museQuestionIndex = findMuseInteractiveQuestionIndex(normalized)
+  if (museQuestionIndex !== null) {
+    candidates.push({ reason: 'agent-interactive-prompt', index: museQuestionIndex })
   }
   return candidates.length > 0
     ? candidates.reduce((latest, candidate) =>

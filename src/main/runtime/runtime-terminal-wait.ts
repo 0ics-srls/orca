@@ -4,7 +4,8 @@ import type {
 } from '../../shared/runtime-types'
 import {
   detectTerminalWaitBlockedReason,
-  isKnownReadyPromptPreview
+  isKnownReadyPromptPreview,
+  isMuseReadyPromptPreview
 } from './terminal-wait-detection'
 import {
   buildPtyTerminalWaitBlockedResult,
@@ -59,6 +60,7 @@ export class RuntimeTerminalWait {
       record: leaf,
       rendererTitle: leaf.paneTitle ?? this.deps.getTabTitle(leaf.tabId),
       readPositiveBodyEvidence: () => isKnownReadyPromptPreview(waitText),
+      readMuseReadyBodyEvidence: () => isMuseReadyPromptPreview(waitText),
       agent: this.deps.getPaneAgent(leaf.ptyId),
       firstPartyStatus: this.deps.getFirstPartyAgentStatus(leaf.ptyId),
       quiescenceMs: this.deps.quiescenceMs

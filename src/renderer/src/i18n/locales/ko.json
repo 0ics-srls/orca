@@ -323,6 +323,7 @@
     "lib": {
       "agent": {
         "catalog": {
+          "muse_label": "Muse",
           "5dff448636": "OpenClaw",
           "8a9ba743cc": "Hermes",
           "4e63c7b956": "Rovo Dev",

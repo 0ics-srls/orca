@@ -20,6 +20,7 @@ import { ownRetainedString } from '../../shared/own-retained-string'
 import type { ProcessedAgentStatusChunk } from '../../shared/agent-status-osc'
 import { createAgentStatusOscProcessor } from '../../shared/agent-status-osc'
 import type { RuntimePtyTitleTrackerEntry } from './runtime-terminal-state-records'
+import { findMuseInteractiveQuestionIndex } from '../../shared/muse-interactive-question'
 
 export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPtyData {
   protected scheduleWaitBlockedCheck(ptyId: string, appendedText: string, at: number): void {
@@ -78,6 +79,17 @@ export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPt
     ) {
       pty.waitBlockedAt = at
       this.recordAgentPromptPermissionObservation(ptyId)
+      if (
+        nextWaitState.signal?.reason === 'agent-interactive-prompt' &&
+        findMuseInteractiveQuestionIndex(nextWaitState.waitText.toLowerCase()) !== null
+      ) {
+        this.emitInferredAgentStatusEvent(ptyId, {
+          state: 'waiting',
+          prompt: nextWaitState.waitText,
+          agentType: 'muse',
+          toolName: 'Request user input'
+        })
+      }
     }
     state.lastAt = at
     state.lastWaitState = nextWaitState
