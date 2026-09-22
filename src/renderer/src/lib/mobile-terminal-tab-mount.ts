@@ -75,12 +75,3 @@ export function resolveMobileTerminalTabMount(
         }
       }
 }
-
-export function planMobileTerminalTabMount(
-  state: TerminalTabPtyOwnershipState,
-  request: MobileTerminalTabMountRequest,
-  options: MobileTerminalTabMountOptions = {}
-): BackgroundMountTerminalWorktreeDetail | null {
-  const resolution = resolveMobileTerminalTabMount(state, request, options)
-  return resolution?.kind === 'mount' ? resolution.detail : null
-}
