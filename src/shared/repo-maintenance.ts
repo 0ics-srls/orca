@@ -1,26 +1,30 @@
-import { countLooseRefs } from './loose-ref-count'
 import { PackedRefsLockGate } from './packed-refs-lock-gate'
+import { RepoMaintenanceCooldowns } from './repo-maintenance-cooldowns'
 import {
-  LOOSE_REF_PACK_THRESHOLD,
-  REF_MAINTENANCE_ATTEMPT_DEADLINE_MS,
-  REF_MAINTENANCE_CLEAN_COOLDOWN_MS,
-  REF_MAINTENANCE_FAILURE_COOLDOWN_MS,
-  REF_MAINTENANCE_PACKED_COOLDOWN_MS,
-  REF_MAINTENANCE_QUIET_PERIOD_MS,
   PACKED_REFS_LOCK_WAIT_MS,
-  REF_MAINTENANCE_LOCKED_COOLDOWN_MS,
-  RefMaintenanceInterrupted,
-  RefMaintenanceRepoLocked,
-  type RefMaintenanceOutcome,
-  type RefMaintenanceSpan,
-  type RepoRefMaintenanceOptions,
-  type RepoRefMaintenanceTarget
-} from './repo-ref-maintenance-policy'
+  REPO_MAINTENANCE_ATTEMPT_DEADLINE_MS,
+  REPO_MAINTENANCE_CLEAN_COOLDOWN_MS,
+  REPO_MAINTENANCE_FAILURE_COOLDOWN_MS,
+  REPO_MAINTENANCE_LOCKED_COOLDOWN_MS,
+  REPO_MAINTENANCE_MAX_REMAINDER_ROUNDS,
+  REPO_MAINTENANCE_PACKED_COOLDOWN_MS,
+  REPO_MAINTENANCE_QUIET_PERIOD_MS,
+  REPO_MAINTENANCE_REMAINDER_DELAY_MS,
+  RepoMaintenanceInterrupted,
+  type RepoMaintenanceAttemptOutcome,
+  type RepoMaintenanceOptions,
+  type RepoMaintenanceSpan,
+  type RepoMaintenanceTarget,
+  type RepoMaintenanceTask,
+  type RepoMaintenanceTaskOutcome
+} from './repo-maintenance-policy'
+import { runMaintenanceTask } from './repo-maintenance-task-run'
 
 /**
- * The scheduler half of idle loose-ref packing: when to probe, when to pack,
- * when to stand down. The thresholds and the host contract it works against
- * live in `./repo-ref-maintenance-policy`.
+ * The scheduler half of idle repo maintenance: when to probe, when to pack, when
+ * to stand down. It is deliberately blind to what a task maintains -- it probes,
+ * compares to the task's own threshold, packs, and re-probes. The thresholds,
+ * the task contract and the host contract live in `./repo-maintenance-policy`.
  */
 
 /** Give up until the next real activity rather than re-arming forever. */
@@ -29,33 +33,48 @@ const MAX_DEFERRALS = 6
 const MAX_DEFERRAL_BACKOFF_MULTIPLIER = 8
 /** Armed repos are evicted oldest-first past this; the next write on one re-arms it. */
 const MAX_TRACKED_REPOS = 64
+/** Cooldowns are per repo *and* task, so the ceiling has to cover both. */
+const MAX_TRACKED_COOLDOWNS = MAX_TRACKED_REPOS * 8
 
 type TrackedRepo = {
-  target: RepoRefMaintenanceTarget
+  target: RepoMaintenanceTarget
   timer: ReturnType<typeof setTimeout> | null
   deferrals: number
+  /** Consecutive re-arms for a remainder; a write to the repo resets it. */
+  remainders: number
 }
 
-const noopSpan: RefMaintenanceSpan = { setAttribute: () => {} }
+const noopSpan: RepoMaintenanceSpan = { setAttribute: () => {} }
+
+const TASK_COOLDOWN_MS: Record<RepoMaintenanceTaskOutcome, number> = {
+  packed: REPO_MAINTENANCE_PACKED_COOLDOWN_MS,
+  // None: a remainder is work still owed, and the attempt re-arms to finish it.
+  partially_packed: 0,
+  below_threshold: REPO_MAINTENANCE_CLEAN_COOLDOWN_MS,
+  unresolved: REPO_MAINTENANCE_CLEAN_COOLDOWN_MS,
+  locked: REPO_MAINTENANCE_LOCKED_COOLDOWN_MS,
+  failed: REPO_MAINTENANCE_FAILURE_COOLDOWN_MS
+}
 
 /** A deadline means something is stuck: back off instead of retrying straight away. */
 function hitDeadline(signal: AbortSignal): boolean {
-  return signal.reason instanceof RefMaintenanceInterrupted && signal.reason.deadline
+  return signal.reason instanceof RepoMaintenanceInterrupted && signal.reason.deadline
 }
 
-export class RepoRefMaintenance {
+export class RepoMaintenance {
   private readonly tracked = new Map<string, TrackedRepo>()
-  private readonly cooldownUntil = new Map<string, number>()
+  private readonly cooldowns: RepoMaintenanceCooldowns
   private readonly now: () => number
   private readonly isAppBusy: () => boolean
-  private readonly observe: NonNullable<RepoRefMaintenanceOptions['observe']>
+  private readonly observe: NonNullable<RepoMaintenanceOptions['observe']>
   private readonly quietPeriodMs: number
-  private readonly looseRefThreshold: number
+  private readonly remainderDelayMs: number
   private readonly onError: (error: unknown) => void
-  // Why: at most one pack-refs anywhere. It holds a general git admission slot
-  // for its whole run, and two at once would halve git throughput on a small host.
-  // The slot is never released while a pack that could hold `packed-refs.lock`
-  // is still running -- an interrupt cancels the work and waits for it to stop.
+  // Why: at most one maintenance attempt anywhere. A pack holds a general git
+  // admission slot for its whole run, and two at once would halve git throughput
+  // on a small host. The slot is never released while a pack that could hold
+  // `packed-refs.lock` is still running -- an interrupt cancels the work and
+  // waits for it to stop.
   private inFlight: Promise<void> | null = null
   private inFlightAbort: AbortController | null = null
   private readonly lockGate = new PackedRefsLockGate()
@@ -65,12 +84,13 @@ export class RepoRefMaintenance {
   private lastAttempt: Promise<void> = Promise.resolve()
   private disposed = false
 
-  constructor(options: RepoRefMaintenanceOptions = {}) {
+  constructor(options: RepoMaintenanceOptions = {}) {
     this.now = options.now ?? Date.now
+    this.cooldowns = new RepoMaintenanceCooldowns(this.now, MAX_TRACKED_COOLDOWNS)
     this.isAppBusy = options.isBusy ?? (() => false)
     this.observe = options.observe ?? ((attempt) => attempt(noopSpan))
-    this.quietPeriodMs = options.quietPeriodMs ?? REF_MAINTENANCE_QUIET_PERIOD_MS
-    this.looseRefThreshold = options.looseRefThreshold ?? LOOSE_REF_PACK_THRESHOLD
+    this.quietPeriodMs = options.quietPeriodMs ?? REPO_MAINTENANCE_QUIET_PERIOD_MS
+    this.remainderDelayMs = options.remainderDelayMs ?? REPO_MAINTENANCE_REMAINDER_DELAY_MS
     this.onError = options.onError ?? (() => {})
   }
 
@@ -79,7 +99,7 @@ export class RepoRefMaintenance {
    * Every call pushes the attempt further out, so a burst of fetches or a
    * worktree create can never be interrupted by maintenance it triggered.
    */
-  arm(target: RepoRefMaintenanceTarget): void {
+  arm(target: RepoMaintenanceTarget): void {
     if (this.disposed) {
       return
     }
@@ -87,7 +107,12 @@ export class RepoRefMaintenance {
     if (existing?.timer) {
       clearTimeout(existing.timer)
     }
-    const tracked: TrackedRepo = { target, timer: null, deferrals: existing?.deferrals ?? 0 }
+    const tracked: TrackedRepo = {
+      target,
+      timer: null,
+      deferrals: existing?.deferrals ?? 0,
+      remainders: 0
+    }
     this.tracked.delete(target.key)
     this.evictOldestBeyondCap()
     this.tracked.set(target.key, tracked)
@@ -160,14 +185,14 @@ export class RepoRefMaintenance {
 
   dispose(): void {
     this.disposed = true
-    this.inFlightAbort?.abort(new RefMaintenanceInterrupted('disposed'))
+    this.inFlightAbort?.abort(new RepoMaintenanceInterrupted('disposed'))
     for (const tracked of this.tracked.values()) {
       if (tracked.timer) {
         clearTimeout(tracked.timer)
       }
     }
     this.tracked.clear()
-    this.cooldownUntil.clear()
+    this.cooldowns.clear()
   }
 
   private isBusy(tracked: TrackedRepo): boolean {
@@ -204,7 +229,7 @@ export class RepoRefMaintenance {
    * their own, so charging for them would let a busy machine starve a repo
    * until its next fetch. Only "the app is busy" is charged.
    */
-  private defer(key: string, tracked: TrackedRepo, counted: boolean): void {
+  private defer(key: string, tracked: TrackedRepo, counted: boolean, delayMs?: number): void {
     // A fetch that landed while this attempt was probing already re-armed the
     // repo; that entry is fresher, so the deferral must not overwrite it.
     if (this.disposed || this.tracked.has(key)) {
@@ -218,7 +243,7 @@ export class RepoRefMaintenance {
     }
     this.tracked.set(key, tracked)
     const multiplier = Math.min(2 ** tracked.deferrals, MAX_DEFERRAL_BACKOFF_MULTIPLIER)
-    this.schedule(key, tracked, this.quietPeriodMs * multiplier)
+    this.schedule(key, tracked, delayMs ?? this.quietPeriodMs * multiplier)
   }
 
   private async attempt(key: string): Promise<void> {
@@ -227,8 +252,8 @@ export class RepoRefMaintenance {
       return
     }
     this.tracked.delete(key)
-    const cooldownUntil = this.cooldownUntil.get(key)
-    if (cooldownUntil !== undefined && this.now() < cooldownUntil) {
+    const due = tracked.target.tasks.filter((task) => !this.cooldowns.isCoolingDown(key, task.id))
+    if (due.length === 0) {
       return
     }
     if (this.inFlight !== null) {
@@ -241,11 +266,11 @@ export class RepoRefMaintenance {
     }
     const abort = new AbortController()
     const deadline = setTimeout(
-      () => abort.abort(new RefMaintenanceInterrupted('attempt deadline', true)),
-      REF_MAINTENANCE_ATTEMPT_DEADLINE_MS
+      () => abort.abort(new RepoMaintenanceInterrupted('attempt deadline', true)),
+      REPO_MAINTENANCE_ATTEMPT_DEADLINE_MS
     )
     deadline.unref?.()
-    const run = this.observe((span) => this.packIfNeeded(key, tracked, span, abort.signal))
+    const run = this.observe((span) => this.runDueTasks(key, tracked, due, span, abort.signal))
     this.inFlight = run
     this.inFlightAbort = abort
     try {
@@ -259,108 +284,76 @@ export class RepoRefMaintenance {
     }
   }
 
-  private async packIfNeeded(
+  private async runDueTasks(
     key: string,
     tracked: TrackedRepo,
-    span: RefMaintenanceSpan,
+    due: readonly RepoMaintenanceTask[],
+    span: RepoMaintenanceSpan,
     signal: AbortSignal
   ): Promise<void> {
     span.setAttribute('repo.maintenance_key', key)
+    span.setAttribute('repo.maintenance_tasks', due.map((task) => task.id).join(','))
     // Every await below carries the signal, so a caller waiting in `pause()` is
     // never stuck behind a probe that has already been told to stop.
     if (await tracked.target.isOptedOut?.(signal)) {
-      this.settle(key, span, 'opted_out', REF_MAINTENANCE_CLEAN_COOLDOWN_MS)
+      for (const task of tracked.target.tasks) {
+        this.cooldowns.start(key, task.id, REPO_MAINTENANCE_CLEAN_COOLDOWN_MS)
+      }
+      this.recordAttempt(span, 'opted_out')
       return
     }
-    if (signal.aborted) {
-      this.yieldTo(key, tracked, span, signal)
-      return
-    }
-    const refsDirectory = await tracked.target.resolveRefsDirectory(signal)
-    if (!refsDirectory) {
-      this.settle(key, span, 'unresolved', REF_MAINTENANCE_CLEAN_COOLDOWN_MS)
-      return
-    }
-    const budget = this.looseRefThreshold + 1
-    const before = await countLooseRefs(refsDirectory, budget, signal)
-    if (signal.aborted) {
-      this.yieldTo(key, tracked, span, signal)
-      return
-    }
-    span.setAttribute('git.loose_ref_count', before.count)
-    span.setAttribute('git.loose_ref_threshold', this.looseRefThreshold)
-    // A saturated walk stopped early, so `count` is a floor -- never read it as "clean".
-    if (!before.saturated && before.count < this.looseRefThreshold) {
-      this.settle(key, span, 'below_threshold', REF_MAINTENANCE_CLEAN_COOLDOWN_MS)
-      return
-    }
-    // The quiet window can close while the probe walks; re-check before spending a git slot.
-    if (this.suspensions > 0 || this.isBusy(tracked)) {
-      span.setAttribute('repo.maintenance_outcome', 'deferred' satisfies RefMaintenanceOutcome)
-      this.defer(key, tracked, true)
-      return
-    }
-    const startedAt = this.now()
-    let partial = false
-    try {
-      // No signal: the pack runs to completion. Callers that need the refs wait
-      // out the rewrite window through `pause()` instead of killing it.
-      await tracked.target.packRefs(this.lockGate)
-    } catch (error) {
-      span.setAttribute('repo.maintenance_error', String(error))
-      if (error instanceof RefMaintenanceRepoLocked) {
-        this.settle(key, span, 'locked', REF_MAINTENANCE_LOCKED_COOLDOWN_MS)
+    let remainder = false
+    for (const task of due) {
+      if (signal.aborted) {
+        this.endAborted(key, tracked, span, signal)
         return
       }
-      partial = true
-    } finally {
-      this.lockGate.setHeld(false)
+      // The quiet window can close between tasks; re-check before spending a git slot.
+      if (this.suspensions > 0 || this.isBusy(tracked)) {
+        this.recordAttempt(span, 'deferred')
+        this.defer(key, tracked, true)
+        return
+      }
+      remainder = (await this.runTask(key, task, span, signal)) || remainder
     }
-    span.setAttribute('git.pack_refs_ms', this.now() - startedAt)
-    // Judge by the backlog, not by the exit code. On a machine running several
-    // Orca sessions a branch moving mid-pack is the normal case, and Git's
-    // response -- leave that one ref loose, pack the rest -- is the correct one.
-    // Measured in the field: 36,688 loose refs down to 3, reported as an error.
-    const after = await countLooseRefs(refsDirectory, budget, signal)
-    span.setAttribute('git.loose_ref_count_after', after.count)
-    if (partial && (after.saturated || after.count >= this.looseRefThreshold)) {
-      this.settle(key, span, 'failed', REF_MAINTENANCE_FAILURE_COOLDOWN_MS)
-      return
+    this.recordAttempt(span, 'completed')
+    if (remainder && tracked.remainders < REPO_MAINTENANCE_MAX_REMAINDER_ROUNDS) {
+      tracked.remainders += 1
+      this.defer(key, tracked, false, this.remainderDelayMs)
     }
-    span.setAttribute('git.pack_refs_partial', partial)
-    this.settle(key, span, 'packed', REF_MAINTENANCE_PACKED_COOLDOWN_MS)
+  }
+
+  /** Runs one task and records its verdict; resolves true when it is owed another turn. */
+  private async runTask(
+    key: string,
+    task: RepoMaintenanceTask,
+    span: RepoMaintenanceSpan,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    const verdict = await runMaintenanceTask(task, span, this.lockGate, signal, this.now)
+    this.cooldowns.start(key, task.id, TASK_COOLDOWN_MS[verdict.outcome])
+    return verdict.remainder
   }
 
   /** Record an aborted attempt: retry soon if Orca yielded, back off if it stalled. */
-  private yieldTo(
+  private endAborted(
     key: string,
     tracked: TrackedRepo,
-    span: RefMaintenanceSpan,
+    span: RepoMaintenanceSpan,
     signal: AbortSignal
   ): void {
     if (hitDeadline(signal)) {
-      this.settle(key, span, 'timed_out', REF_MAINTENANCE_FAILURE_COOLDOWN_MS)
+      for (const task of tracked.target.tasks) {
+        this.cooldowns.start(key, task.id, REPO_MAINTENANCE_FAILURE_COOLDOWN_MS)
+      }
+      this.recordAttempt(span, 'timed_out')
       return
     }
-    span.setAttribute('repo.maintenance_outcome', 'interrupted' satisfies RefMaintenanceOutcome)
+    this.recordAttempt(span, 'interrupted')
     this.defer(key, tracked, false)
   }
 
-  private settle(
-    key: string,
-    span: RefMaintenanceSpan,
-    outcome: RefMaintenanceOutcome,
-    cooldownMs: number
-  ): void {
+  private recordAttempt(span: RepoMaintenanceSpan, outcome: RepoMaintenanceAttemptOutcome): void {
     span.setAttribute('repo.maintenance_outcome', outcome)
-    // Re-insert so Map order stays newest-last and the eviction below drops the oldest.
-    this.cooldownUntil.delete(key)
-    this.cooldownUntil.set(key, this.now() + cooldownMs)
-    if (this.cooldownUntil.size > MAX_TRACKED_REPOS * 4) {
-      const oldest = this.cooldownUntil.keys().next()
-      if (!oldest.done) {
-        this.cooldownUntil.delete(oldest.value)
-      }
-    }
   }
 }

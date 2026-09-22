@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -37,17 +37,23 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
   let repoPath = ''
   let version = { major: 0, minor: 0 }
 
-  async function runGit(args: string[], env?: NodeJS.ProcessEnv): Promise<GitResult> {
+  /** The same invocation for both hosts, so a stdin variant cannot drift from it. */
+  function gitInvocation(
+    args: string[],
+    env?: NodeJS.ProcessEnv,
+    interactive = false
+  ): { command: string; argv: string[]; cwd?: string; env?: NodeJS.ProcessEnv } {
     if (image) {
       const dockerUser =
         typeof process.getuid === 'function' && typeof process.getgid === 'function'
           ? ['--user', `${process.getuid()}:${process.getgid()}`]
           : []
-      return execFileAsync(
-        'docker',
-        [
+      return {
+        command: 'docker',
+        argv: [
           'run',
           '--rm',
+          ...(interactive ? ['-i'] : []),
           '--network=none',
           ...dockerUser,
           ...Object.entries(env ?? {}).flatMap(([key, value]) =>
@@ -61,14 +67,52 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
           '-c',
           'safe.directory=/repo',
           ...args
-        ],
-        { maxBuffer: 2 * 1024 * 1024 }
-      )
+        ]
+      }
     }
-    return execFileAsync(binary!, args, {
+    return {
+      command: binary!,
+      argv: args,
       cwd: repoPath,
-      env: env ? { ...process.env, ...env } : undefined,
+      ...(env ? { env: { ...process.env, ...env } } : {})
+    }
+  }
+
+  async function runGit(args: string[], env?: NodeJS.ProcessEnv): Promise<GitResult> {
+    const invocation = gitInvocation(args, env)
+    return execFileAsync(invocation.command, invocation.argv, {
+      ...(invocation.cwd ? { cwd: invocation.cwd } : {}),
+      ...(invocation.env ? { env: invocation.env } : {}),
       maxBuffer: 2 * 1024 * 1024
+    })
+  }
+
+  /** `execFile` cannot feed a child; the loose-object recipe is a stdin recipe. */
+  function runGitWithStdin(args: string[], stdin: string): Promise<GitResult> {
+    const invocation = gitInvocation(args, undefined, true)
+    return new Promise((resolve, reject) => {
+      const child = spawn(invocation.command, invocation.argv, {
+        ...(invocation.cwd ? { cwd: invocation.cwd } : {}),
+        ...(invocation.env ? { env: invocation.env } : {}),
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (chunk) => {
+        stdout += String(chunk)
+      })
+      child.stderr.on('data', (chunk) => {
+        stderr += String(chunk)
+      })
+      child.on('error', reject)
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ stdout, stderr })
+          return
+        }
+        reject(new Error(`git ${args.join(' ')} exited ${code}: ${stderr}`))
+      })
+      child.stdin.end(stdin)
     })
   }
 
@@ -405,6 +449,35 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
     await expect(
       runGit(['show-ref', '--verify', '--quiet', '--', 'refs/remotes/origin/compat-parent'])
     ).rejects.toMatchObject({ code: 1 })
+  })
+
+  it('packs and prunes unreachable loose objects at the baseline', async () => {
+    // Why: idle loose-object maintenance packs by object id on stdin rather than
+    // by reachability, because the backlog Orca creates is unreachable and `gc`
+    // can neither fold it into a pack nor prune it until it ages out. That
+    // recipe -- `pack-objects` reading ids, then `prune-packed` -- predates the
+    // 2.25 baseline, and `git maintenance run --task=loose-objects` (2.30) does
+    // not exist here, so this is the only form available on every supported Git.
+    const blob = (
+      await runGitWithStdin(['hash-object', '-w', '--stdin'], 'unreachable at the baseline\n')
+    ).stdout.trim()
+    expect(blob).toMatch(/^[0-9a-f]{40}$/)
+    const loosePath = join(repoPath, '.git', 'objects', blob.slice(0, 2), blob.slice(2))
+    await expect(readFile(loosePath)).resolves.toBeDefined()
+
+    await runGitWithStdin(
+      ['pack-objects', '--quiet', '--non-empty', '.git/objects/pack/loose'],
+      `${blob}\n`
+    )
+    await runGit(['prune-packed', '--quiet'])
+
+    // The loose copy is gone and the object still reads, out of the new pack.
+    await expect(readFile(loosePath)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(runGit(['cat-file', '-p', blob])).resolves.toMatchObject({
+      stdout: 'unreachable at the baseline\n'
+    })
+    // Still unreachable, which is the point: no ref was created for it.
+    await expect(runGit(['cat-file', '-t', blob])).resolves.toMatchObject({ stdout: 'blob\n' })
   })
 
   it('packs loose refs and reads the maintenance opt-out at the baseline', async () => {

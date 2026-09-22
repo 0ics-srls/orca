@@ -1,9 +1,9 @@
 import { app, powerMonitor } from 'electron'
 import {
-  disposeLocalRepoRefMaintenance,
-  postponeRepoRefMaintenance,
+  disposeLocalRepoMaintenance,
+  postponeRepoMaintenance,
   setRepoMaintenanceActivityProbe
-} from './git/local-repo-ref-maintenance'
+} from './git/local-repo-maintenance'
 import { hasWorktreeRemovalsInFlight } from './ipc/worktrees/worktree-ipc-context'
 import { hasPendingWorktreeCreatePreparations } from './worktree-create-preparation'
 
@@ -39,10 +39,10 @@ export function installRepoMaintenanceIdleGate(
   // most a couple of minutes of background unlinking; pushing the next attempt
   // out costs nothing and risks nothing.
   const onBattery = (): void => {
-    postponeRepoRefMaintenance()
+    postponeRepoMaintenance()
   }
   const onFocus = (): void => {
-    postponeRepoRefMaintenance()
+    postponeRepoMaintenance()
   }
   powerMonitor.on('on-battery', onBattery)
   app.on('browser-window-focus', onFocus)
@@ -51,7 +51,7 @@ export function installRepoMaintenanceIdleGate(
     powerMonitor.off('on-battery', onBattery)
     // Order matters: clearing the probe alone would leave armed timers running
     // against a gate that can no longer see agents, creates, or shutdown.
-    const stopped = disposeLocalRepoRefMaintenance()
+    const stopped = disposeLocalRepoMaintenance()
     setRepoMaintenanceActivityProbe(null)
     return stopped
   }

@@ -29,10 +29,10 @@ vi.mock('./ipc/worktrees/worktree-ipc-context', () => ({
   hasWorktreeRemovalsInFlight: hasRemovalsInFlightMock
 }))
 
-vi.mock('./git/local-repo-ref-maintenance', () => ({
+vi.mock('./git/local-repo-maintenance', () => ({
   setRepoMaintenanceActivityProbe: setProbeMock,
-  disposeLocalRepoRefMaintenance: disposeMock,
-  postponeRepoRefMaintenance: postponeMock
+  disposeLocalRepoMaintenance: disposeMock,
+  postponeRepoMaintenance: postponeMock
 }))
 
 import { installRepoMaintenanceIdleGate } from './repo-maintenance-idle-gate'

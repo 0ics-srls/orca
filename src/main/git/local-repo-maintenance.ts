@@ -1,22 +1,17 @@
-import { posix, win32 } from 'node:path'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import { RepoRefMaintenance } from '../../shared/repo-ref-maintenance'
-import {
-  PACK_REFS_ARGS,
-  PACK_REFS_TIMEOUT_MS,
-  RefMaintenanceRepoLocked,
-  type PackedRefsLockReporter,
-  type RepoRefMaintenanceOptions,
-  type RepoRefMaintenanceTarget
-} from '../../shared/repo-ref-maintenance-policy'
-import { isWslUncPath, toWindowsWslPath } from '../../shared/wsl-paths'
+import { RepoMaintenance } from '../../shared/repo-maintenance'
+import type {
+  RepoMaintenanceOptions,
+  RepoMaintenanceTarget
+} from '../../shared/repo-maintenance-policy'
 import { withSpan } from '../observability/tracer'
-import { PackRefsLockOwnership } from './pack-refs-lock-ownership'
+import type { RepoCommonDirResolver } from './git-common-dir-paths'
+import { createPackLooseObjectsMaintenanceTask } from './pack-loose-objects-maintenance-task'
+import { createPackRefsMaintenanceTask } from './pack-refs-maintenance-task'
 import { gitExecFileAsync } from './runner'
 import { readRepoCommonDirFromGit } from './worktree-list-reader'
 
 /**
- * Main-process wiring for idle loose-ref packing on the local execution host
+ * Main-process wiring for idle repo maintenance on the local execution host
  * (native and WSL).
  *
  * SSH-hosted repos are deliberately out of scope: the execution host owns
@@ -30,14 +25,14 @@ export type RepoMaintenanceActivityProbe = () => boolean
 const REPO_BUSY_PROBE_MAX = 64
 
 let activityProbe: RepoMaintenanceActivityProbe | null = null
-let shared: RepoRefMaintenance | null = null
+let shared: RepoMaintenance | null = null
 // Why keyed here rather than captured in the target: a repo can be armed from
 // the fetch controller or from a user-initiated fetch, and every arming must see
 // the same "this repo has work in flight" answer, not whichever closure was last.
 const repoBusyProbes = new Map<string, () => boolean>()
 
 /** Register the owner of "this repo has a fetch in flight" for `key`. */
-export function setRepoRefMaintenanceBusyProbe(key: string, probe: () => boolean): void {
+export function setRepoMaintenanceBusyProbe(key: string, probe: () => boolean): void {
   repoBusyProbes.delete(key)
   repoBusyProbes.set(key, probe)
   while (repoBusyProbes.size > REPO_BUSY_PROBE_MAX) {
@@ -58,28 +53,35 @@ export function setRepoMaintenanceActivityProbe(probe: RepoMaintenanceActivityPr
   activityProbe = probe
 }
 
-/** Support escape hatch: kills the sweep without touching the user's git config. */
+/**
+ * Support escape hatch: kills the whole sweep without touching the user's git
+ * config. The `_REF_` spelling is the name support has already handed out for
+ * the loose-ref-only sweep this grew from, and still means the same thing.
+ */
 function isDisabled(): boolean {
-  return process.env.ORCA_DISABLE_REPO_REF_MAINTENANCE === '1'
+  return (
+    process.env.ORCA_DISABLE_REPO_MAINTENANCE === '1' ||
+    process.env.ORCA_DISABLE_REPO_REF_MAINTENANCE === '1'
+  )
 }
 
-function localMaintenanceOptions(): RepoRefMaintenanceOptions {
+function localMaintenanceOptions(): RepoMaintenanceOptions {
   return {
     // Fail closed: without the app-level gate installed we cannot see agents,
     // creates, or battery, and running blind is worse than not running.
     isBusy: () => activityProbe?.() ?? true,
     observe: (attempt) =>
-      withSpan('repo.ref_maintenance', (span) => attempt(span), {
+      withSpan('repo.maintenance', (span) => attempt(span), {
         attributes: { kind: 'git', 'repo.maintenance_host': 'local' }
       }),
     onError: (error) => {
-      console.warn('[repo-ref-maintenance] attempt failed:', error)
+      console.warn('[repo-maintenance] attempt failed:', error)
     }
   }
 }
 
-export function getLocalRepoRefMaintenance(): RepoRefMaintenance {
-  shared ??= new RepoRefMaintenance(localMaintenanceOptions())
+export function getLocalRepoMaintenance(): RepoMaintenance {
+  shared ??= new RepoMaintenance(localMaintenanceOptions())
   return shared
 }
 
@@ -91,7 +93,7 @@ export function getLocalRepoRefMaintenance(): RepoRefMaintenance {
  * time in five, and on Windows a force-kill inside the rewrite strands
  * `packed-refs.lock` every time -- which blocks every later ref deletion.
  */
-export function disposeLocalRepoRefMaintenance(): Promise<void> {
+export function disposeLocalRepoMaintenance(): Promise<void> {
   const settling = shared?.awaitPackedRefsLockRelease() ?? Promise.resolve()
   shared?.dispose()
   shared = null
@@ -108,7 +110,7 @@ export function disposeLocalRepoRefMaintenance(): Promise<void> {
  * `refs/**` lock about one time in five, which Git never clears, so the ref
  * stays undeletable indefinitely.
  */
-export async function withRepoRefMaintenancePaused<T>(
+export async function withRepoMaintenancePaused<T>(
   reason: string,
   run: () => Promise<T>
 ): Promise<T> {
@@ -117,7 +119,7 @@ export async function withRepoRefMaintenancePaused<T>(
   // instance costs a microtask. This can rebuild the instance after the
   // quit-time dispose; harmless, because a fresh one has no armed timers and its
   // activity probe is gone, so it fails closed.
-  const release = await getLocalRepoRefMaintenance().pause(reason)
+  const release = await getLocalRepoMaintenance().pause(reason)
   try {
     return await run()
   } finally {
@@ -137,32 +139,18 @@ export function awaitPackedRefsLockRelease(): Promise<void> {
  * path the user is waiting on, and a manual fetch or pull says the user is at
  * the keyboard, which is a reason to defer every repository.
  */
-export function postponeRepoRefMaintenance(): void {
+export function postponeRepoMaintenance(): void {
   shared?.postponeAll()
 }
 
 /** `overrides` preseeds the shared instance so a test can shorten the quiet period. */
-export function _resetLocalRepoRefMaintenanceForTests(
-  overrides?: Partial<RepoRefMaintenanceOptions>
+export function _resetLocalRepoMaintenanceForTests(
+  overrides?: Partial<RepoMaintenanceOptions>
 ): void {
   shared?.dispose()
-  shared = overrides ? new RepoRefMaintenance({ ...localMaintenanceOptions(), ...overrides }) : null
+  shared = overrides ? new RepoMaintenance({ ...localMaintenanceOptions(), ...overrides }) : null
   activityProbe = null
   repoBusyProbes.clear()
-}
-
-/**
- * Git reports the common dir in its own execution space, so a WSL repo answers
- * with a Linux path the Windows main process cannot open. Translate it back to
- * the UNC spelling for the dirent walk; the walk reads directories, not files,
- * so the handful of round trips stays cheap even over the share.
- */
-function refsDirectoryForMainProcess(commonDir: string, wslDistro: string | undefined): string {
-  if (wslDistro && !isWslUncPath(commonDir) && !isWindowsAbsolutePathLike(commonDir)) {
-    return win32.join(toWindowsWslPath(commonDir, wslDistro), 'refs')
-  }
-  // Decided by path syntax, not by platform: `win32.isAbsolute` accepts POSIX paths too.
-  return (isWindowsAbsolutePathLike(commonDir) ? win32 : posix).join(commonDir, 'refs')
 }
 
 /**
@@ -178,23 +166,13 @@ export function isGitAutoMaintenanceDisabled(configOutput: string): boolean {
     .some((line) => line === 'maintenance.auto false' || line === 'gc.auto 0')
 }
 
-/**
- * The common dir in the spelling the main process can open.
- *
- * Derived from the converted refs path, not the raw one: a WSL answer arrives as
- * a Linux path but converts to a UNC path with no `/` in it, so choosing the
- * path flavour before conversion collapses the whole thing to `.`.
- */
-function gitCommonDirForMainProcess(commonDir: string, wslDistro: string | undefined): string {
-  const refs = refsDirectoryForMainProcess(commonDir, wslDistro)
-  return (isWindowsAbsolutePathLike(refs) ? win32 : posix).dirname(refs)
-}
-
-export type LocalRepoRefMaintenanceTargetArgs = {
+export type LocalRepoMaintenanceTargetArgs = {
   /** `${runtimeKey}::${gitCommonDir}` -- already scoped to the execution host. */
   readonly key: string
   readonly repoPath: string
   readonly wslDistro?: string
+  /** Test seam only; production uses the policy thresholds and batch size. */
+  readonly taskOverrides?: { refsThreshold?: number; objectThreshold?: number; batchSize?: number }
 }
 
 /**
@@ -202,34 +180,53 @@ export type LocalRepoRefMaintenanceTargetArgs = {
  * entry point callers need: the kill switch is honoured before anything is
  * scheduled, so a disabled build arms no timers at all.
  */
-export function armLocalRepoRefMaintenance(args: LocalRepoRefMaintenanceTargetArgs): void {
+export function armLocalRepoMaintenance(args: LocalRepoMaintenanceTargetArgs): void {
   if (isDisabled()) {
     return
   }
-  getLocalRepoRefMaintenance().arm(createLocalRepoRefMaintenanceTarget(args))
+  getLocalRepoMaintenance().arm(createLocalRepoMaintenanceTarget(args))
 }
 
-export function createLocalRepoRefMaintenanceTarget(
-  args: LocalRepoRefMaintenanceTargetArgs
-): RepoRefMaintenanceTarget {
+export function createLocalRepoMaintenanceTarget(
+  args: LocalRepoMaintenanceTargetArgs
+): RepoMaintenanceTarget {
   const gitOptions = args.wslDistro ? { wslDistro: args.wslDistro } : {}
-  // The engine always probes before it packs, so the pack reuses this answer
-  // rather than spending a second rev-parse on the same repository.
+  // Every task probes before it packs, and both tasks want the same answer, so
+  // one `rev-parse` is resolved for the whole target rather than per call.
   let commonDir: string | undefined
-  const resolveCommonDir = async (signal?: AbortSignal): Promise<string | undefined> => {
+  const resolveCommonDir: RepoCommonDirResolver = async (signal?: AbortSignal) => {
     commonDir ??= await readRepoCommonDirFromGit(args.repoPath, {
       ...gitOptions,
       ...(signal ? { signal } : {})
     })
     return commonDir
   }
+  const taskArgs = {
+    repoPath: args.repoPath,
+    ...(args.wslDistro ? { wslDistro: args.wslDistro } : {}),
+    resolveCommonDir
+  }
+  const overrides = args.taskOverrides
   return {
     key: args.key,
     isBusy: () => repoBusyProbes.get(args.key)?.() ?? false,
-    async resolveRefsDirectory(signal: AbortSignal) {
-      const resolved = await resolveCommonDir(signal)
-      return resolved ? refsDirectoryForMainProcess(resolved, args.wslDistro) : undefined
-    },
+    // Refs first: `pack-refs` is what a worktree create and every ref
+    // enumeration are waiting on, so it gets the quiet window while it is
+    // certainly still quiet. Objects second -- nothing blocks on the object
+    // store, and its batch re-arms for the remainder anyway.
+    tasks: [
+      createPackRefsMaintenanceTask({
+        ...taskArgs,
+        ...(overrides?.refsThreshold === undefined ? {} : { threshold: overrides.refsThreshold })
+      }),
+      createPackLooseObjectsMaintenanceTask({
+        ...taskArgs,
+        ...(overrides?.objectThreshold === undefined
+          ? {}
+          : { threshold: overrides.objectThreshold }),
+        ...(overrides?.batchSize === undefined ? {} : { batchSize: overrides.batchSize })
+      })
+    ],
     async isOptedOut(signal: AbortSignal) {
       try {
         const { stdout } = await gitExecFileAsync(
@@ -240,32 +237,6 @@ export function createLocalRepoRefMaintenanceTarget(
       } catch {
         // Neither key set is the common case and exits non-zero; that is consent.
         return false
-      }
-    },
-    async packRefs(lock: PackedRefsLockReporter) {
-      const resolved = await resolveCommonDir()
-      const owner = resolved
-        ? new PackRefsLockOwnership(gitCommonDirForMainProcess(resolved, args.wslDistro))
-        : null
-      const claim = owner ? await owner.claim() : { ok: true as const }
-      if (!claim.ok) {
-        throw new RefMaintenanceRepoLocked(claim.reason)
-      }
-      // Report the rewrite window rather than accepting a signal. A pack that is
-      // killed mid-prune strands a `refs/**` lock about one time in five, and
-      // Git never clears those; waiting out the window costs at most ~1.4s.
-      const watch = owner?.watchLock((held) => lock.setHeld(held))
-      try {
-        await gitExecFileAsync([...PACK_REFS_ARGS], {
-          cwd: args.repoPath,
-          ...gitOptions,
-          admissionTier: 'background',
-          timeout: PACK_REFS_TIMEOUT_MS
-        })
-      } finally {
-        watch?.stop()
-        lock.setHeld(false)
-        await owner?.release()
       }
     }
   }
