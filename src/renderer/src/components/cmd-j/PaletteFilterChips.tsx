@@ -47,7 +47,7 @@ export default function PaletteFilterChips({
   return (
     // Why: the scope is seeded from the sidebar, not chosen here, so it reads as metadata
     // rather than as pills offering to undo an action the user never took.
-    <div className="mx-3 mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+    <div className="mx-3 mt-2 flex items-center gap-1.5 pl-3.5 text-[11px] text-muted-foreground">
       {/* Why: a fixed anchor the eye can find at one filter, where a bare muted line vanishes. */}
       <ListFilter className="size-3 shrink-0" aria-hidden="true" />
       <span className="sr-only">
@@ -87,7 +87,7 @@ export default function PaletteFilterChips({
       <button
         type="button"
         onClick={() => onFilterChange(EMPTY_PALETTE_FILTER)}
-        className="ml-1 shrink-0 rounded-md px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
+        className="ml-1 mr-4 shrink-0 rounded-md px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
       >
         {translate('worktreeJumpPalette.filter.clearAll', 'Clear all')}
       </button>
