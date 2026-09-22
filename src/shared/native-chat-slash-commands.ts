@@ -34,6 +34,12 @@ const CLAUDE_COMMANDS: readonly SlashCommandSuggestion[] = [
   { name: 'help', description: 'Show available commands' }
 ]
 
+// Why: OpenClaude writes its `/context` report to the transcript; Claude's TUI does not.
+const OPENCLAUDE_COMMANDS: readonly SlashCommandSuggestion[] = [
+  ...CLAUDE_COMMANDS,
+  { name: 'context', description: 'Show context usage' }
+]
+
 const CODEX_COMMANDS: readonly SlashCommandSuggestion[] = [
   { name: 'model', description: 'Choose the model and reasoning effort' },
   { name: 'ide', description: 'Include IDE context' },
@@ -113,7 +119,7 @@ const OMP_COMMANDS: readonly SlashCommandSuggestion[] = [
 
 const COMMANDS_BY_AGENT: Partial<Record<AgentType, readonly SlashCommandSuggestion[]>> = {
   claude: CLAUDE_COMMANDS,
-  openclaude: CLAUDE_COMMANDS,
+  openclaude: OPENCLAUDE_COMMANDS,
   codex: CODEX_COMMANDS,
   omp: OMP_COMMANDS
 }
