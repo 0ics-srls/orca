@@ -9,6 +9,12 @@ import { resolvePrompt, resolveToolState, stripGrokUserQueryWrapper } from '../p
 import { extractToolFields, isNewTurnEvent } from '../provider-event-routing'
 import { readString } from '../tool-input-preview'
 import { isGrokEvent } from '../provider-event-names'
+import { classifyClaudeBackgroundTaskKind } from '../../claude-background-task-kind'
+import {
+  agentChildWorkLivenessFromEvidence,
+  isAgentChildWorkKind,
+  type AgentChildWorkLivenessEvidence
+} from '../../agent-status-child-work-liveness'
 import {
   getGrokNotificationType,
   isGrokPermissionNotification,
@@ -90,22 +96,48 @@ function grokTurnEndApplies(
   )
 }
 
-function grokHasRunningFiniteTask(hookPayload: Record<string, unknown>): boolean {
+/** Grok's inventory names only these two; the shared table decides which is agent work. */
+function isGrokFiniteTaskType(taskType: unknown): boolean {
+  return taskType === 'shell' || taskType === 'subagent'
+}
+
+function grokFiniteTaskEvidence(
+  hookPayload: Record<string, unknown>
+): AgentChildWorkLivenessEvidence {
   const backgroundTasks = aliasedField(hookPayload, 'backgroundTasks', 'background_tasks')
+  const evidence = { hasLiveAgentWork: false, hasLiveNonAgentWork: false }
   if (!backgroundTasks.present || !Array.isArray(backgroundTasks.value)) {
-    return false
+    return evidence
   }
-  return backgroundTasks.value.some((task) => {
-    if (!isRecord(task)) {
-      return false
+  for (const task of backgroundTasks.value) {
+    if (!isRecord(task) || !isGrokFiniteTaskType(task.type)) {
+      continue
     }
-    return task.type === 'shell' || task.type === 'subagent'
-  })
+    const isAgent = isAgentChildWorkKind(classifyClaudeBackgroundTaskKind(task.type))
+    evidence.hasLiveAgentWork ||= isAgent
+    evidence.hasLiveNonAgentWork ||= !isAgent
+  }
+  return evidence
+}
+
+function grokStopHookActive(hookPayload: Record<string, unknown>): boolean {
+  return aliasedField(hookPayload, 'stopHookActive', 'stop_hook_active').value === true
 }
 
 function grokStopKeepsWorking(hookPayload: Record<string, unknown>): boolean {
-  const stopHookActive = aliasedField(hookPayload, 'stopHookActive', 'stop_hook_active')
-  return stopHookActive.value === true || grokHasRunningFiniteTask(hookPayload)
+  const evidence = grokFiniteTaskEvidence(hookPayload)
+  return (
+    grokStopHookActive(hookPayload) || evidence.hasLiveAgentWork || evidence.hasLiveNonAgentWork
+  )
+}
+
+/** `workingMode` promises no foreground execution is owed. A live subagent owes it, and a blocked
+ *  Stop hook means the model's own loop is still running with no background work at all. */
+function grokStopIsMonitoringOnly(hookPayload: Record<string, unknown>): boolean {
+  if (grokStopHookActive(hookPayload)) {
+    return false
+  }
+  return agentChildWorkLivenessFromEvidence(grokFiniteTaskEvidence(hookPayload)) === 'monitoring'
 }
 
 function isGrokSessionBoundary(eventName: unknown, hookPayload: Record<string, unknown>): boolean {
@@ -220,7 +252,9 @@ export function normalizeGrokEvent(
     interactivePrompt: snapshot.interactivePrompt,
     lastAssistantMessage: snapshot.lastAssistantMessage,
     lastAssistantMessageIsToolOutput: snapshot.lastAssistantMessageIsToolOutput,
-    ...(stateName === 'working' && isGrokEvent(eventName, 'stop')
+    ...(stateName === 'working' &&
+    isGrokEvent(eventName, 'stop') &&
+    grokStopIsMonitoringOnly(hookPayload)
       ? { workingMode: 'monitoring' as const }
       : {}),
     ...(isGrokEvent(eventName, 'stop_cancelled') ? { interrupted: true } : {}),

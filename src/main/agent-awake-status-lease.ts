@@ -5,7 +5,7 @@ export const AGENT_AWAKE_STATUS_STALE_AFTER_MS = 2 * 60 * 60 * 1000
 export type AgentAwakeStatus = {
   paneKey: string
   state: AgentStatusState
-  /** Only valid while working; `monitoring` is a watch loop the agent left behind. */
+  /** Only valid while working; `monitoring` is watch work with no foreground execution owed. */
   workingMode?: AgentWorkingMode
   receivedAt: number
   observedInCurrentRuntime: boolean
@@ -56,7 +56,8 @@ export class AgentAwakeStatusLease {
     return (
       status.observedInCurrentRuntime &&
       status.state === 'working' &&
-      // A watch loop outlives the turn that started it, so it can never release the machine.
+      // `monitoring` promises no foreground execution is owed, so nothing here will end on its
+      // own: the watch outlives the turn that started it.
       status.workingMode !== 'monitoring' &&
       Number.isFinite(status.receivedAt) &&
       now - status.receivedAt <= AGENT_AWAKE_STATUS_STALE_AFTER_MS
