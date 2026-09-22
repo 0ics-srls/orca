@@ -42,4 +42,7 @@ CREATE INDEX IF NOT EXISTS push_recipients_retention ON push_event_recipients(cr
 CREATE INDEX IF NOT EXISTS push_batches_expiry ON push_delivery_batches(expires_at);
 CREATE INDEX IF NOT EXISTS push_batches_due ON push_delivery_batches(state, due_at);
 CREATE INDEX IF NOT EXISTS push_batches_registration ON push_delivery_batches(registration_id, state);
+CREATE INDEX IF NOT EXISTS push_batches_pending_due ON push_delivery_batches(due_at, created_at, batch_id) WHERE state = 'pending';
+CREATE INDEX IF NOT EXISTS push_batches_pending_device ON push_delivery_batches(registration_id, due_at, created_at, batch_id) WHERE state = 'pending';
+CREATE INDEX IF NOT EXISTS push_batches_leased_device ON push_delivery_batches(registration_id, lease_until) WHERE state = 'pending' AND lease_until > 0;
 `
