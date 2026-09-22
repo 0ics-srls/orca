@@ -3,6 +3,7 @@ import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity,
   AgentJournalMessageItem,
+  AgentJournalProducerLinkage,
   AgentJournalResetReason,
   AgentSessionJournalIdentity
 } from '../../../shared/agent-session-journal-types'
@@ -39,10 +40,14 @@ export type JournalAppendResult = {
   revision: number
 }
 
-export type JournalItemAppendOptions = { fence: number; observedAt?: number; recovered?: true }
+export type JournalItemAppendOptions = AgentJournalProducerLinkage & {
+  fence: number
+  observedAt?: number
+  recovered?: true
+}
 export type JournalTombstoneInput = { fence: number }
 
-export type JournalLifecycleBatchInput = {
+export type JournalLifecycleBatchInput = AgentJournalProducerLinkage & {
   settlementId: string
   mutations: readonly JournalLifecycleMutationInput[]
   fence: number

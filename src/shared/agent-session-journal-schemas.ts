@@ -237,13 +237,25 @@ export const AgentJournalItemBodySchema = z.discriminatedUnion('kind', [
   })
 ])
 
+/** Producer linkage as it rides a render item across the process boundary.
+ *  `producerKind` stays an open string for the reason the header gives: a host
+ *  that learns a third kind must not make its rows unreadable to this client. */
+export const AgentJournalProducerLinkageShape = {
+  agentId: z.string().optional(),
+  parentAgentId: z.string().optional(),
+  providerParentRef: z.string().optional(),
+  producerKind: z.string().optional(),
+  attempt: z.number().int().optional()
+} as const
+
 export const AgentJournalRenderItemSchema = z.object({
   itemId: z.string().min(1),
   revision: z.number().int(),
   body: AgentJournalItemBodySchema,
   sequence: z.number().int(),
   observedAt: z.number(),
-  recovered: z.literal(true).optional()
+  recovered: z.literal(true).optional(),
+  ...AgentJournalProducerLinkageShape
 })
 
 export const AgentJournalSubmissionSchema = z.object({

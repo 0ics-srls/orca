@@ -10,6 +10,7 @@ import {
   type AgentJournalDispatchState,
   type AgentJournalItemBody,
   type AgentJournalMessageItem,
+  type AgentJournalProducerLinkage,
   type AgentSessionProviderHandle
 } from '../../../shared/agent-session-journal-types'
 import {
@@ -17,7 +18,13 @@ import {
   isAdmissibleAgentJournalMessageBody
 } from '../../../shared/agent-session-journal-schemas'
 
-type JournalRowBase = {
+/** Producer linkage rides the row BASE rather than the body: the two nested
+ *  prompt shapes are `.strict()`, so an unknown key on a body would make the
+ *  whole row parse as malformed. It is also deliberately not a `v` bump — an
+ *  unknown `v` makes a row unreadable and latches the host read-only, while an
+ *  unknown KEY is ignored below, so an older host reads a stamped row and
+ *  behaves exactly as it does today. */
+type JournalRowBase = AgentJournalProducerLinkage & {
   /** Schema version of THIS row. */
   v: number
   epoch: string
