@@ -343,7 +343,10 @@ drains over successive runs instead of in one long statement. FCM project-level 
 remain independent of host limits.
 
 A worker claims one device's oldest due delivery with a row lock that other claimers skip, and a
-non-blocking per-device lock keeps at most one delivery per phone in flight. The claim scan only
+non-blocking per-device lock keeps at most one delivery per phone in flight. Each claim also takes
+the previous revision's global claim lock in shared mode, so during a deploy overlap an old worker's
+claim waits for new leases to commit instead of re-leasing them. That shared lock can be removed one
+release after every worker runs this revision. The claim scan only
 reads rows due within the notification TTL, so an unpruned backlog does not slow it. Boot adds one
 queue index, a partial index of pending rows per device for the head check; it indexes no lease
 column, so lease and renew writes stay heap-only updates. Claim, finish and cleanup traffic may
