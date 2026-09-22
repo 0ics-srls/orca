@@ -4,6 +4,8 @@ import { asRecord, extractString } from './session-scanner-values'
  * What Codex stated about the spawn that produced a thread. `parentThreadId` is
  * the only join key here: `agentPath` is a slash-rooted naming path
  * (`/root/pr_review_pass_1`) that labels agents rather than identifying them.
+ * Fork lineage is a separate key and deliberately not read into this — a thread
+ * the user forked is still their own.
  */
 export type CodexSubagentParentage = {
   parentThreadId: string | null
@@ -15,74 +17,86 @@ export type CodexSubagentParentage = {
 }
 
 /**
- * Why a Codex rollout is not the user's own thread, and who spawned it. Codex's
- * protocol keeps those apart and so does this: `kind` is the union tag naming
- * the sort of non-user thread — a spawned agent, but equally a review pass, a
- * compaction, a memory consolidation — while `parentage` is the thread it came
- * from. Only the spawn tag carries a spawn record, so a null `parentage` says
- * nothing about the spawn was readable, never that the thread is rooted.
+ * Why a Codex rollout is not the user's own thread, and who spawned it. Those
+ * are two facts and Codex keeps them apart, so this does too.
+ *
+ * `source` is a nested union: its outer tag says an agent Codex spawned
+ * (`subagent`) or machinery it ran for itself (`internal`), and the inner `kind`
+ * says which — a spawn record, a review pass, a compaction, a guardian. Only the
+ * spawn kind carries a spawn record, so a null `parentage` means nothing about a
+ * spawn was readable, never that the thread is rooted. Every other outer tag
+ * (`cli`, `vscode`, `exec`, `mcp`, `custom`, `unknown`) is a thread the user
+ * started and produces no origin at all.
  */
-export type CodexSubagentOrigin = {
+export type CodexNonUserOrigin = {
+  /** The `source` outer tag: 'subagent' or 'internal'. Null when only `thread_source` stated it. */
+  source: string | null
   /**
-   * The `source.subagent` union tag, verbatim snake_case: 'thread_spawn',
-   * 'review', 'compact', 'memory_consolidation', 'other', or a tag a later
-   * release adds. Null when `thread_source` alone stated the thread is not the
-   * user's and `source` stated nothing structural.
+   * The inner tag, verbatim snake_case: 'thread_spawn', 'review', 'compact',
+   * 'memory_consolidation', 'other', 'guardian', or one a later release adds.
    */
   kind: string | null
-  /** Free text the tag carries — the 'other' tag's label; null for tags without one. */
+  /** Free text the inner tag carries — the 'other' tag's label; null for tags without one. */
   kindLabel: string | null
   /** Verbatim non-user `thread_source`; null on payloads that state none. */
   threadSource: string | null
   parentage: CodexSubagentParentage | null
 }
 
+// The two `source` tags that are not the user's own thread. Codex's runtime
+// draws the same line: everything else, spawn records included, gets the
+// treatment a real agent session gets.
+const NON_USER_SOURCE_TAGS = new Set(['subagent', 'internal'])
+
 /**
- * Read a `session_meta` payload's subagent origin, or null for a user thread.
+ * Read a `session_meta` payload's non-user origin, or null for a user thread.
  *
  * The payload states this in two places that disagree in coverage. `source` is
  * the structural field Codex's own runtime switches on; `thread_source` is an
  * analytics label that some releases omit entirely. A payload stating only one
- * of them is normal, so each field is read independently and a tag that carries
- * no spawn record still classifies the thread.
+ * of them is normal, so each is read independently and a tag carrying no spawn
+ * record still classifies the thread.
  */
-export function readCodexSubagentOrigin(
+export function readCodexNonUserOrigin(
   payload: Record<string, unknown>
-): CodexSubagentOrigin | null {
+): CodexNonUserOrigin | null {
   const threadSource = extractString(payload.thread_source) ?? extractString(payload.threadSource)
-  const tag = readCodexSubagentSourceTag(asRecord(payload.source)?.subagent)
+  const outerTag = readCodexUnionTag(payload.source)
+  const nonUserSource = outerTag && NON_USER_SOURCE_TAGS.has(outerTag.kind) ? outerTag : null
   if (threadSource) {
     // A stated thread_source is the provider's own verdict, so it outranks
     // `source` even when the two disagree.
     if (threadSource.toLowerCase() === 'user') {
       return null
     }
-  } else if (!tag) {
+  } else if (!nonUserSource) {
     return null
   }
+  const innerTag = readCodexUnionTag(nonUserSource?.content)
   return {
-    kind: tag?.kind ?? null,
-    kindLabel: extractString(tag?.content),
+    source: nonUserSource?.kind ?? null,
+    kind: innerTag?.kind ?? null,
+    kindLabel: extractString(innerTag?.content),
     threadSource,
-    parentage: readCodexSubagentParentage(payload, asRecord(tag?.content))
+    parentage: readCodexSubagentParentage(payload, asRecord(innerTag?.content))
   }
 }
 
-type CodexSubagentSourceTag = {
+type CodexUnionTag = {
   kind: string
-  /** The tag's payload: free text for 'other', the record for 'thread_spawn'. */
+  /** The tag's payload: free text, a nested tag, or the spawn record. */
   content: unknown
 }
 
 /**
- * Read `source.subagent` as the externally tagged union it is: a payload-less
- * tag is a bare string ('review'), a tag with one is a single-key object
- * (`{ thread_spawn: { ... } }`, `{ other: 'label' }`). Anything else states no
- * tag at all — and treating an unreadable value as a spawn would drop the
- * user's own thread out of their history, where letting an unrecognised one
- * through only shows a transcript they can see and ignore.
+ * Read one externally tagged union value: a payload-less tag is a bare string
+ * (`'cli'`, `'review'`), a tag with one is a single-key object
+ * (`{ subagent: ... }`, `{ thread_spawn: { ... } }`, `{ other: 'label' }`).
+ * Anything else states no tag — and treating an unreadable value as a spawn
+ * would drop the user's own thread out of their history, where letting an
+ * unrecognised one through only shows a transcript they can see and ignore.
  */
-function readCodexSubagentSourceTag(value: unknown): CodexSubagentSourceTag | null {
+function readCodexUnionTag(value: unknown): CodexUnionTag | null {
   const bareTag = extractString(value)
   if (bareTag) {
     return { kind: bareTag, content: undefined }

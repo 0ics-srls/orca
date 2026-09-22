@@ -38,9 +38,9 @@ import { remoteSessionContentLines } from './remote-session-content-lines'
 import { readCodexTimelineOnlyRecord } from './session-scanner-codex-record-fast-path'
 import { extractCodexSessionMetadataTitle } from './session-scanner-codex-session-meta'
 import {
-  readCodexSubagentOrigin,
-  type CodexSubagentOrigin
-} from './session-scanner-codex-subagent-origin'
+  readCodexNonUserOrigin,
+  type CodexNonUserOrigin
+} from './session-scanner-codex-non-user-origin'
 
 export async function parseCodexSessionFile(
   file: FileWithMtime,
@@ -90,11 +90,11 @@ type CodexSessionParseState = {
   accumulator: SessionAccumulator
   previousTotals: CodexUsageSnapshot | null
   // Codex's own classification of this thread as something other than the
-  // user's own — a spawned agent, a review pass, a compaction. Codex writes all
-  // of those into the same history tree and AI Vault shows user-started sessions
-  // only, so the parse is rejected on this record's presence rather than on a
-  // separate flag beside it.
-  subagentOrigin: CodexSubagentOrigin | null
+  // user's own — a spawned agent, a review pass, a compaction, a guardian. Codex
+  // writes all of those into the same history tree and AI Vault shows
+  // user-started sessions only, so the parse is rejected on this record's
+  // presence rather than on a separate flag beside it.
+  nonUserOrigin: CodexNonUserOrigin | null
   sawSessionMeta: boolean
   historyMode: string | null
   // Which source set the current title; an index-file title outranks the raw
@@ -114,7 +114,7 @@ function createCodexParseState(
       messages
     }),
     previousTotals: null,
-    subagentOrigin: null,
+    nonUserOrigin: null,
     sawSessionMeta: false,
     historyMode: null,
     titleSource: null
@@ -130,7 +130,7 @@ function cloneCodexParseState(state: CodexSessionParseState): CodexSessionParseS
 }
 
 function consumeCodexRecordLine(state: CodexSessionParseState, line: string): void {
-  if (state.subagentOrigin) {
+  if (state.nonUserOrigin) {
     return
   }
   const record = parseJsonObject(line)
@@ -143,8 +143,8 @@ function consumeCodexRecordLine(state: CodexSessionParseState, line: string): vo
 
   const payload = asRecord(record.payload)
   if (record.type === 'session_meta' && payload) {
-    state.subagentOrigin = readCodexSubagentOrigin(payload)
-    if (state.subagentOrigin) {
+    state.nonUserOrigin = readCodexNonUserOrigin(payload)
+    if (state.nonUserOrigin) {
       return
     }
     state.sawSessionMeta = true
@@ -243,7 +243,7 @@ async function finalizeCodexParseState(
     executionHostPlatform?: NodeJS.Platform | null
   }
 ): Promise<AiVaultSession | null> {
-  if (state.subagentOrigin) {
+  if (state.nonUserOrigin) {
     return null
   }
   // Finalize a snapshot: the live state keeps accumulating appended lines.
@@ -294,7 +294,7 @@ function codexResumeStateFromParseState(
         consumeCodexRecordLine(state, line.toString('utf8'))
       }
     },
-    shouldStop: () => state.subagentOrigin !== null,
+    shouldStop: () => state.nonUserOrigin !== null,
     identity: () => accumulatorSessionIdentity(state.accumulator),
     clone: () =>
       codexResumeStateFromParseState(cloneCodexParseState(state), codexHome, titleReader),
@@ -319,7 +319,7 @@ async function parseCodexSessionLines(args: {
   const state = createCodexParseState(args.file, args.messages)
   for await (const line of args.lines) {
     consumeCodexRecordLine(state, line)
-    if (state.subagentOrigin) {
+    if (state.nonUserOrigin) {
       // Worker transcripts are excluded outright; stop reading early.
       return null
     }
