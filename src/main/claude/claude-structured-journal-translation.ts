@@ -18,7 +18,7 @@ import {
 } from './claude-structured-provider-fallback'
 import { taskFrameSentence } from './claude-background-task-frames'
 import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
-import { ClaudeForwardedToolRegistry } from './claude-forwarded-tool-registry'
+import { ClaudeToolOriginRegistry } from './claude-tool-origin-registry'
 import { ClaudePendingChildRows } from './claude-pending-child-rows'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
@@ -88,11 +88,12 @@ export function createClaudeJournalTranslator(
     deps.sink,
     deps.fallbackIdPrefix ?? 'acquisition'
   )
-  const forwardedTools = new ClaudeForwardedToolRegistry()
+  const toolOrigins = new ClaudeToolOriginRegistry()
   const subagents = new ClaudeSubagentRoster({
     sink: deps.sink,
     currentGroupKey: () => turn.groupKey,
-    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
+    isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
+    childOwnerRefOf: (toolUseId) => toolOrigins.childOwnerRef(toolUseId),
     // A settled group can receive no further announcement, so anything still
     // waiting on one has to be written now rather than held for ever.
     onIdentitiesFinal: () => pendingChildRows.drain()
@@ -100,7 +101,7 @@ export function createClaudeJournalTranslator(
   const pendingChildRows = new ClaudePendingChildRows(subagents.linkage)
   const backgroundTasks = new ClaudeBackgroundTaskRows({
     sink: deps.sink,
-    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
+    isForwardedParentTool: (toolUseId) => toolOrigins.has(toolUseId),
     // A typed task row is provider output: journaling one must open a resumed
     // turn, or the session shows the row while reading idle.
     openOutputTurn: (frame, observedAt) =>
@@ -149,7 +150,7 @@ export function createClaudeJournalTranslator(
     streamedBlocks,
     streamedText,
     subagents,
-    forwardedTools,
+    toolOrigins,
     backgroundTasks,
     providerFallback,
     pendingChildRows,
@@ -280,7 +281,7 @@ export function createClaudeJournalTranslator(
       streamedBlocks.clear()
       subagents.dispose()
       backgroundTasks.dispose()
-      forwardedTools.clear()
+      toolOrigins.clear()
     }
   }
 }

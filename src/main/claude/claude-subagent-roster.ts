@@ -51,6 +51,9 @@ export type ClaudeSubagentRosterDeps = {
    *  expected; a child parented to anything else names an id that only ever
    *  existed inside a sidechain, which this CLI will never announce. */
   isForwardedParentTool?: (toolUseId: string) => boolean
+  /** The reference naming the child that journaled a tool call, when a child
+   *  did. It is how a grandchild's row reaches the agent that spawned it. */
+  childOwnerRefOf?: (toolUseId: string) => string | null
   /** A settled group can receive no further announcement, so an identity still
    *  provisional will stay that way. Fires on EVERY settle path, so a caller
    *  holding rows against a pending identity cannot miss one. */
@@ -78,7 +81,8 @@ export class ClaudeSubagentRoster {
       ids: this.ids,
       announcesTasks: () => this.announcesTasks,
       trackedFor: (canonicalId) => this.locate(canonicalId)?.tracked ?? null,
-      isForwardedParentTool: deps.isForwardedParentTool
+      isForwardedParentTool: deps.isForwardedParentTool,
+      childOwnerRefOf: deps.childOwnerRefOf
     })
   }
 

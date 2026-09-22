@@ -312,6 +312,27 @@ describe('claude journal translation — which agent produced a row', () => {
     }
   }
 
+  /** A tool call the CHILD makes. Its id exists only inside that sidechain, and
+   *  is the one handle the grandchild's own frames will carry. */
+  function childSpawnCall(uuid: string, parentToolUseId: string, toolUseId: string) {
+    return {
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'assistant',
+        uuid,
+        session_id: 'claude-session',
+        parent_tool_use_id: parentToolUseId,
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: toolUseId, name: 'Task', input: { description: 'deeper' } }
+          ]
+        }
+      }
+    }
+  }
+
   function announce(taskId: string, toolUseId: string) {
     return systemFrame('task_started', {
       task_id: taskId,
@@ -442,6 +463,69 @@ describe('claude journal translation — which agent produced a row', () => {
     expect(linkageOfProse('deeper')).toMatchObject({
       agentId: 'toolu_nested',
       providerParentRef: 'toolu_nested'
+    })
+    // The call that opened this sidechain was never journaled, so who spawned
+    // it is genuinely unknown and the row claims nothing.
+    expect(linkageOfProse('deeper')?.parentAgentId).toBeUndefined()
+  })
+
+  it('names the child that spawned a grandchild rather than leaving it on the session', () => {
+    // The grandchild's frames carry one handle: the nested call id. That id was
+    // journaled on the CHILD's own row, which is the only place the real parent
+    // is recoverable — and without it the row's absent parent would read as a
+    // claim that the session's own agent spawned it.
+    const { translator, linkageOfProse } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(announce('task-1', 'toolu_1'))
+    translator.handle(childSpawnCall('child-1', 'toolu_1', 'toolu_nested'))
+    translator.handle(childProse('grandchild-1', 'toolu_nested', 'deeper'))
+
+    expect(linkageOfProse('deeper')).toMatchObject({
+      agentId: 'toolu_nested',
+      parentAgentId: 'task-1',
+      providerParentRef: 'toolu_nested'
+    })
+  })
+
+  it('holds a grandchild until the child that spawned it has an identity', () => {
+    // Both halves of a row have to be final before it persists: the grandchild's
+    // own reference resolves at once, but naming its parent has to wait for the
+    // child's announcement. The row is written linked to both, not written twice
+    // and not written with a parent that later turns out to be a different id.
+    const { translator, linkageOfProse } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    // Some other task announced, so this release has proven it declares them.
+    translator.handle(announce('task-other', 'toolu_other'))
+    translator.handle(childSpawnCall('child-1', 'toolu_1', 'toolu_nested'))
+    translator.handle(childProse('grandchild-1', 'toolu_nested', 'held deeper'))
+    expect(linkageOfProse('held deeper')).toBeUndefined()
+
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    expect(linkageOfProse('held deeper')).toMatchObject({
+      agentId: 'toolu_nested',
+      parentAgentId: 'task-1'
+    })
+  })
+
+  it('writes every held row as a child’s when the session is torn down', () => {
+    // Anti-swallow at teardown, and the reason dispose settles the roster before
+    // it forgets what the session announced: resolving these rows after that
+    // reset would read them as the session's own agent's output.
+    const { translator, linkageOfProse } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(announce('task-other', 'toolu_other'))
+    translator.handle(childProse('child-1', 'toolu_1', 'still held at teardown'))
+    expect(linkageOfProse('still held at teardown')).toBeUndefined()
+
+    translator.dispose()
+
+    expect(linkageOfProse('still held at teardown')).toMatchObject({
+      agentId: 'toolu_1',
+      providerParentRef: 'toolu_1'
     })
   })
 

@@ -631,9 +631,17 @@ describe("producer linkage — a subagent's output never speaks for the parent",
     }
     const nested = [...items, grandchild]
     expect(latestStructuredAgentSessionAssistantMessage(nested)).toBe('delegating')
-    // And a reader can name who produced it and whose child that is from the
-    // row alone, without scanning neighbours.
-    expect(nested.at(-1)).toMatchObject({ agentId: 'task-2', parentAgentId: 'task-1' })
+    // Naming a parent does not make the row that parent's: the summary the
+    // sidebar reads still shows the session's own line.
+    expect(projectStructuredAgentSessionStatusSummary(nested).lastAssistantMessage).toBe(
+      'delegating'
+    )
+    // And the transcript still renders it, so naming a parent is not a filter.
+    expect(
+      projectStructuredItemsToNativeChat(nested).some((block) =>
+        JSON.stringify(block).includes('deeper')
+      )
+    ).toBe(true)
   })
 
   it('treats an agent id that failed to resolve as a child rather than as the parent', () => {

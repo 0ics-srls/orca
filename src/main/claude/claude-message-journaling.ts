@@ -13,7 +13,7 @@ import {
 } from '../native-chat/agent-session-journal/journal-payload-bounds'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
-import type { ClaudeForwardedToolRegistry } from './claude-forwarded-tool-registry'
+import type { ClaudeToolOriginRegistry } from './claude-tool-origin-registry'
 import {
   claudeRecord,
   claudeMessageBody,
@@ -45,7 +45,7 @@ export type ClaudeMessageJournalContext = {
   streamedBlocks: ReturnType<typeof createClaudeStreamedBlockRegistry>
   streamedText: ReturnType<typeof createClaudeStreamedTextCheckpoints>
   subagents: ClaudeSubagentRoster
-  forwardedTools: ClaudeForwardedToolRegistry
+  toolOrigins: ClaudeToolOriginRegistry
   backgroundTasks: ClaudeBackgroundTaskRows
   providerFallback: ClaudeProviderFrameFallback
   /** Attributes every row this module writes to the agent that produced it, and
@@ -101,9 +101,13 @@ export function journalClaudeMessage(
     ctx.turn.ensureOpen(message, source, observedAt)
     ctx.tools.set(tool.id, tool)
     // Only a TOP-LEVEL call can be the parent of a top-level task row; a
-    // sidechain's own tool ids never reach the transcript.
-    if (!envelope.parentToolUseId) {
-      ctx.forwardedTools.record(tool.id)
+    // sidechain's own tool ids never reach the transcript. Those are recorded
+    // against their owner instead: a grandchild's frames name one of them and
+    // nothing else, so this is the only place its parent is ever knowable.
+    if (envelope.parentToolUseId) {
+      ctx.toolOrigins.recordChildOwned(tool.id, envelope.parentToolUseId)
+    } else {
+      ctx.toolOrigins.recordTopLevel(tool.id)
     }
     admit((options) =>
       ctx.sink.appendItem(
@@ -133,7 +137,7 @@ export function journalClaudeMessage(
       results.length === 1 &&
       envelope.parentToolUseId === null &&
       tool.name === 'Monitor' &&
-      ctx.forwardedTools.has(result.toolUseId)
+      ctx.toolOrigins.has(result.toolUseId)
     ) {
       ctx.backgroundTasks.observeMonitorToolResult(claudeRecord(message.tool_use_result)?.taskId)
     }
