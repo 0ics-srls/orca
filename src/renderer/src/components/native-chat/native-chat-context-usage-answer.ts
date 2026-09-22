@@ -30,3 +30,11 @@ export function formatNativeChatContextUsageAnswer(usage: NativeChatContextUsage
     }
   )
 }
+
+/** For a session whose messages will never carry usage, so no later reply helps. */
+export function formatNativeChatContextUsageUnreported(): string {
+  return translate(
+    'components.native-chat.context.unreported',
+    'Context usage is not available for this session.'
+  )
+}

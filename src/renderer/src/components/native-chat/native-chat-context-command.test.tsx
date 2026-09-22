@@ -171,6 +171,19 @@ describe('answerNativeChatLocalCommand', () => {
     ).toBe('Context: 30k / 1m tokens (3%), estimated from the last response.')
   })
 
+  it('does not promise a later answer when the host never reports usage', () => {
+    const pending =
+      'Context usage is not known yet. It becomes available once the agent has answered in this session.'
+    const { model: _model, usage: _usage, ...olderHostRow } = response(54_600, 10)
+    // An older host decodes the same reply without its model or usage.
+    expect(answer({ messages: [olderHostRow] })).toBe(
+      'Context usage is not available for this session.'
+    )
+    expect(answer({ messages: [] })).toBe(pending)
+    // A live preview is not an answer the host decoded.
+    expect(answer({ messages: [{ ...olderHostRow, source: 'hook' }] })).toBe(pending)
+  })
+
   it('leaves every other command to the agent', () => {
     expect(answer({ messages: [], command: '/compact' })).toBeNull()
   })
