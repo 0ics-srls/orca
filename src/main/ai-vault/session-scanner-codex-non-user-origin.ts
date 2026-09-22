@@ -20,19 +20,20 @@ export type CodexSubagentParentage = {
  * Why a Codex rollout is not the user's own thread, and who spawned it. Those
  * are two facts and Codex keeps them apart, so this does too.
  *
- * `source` is a nested union: its outer `subagent` tag says the thread is not
- * the user's, and the inner `kind` says what it is — a spawn record, a review
- * pass, a compaction. Only the spawn kind carries a spawn record, so a null
- * `parentage` means nothing about a spawn was readable, never that the thread is
- * rooted. Every other outer tag (`cli`, `vscode`, `exec`, `mcp`, `custom`,
- * `unknown`) is a thread the user started and produces no origin at all.
+ * `source` is a nested union: its outer tag says an agent Codex spawned
+ * (`subagent`) or machinery it ran for itself (`internal`), and the inner `kind`
+ * says which — a spawn record, a review pass, a compaction, a guardian. Only the
+ * spawn kind carries a spawn record, so a null `parentage` means nothing about a
+ * spawn was readable, never that the thread is rooted. Every other outer tag
+ * (`cli`, `vscode`, `exec`, `mcp`, `custom`, `unknown`) is a thread the user
+ * started and produces no origin at all.
  */
 export type CodexNonUserOrigin = {
-  /** The `source` outer tag, always 'subagent'. Null when only `thread_source` stated it. */
+  /** The `source` outer tag: 'subagent' or 'internal'. Null when only `thread_source` stated it. */
   source: string | null
   /**
    * The inner tag, verbatim snake_case: 'thread_spawn', 'review', 'compact',
-   * 'memory_consolidation', 'other', or one a later release adds.
+   * 'memory_consolidation', 'other', 'guardian', or one a later release adds.
    */
   kind: string | null
   /** Free text the inner tag carries — the 'other' tag's label; null for tags without one. */
@@ -41,6 +42,11 @@ export type CodexNonUserOrigin = {
   threadSource: string | null
   parentage: CodexSubagentParentage | null
 }
+
+// The two `source` tags that are not the user's own thread. Codex's runtime
+// draws the same line: everything else, spawn records included, gets the
+// treatment a real agent session gets.
+const NON_USER_SOURCE_TAGS = new Set(['subagent', 'internal'])
 
 /**
  * Read a `session_meta` payload's non-user origin, or null for a user thread.
@@ -56,9 +62,7 @@ export function readCodexNonUserOrigin(
 ): CodexNonUserOrigin | null {
   const threadSource = extractString(payload.thread_source) ?? extractString(payload.threadSource)
   const outerTag = readCodexUnionTag(payload.source)
-  // `subagent` is the only `source` tag read here: Codex's other non-user tag
-  // always states a `thread_source` beside it, which classifies it already.
-  const nonUserSource = outerTag?.kind === 'subagent' ? outerTag : null
+  const nonUserSource = outerTag && NON_USER_SOURCE_TAGS.has(outerTag.kind) ? outerTag : null
   if (threadSource) {
     // A stated thread_source is the provider's own verdict, so it outranks
     // `source` even when the two disagree.

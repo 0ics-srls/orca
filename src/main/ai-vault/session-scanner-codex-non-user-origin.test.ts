@@ -153,6 +153,27 @@ describe('readCodexNonUserOrigin', () => {
     })
   })
 
+  it('classifies machinery Codex ran for itself, not only agents it spawned', () => {
+    // `internal` is the other non-user branch of the same union. Its threads
+    // land in the same history tree and state no spawn record, and a release
+    // that omits `thread_source` leaves the tag as the only signal there is.
+    expect(
+      readCodexNonUserOrigin({ id: 'child-thread', source: { internal: 'guardian' } })
+    ).toEqual({
+      source: 'internal',
+      kind: 'guardian',
+      kindLabel: null,
+      threadSource: null,
+      parentage: null
+    })
+    expect(
+      readCodexNonUserOrigin({
+        id: 'child-thread',
+        source: { internal: 'memory_consolidation' }
+      })?.kind
+    ).toBe('memory_consolidation')
+  })
+
   it('keeps every thread the user started, whatever its source tag', () => {
     // Codex's runtime groups these with spawn records as real agent sessions,
     // so none of them is machinery and none may be hidden. `custom` carries a
