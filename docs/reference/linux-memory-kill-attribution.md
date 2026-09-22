@@ -109,9 +109,16 @@ Read the pre-gone and gone-time pair, in this order.
 
 1. **Did `systemMemoryCgroupOomKillCount` step up across the death?**
    `systemMemoryPreGoneCgroupOomKillCount` 3 → `systemMemoryCgroupOomKillCount` 4
-   is the kernel OOM killer acting inside our cgroup. This is the only decisive
-   datum; an absolute count on its own proves nothing, because the cgroup may
-   have OOMed an hour ago. Unchanged rules the cgroup OOM killer out.
+   is the kernel OOM killer killing a task in our cgroup. The kernel credits the
+   victim's cgroup whichever limit fired, so a step covers the host-wide killer
+   too: split the two on `systemMemoryAvailableMB` (near zero for host-wide,
+   gigabytes for a `memory.max` above us). This is the only decisive datum; an
+   absolute count on its own proves nothing, because the cgroup may have OOMed
+   an hour ago. Unchanged rules the kernel OOM killer out only when
+   `systemMemoryPreGoneSampleAgeMs` is comfortably above event delivery — a
+   second or more. The pre-gone sample is a free-running 10 s tick, so a
+   near-zero age means it may itself have landed after the SIGKILL, and the
+   step is then inconclusive rather than absent.
 2. **Was `systemMemoryCgroupMaxMB` (or `HighMB`) set, with the usage near it?**
    A ceiling below host RAM means the machine's spare memory was never available
    to us. This is the answer for a systemd unit with `MemoryMax`, a Flatpak or

@@ -10,10 +10,23 @@ import { getSystemMemoryDetails, setSystemMemoryInfoReaderForTest } from './syst
 // so it is the one place a real /proc and /sys can vouch for that. Asserts only
 // what holds on ANY such host — a cgroup namespace included — so no ceiling,
 // no chain-reaches-root, no host values.
+//
+// Why read rather than existsSync: a CONFIG_PSI_DEFAULT_DISABLED kernel keeps
+// /proc/pressure/memory but answers EOPNOTSUPP, and the root cgroup (`0::/`,
+// no systemd) has no memory.current — both would fail here falsely.
+function readableOrEmpty(path: string): string {
+  try {
+    return readFileSync(path, 'utf8')
+  } catch {
+    return ''
+  }
+}
+
 const LIVE_CGROUP_V2_PSI_HOST =
   process.platform === 'linux' &&
-  existsSync('/proc/pressure/memory') &&
-  existsSync('/sys/fs/cgroup/cgroup.controllers')
+  /^some avg10=/m.test(readableOrEmpty('/proc/pressure/memory')) &&
+  existsSync('/sys/fs/cgroup/cgroup.controllers') &&
+  /^0::\/.+$/m.test(readableOrEmpty('/proc/self/cgroup'))
 
 const STALL_KEYS = ['someAvg10', 'someAvg60', 'fullAvg10', 'fullAvg60'] as const
 
