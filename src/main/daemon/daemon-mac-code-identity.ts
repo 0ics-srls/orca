@@ -19,6 +19,8 @@ const CODESIGN_TIMEOUT_MS = 3_000
 // proc_pidpath resolved and the pid is merely exiting, so it is not evidence of anything.
 const UNLINKED_EXECUTABLE_PATTERN = /No such file or directory/
 // Squirrel parks the outgoing bundle under a `…ShipIt…` directory in $TMPDIR or ~/Library/Caches.
+// A path outside one is only `resolved`, never "inside the installed app": that claim would need
+// the pid record's spawner path, and nothing here is entitled to act on the answer anyway.
 const PARKED_BUNDLE_PATTERN = /\/[^/]*ShipIt[^/]*\//
 
 const defaultRunner: MacCodeIdentityCommandRunner = (program, args, timeoutMs) =>
