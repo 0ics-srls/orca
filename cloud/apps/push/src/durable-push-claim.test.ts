@@ -148,6 +148,26 @@ it.skipIf(!durablePushTestDatabaseUrl)(
   }
 )
 
+it('keeps claim, exclusion and prune correct without the queue indexes', async () => {
+  const { db, store, clock, advance } = await fixture()
+  for (const name of ['push_batches_pending_due', 'push_batches_pending_device', 'push_batches_leased_device'])
+    await db.query(`DROP INDEX ${name}`)
+  await store.accept('host', 'phone', notification(1))
+  advance(1)
+  await store.accept('host', 'phone', notification(2))
+  await store.accept('host', 'phone-2', notification(3))
+  const claims = await Promise.all(
+    Array.from({ length: 4 }, () => new DurablePushStore(db, clock).claim())
+  )
+  const leased = claims.filter((claim) => claim !== null)
+  expect(leased.map((claim) => claim.notification.notificationSeq).sort()).toEqual([1, 3])
+  for (const claim of leased) await store.finish(claim)
+  expect((await store.claim())?.notification.notificationSeq).toBe(2)
+  advance(10 * 60_000)
+  expect(await store.prune()).toBe(1)
+  expect(await batchCount(db)).toBe(0)
+})
+
 it('deletes a batch once it is finished, and keeps it only for a retry', async () => {
   const { db, store, advance } = await fixture()
   await store.accept('host', 'phone', notification(1))
