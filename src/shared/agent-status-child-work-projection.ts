@@ -56,6 +56,26 @@ function legacySubagentState(
   return null
 }
 
+/** A host-published background task as a projection candidate: the wire row already
+ *  speaks the child-work vocabulary, and a published task is live by definition. */
+export function agentChildWorkProjectionCandidateFromBackgroundTask(
+  task: AgentSessionBackgroundTask
+): AgentChildWorkLegacyProjectionCandidate {
+  return {
+    providerId: task.id,
+    child: {
+      kind: task.kind,
+      ...(task.state !== undefined ? { state: task.state } : {}),
+      membership: 'live',
+      firstObservedAt: task.startedAt ?? 0,
+      ...(task.name !== undefined ? { name: task.name, agentType: task.name } : {}),
+      ...(task.description !== undefined ? { description: task.description } : {}),
+      ...(task.totalTokens !== undefined ? { totalTokens: task.totalTokens } : {}),
+      stoppable: task.stoppable ?? true
+    }
+  }
+}
+
 export function projectAgentChildWorkLegacySubagents(
   candidates: readonly AgentChildWorkLegacyProjectionCandidate[]
 ): AgentSubagentSnapshot[] | undefined {

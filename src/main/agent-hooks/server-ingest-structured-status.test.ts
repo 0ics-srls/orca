@@ -102,6 +102,43 @@ describe('AgentHookServer ingestStructuredStatus', () => {
     expect(server.getStatusSnapshot()[0]?.state).toBe('done')
   })
 
+  it('folds live background tasks into an idle session the way the hook lane folds a roster', () => {
+    const server = new AgentHookServer()
+    server.ingestStructuredStatus(
+      summary({
+        status: 'idle',
+        backgroundTasks: [{ id: 'child-1', kind: 'agent', state: 'working' }]
+      }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({ state: 'working' })
+    expect(server.getStatusSnapshot()[0]).not.toHaveProperty('workingMode')
+
+    server.ingestStructuredStatus(
+      summary({
+        status: 'idle',
+        updatedAt: OBSERVED_AT + 1,
+        backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+      }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      workingMode: 'monitoring'
+    })
+
+    server.ingestStructuredStatus(
+      summary({
+        status: 'idle',
+        updatedAt: OBSERVED_AT + 2,
+        backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'done' }]
+      }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({ state: 'done' })
+    expect(server.getStatusSnapshot()[0]).not.toHaveProperty('workingMode')
+  })
+
   it('marks a session whose provider child is gone as held, not owned', () => {
     const server = new AgentHookServer()
     server.ingestStructuredStatus(summary({ hostExecutionOwned: undefined }), SUBJECT)

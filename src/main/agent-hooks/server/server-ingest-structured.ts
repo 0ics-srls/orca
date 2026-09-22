@@ -7,9 +7,9 @@ import {
 } from '../../../shared/agent-status-subject'
 import {
   structuredAgentSessionPaneKey,
-  structuredAgentSessionStatusState,
   structuredAgentSessionTabId
 } from '../../../shared/structured-agent-session-projection'
+import { structuredAgentSessionAgentStatus } from '../../../shared/structured-agent-session-agent-status'
 import { structuredStatusLegacyEvent } from './server-structured-status-row'
 import { AgentHookServerIngestTerminal } from './server-ingest-terminal'
 
@@ -35,7 +35,10 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
     }
     const previous = this.canonicalStatusStore.getParent(parsed)
     const priorStatus = previous?.status
-    const state = structuredAgentSessionStatusState(summary.status)
+    const { state, workingMode } = structuredAgentSessionAgentStatus({
+      status: summary.status,
+      backgroundTasks: summary.backgroundTasks
+    })
     const tabId = structuredAgentSessionTabId(parsed.sessionId)
     const paneKey = structuredAgentSessionPaneKey(tabId, parsed.sessionId)
     if (this.state.lastStatusByPaneKey.has(paneKey)) {
@@ -50,6 +53,7 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
       structuredHost: summary.hostExecutionOwned ? 'owned' : 'held',
       ...(summary.providerSession ? { providerSession: summary.providerSession } : {}),
       state,
+      ...(workingMode ? { workingMode } : {}),
       prompt: summary.latestPrompt,
       agentType: summary.agent,
       ...(summary.model ? { model: summary.model } : {}),

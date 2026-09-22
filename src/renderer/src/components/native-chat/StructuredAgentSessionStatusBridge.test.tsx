@@ -320,6 +320,66 @@ describe('StructuredAgentSessionStatusBridge', () => {
     expect(statuses()).toEqual([expect.objectContaining({ subagents: undefined })])
   })
 
+  // The same fold the hook lane applies to a subagent roster: an idle lead is not idle
+  // while its children run, and a backgrounded shell reads as monitoring.
+  it('keeps an idle session working while a subagent runs, and monitoring while a shell runs', async () => {
+    render(<StructuredAgentSessionStatusBridge />)
+    await waitFor(() => expect(mocks.subscribeStatus).toHaveBeenCalledOnce())
+
+    act(() =>
+      feed().emit({
+        type: 'snapshot',
+        sessions: [
+          summary({
+            status: 'idle',
+            updatedAt: 1,
+            backgroundTasks: [
+              { id: 'child-1', kind: 'agent', state: 'working' },
+              { id: 'shell-1', kind: 'command', state: 'working' }
+            ]
+          })
+        ]
+      })
+    )
+    expect(statuses()).toEqual([
+      expect.objectContaining({ state: 'working', workingMode: undefined, stateStartedAt: 1 })
+    ])
+
+    act(() =>
+      feed().emit({
+        type: 'status',
+        session: summary({
+          status: 'idle',
+          updatedAt: 2,
+          backgroundTasks: [
+            { id: 'child-1', kind: 'agent', state: 'done' },
+            { id: 'shell-1', kind: 'command', state: 'working' }
+          ]
+        })
+      })
+    )
+    expect(statuses()).toEqual([
+      expect.objectContaining({ state: 'working', workingMode: 'monitoring', stateStartedAt: 1 })
+    ])
+
+    act(() =>
+      feed().emit({
+        type: 'status',
+        session: summary({
+          status: 'idle',
+          updatedAt: 3,
+          backgroundTasks: [
+            { id: 'child-1', kind: 'agent', state: 'done' },
+            { id: 'shell-1', kind: 'command', state: 'done' }
+          ]
+        })
+      })
+    )
+    expect(statuses()).toEqual([
+      expect.objectContaining({ state: 'done', workingMode: undefined, stateStartedAt: 3 })
+    ])
+  })
+
   it('requires fresh parent evidence as well as a reconfirmed feed after reconnect', async () => {
     render(<StructuredAgentSessionStatusBridge />)
     await waitFor(() => expect(mocks.subscribeStatus).toHaveBeenCalledOnce())
