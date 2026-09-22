@@ -446,8 +446,67 @@ describe('claude journal translation — which agent produced a row', () => {
     translator.handle(userTurn('user-1'))
     translator.handle(spawnCall('assistant-1', 'toolu_1'))
     translator.handle(childProse('child-1', 'toolu_1', 'unannounced release'))
+    // A forwarded spawn call is held first — "no announcement so far" is also
+    // what the session's first child looks like — so the release verdict is
+    // only reachable once the turn settles.
+    expect(linkageOfProse('unannounced release')).toBeUndefined()
 
-    expect(linkageOfProse('unannounced release')?.agentId).toBeUndefined()
+    translator.handle(resultFrame())
+
+    // `{}`, not `undefined`: the row WAS written, and written as the session's
+    // own. An absent row would satisfy any assertion phrased on `?.agentId`.
+    expect(linkageOfProse('unannounced release')).toEqual({})
+  })
+
+  it("attributes a tool result naming its own call to the call's own agent", () => {
+    // Every top-level call is a forwarded tool id, not just a spawn. Reading the
+    // parent reference literally on a result frame would park ordinary tool
+    // output against a `task_started` that is never coming, leaving the tool row
+    // stuck `running` for the rest of the turn.
+    const { translator, items } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(announce('task-1', 'toolu_1'))
+    translator.handle({
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'user',
+        uuid: 'bash-result',
+        session_id: 'claude-session',
+        parent_tool_use_id: 'toolu_bash',
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'toolu_bash', content: 'a.ts' }]
+        }
+      }
+    })
+
+    const row = items.find(
+      (entry) => orcaClientMessageId(entry.identity) === 'claude-tool:claude-session:toolu_bash'
+    )
+    expect(row?.body).toMatchObject({ kind: 'tool-call', state: 'completed' })
+    expect(row?.options).toEqual({})
+  })
+
+  it("holds the session's FIRST child, whose spawn is unannounced only so far", () => {
+    // The release check reads "no task announced yet", which every session looks
+    // like before its first `task_started`. Without the spawn call outranking
+    // it, the first child's pre-announcement rows persist as the PARENT's — the
+    // whole defect, for the first child of every session.
+    const { translator, linkageOfProse } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(childProse('child-1', 'toolu_1', 'first child prose'))
+
+    expect(linkageOfProse('first child prose')).toBeUndefined()
+
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    expect(linkageOfProse('first child prose')).toMatchObject({
+      agentId: 'task-1',
+      providerParentRef: 'toolu_1'
+    })
   })
 
   it('stamps nested sidechain traffic this release will never announce', () => {

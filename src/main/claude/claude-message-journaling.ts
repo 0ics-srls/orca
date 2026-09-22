@@ -72,10 +72,19 @@ export function journalClaudeMessage(
   if (envelope.parentToolUseId) {
     ctx.subagents.observeChildActivity(envelope.parentToolUseId)
   }
+  const results = claudeToolResults(envelope)
   // Everything this envelope journals belongs to whoever produced the envelope.
   // A child's rows live in the parent's journal, so without this the parent's
   // own "what am I doing" readers report the child's newest output as their own.
-  const admit = ctx.pendingChildRows.admissionFor(envelope.parentToolUseId)
+  //
+  // Delivering the result of the very call it names as parent is the exception:
+  // that is the caller consuming its own tool output, not a child's row. Only a
+  // spawn call ever gets a sidechain, so reading the field literally here would
+  // park every ordinary tool result against an announcement never coming.
+  const producedByCaller = results.some((result) => result.toolUseId === envelope.parentToolUseId)
+  const admit = ctx.pendingChildRows.admissionFor(
+    producedByCaller ? null : envelope.parentToolUseId
+  )
   const outputEnvelope = claudeOutputEnvelope(envelope)
   const body = claudeMessageBody(outputEnvelope)
   const identity =
@@ -118,7 +127,6 @@ export function journalClaudeMessage(
     )
     changed = true
   }
-  const results = claudeToolResults(envelope)
   for (const result of results) {
     const tool = ctx.tools.get(result.toolUseId) ?? {
       id: result.toolUseId,
