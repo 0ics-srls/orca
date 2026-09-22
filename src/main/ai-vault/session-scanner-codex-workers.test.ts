@@ -141,10 +141,11 @@ describe('scanAiVaultSessions Codex worker sessions', () => {
       ])
     )
 
-    // Codex 0.144-0.147 named the agent's role in `subagent` and stated the
-    // parent only on the payload's own key. `thread_source` is omitted here
-    // because older releases state none, and it is the only other signal that
-    // would keep this transcript out of the user's history.
+    // `review` is a sibling tag of `thread_spawn` in the same union, not an
+    // older spelling of it: it states no spawn record, so the parent is on the
+    // payload's own key. `thread_source` is omitted because some releases state
+    // none, and it is the only other signal that would keep this transcript out
+    // of the user's history.
     await writeFile(
       join(codexSessionsDir, '2026', '06', '12', 'rollout-role-only-worker-session.jsonl'),
       jsonLines([
@@ -165,6 +166,32 @@ describe('scanAiVaultSessions Codex worker sessions', () => {
             type: 'message',
             role: 'user',
             content: [{ type: 'text', text: 'Role-only internal worker task' }]
+          }
+        }
+      ])
+    )
+
+    // A compaction thread is a non-user thread that names no parent at all,
+    // so its tag is the only thing keeping it out of the user's history.
+    await writeFile(
+      join(codexSessionsDir, '2026', '06', '12', 'rollout-compaction-session.jsonl'),
+      jsonLines([
+        {
+          timestamp: '2026-06-12T10:05:00.000Z',
+          type: 'session_meta',
+          payload: {
+            id: 'compaction-session',
+            cwd: '/repo/app',
+            source: { subagent: 'compact' }
+          }
+        },
+        {
+          timestamp: '2026-06-12T10:05:01.000Z',
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'text', text: 'Compaction of the user session' }]
           }
         }
       ])

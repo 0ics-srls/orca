@@ -89,10 +89,11 @@ export async function parseCodexSessionContent(args: {
 type CodexSessionParseState = {
   accumulator: SessionAccumulator
   previousTotals: CodexUsageSnapshot | null
-  // Codex's own statement that this thread was spawned by another. Codex writes
-  // those transcripts into the same history tree and AI Vault shows user-started
-  // sessions only, so the parse is rejected on this record's presence rather
-  // than on a separate flag beside it.
+  // Codex's own classification of this thread as something other than the
+  // user's own — a spawned agent, a review pass, a compaction. Codex writes all
+  // of those into the same history tree and AI Vault shows user-started sessions
+  // only, so the parse is rejected on this record's presence rather than on a
+  // separate flag beside it.
   subagentOrigin: CodexSubagentOrigin | null
   sawSessionMeta: boolean
   historyMode: string | null

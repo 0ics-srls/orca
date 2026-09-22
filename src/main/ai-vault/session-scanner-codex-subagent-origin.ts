@@ -15,12 +15,24 @@ export type CodexSubagentParentage = {
 }
 
 /**
- * Why a Codex rollout is not the user's own thread, plus whatever parentage the
- * writing release stated. A null `parentage` means nothing about the spawn was
- * readable — never that the thread is rooted.
+ * Why a Codex rollout is not the user's own thread, and who spawned it. Codex's
+ * protocol keeps those apart and so does this: `kind` is the union tag naming
+ * the sort of non-user thread — a spawned agent, but equally a review pass, a
+ * compaction, a memory consolidation — while `parentage` is the thread it came
+ * from. Only the spawn tag carries a spawn record, so a null `parentage` says
+ * nothing about the spawn was readable, never that the thread is rooted.
  */
 export type CodexSubagentOrigin = {
-  /** Verbatim non-user `thread_source`; null on releases that state none. */
+  /**
+   * The `source.subagent` union tag, verbatim snake_case: 'thread_spawn',
+   * 'review', 'compact', 'memory_consolidation', 'other', or a tag a later
+   * release adds. Null when `thread_source` alone stated the thread is not the
+   * user's and `source` stated nothing structural.
+   */
+  kind: string | null
+  /** Free text the tag carries — the 'other' tag's label; null for tags without one. */
+  kindLabel: string | null
+  /** Verbatim non-user `thread_source`; null on payloads that state none. */
   threadSource: string | null
   parentage: CodexSubagentParentage | null
 }
@@ -28,49 +40,77 @@ export type CodexSubagentOrigin = {
 /**
  * Read a `session_meta` payload's subagent origin, or null for a user thread.
  *
- * Releases disagree about where they state this. Newer ones nest the full record
- * under `source.subagent.thread_spawn` and copy the parent, nickname and path
- * onto the payload's own keys; 0.144-0.147 state only the agent's role there
- * (`source: { subagent: 'review' }`) and leave the payload copies as the sole
- * statement of the parent. Each field is read independently so a release that
- * states three of them is not discarded for omitting the other two.
+ * The payload states this in two places that disagree in coverage. `source` is
+ * the structural field Codex's own runtime switches on; `thread_source` is an
+ * analytics label that some releases omit entirely. A payload stating only one
+ * of them is normal, so each field is read independently and a tag that carries
+ * no spawn record still classifies the thread.
  */
 export function readCodexSubagentOrigin(
   payload: Record<string, unknown>
 ): CodexSubagentOrigin | null {
   const threadSource = extractString(payload.thread_source) ?? extractString(payload.threadSource)
-  const subagentSource = asRecord(payload.source)?.subagent
+  const tag = readCodexSubagentSourceTag(asRecord(payload.source)?.subagent)
   if (threadSource) {
     // A stated thread_source is the provider's own verdict, so it outranks
     // `source` even when the two disagree.
-    return threadSource.toLowerCase() === 'user'
-      ? null
-      : { threadSource, parentage: readCodexSubagentParentage(payload, subagentSource) }
-  }
-  // With no stated thread_source, `source` is the only signal, and it must be
-  // readable as one: every release spells a subagent source as either the spawn
-  // record or the agent's role. A value that is neither (a falsy primitive most
-  // of all, which reads as a negative flag) is treated as no statement — hiding
-  // a user's own thread on an unreadable value is the worse of the two errors,
-  // since letting a worker transcript through is at least visible.
-  if (!asRecord(subagentSource) && !extractString(subagentSource)) {
+    if (threadSource.toLowerCase() === 'user') {
+      return null
+    }
+  } else if (!tag) {
     return null
   }
-  return { threadSource: null, parentage: readCodexSubagentParentage(payload, subagentSource) }
+  return {
+    kind: tag?.kind ?? null,
+    kindLabel: extractString(tag?.content),
+    threadSource,
+    parentage: readCodexSubagentParentage(payload, asRecord(tag?.content))
+  }
 }
 
+type CodexSubagentSourceTag = {
+  kind: string
+  /** The tag's payload: free text for 'other', the record for 'thread_spawn'. */
+  content: unknown
+}
+
+/**
+ * Read `source.subagent` as the externally tagged union it is: a payload-less
+ * tag is a bare string ('review'), a tag with one is a single-key object
+ * (`{ thread_spawn: { ... } }`, `{ other: 'label' }`). Anything else states no
+ * tag at all — and treating an unreadable value as a spawn would drop the
+ * user's own thread out of their history, where letting an unrecognised one
+ * through only shows a transcript they can see and ignore.
+ */
+function readCodexSubagentSourceTag(value: unknown): CodexSubagentSourceTag | null {
+  const bareTag = extractString(value)
+  if (bareTag) {
+    return { kind: bareTag, content: undefined }
+  }
+  const record = asRecord(value)
+  const keys = record ? Object.keys(record) : []
+  const kind = keys.length === 1 ? extractString(keys[0]) : null
+  return kind && record ? { kind, content: record[kind] } : null
+}
+
+// The spawn record's fields are copied onto the payload's own keys, so each one
+// falls back rather than being discarded with its record. `depth` has no copy to
+// fall back to; `agent_role` is documented with `agent_type` as its alias, in
+// both places.
 function readCodexSubagentParentage(
   payload: Record<string, unknown>,
-  subagentSource: unknown
+  spawn: Record<string, unknown> | null
 ): CodexSubagentParentage | null {
-  const spawn = asRecord(asRecord(subagentSource)?.thread_spawn)
   const parentage: CodexSubagentParentage = {
     parentThreadId:
       extractString(spawn?.parent_thread_id) ?? extractString(payload.parent_thread_id),
     depth: codexSpawnDepth(spawn?.depth),
     agentNickname: extractString(spawn?.agent_nickname) ?? extractString(payload.agent_nickname),
-    // A release that states no spawn record names the agent's role in `subagent`.
-    agentRole: extractString(spawn?.agent_role) ?? extractString(subagentSource),
+    agentRole:
+      extractString(spawn?.agent_role) ??
+      extractString(spawn?.agent_type) ??
+      extractString(payload.agent_role) ??
+      extractString(payload.agent_type),
     agentPath: extractString(spawn?.agent_path) ?? extractString(payload.agent_path)
   }
   return Object.values(parentage).some((field) => field !== null) ? parentage : null
