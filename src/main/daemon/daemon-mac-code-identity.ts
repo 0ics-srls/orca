@@ -25,8 +25,6 @@ const PARKED_BUNDLE_PATTERN = /\/[^/]*ShipIt[^/]*\//
 const defaultRunner: MacCodeIdentityCommandRunner = (program, args, timeoutMs) =>
   runProcess({ program, args, timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] })
 
-let cached: { pid: number; pending: Promise<DaemonCodeIdentity> } | null = null
-
 export function classifyCodesignDisplayOutput(
   output: string,
   code: number | null
@@ -62,9 +60,13 @@ async function probe(
   }
 }
 
+/** Concurrent asks about one pid share a probe; nothing outlives it, so no verdict is retained. */
+let inFlight: { pid: number; pending: Promise<DaemonCodeIdentity> } | null = null
+
 /**
- * Where macOS says the daemon pid's code lives. Memoised per pid, which is per daemon
- * generation: both adoption events ask, and one codesign spawn answers for all of them.
+ * Where macOS says the daemon pid's code lives, read fresh at every ask. The verdict is not
+ * stable for a pid: Squirrel keeps the parked bundle until the next update, so `parked` becomes
+ * `unresolvable` mid-run, and that crossover is the whole point of measuring this.
  */
 export function getDaemonMacCodeIdentity(
   pid: number | null | undefined,
@@ -73,12 +75,14 @@ export function getDaemonMacCodeIdentity(
   if (process.platform !== 'darwin' || !pid || !Number.isSafeInteger(pid) || pid <= 0) {
     return Promise.resolve('probe-failed')
   }
-  if (cached?.pid !== pid) {
-    cached = { pid, pending: probe(pid, runCommand) }
+  if (inFlight?.pid !== pid) {
+    const entry = { pid, pending: probe(pid, runCommand) }
+    inFlight = entry
+    void entry.pending.then(() => {
+      if (inFlight === entry) {
+        inFlight = null
+      }
+    })
   }
-  return cached.pending
-}
-
-export function resetDaemonMacCodeIdentityForTests(): void {
-  cached = null
+  return inFlight.pending
 }

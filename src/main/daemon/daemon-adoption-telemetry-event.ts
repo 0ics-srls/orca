@@ -31,7 +31,7 @@ export type DaemonAdoptionOrigin = Pick<
 
 /**
  * Classifies the adopted daemon's pid record against the running app; enum-only by construction.
- * Async for `code_identity` alone, which costs one memoised codesign spawn per daemon generation.
+ * Async for `code_identity` alone, which costs one codesign spawn per event; both are rare.
  */
 export async function classifyDaemonAdoptionOrigin(
   pidRecord: ParsedDaemonPid | null

@@ -8,11 +8,7 @@ vi.mock('node:fs', async (importOriginal) => ({
   existsSync: existsSyncMock
 }))
 
-import {
-  classifyCodesignDisplayOutput,
-  getDaemonMacCodeIdentity,
-  resetDaemonMacCodeIdentityForTests
-} from './daemon-mac-code-identity'
+import { classifyCodesignDisplayOutput, getDaemonMacCodeIdentity } from './daemon-mac-code-identity'
 
 const HELPER_PATH =
   '/Applications/Orca.app/Contents/Frameworks/Orca Helper.app/Contents/MacOS/Orca Helper'
@@ -24,7 +20,6 @@ function runnerReturning(stderr: string, code: number | null) {
 }
 
 beforeEach(() => {
-  resetDaemonMacCodeIdentityForTests()
   existsSyncMock.mockReset().mockReturnValue(true)
   vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
 })
@@ -101,14 +96,30 @@ describe('getDaemonMacCodeIdentity', () => {
     ).resolves.toBe('unresolvable')
   })
 
-  // One probe per daemon generation: both adoption events ask, and a denial can ask repeatedly.
-  it('probes once per pid and reprobes when the daemon generation changes', async () => {
+  // No verdict is retained: a daemon's parked bundle becomes unlinked later in the same run.
+  it('reprobes on every ask rather than reporting an earlier verdict', async () => {
     const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
     await getDaemonMacCodeIdentity(3337, runCommand)
     await getDaemonMacCodeIdentity(3337, runCommand)
-    expect(runCommand).toHaveBeenCalledTimes(1)
-    await getDaemonMacCodeIdentity(4001, runCommand)
     expect(runCommand).toHaveBeenCalledTimes(2)
+
+    runCommand.mockResolvedValue({
+      code: 1,
+      stdout: '',
+      stderr: '+3337: No such file or directory\n'
+    })
+    await expect(getDaemonMacCodeIdentity(3337, runCommand)).resolves.toBe('unresolvable')
+  })
+
+  it('coalesces concurrent asks about one pid into a single probe', async () => {
+    const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
+    await expect(
+      Promise.all([
+        getDaemonMacCodeIdentity(3337, runCommand),
+        getDaemonMacCodeIdentity(3337, runCommand)
+      ])
+    ).resolves.toEqual(['resolved', 'resolved'])
+    expect(runCommand).toHaveBeenCalledTimes(1)
   })
 
   it('fails open when codesign cannot be spawned, off macOS, or without a pid', async () => {
