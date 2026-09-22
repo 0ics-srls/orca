@@ -1,181 +1,87 @@
-import { createServer, type Server } from 'node:http'
-import { expect, test } from './helpers/orca-app'
+// STA-8147 follow-up: the floating browser and a focused split browser each answer only the
+// chrome chords pressed inside them.
+
 import type { Page } from '@stablyai/playwright-test'
+import { expect, test } from './helpers/orca-app'
 import { ensureTerminalVisible, waitForActiveWorktree, waitForSessionReady } from './helpers/store'
+import {
+  browserAddressBar,
+  browserOverlay,
+  createTerminalBrowserSplit,
+  focusBrowserGroup,
+  pressKeyInBrowserGuest,
+  shortcutModifier
+} from './helpers/browser-split-fixture'
+import {
+  guestLoadStarts,
+  navigateGuest,
+  recordGuestLoadStarts,
+  waitForGuestIdle,
+  waitForGuestUrl
+} from './helpers/browser-split-guest-probes'
+import { startBrowserSplitPageServer } from './helpers/browser-split-page-server'
 
 // Why: mirrors FLOATING_TERMINAL_WORKTREE_ID in src/shared/constants.ts.
 const FLOATING_WORKTREE_ID = 'global-floating-terminal'
-const FLOATING_PANEL = '[data-floating-terminal-panel][aria-hidden="false"]'
+const FLOATING_PANEL = '[data-floating-terminal-panel]'
 const isMac = process.platform === 'darwin'
-const modifier = isMac ? 'Meta' : 'Control'
 const backChord = isMac ? 'Meta+BracketLeft' : 'Alt+ArrowLeft'
 const forwardChord = isMac ? 'Meta+BracketRight' : 'Alt+ArrowRight'
 
-type Fixture = {
-  splitGroupId: string
-  splitRoot: string
-  splitTabId: string
-  floatingTabId: string
-}
-
-async function startFixtureServer(): Promise<{
-  origin: string
-  hits: Map<string, number>
-  close: () => Promise<void>
-}> {
-  const hits = new Map<string, number>()
-  const server: Server = createServer((request, response) => {
-    const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
-    if (pathname === '/favicon.ico') {
-      response.writeHead(204).end()
-      return
-    }
-    hits.set(pathname, (hits.get(pathname) ?? 0) + 1)
-    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    response.end(`<!doctype html><title>${pathname}</title><body>${pathname}</body>`)
-  })
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-  const address = server.address()
-  if (!address || typeof address === 'string') {
-    throw new Error('Fixture server has no port')
-  }
-  return {
-    origin: `http://127.0.0.1:${address.port}`,
-    hits,
-    close: () =>
-      new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())))
-  }
-}
-
-async function openSplitAndFloatingBrowsers(
+async function openFloatingBrowser(
   page: Page,
-  splitUrl: string,
-  floatingUrl: string
-): Promise<Fixture> {
-  const ids = await page.evaluate(
-    ({ floatingWorktreeId, splitUrl, floatingUrl }) => {
+  url: string
+): Promise<{ browserTabId: string; browserPageId: string }> {
+  const floating = await page.evaluate(
+    ({ worktreeId, initialUrl }) => {
       const store = window.__store
       if (!store) {
         throw new Error('Store unavailable')
       }
       store.setState({ settings: { ...store.getState().settings, floatingTerminalEnabled: true } })
       const state = store.getState()
-      const worktreeId = state.activeWorktreeId
-      if (!worktreeId) {
-        throw new Error('Active worktree unavailable')
-      }
-      const terminalGroupId = state.ensureWorktreeRootGroup(worktreeId)
-      const splitGroupId = state.createEmptySplitGroup(worktreeId, terminalGroupId, 'right')
-      if (!splitGroupId) {
-        throw new Error('Browser split unavailable')
-      }
-      const splitTab = state.createBrowserTab(worktreeId, splitUrl, {
+      const tab = state.createBrowserTab(worktreeId, initialUrl, {
         activate: true,
         focusAddressBar: false,
-        targetGroupId: splitGroupId
-      })
-      const floatingTab = state.createBrowserTab(floatingWorktreeId, floatingUrl, {
-        activate: true,
-        focusAddressBar: false,
-        targetGroupId: state.ensureWorktreeRootGroup(floatingWorktreeId),
+        targetGroupId: state.ensureWorktreeRootGroup(worktreeId),
         browserRuntimeEnvironmentId: null
       })
-      return { splitGroupId, splitTabId: splitTab.id, floatingTabId: floatingTab.id }
+      if (!tab.activePageId) {
+        throw new Error('Floating browser page unavailable')
+      }
+      return { browserTabId: tab.id, browserPageId: tab.activePageId }
     },
-    { floatingWorktreeId: FLOATING_WORKTREE_ID, splitUrl, floatingUrl }
+    { worktreeId: FLOATING_WORKTREE_ID, initialUrl: url }
   )
   // Why: the toggle listener closes over floatingTerminalEnabled, so wait for the panel to mount.
-  await page.waitForFunction(() =>
-    Boolean(document.querySelector('[data-floating-terminal-panel]'))
-  )
-  if ((await page.locator(FLOATING_PANEL).count()) === 0) {
+  await expect(page.locator(FLOATING_PANEL)).toHaveCount(1)
+  const openPanel = page.locator(`${FLOATING_PANEL}[aria-hidden="false"]`)
+  if ((await openPanel.count()) === 0) {
     await page.evaluate(() => window.dispatchEvent(new Event('orca-toggle-floating-terminal')))
   }
-  await expect(page.locator(FLOATING_PANEL)).toBeVisible()
-  return { ...ids, splitRoot: `[data-browser-overlay-tab-id="${ids.splitTabId}"]` }
+  await expect(
+    openPanel.locator(`[data-browser-overlay-tab-id="${floating.browserTabId}"]`)
+  ).toBeVisible()
+  return floating
 }
 
-async function focusSplitGroup(page: Page, groupId: string): Promise<void> {
-  await page.evaluate((targetGroupId) => {
-    const state = window.__store?.getState()
-    const worktreeId = state?.activeWorktreeId
-    if (state && worktreeId) {
-      state.focusGroup(worktreeId, targetGroupId)
-    }
-  }, groupId)
-  await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const state = window.__store?.getState()
-        const worktreeId = state?.activeWorktreeId
-        return worktreeId ? state.activeGroupIdByWorktree[worktreeId] : null
-      })
-    )
-    .toBe(groupId)
+function findInput(page: Page, browserTabId: string) {
+  return browserOverlay(page, browserTabId).getByPlaceholder('Find in page...')
 }
 
-function addressBar(page: Page, root: string) {
-  return page.locator(`${root} [data-orca-browser-address-bar="true"]`)
-}
-
-function findInput(page: Page, root: string) {
-  return page.locator(root).getByPlaceholder('Find in page...')
-}
-
-function grabButton(page: Page, root: string) {
-  return page.locator(root).getByRole('button', { name: 'Grab page element', exact: true })
-}
-
-async function navigateFromAddressBar(page: Page, root: string, url: string): Promise<void> {
-  const bar = addressBar(page, root)
-  await bar.fill(url)
-  await bar.press('Enter')
-  await expect(bar).toHaveValue(url)
+function grabButton(page: Page, browserTabId: string) {
+  return browserOverlay(page, browserTabId).getByRole('button', {
+    name: 'Grab page element',
+    exact: true
+  })
 }
 
 // Why: a non-editable chrome target, so reload and grab are not skipped as text-field keys.
-async function focusChrome(page: Page, root: string): Promise<void> {
-  const target = grabButton(page, root)
+async function focusChrome(page: Page, browserTabId: string): Promise<void> {
+  const target = grabButton(page, browserTabId)
   await expect(target).toBeEnabled()
   await target.focus()
   await expect(target).toBeFocused()
-}
-
-async function expectUrls(page: Page, roots: { root: string; url: string }[]): Promise<void> {
-  for (const { root, url } of roots) {
-    await expect(addressBar(page, root)).toHaveValue(url)
-  }
-}
-
-async function pressBackInFloatingGuest(page: Page): Promise<void> {
-  await expect
-    .poll(() =>
-      page.evaluate(async (panel) => {
-        const webview = document.querySelector<Electron.WebviewTag>(`${panel} webview`)
-        try {
-          return webview ? webview.getWebContentsId() > 0 : false
-        } catch {
-          return false
-        }
-      }, FLOATING_PANEL)
-    )
-    .toBe(true)
-  await page.evaluate(
-    async ({ panel, keyCode, inputModifier }) => {
-      const webview = document.querySelector<Electron.WebviewTag>(`${panel} webview`)
-      if (!webview) {
-        throw new Error('Floating browser guest unavailable')
-      }
-      webview.focus()
-      await webview.sendInputEvent({ type: 'keyDown', keyCode, modifiers: [inputModifier] })
-      await webview.sendInputEvent({ type: 'keyUp', keyCode, modifiers: [inputModifier] })
-    },
-    {
-      panel: FLOATING_PANEL,
-      keyCode: isMac ? '[' : 'Left',
-      inputModifier: isMac ? ('meta' as const) : ('alt' as const)
-    }
-  )
 }
 
 test.describe('floating browser shortcut scope', () => {
@@ -186,57 +92,62 @@ test.describe('floating browser shortcut scope', () => {
   })
 
   test('chrome shortcuts act only in the pane that owns the key press', async ({ orcaPage }) => {
-    const server = await startFixtureServer()
-    const url = (path: string): string => `${server.origin}${path}`
+    const server = await startBrowserSplitPageServer()
     try {
-      const fixture = await openSplitAndFloatingBrowsers(orcaPage, url('/split-1'), url('/float-1'))
-      const split = fixture.splitRoot
-      const floating = FLOATING_PANEL
-      await focusSplitGroup(orcaPage, fixture.splitGroupId)
-      await navigateFromAddressBar(orcaPage, split, url('/split-2'))
-      await navigateFromAddressBar(orcaPage, floating, url('/float-2'))
+      const split = await createTerminalBrowserSplit(orcaPage, server.pageUrl('split', 1))
+      const floating = await openFloatingBrowser(orcaPage, server.pageUrl('float', 1))
+      await focusBrowserGroup(orcaPage, split.browserGroupId)
+      await waitForGuestUrl(orcaPage, split.browserTabId, server.pageUrl('split', 1))
+      await waitForGuestUrl(orcaPage, floating.browserTabId, server.pageUrl('float', 1))
+      await navigateGuest(orcaPage, split.browserTabId, server.pageUrl('split', 2))
+      await navigateGuest(orcaPage, floating.browserTabId, server.pageUrl('float', 2))
 
       const cases = [
-        { owner: floating, other: split, ownerPath: '/float', otherPath: '/split' },
-        { owner: split, other: floating, ownerPath: '/split', otherPath: '/float' }
+        {
+          name: 'float',
+          owner: floating.browserTabId,
+          other: split.browserTabId,
+          otherName: 'split'
+        },
+        {
+          name: 'split',
+          owner: split.browserTabId,
+          other: floating.browserTabId,
+          otherName: 'float'
+        }
       ]
-      for (const { owner, other, ownerPath, otherPath } of cases) {
-        await test.step(`keys pressed in ${ownerPath} chrome`, async () => {
+      for (const { name, owner, other, otherName } of cases) {
+        await test.step(`keys pressed in the ${name} browser chrome`, async () => {
           await focusChrome(orcaPage, owner)
           await orcaPage.keyboard.press(backChord)
-          await expectUrls(orcaPage, [
-            { root: owner, url: url(`${ownerPath}-1`) },
-            { root: other, url: url(`${otherPath}-2`) }
-          ])
+          await waitForGuestUrl(orcaPage, owner, server.pageUrl(name, 1))
+          await waitForGuestIdle(orcaPage, other)
+          await waitForGuestUrl(orcaPage, other, server.pageUrl(otherName, 2))
           await focusChrome(orcaPage, owner)
           await orcaPage.keyboard.press(forwardChord)
-          await expectUrls(orcaPage, [
-            { root: owner, url: url(`${ownerPath}-2`) },
-            { root: other, url: url(`${otherPath}-2`) }
-          ])
+          await waitForGuestUrl(orcaPage, owner, server.pageUrl(name, 2))
+          await waitForGuestUrl(orcaPage, other, server.pageUrl(otherName, 2))
 
-          const ownerHits = server.hits.get(`${ownerPath}-2`) ?? 0
-          const otherHits = server.hits.get(`${otherPath}-2`) ?? 0
+          await recordGuestLoadStarts(orcaPage, [owner, other])
           await focusChrome(orcaPage, owner)
-          await orcaPage.keyboard.press(`${modifier}+r`)
-          await expect.poll(() => server.hits.get(`${ownerPath}-2`) ?? 0).toBeGreaterThan(ownerHits)
-          // Why: both panes would reload on the same keydown, so the owner's request bounds the wait.
-          await orcaPage.waitForTimeout(500)
-          expect(server.hits.get(`${otherPath}-2`) ?? 0).toBe(otherHits)
+          await orcaPage.keyboard.press(`${shortcutModifier}+r`)
+          await expect.poll(() => guestLoadStarts(orcaPage, owner)).toBeGreaterThan(0)
+          await waitForGuestIdle(orcaPage, owner)
+          expect(await guestLoadStarts(orcaPage, other)).toBe(0)
 
           await focusChrome(orcaPage, owner)
-          await orcaPage.keyboard.press(`${modifier}+f`)
+          await orcaPage.keyboard.press(`${shortcutModifier}+f`)
           await expect(findInput(orcaPage, owner)).toBeFocused()
           await expect(findInput(orcaPage, other)).toBeHidden()
           await orcaPage.keyboard.press('Escape')
           await expect(findInput(orcaPage, owner)).toBeHidden()
 
           await focusChrome(orcaPage, owner)
-          await orcaPage.keyboard.press(`${modifier}+l`)
-          await expect(addressBar(orcaPage, owner)).toBeFocused()
+          await orcaPage.keyboard.press(`${shortcutModifier}+l`)
+          await expect(browserAddressBar(orcaPage, owner)).toBeFocused()
 
           await focusChrome(orcaPage, owner)
-          await orcaPage.keyboard.press(`${modifier}+c`)
+          await orcaPage.keyboard.press(`${shortcutModifier}+c`)
           await expect(grabButton(orcaPage, owner)).toHaveAttribute('data-variant', 'default')
           await expect(grabButton(orcaPage, other)).toHaveAttribute('data-variant', 'ghost')
           await grabButton(orcaPage, owner).click()
@@ -245,11 +156,15 @@ test.describe('floating browser shortcut scope', () => {
       }
 
       await test.step('back pressed inside the floating page', async () => {
-        await pressBackInFloatingGuest(orcaPage)
-        await expectUrls(orcaPage, [
-          { root: floating, url: url('/float-1') },
-          { root: split, url: url('/split-2') }
-        ])
+        await pressKeyInBrowserGuest(
+          orcaPage,
+          floating.browserTabId,
+          floating.browserPageId,
+          isMac ? '[' : 'Left',
+          [isMac ? 'meta' : 'alt']
+        )
+        await waitForGuestUrl(orcaPage, floating.browserTabId, server.pageUrl('float', 1))
+        await waitForGuestUrl(orcaPage, split.browserTabId, server.pageUrl('split', 2))
       })
     } finally {
       await server.close()
