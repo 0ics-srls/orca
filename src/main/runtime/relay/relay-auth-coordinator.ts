@@ -61,6 +61,8 @@ export class RelayAuthCoordinator {
   // an open already in flight. It spans the first few rungs of the backoff
   // ladder and stays inside the phone's 30s request budget, so a sustained
   // outage fails the caller with its cause instead of parking the demand ref.
+  // Only callers that cannot proceed without a relay take this default; a
+  // pollable probe passes 0 and settles for whatever is already in flight.
   private static readonly LIVE_BROKER_WAIT_BUDGET_MS = 20_000
   private readonly options: RelayAuthCoordinatorOptions
   private authEpoch = 0

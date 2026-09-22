@@ -287,8 +287,12 @@ export class DesktopRelayService {
     }
   }
 
+  // Why budget 0: getEndpoints is the LAN-connected phone's periodic "is relay
+  // available?" probe, and a null answer costs it nothing. It awaits an open
+  // already in flight but never sits through an armed retry, so a relay outage
+  // cannot stall the poll that a local connection is already serving.
   private async activeBrokerForDemand(): Promise<RelaySessionBroker | null> {
-    const broker = this.coordinator.getLiveBroker() ?? (await this.coordinator.waitForLiveBroker())
+    const broker = this.coordinator.getLiveBroker() ?? (await this.coordinator.waitForLiveBroker(0))
     return broker instanceof RelaySessionBroker ? broker : null
   }
 
