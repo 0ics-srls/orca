@@ -5,6 +5,8 @@ import { PUSH_LIMITS, type PushNotification } from '@orca-cloud/push-contract'
 import type { PushDatabase, SqlRow } from './push-database.js'
 
 const RETENTION_MS = 24 * 60 * 60_000
+// accept() caps expires_at at due_at + TTL, so older due_at is expired: scans skip an unpruned backlog.
+const TTL_MS = PUSH_LIMITS.notificationTtlSeconds * 1000
 // Covers one claimer per worker drain skipping a device another drain holds.
 const CLAIM_CANDIDATE_ATTEMPTS = 4
 export const PRUNE_BATCH_ROWS = 2_000
@@ -104,10 +106,10 @@ export class DurablePushStore {
       for (let attempt = 0; attempt < CLAIM_CANDIDATE_ATTEMPTS; attempt++) {
         const excluded = skipped.map(() => ' AND registration_id <> ?').join('')
         const [row] = await tx.query(
-          `SELECT * FROM push_delivery_batches WHERE state = 'pending' AND lease_until <= ? AND expires_at > ? AND due_at <= ?${excluded}
+          `SELECT * FROM push_delivery_batches WHERE state = 'pending' AND lease_until <= ? AND expires_at > ? AND due_at <= ? AND due_at > ?${excluded}
           AND NOT EXISTS (SELECT 1 FROM push_delivery_batches busy WHERE busy.registration_id = push_delivery_batches.registration_id AND busy.state = 'pending' AND busy.lease_until > 0 AND busy.lease_until > ?)
           ORDER BY due_at, created_at, batch_id LIMIT 1${lockRow}`,
-          [now, now, now, ...skipped, now]
+          [now, now, now, now - TTL_MS, ...skipped, now]
         )
         if (!row) return null
         if (await this.ownsDeviceHead(tx, row, now)) return await this.lease(tx, row, now)
@@ -123,9 +125,9 @@ export class DurablePushStore {
     const registrationId = String(row.registration_id)
     if (!(await tx.tryLockScope(`push-device:${registrationId}`))) return false
     const [device] = await tx.query(
-      `SELECT (SELECT batch_id FROM push_delivery_batches WHERE registration_id = ? AND state = 'pending' AND expires_at > ? ORDER BY due_at, created_at, batch_id LIMIT 1) AS head,
+      `SELECT (SELECT batch_id FROM push_delivery_batches WHERE registration_id = ? AND state = 'pending' AND expires_at > ? AND due_at > ? ORDER BY due_at, created_at, batch_id LIMIT 1) AS head,
       EXISTS (SELECT 1 FROM push_delivery_batches WHERE registration_id = ? AND state = 'pending' AND lease_until > 0 AND lease_until > ?) AS busy`,
-      [registrationId, now, registrationId, now]
+      [registrationId, now, now - TTL_MS, registrationId, now]
     )
     return device?.head === row.batch_id && !Number(device?.busy)
   }

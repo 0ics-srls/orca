@@ -16,9 +16,10 @@ import {
 afterEach(cleanupDurablePushFixtures)
 
 const CANDIDATE_SQL = "SELECT * FROM push_delivery_batches WHERE state = 'pending'"
+const DEVICE_HEAD_SQL = 'SELECT (SELECT batch_id'
 
-// Parks the first claim transaction right after its candidate row lock is taken.
-function pauseAfterCandidate(database: PushDatabase) {
+// Parks the first claim transaction right after the matching statement, locks still held.
+function pauseAfter(database: PushDatabase, prefix = CANDIDATE_SQL) {
   let reached!: () => void
   const atCandidate = new Promise<void>((resolve) => (reached = resolve))
   let release!: () => void
@@ -41,7 +42,7 @@ function pauseAfterCandidate(database: PushDatabase) {
           tryLockScope: (key) => tx.tryLockScope(key),
           query: async (sql, params) => {
             const rows = await tx.query(sql, params)
-            if (!paused && sql.startsWith(CANDIDATE_SQL)) {
+            if (!paused && sql.startsWith(prefix)) {
               paused = true
               reached()
               await released
@@ -54,11 +55,16 @@ function pauseAfterCandidate(database: PushDatabase) {
   return { wrapped, atCandidate, release }
 }
 
-function within<T>(operation: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    operation,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('claim_blocked')), ms))
-  ])
+async function within<T>(operation: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => (timer = setTimeout(() => reject(new Error('claim_blocked')), ms)))
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 async function batchCount(db: PushDatabase): Promise<number> {
@@ -87,7 +93,7 @@ it.skipIf(!durablePushTestDatabaseUrl)(
     await store.accept('host', 'phone', notification(1))
     advance(1)
     await store.accept('host', 'phone', notification(2))
-    const paused = pauseAfterCandidate(db)
+    const paused = pauseAfter(db)
     const first = new DurablePushStore(paused.wrapped, clock).claim()
     await paused.atCandidate
     try {
@@ -107,7 +113,7 @@ it.skipIf(!durablePushTestDatabaseUrl)(
     await store.accept('host', 'phone-a', notification(1))
     advance(1)
     await store.accept('host', 'phone-b', notification(2))
-    const paused = pauseAfterCandidate(db)
+    const paused = pauseAfter(db)
     const first = new DurablePushStore(paused.wrapped, clock).claim()
     await paused.atCandidate
     try {
@@ -116,6 +122,29 @@ it.skipIf(!durablePushTestDatabaseUrl)(
       paused.release()
     }
     expect((await first)?.registrationId).toBe('phone-a')
+  }
+)
+
+it.skipIf(!durablePushTestDatabaseUrl)(
+  'keeps a device exclusive when an earlier-sorting row lands mid-claim',
+  async () => {
+    const { db, store, clock } = await fixture()
+    await store.accept('host', 'phone', notification(1))
+    const paused = pauseAfter(db, DEVICE_HEAD_SQL)
+    const first = new DurablePushStore(paused.wrapped, clock).claim()
+    await paused.atCandidate
+    try {
+      // Another instance with a slower clock queues a row that now sorts first.
+      await db.query(
+        `INSERT INTO push_delivery_batches(batch_id, host_fingerprint, registration_id, kind, payload_json, state, due_at, expires_at, lease_until, attempts, created_at)
+        VALUES ('skewed', 'host', 'phone', 'alert', ?, 'pending', ?, ?, 0, 0, ?)`,
+        [JSON.stringify(notification(2)), clock() - 10, clock() + 60_000, clock() - 10]
+      )
+      expect(await within(store.claim(), 2_000)).toBeNull()
+    } finally {
+      paused.release()
+    }
+    expect((await first)?.notification.notificationSeq).toBe(1)
   }
 )
 
