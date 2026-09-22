@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DetectedWorktree, Worktree } from '../../../../shared/worktree/types'
-import { mergeFetchedWorktrees } from './worktrees/listing/fetched-worktree-merge'
-import { TEST_REPO, createTestStore, makeTab, makeWorktree, seedStore } from './store-test-helpers'
-import { createStoreCascadesMockApi } from './store-cascades-test-harness'
+import type { DetectedWorktree, Worktree } from '../../../../../../shared/worktree/types'
+import { mergeFetchedWorktrees } from './fetched-worktree-merge'
+import {
+  TEST_REPO,
+  createTestStore,
+  makeTab,
+  makeWorktree,
+  seedStore
+} from '../../store-test-helpers'
+import { createStoreCascadesMockApi } from '../../store-cascades-test-harness'
 import {
   resetStructuredAgentLaunchPersistenceForTests,
   writeStructuredAgentLaunchRecord
@@ -15,7 +21,7 @@ import {
   currentWorktreeCreateSequence,
   recordLocallyCreatedWorktree,
   resetWorktreeCreateSequenceForTests
-} from './worktrees/create/created-worktree-sequence'
+} from '../create/created-worktree-sequence'
 
 vi.mock('sonner', () => ({
   toast: { warning: vi.fn(), info: vi.fn(), success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }

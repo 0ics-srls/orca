@@ -13,6 +13,10 @@ import {
 } from './worktrees-detected-listing-fixtures'
 import { makeWorktree } from './worktrees-slice-test-fixtures'
 import {
+  recordLocallyCreatedWorktree,
+  resetWorktreeCreateSequenceForTests
+} from './worktrees/create/created-worktree-sequence'
+import {
   createTestStore,
   mockApi,
   resetRemoteRuntimeMocks,
@@ -657,5 +661,64 @@ describe('fetchWorktrees', () => {
     expect(mockApi.worktrees.listDetected).not.toHaveBeenCalled()
     expect(store.getState().worktreesByRepo).toBe(worktreesByRepo)
     expect(store.getState().detectedWorktreesByRepo).toBe(detectedWorktreesByRepo)
+  })
+
+  // Why this case exists: SSH hosts have no scan cache to mark an overtaken scan, so the client's
+  // create fence is the only thing between a slow reconnect listing and "your new workspace was
+  // deleted". The direct-SSH scheduler builds its own refresh, and must carry that fence too.
+  it('a direct provider listing that began before a create cannot retire the created worktree', async () => {
+    resetWorktreeCreateSequenceForTests()
+    const store = createTestStore()
+    const existing = makeWorktree({
+      id: 'repo-ssh::/home/orca/existing',
+      repoId: 'repo-ssh',
+      path: '/home/orca/existing',
+      hostId: 'ssh:ssh-1'
+    })
+    const created = makeWorktree({
+      id: 'repo-ssh::/home/orca/created',
+      repoId: 'repo-ssh',
+      path: '/home/orca/created',
+      hostId: 'ssh:ssh-1'
+    })
+    store.setState({
+      repos: [
+        {
+          id: 'repo-ssh',
+          path: '/home/orca/repo',
+          displayName: 'SSH Repo',
+          badgeColor: '#000',
+          addedAt: 0,
+          connectionId: 'ssh-1'
+        }
+      ],
+      worktreesByRepo: { 'repo-ssh': [existing] },
+      detectedWorktreesByRepo: { 'repo-ssh': makeDetectedResult('repo-ssh', [existing]) }
+    })
+    let request!: ListDetectedWorktreesArgs
+    let resolveProvider!: (result: HostQualifiedDetectedWorktreeResult) => void
+    mockApi.worktrees.listDetected.mockImplementationOnce(
+      (args: ListDetectedWorktreesArgs) =>
+        new Promise<HostQualifiedDetectedWorktreeResult>((resolve) => {
+          request = args
+          resolveProvider = resolve
+        })
+    )
+    const lease = acquireDirectSshDetectedWorktreeRefresh(store, {
+      repoId: 'repo-ssh',
+      executionHostId: 'ssh:ssh-1',
+      authority: TEST_SSH_AUTHORITY
+    })
+
+    // The create completes on this client while the listing is still running on the host.
+    recordLocallyCreatedWorktree(created.id)
+    store.setState({ worktreesByRepo: { 'repo-ssh': [existing, created] } })
+    resolveProvider(qualifyDetectedResult(request, makeDetectedResult('repo-ssh', [existing])))
+
+    expect(lease.merge(await lease.result)).toMatchObject({ status: 'complete' })
+    expect(store.getState().worktreesByRepo['repo-ssh']?.map((worktree) => worktree.id)).toEqual([
+      existing.id,
+      created.id
+    ])
   })
 })

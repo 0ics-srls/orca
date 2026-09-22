@@ -13,6 +13,9 @@ export function currentWorktreeCreateSequence(): number {
 
 export function recordLocallyCreatedWorktree(worktreeId: string): void {
   createSequence += 1
+  // Why delete first: a re-created id keeps its old iteration slot on `set`, and the eviction loop
+  // below stops at the first retained entry, so it would shield every record behind it.
+  createSequenceByWorktreeId.delete(worktreeId)
   createSequenceByWorktreeId.set(worktreeId, createSequence)
   for (const [id, sequence] of createSequenceByWorktreeId) {
     if (createSequence - sequence <= RETAINED_CREATE_RECORDS) {

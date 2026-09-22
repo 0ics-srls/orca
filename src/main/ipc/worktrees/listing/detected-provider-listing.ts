@@ -33,6 +33,10 @@ import {
 import { readAllWorktreeMetaForRepo } from '../../../persistence/host-qualified-worktree-meta'
 import { classifyWorktreeScanFailure } from '../../../../shared/worktree-scan-failure'
 
+// Why two: one covers the create/delete overlap the scan is re-run for; a second mutation landing
+// inside that re-run is the churn case, and a third pass would only chase it.
+const SUPERSEDED_SCAN_RESCANS = 2
+
 export async function listDetectedWorktreesForCapturedRepo(
   store: Store,
   repo: Repo,
@@ -54,6 +58,7 @@ export async function listDetectedWorktreesForCapturedRepo(
   try {
     let gitWorktrees: GitWorktreeInfo[]
     let freshScan = true
+    let authoritative = true
     let sideEffectToken: DetectedWorktreeSideEffectToken | undefined
     let metadataPrune: DetectedWorktreeMetadataPrune | undefined
     let hygieneDue: boolean | undefined
@@ -103,21 +108,26 @@ export async function listDetectedWorktreesForCapturedRepo(
         signal: providerAbort?.signal
       })
     } else {
-      const scan = await listDetectedGitWorktrees(store, repo)
-      if (scan.superseded) {
-        // Why: a worktree mutation overtook this scan, so its rows describe a catalog that no longer
-        // exists. Published as authoritative, a worktree created during the scan reads as deleted and
-        // the renderer retires it. The rows are still worth showing; the absence claim is not.
-        return {
-          repoId: repo.id,
-          authoritative: false,
-          source: 'git',
-          worktrees: buildDetectedGitWorktrees(store, repo, scan.gitWorktrees, allMeta),
-          unavailableReason: 'Worktree scan was overtaken by a concurrent worktree change'
+      let scan = await listDetectedGitWorktrees(store, repo)
+      // Why re-scan rather than publish: a worktree mutation overtook this scan, so its rows describe
+      // a catalog that no longer exists -- published as authoritative, a worktree created during the
+      // scan reads as deleted and the client retires it. The mutation already dropped the cache, so
+      // asking again scans afresh (or joins the scan a sibling has started); the bound keeps
+      // continuous churn from spinning here. Past the bound the rows still ship, only not as proof
+      // of absence -- and not as a failure, which is what `unavailableReason` would present as.
+      for (
+        let rescan = 0;
+        scan.superseded && rescan < SUPERSEDED_SCAN_RESCANS && !providerAbort?.signal.aborted;
+        rescan += 1
+      ) {
+        if (!isCurrent()) {
+          return null
         }
+        scan = await listDetectedGitWorktrees(store, repo)
       }
       gitWorktrees = scan.gitWorktrees
       freshScan = scan.fresh
+      authoritative = !scan.superseded
       sideEffectToken = scan.sideEffectToken
       metadataPrune = scan.metadataPrune
       hygieneDue = scan.hygieneDue
@@ -156,7 +166,7 @@ export async function listDetectedWorktreesForCapturedRepo(
     loggedWorktreeListFailures.delete(`${repo.id}:${repo.path}`)
     return {
       repoId: repo.id,
-      authoritative: true,
+      authoritative,
       source: 'git',
       worktrees: buildDetectedGitWorktrees(store, repo, gitWorktrees, allMeta)
     }
