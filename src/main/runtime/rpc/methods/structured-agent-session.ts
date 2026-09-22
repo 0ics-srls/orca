@@ -263,6 +263,7 @@ export const STRUCTURED_AGENT_SESSION_METHODS = [
     name: 'agentSession.history',
     params: HistoryParams,
     handler: async (params, ctx) => {
+      await ensureHostInstalled(ctx)
       const host = requireHost(ctx)
       await host.ensureReadable(params.sessionId)
       return projectTurnItemHistory(projectBackgroundTaskHistory(host.history(params), ctx), ctx)
@@ -272,6 +273,7 @@ export const STRUCTURED_AGENT_SESSION_METHODS = [
     name: 'agentSession.subscribe',
     params: SubscribeParams,
     handler: async (params, ctx, emit) => {
+      await ensureHostInstalled(ctx)
       const host = requireHost(ctx)
       // Before the stream binds, so nothing is bound across the await. Opens the journal only;
       // a chat the user still shows reads without waiting for the startup sweep.

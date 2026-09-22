@@ -120,6 +120,7 @@ export class StructuredAgentSessionHost {
     })
     this.holds = createStructuredAgentSessionHolds(this.lifetimeContext(), {
       reconcileLeases: this.reconcileLeases,
+      makeReadable: (sessionId) => this.restore.ensureReadable(sessionId),
       attach: (params) => this.attach({ callerKey: 'trusted-local:surface-hold' }, params),
       close: (sessionId) => this.close(sessionId)
     })
