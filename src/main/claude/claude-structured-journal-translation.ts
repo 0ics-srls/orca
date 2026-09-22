@@ -100,7 +100,17 @@ export function createClaudeJournalTranslator(
   })
   const corrections = new ClaudeProvisionalRowCorrections({
     ...subagents.linkage,
-    rewrite: (identity, body, options) => deps.sink.appendItem(identity, body, options),
+    rewrite: (identity, body, options) => {
+      // The admission-returning path, so a correction the sink refuses under
+      // backpressure stays owed instead of vanishing. Sinks without it accept
+      // unconditionally, which is what the plain append already assumed.
+      const admission = deps.sink.tryAppendItem?.(identity, body, options)
+      if (admission === undefined) {
+        deps.sink.appendItem(identity, body, options)
+        return true
+      }
+      return admission.accepted
+    },
     publish: () => deps.sink.publish()
   })
   const backgroundTasks = new ClaudeBackgroundTaskRows({

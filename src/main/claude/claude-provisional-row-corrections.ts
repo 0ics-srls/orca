@@ -61,12 +61,14 @@ type OutstandingCorrection = {
 }
 
 export type ClaudeProvisionalRowCorrectionsDeps = ClaudeSubagentLinkageSource & {
-  /** Re-appends a row under its own identity, which revises it in place. */
+  /** Re-appends a row under its own identity, which revises it in place.
+   *  Returns whether the write was ADMITTED: a sink under backpressure refuses,
+   *  and a correction dropped on a refusal is an obligation nothing re-derives. */
   rewrite: (
     identity: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
     options: StructuredAgentSessionAppendOptions
-  ) => void
+  ) => boolean
   publish: () => void
 }
 
@@ -114,8 +116,13 @@ export class ClaudeProvisionalRowCorrections {
       if (this.deps.linkageFor(correction.ref).kind === 'pending') {
         continue
       }
-      this.outstanding.delete(itemId)
-      wrote = this.settle(correction) || wrote
+      const outcome = this.settle(correction)
+      // Kept outstanding when the sink refused it, so `abandon` gets another
+      // go. Dropping it here would strand the row on a stamp nothing revisits.
+      if (outcome !== 'refused') {
+        this.outstanding.delete(itemId)
+      }
+      wrote = outcome === 'wrote' || wrote
     }
     if (wrote) {
       this.deps.publish()
@@ -128,7 +135,9 @@ export class ClaudeProvisionalRowCorrections {
   abandon(): void {
     let wrote = false
     for (const correction of this.outstanding.values()) {
-      wrote = this.settle(correction) || wrote
+      // Last attempt. A refusal here ends it: the row keeps a usable id, and an
+      // obligation with no exit is worse than one that settles for less.
+      wrote = this.settle(correction) === 'wrote' || wrote
     }
     this.outstanding.clear()
     this.givenUp.clear()
@@ -158,13 +167,12 @@ export class ClaudeProvisionalRowCorrections {
 
   /** Writes the correction only when it actually changes the row's attribution.
    *  A duplicate must not burn a revision. */
-  private settle(correction: OutstandingCorrection): boolean {
+  private settle(correction: OutstandingCorrection): 'wrote' | 'unchanged' | 'refused' {
     const options = this.stamp(correction.ref)
     if (sameLinkage(options, correction.stamped)) {
-      return false
+      return 'unchanged'
     }
-    this.deps.rewrite(correction.identity, correction.body, options)
-    return true
+    return this.deps.rewrite(correction.identity, correction.body, options) ? 'wrote' : 'refused'
   }
 
   private remember(

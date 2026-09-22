@@ -29,6 +29,8 @@ function ledger(initial: Record<string, ClaudeSubagentLinkageVerdict> = {}) {
     options: StructuredAgentSessionAppendOptions
   }[] = []
   let published = 0
+  /** Stands in for a sink refusing the write under backpressure. */
+  let refuse = false
   const settledFor = (ref: string): ClaudeSubagentLinkageVerdict => {
     const verdict = verdicts.get(ref)
     return verdict && verdict.kind !== 'pending'
@@ -42,7 +44,13 @@ function ledger(initial: Record<string, ClaudeSubagentLinkageVerdict> = {}) {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: `settledFor` returns only the linked arm, never `pending`.
       return verdict as Exclude<ClaudeSubagentLinkageVerdict, { kind: 'pending' }>
     },
-    rewrite: (identity, body, options) => rewrites.push({ identity, body, options }),
+    rewrite: (identity, body, options) => {
+      if (refuse) {
+        return false
+      }
+      rewrites.push({ identity, body, options })
+      return true
+    },
     publish: () => {
       published += 1
     }
@@ -55,7 +63,10 @@ function ledger(initial: Record<string, ClaudeSubagentLinkageVerdict> = {}) {
         kind: 'linked',
         linkage: { agentId, providerParentRef: ref, producerKind: 'agent' }
       }),
-    publishes: () => published
+    publishes: () => published,
+    setRefusing: (value: boolean) => {
+      refuse = value
+    }
   }
 }
 
@@ -115,6 +126,39 @@ describe('ClaudeProvisionalRowCorrections', () => {
     announce('toolu_1', 'task-1')
     corrections.retry()
     expect(rewrites).toEqual([])
+  })
+
+  it('keeps a correction owed when the sink refuses it, and retries at abandon', () => {
+    // Backpressure refuses the write. Deleting the entry anyway would leave a
+    // durable obligation with nothing re-deriving it — the row would keep the
+    // provisional id and no later pass would ever revisit it.
+    const { corrections, rewrites, announce, setRefusing } = ledger()
+    corrections.stampFor('toolu_1')(identityOf('toolu_2'), RUNNING)
+    announce('toolu_1', 'task-1')
+
+    setRefusing(true)
+    corrections.retry()
+    expect(rewrites).toEqual([])
+    expect(corrections.pending).toBe(1)
+
+    setRefusing(false)
+    corrections.retry()
+    expect(rewrites).toHaveLength(1)
+    expect(corrections.pending).toBe(0)
+  })
+
+  it('lets a refusal at abandon end the obligation rather than leaking it', () => {
+    // The last attempt. A correction that cannot be written has to die here:
+    // an obligation with no exit is worse than a row keeping a usable id.
+    const { corrections, rewrites, announce, setRefusing } = ledger()
+    corrections.stampFor('toolu_1')(identityOf('toolu_2'), RUNNING)
+    announce('toolu_1', 'task-1')
+
+    setRefusing(true)
+    corrections.abandon()
+
+    expect(rewrites).toEqual([])
+    expect(corrections.pending).toBe(0)
   })
 
   it('carries the NEWEST body when a row is written provisionally twice', () => {

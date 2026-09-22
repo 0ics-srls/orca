@@ -6,6 +6,15 @@
 // These scans answer for the SESSION'S OWN agent. A subagent's rows share this
 // journal and are usually the newer ones while a child runs, so each scan skips
 // anything a subagent produced; the transcript still renders every agent.
+//
+// Each scan reads the turn record BEFORE it checks the producer, which is only
+// safe because a turn row can never carry linkage: a turn is the SESSION'S unit
+// of work, and no producer of a turn-bearing body stamps one. Both lanes were
+// checked — Claude's turn rows are built with no linkage at all, Codex has no
+// linkage concept, the compact row passes only a fence, and the stale-turn
+// sweep goes through the lifecycle-batch path, which cannot carry linkage by
+// type. So a child-linked row can never be what terminates one of these scans.
+// Re-check that before giving any of those sites a producer.
 
 import type {
   AgentJournalRenderItem,
