@@ -1,23 +1,10 @@
-import { killWithDescendantSweep, type DescendantSnapshot } from '../pty-descendant-termination'
-import { sweepTerminalSessionDescendants } from './terminal-session-descendant-sweep'
-import { markPtySessionRootExited, rememberPtySessionPgids } from '../pty-session-identity'
+import { killWithDescendantSweep } from '../pty-descendant-termination'
+import {
+  sweepSessionFromSnapshot,
+  sweepTerminalSessionDescendants
+} from './terminal-session-descendant-sweep'
+import { markPtySessionRootExited } from '../pty-session-identity'
 import type { Session } from './session'
-
-/**
- * Hands a pre-kill walk's process groups to the session identity, then sweeps
- * from that identity. The walk is the one moment a live root can teach Orca the
- * job groups its shell created; nothing rediscovers them afterwards.
- */
-function sweepSessionFromSnapshot(
-  session: Session,
-  snapshot: DescendantSnapshot
-): Promise<unknown> {
-  rememberPtySessionPgids(
-    session.processIdentity,
-    snapshot.descendants.map((row) => row.pgid)
-  )
-  return sweepTerminalSessionDescendants(session.processIdentity)
-}
 
 type TeardownOperation = {
   promise: Promise<void>
@@ -168,7 +155,8 @@ export class TerminalSessionTeardown {
     await killWithDescendantSweep(session.pid, () => {}, {
       ownsRoot: () => this.sessions.get(sessionId) === session && session.isAlive,
       terminateOwnedTree: () => session.terminateOwnedTree(),
-      terminateDescendants: (snapshot) => sweepSessionFromSnapshot(session, snapshot),
+      terminateDescendants: (snapshot) =>
+        sweepSessionFromSnapshot(session.processIdentity, snapshot),
       awaitEscalation: true
     })
     await session.forceKillAndWaitForExit()
@@ -222,7 +210,10 @@ export class TerminalSessionTeardown {
             ownsRoot: () => this.sessions.get(sessionId) === session && session.isAlive,
             terminateOwnedTree: () => session.terminateOwnedTree(),
             terminateDescendants: (snapshot) => {
-              entry.descendantVerification = sweepSessionFromSnapshot(session, snapshot)
+              entry.descendantVerification = sweepSessionFromSnapshot(
+                session.processIdentity,
+                snapshot
+              )
               return entry.descendantVerification
             },
             awaitEscalation: () => entry.immediate

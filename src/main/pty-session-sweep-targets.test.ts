@@ -3,13 +3,15 @@ import { collectSessionSweepTargets } from './pty-session-sweep-targets'
 import {
   createPtySessionProcessIdentity,
   markPtySessionRootExited,
-  rememberPtySessionPgids
+  recordPtySessionGroups
 } from './pty-session-identity'
 import type { ProcessTableRow } from './pty-process-table-parser'
 
 const BEFORE = 'Mon Jul 13 12:54:47 2026'
 const AFTER = 'Mon Jul 13 12:55:30 2026'
 const EXIT_AT_MS = Date.parse('Mon Jul 13 12:55:00 2026')
+/** When the recorded groups were last seen owned by the live session. */
+const OWNED_AT_MS = Date.parse('Mon Jul 13 12:54:55 2026')
 
 const ROOT = 500
 const SELF = 900
@@ -27,7 +29,7 @@ function identityFor(opts: { tty?: string; exited?: boolean; pgids?: number[] } 
     ...(opts.tty === undefined ? {} : { slavePath: `/dev/${opts.tty}` })
   })
   identity.rootStartedAt = BEFORE
-  rememberPtySessionPgids(identity, opts.pgids ?? [])
+  recordPtySessionGroups(identity, opts.pgids ?? [], OWNED_AT_MS)
   if (opts.exited) {
     markPtySessionRootExited(identity, EXIT_AT_MS)
   }
@@ -48,8 +50,7 @@ describe('collectSessionSweepTargets', () => {
 
     expect(targets.rootAlive).toBe(true)
     expect(pidsOf(targets.rows)).toEqual([501, 502])
-    // The root's own group belongs to whoever signals the root.
-    expect(targets.pgids).toEqual([501])
+    expect(targets.ownedPgids.sort((left, right) => left - right)).toEqual([ROOT, 501])
   })
 
   it('refuses the ppid tree once the root has exited, because that pid is now a stranger', () => {
@@ -72,7 +73,53 @@ describe('collectSessionSweepTargets', () => {
     })
 
     expect(pidsOf(targets.rows)).toEqual([4767, 4794])
-    expect(targets.pgids).toEqual([777])
+    expect(targets.ownedPgids).toEqual([777])
+  })
+
+  it('refuses a recorded group whose id a stranger took after the session owned it', () => {
+    const targets = collectSessionSweepTargets({
+      // Group 777 emptied; a process born later now leads a new group of that id,
+      // and has children of its own in yet another group.
+      identity: identityFor({ exited: true, pgids: [777] }),
+      rows: [
+        ...SELF_ROWS,
+        row(777, 1, 777, AFTER),
+        row(7778, 777, 777, AFTER),
+        row(9001, 777, 9000, AFTER),
+        row(9000, 1, 9000, AFTER)
+      ],
+      selfPid: SELF
+    })
+
+    expect(targets.rows).toEqual([])
+    expect(targets.ownedPgids).toEqual([])
+  })
+
+  it('without a leader, claims only members born while the group was still owned', () => {
+    const targets = collectSessionSweepTargets({
+      identity: identityFor({ exited: true, pgids: [777] }),
+      rows: [...SELF_ROWS, row(4767, 1, 777), row(8000, 1, 777, AFTER)],
+      selfPid: SELF
+    })
+
+    expect(pidsOf(targets.rows)).toEqual([4767])
+  })
+
+  it("treats the root's group as the session's until the root exits, and a new leader of it as a stranger", () => {
+    const orphan = collectSessionSweepTargets({
+      identity: identityFor({ exited: true, pgids: [ROOT] }),
+      // Born after the group was last observed, but before the root gave up the id.
+      rows: [...SELF_ROWS, row(4767, 1, ROOT, 'Mon Jul 13 12:54:58 2026')],
+      selfPid: SELF
+    })
+    const reused = collectSessionSweepTargets({
+      identity: identityFor({ exited: true, pgids: [ROOT] }),
+      rows: [...SELF_ROWS, row(ROOT, 1, ROOT, AFTER), row(4767, 1, ROOT)],
+      selfPid: SELF
+    })
+
+    expect(pidsOf(orphan.rows)).toEqual([4767])
+    expect(reused.rows).toEqual([])
   })
 
   it('claims processes left on the session terminal after a natural exit', () => {
@@ -84,7 +131,7 @@ describe('collectSessionSweepTargets', () => {
     })
 
     expect(pidsOf(targets.rows)).toEqual([4767, 4794])
-    expect(targets.pgids).toEqual([777])
+    expect(targets.ownedPgids).toEqual([777])
   })
 
   it('ignores a terminal row born after the root died, which a new session may own', () => {
@@ -107,7 +154,7 @@ describe('collectSessionSweepTargets', () => {
     })
 
     expect(pidsOf(targets.rows)).toEqual([4767, 7001])
-    expect(targets.pgids.sort((left, right) => left - right)).toEqual([777, 7001])
+    expect(targets.ownedPgids.sort((left, right) => left - right)).toEqual([777, 7001])
   })
 
   it('never targets Orca, an ancestor of Orca, or a group one of them sits in', () => {
@@ -120,7 +167,7 @@ describe('collectSessionSweepTargets', () => {
     })
 
     expect(targets.rows).toEqual([])
-    expect(targets.pgids).toEqual([])
+    expect(targets.ownedPgids).toEqual([])
   })
 
   it('drops the terminal claim entirely when Orca shares that terminal', () => {

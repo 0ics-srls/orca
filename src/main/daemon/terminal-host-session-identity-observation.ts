@@ -11,12 +11,12 @@ import type { Session } from './session'
  * the existing captures buys that observation for no extra `ps`.
  */
 export function observeLiveSessionProcessIdentities(
-  sessions: ReadonlyMap<string, Session>
+  sessions: ReadonlyMap<string, Pick<Session, 'isAlive' | 'processIdentity'>>
 ): () => void {
-  return onProcessTableCapture((rows) => {
+  return onProcessTableCapture((rows, capturedAtMs) => {
     for (const session of sessions.values()) {
       if (session.isAlive) {
-        observeSessionDescendantGroups(session.processIdentity, rows)
+        observeSessionDescendantGroups(session.processIdentity, rows, capturedAtMs)
       }
     }
   })

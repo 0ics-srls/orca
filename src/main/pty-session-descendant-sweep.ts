@@ -2,6 +2,7 @@ import {
   DESCENDANT_KILL_GRACE_MS,
   DESCENDANT_SNAPSHOT_TIMEOUT_MS,
   hasUnambiguousStartIdentity,
+  hasUnambiguousStartTime,
   readProcessTable,
   readProcessTableBeforeDeadline,
   sendDescendantSignal,
@@ -15,7 +16,8 @@ import {
 } from './pty-descendant-exit-verification'
 import {
   observePtySessionIdentity,
-  rememberPtySessionPgids,
+  prunePtySessionGroups,
+  recordPtySessionGroups,
   type PtySessionProcessIdentity
 } from './pty-session-identity'
 import { collectSessionSweepTargets } from './pty-session-sweep-targets'
@@ -23,13 +25,14 @@ import { readTtyProcessTable, type TtyProcessTableReader } from './pty-session-t
 
 const SWEEP_ROUND_INTERVAL_MS = 150
 
-export type GroupSignalSender = (pgid: number, signal: NodeJS.Signals) => void
+/** Whether any process is still in `pgid`, without reading a process table. */
+export type ProcessGroupProbe = (pgid: number) => boolean
 
 export type SessionDescendantSweepDeps = {
   readTable?: ProcessTableReader
   readTtyTable?: TtyProcessTableReader
   sendSignal?: SignalSender
-  sendGroupSignal?: GroupSignalSender
+  probeGroup?: ProcessGroupProbe
   graceMs?: number
   verifyMs?: number
   timeoutMs?: number
@@ -39,12 +42,36 @@ export type SessionDescendantSweepDeps = {
   selfPid?: number
 }
 
-export function sendProcessGroupSignal(pgid: number, signal: NodeJS.Signals): void {
+export function probeProcessGroup(pgid: number): boolean {
   try {
-    process.kill(-pgid, signal)
-  } catch {
-    /* already gone */
+    process.kill(-pgid, 0)
+    return true
+  } catch (error) {
+    // EPERM still means a member exists; it just is not ours to signal.
+    return error instanceof Error && 'code' in error && error.code === 'EPERM'
   }
+}
+
+/**
+ * Whether any group the session owned still has a member. Signal 0 costs one
+ * syscall per group, so a session that left nothing behind is settled without
+ * forking `ps`. A live answer proves nothing about ownership — only that a
+ * process table is worth reading to find out.
+ */
+export function hasLiveOwnedGroup(
+  identity: PtySessionProcessIdentity,
+  options: { exceptRootGroup?: boolean; probeGroup?: ProcessGroupProbe } = {}
+): boolean {
+  const probe = options.probeGroup ?? probeProcessGroup
+  for (const pgid of identity.ownedGroups.keys()) {
+    if (options.exceptRootGroup && pgid === identity.rootPid) {
+      continue
+    }
+    if (probe(pgid)) {
+      return true
+    }
+  }
+  return false
 }
 
 function waitForDelay(ms: number, keepAlive: boolean): Promise<void> {
@@ -67,10 +94,11 @@ type SignalledIdentity = { startedAt: string; pgid: number }
  * on a natural exit there is no live root to walk from at all — only the
  * session's recorded terminal and process groups can still name that work.
  *
- * Groups are signalled alongside pids so a process forked between two rounds is
- * reached without waiting to be discovered. A pid is only ever force-killed
- * when this round's own table still shows the identity that was asked to stop,
- * so a recycled pid is never signalled.
+ * Only pids this round's table verified are signalled, never a whole group: a
+ * group signal reaches whatever holds the id at delivery, which no table can
+ * vouch for. A process forked between rounds is found by the next one. A pid is
+ * only ever force-killed when this round's table still shows the identity that
+ * was asked to stop, so a recycled pid is never signalled.
  */
 export async function sweepSessionDescendants(
   identity: PtySessionProcessIdentity,
@@ -80,60 +108,52 @@ export async function sweepSessionDescendants(
     // Windows reaches the whole tree through the pty's job object.
     return 'exited'
   }
-  if (
-    identity.rootExitedAtMs !== null &&
-    identity.ttyName === null &&
-    identity.knownPgids.size === 0
-  ) {
-    // Nothing was ever recorded that could name this session's work, and its root
-    // pid is now somebody else's. There is no safe target to look for.
-    return 'exited'
-  }
   const readTable = deps.readTable ?? readProcessTable
   const readTtyTable = deps.readTtyTable ?? readTtyProcessTable
   const sendSignal = deps.sendSignal ?? sendDescendantSignal
-  const sendGroupSignal = deps.sendGroupSignal ?? sendProcessGroupSignal
   const timeoutMs = deps.timeoutMs ?? DESCENDANT_SNAPSHOT_TIMEOUT_MS
+  const readTty = async (): Promise<readonly ProcessTableRow[] | undefined> =>
+    identity.ttyName ? (await readTtyTable(identity.ttyName, timeoutMs))?.rows : undefined
+
+  let ttyRows: readonly ProcessTableRow[] | undefined
+  const exitedAtMs = identity.rootExitedAtMs
+  if (exitedAtMs !== null && !hasLiveOwnedGroup(identity, { probeGroup: deps.probeGroup })) {
+    // Every owned group is empty, so only the terminal can still hold this
+    // session's work — and after exit, only a process born before it.
+    ttyRows = await readTty()
+    if (!ttyRows?.some((row) => hasUnambiguousStartTime(row.startedAt, exitedAtMs))) {
+      return 'exited'
+    }
+  }
+
   const graceMs = deps.graceMs ?? DESCENDANT_KILL_GRACE_MS
   const keepAlive = deps.keepAlive === true
   const startedAtMs = Date.now()
   const deadline = startedAtMs + (deps.verifyMs ?? DESCENDANT_KILL_VERIFY_MS)
   const signalled = new Map<number, SignalledIdentity>()
   let verdict: DescendantTreeVerdict = 'unverifiable'
+  // Later rounds reach terminal-born work through its descent or group instead.
+  ttyRows ??= await readTty()
 
   for (;;) {
-    // Why the terminal first: it answers for one pane, where the whole-host table
-    // is the most expensive read Orca takes. A session that left nothing behind —
-    // almost every session — is settled without ever paying for that table.
-    const ttyCapture = identity.ttyName ? await readTtyTable(identity.ttyName, timeoutMs) : null
-    if (
-      identity.rootExitedAtMs !== null &&
-      identity.knownPgids.size === 0 &&
-      !ttyCapture?.rows.length
-    ) {
-      return 'exited'
-    }
     const capture = await readProcessTableBeforeDeadline(readTable, timeoutMs)
     if (capture) {
-      observePtySessionIdentity(identity, capture.rows)
+      prunePtySessionGroups(identity, capture.rows)
+      observePtySessionIdentity(identity, capture.rows, capture.capturedAtMs)
       const targets = collectSessionSweepTargets({
         identity,
         rows: capture.rows,
-        ...(ttyCapture ? { ttyRows: ttyCapture.rows } : {}),
+        ...(ttyRows ? { ttyRows } : {}),
         ...(deps.selfPid === undefined ? {} : { selfPid: deps.selfPid })
       })
-      rememberPtySessionPgids(identity, targets.pgids)
+      ttyRows = undefined
+      recordPtySessionGroups(identity, targets.ownedPgids, capture.capturedAtMs)
       if (targets.rows.length === 0) {
         return 'exited'
       }
       verdict = 'live'
       const escalate = Date.now() - startedAtMs >= graceMs
-      signalTargets(targets.rows, targets.pgids, capture.capturedAtMs, {
-        escalate,
-        signalled,
-        sendSignal,
-        sendGroupSignal
-      })
+      signalTargets(targets.rows, capture.capturedAtMs, { escalate, signalled, sendSignal })
     }
     if (Date.now() >= deadline) {
       return capture ? verdict : 'unverifiable'
@@ -144,16 +164,13 @@ export async function sweepSessionDescendants(
 
 function signalTargets(
   rows: readonly ProcessTableRow[],
-  pgids: readonly number[],
   capturedAtMs: number,
   args: {
     escalate: boolean
     signalled: Map<number, SignalledIdentity>
     sendSignal: SignalSender
-    sendGroupSignal: GroupSignalSender
   }
 ): void {
-  const forcedPgids = new Set<number>()
   for (const row of rows) {
     const previous = args.signalled.get(row.pid)
     // Force-kill only what already refused a SIGTERM under this exact identity;
@@ -161,16 +178,11 @@ function signalTargets(
     const sameIdentity = previous?.startedAt === row.startedAt && previous.pgid === row.pgid
     if (args.escalate && sameIdentity && hasUnambiguousStartIdentity(row, capturedAtMs)) {
       args.sendSignal(row.pid, 'SIGKILL')
-      forcedPgids.add(row.pgid)
       continue
     }
     if (!sameIdentity) {
       args.signalled.set(row.pid, { startedAt: row.startedAt, pgid: row.pgid })
     }
     args.sendSignal(row.pid, 'SIGTERM')
-  }
-  // A group escalates with its own members, never because a different one did.
-  for (const pgid of pgids) {
-    args.sendGroupSignal(pgid, forcedPgids.has(pgid) ? 'SIGKILL' : 'SIGTERM')
   }
 }

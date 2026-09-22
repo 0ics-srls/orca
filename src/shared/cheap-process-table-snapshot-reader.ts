@@ -20,6 +20,7 @@ import { notifyProcessTableCapture } from './process-table-capture-observers'
  */
 const cheapProcessTableReader = createProcessTableSnapshotReader<CheapProcessTableRow[]>({
   runPs: async () => {
+    const capturedAtMs = Date.now()
     const result = await runProcess({
       program: 'ps',
       args: CHEAP_PS_ARGS,
@@ -37,7 +38,7 @@ const cheapProcessTableReader = createProcessTableSnapshotReader<CheapProcessTab
       throw new ProcessTableCaptureError(`ps_exit_${result.code ?? result.signal ?? 'unknown'}`)
     }
     const rows = parseCheapProcessTableRows(result.stdout)
-    notifyProcessTableCapture(() => rows)
+    notifyProcessTableCapture(() => rows, capturedAtMs)
     return rows
   },
   now: () => Date.now()

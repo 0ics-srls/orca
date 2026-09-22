@@ -8,6 +8,22 @@ import {
 import type { ProcessTableRow } from './pty-process-table-parser'
 
 /**
+ * A process group this session was seen to own, and the last moment that was
+ * verified.
+ *
+ * Why a time rather than the group id alone: a group id is only the pid of the
+ * process that created it, and once every member exits the kernel may hand
+ * that pid to an unrelated process that starts a group of its own. A process
+ * born before `lastOwnedAtMs` cannot be that stranger — the id was still taken
+ * by this session's group when it was born — so the sweep asks every
+ * group-only claim for that proof.
+ */
+export type OwnedProcessGroup = {
+  readonly pgid: number
+  lastOwnedAtMs: number
+}
+
+/**
  * What Orca knows about the processes one PTY session owns, captured while the
  * session is alive so teardown still has coordinates after the root is reaped.
  *
@@ -24,8 +40,8 @@ export type PtySessionProcessIdentity = {
   ttyName: string | null
   /** The root's `lstart`, learned from the first table that saw it alive. */
   rootStartedAt: string | null
-  /** Every process group ever observed for this session. */
-  readonly knownPgids: Set<number>
+  /** Groups this session owned when last observed; a group seen empty is dropped. */
+  readonly ownedGroups: Map<number, OwnedProcessGroup>
   /** When the root was observed to exit; null while it lives. */
   rootExitedAtMs: number | null
 }
@@ -40,7 +56,7 @@ export function createPtySessionProcessIdentity(args: {
     rootPid: args.rootPid,
     ttyName: ttyName && ttyName.length > 0 ? ttyName : null,
     rootStartedAt: null,
-    knownPgids: new Set(),
+    ownedGroups: new Map(),
     rootExitedAtMs: null
   }
 }
@@ -52,7 +68,8 @@ export function createPtySessionProcessIdentity(args: {
  */
 export function observePtySessionIdentity(
   identity: PtySessionProcessIdentity,
-  rows: readonly ProcessTableRow[]
+  rows: readonly ProcessTableRow[],
+  capturedAtMs: number
 ): void {
   if (identity.rootExitedAtMs !== null) {
     // After exit, a row wearing the root's pid is a recycled stranger, never the root.
@@ -69,27 +86,66 @@ export function observePtySessionIdentity(
     }
     rootRow = row
   }
-  if (!rootRow) {
+  if (
+    !rootRow ||
+    (identity.rootStartedAt !== null && identity.rootStartedAt !== rootRow.startedAt)
+  ) {
     return
   }
-  identity.rootStartedAt ??= rootRow.startedAt
-  rememberPtySessionPgids(identity, [rootRow.pgid])
+  identity.rootStartedAt = rootRow.startedAt
+  recordPtySessionGroups(identity, [rootRow.pgid], capturedAtMs)
 }
 
-/** pid 1 and pgid 0 are never a session's own group; retaining them would target the world. */
-export function rememberPtySessionPgids(
+/**
+ * Records groups that `ownedAtMs` shows this session owning. Only evidence of
+ * ownership may call this — a descendant of the live root, or a process the
+ * sweep has already verified — never a bare group id seen on some other row.
+ */
+export function recordPtySessionGroups(
   identity: PtySessionProcessIdentity,
-  pgids: Iterable<number>
+  pgids: Iterable<number>,
+  ownedAtMs: number
 ): void {
   for (const pgid of pgids) {
-    if (Number.isInteger(pgid) && pgid > 1) {
-      identity.knownPgids.add(pgid)
+    // pid 1 and pgid 0 are never a session's own group; retaining them would target the world.
+    if (!Number.isInteger(pgid) || pgid <= 1) {
+      continue
+    }
+    const group = identity.ownedGroups.get(pgid)
+    if (group) {
+      group.lastOwnedAtMs = Math.max(group.lastOwnedAtMs, ownedAtMs)
+    } else {
+      identity.ownedGroups.set(pgid, { pgid, lastOwnedAtMs: ownedAtMs })
     }
   }
 }
 
 /**
- * Records the process groups of everything currently descending from the root.
+ * Drops every group a whole-host capture shows with no member. An empty group
+ * is gone for good, and its id is free for a stranger's group to take.
+ */
+export function prunePtySessionGroups(
+  identity: PtySessionProcessIdentity,
+  rows: readonly { pgid?: number | undefined }[]
+): void {
+  const live = new Set<number>()
+  for (const row of rows) {
+    // A capture tier without the group column cannot show a group empty.
+    if (row.pgid === undefined) {
+      return
+    }
+    live.add(row.pgid)
+  }
+  for (const pgid of identity.ownedGroups.keys()) {
+    if (!live.has(pgid)) {
+      identity.ownedGroups.delete(pgid)
+    }
+  }
+}
+
+/**
+ * Records the process groups of everything currently descending from the root,
+ * from a whole-host capture.
  *
  * This is the observation that makes a natural exit recoverable. A shell puts
  * each job in a group of its own, and once the job's ancestors die nothing
@@ -100,8 +156,10 @@ export function rememberPtySessionPgids(
  */
 export function observeSessionDescendantGroups(
   identity: PtySessionProcessIdentity,
-  rows: readonly (ProcessIdentityRow & { pgid?: number | undefined })[]
+  rows: readonly (ProcessIdentityRow & { pgid?: number | undefined })[],
+  capturedAtMs: number
 ): void {
+  prunePtySessionGroups(identity, rows)
   if (identity.rootExitedAtMs !== null) {
     return
   }
@@ -110,9 +168,10 @@ export function observeSessionDescendantGroups(
   if (!index.byPid.has(identity.rootPid)) {
     return
   }
-  rememberPtySessionPgids(
+  recordPtySessionGroups(
     identity,
-    collectDescendantsFromIndex(index, identity.rootPid).flatMap((row) => row.pgid ?? [])
+    collectDescendantsFromIndex(index, identity.rootPid).flatMap((row) => row.pgid ?? []),
+    capturedAtMs
   )
 }
 
@@ -126,9 +185,10 @@ export function observeSessionDescendantGroups(
  */
 export function observePtySessionTerminal(
   identity: PtySessionProcessIdentity,
-  rows: readonly ProcessTableRow[]
+  rows: readonly ProcessTableRow[],
+  capturedAtMs: number
 ): void {
-  observePtySessionIdentity(identity, rows)
+  observePtySessionIdentity(identity, rows, capturedAtMs)
   if (identity.rootExitedAtMs !== null) {
     return
   }
@@ -136,9 +196,10 @@ export function observePtySessionTerminal(
   if (!index.byPid.has(identity.rootPid)) {
     return
   }
-  rememberPtySessionPgids(
+  recordPtySessionGroups(
     identity,
-    collectDescendantsFromIndex(index, identity.rootPid).map((row) => row.pgid)
+    collectDescendantsFromIndex(index, identity.rootPid).map((row) => row.pgid),
+    capturedAtMs
   )
 }
 
@@ -190,7 +251,7 @@ export function openPtySessionIdentity(
     void readTtyTable(identity.ttyName ?? '').then(
       (capture) => {
         if (capture) {
-          observePtySessionTerminal(identity, capture.rows)
+          observePtySessionTerminal(identity, capture.rows, capture.capturedAtMs)
         }
       },
       () => {

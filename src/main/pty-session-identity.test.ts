@@ -3,12 +3,19 @@ import {
   createPtySessionProcessIdentity,
   markPtySessionRootExited,
   observePtySessionTerminal,
-  openPtySessionIdentity
+  observeSessionDescendantGroups,
+  openPtySessionIdentity,
+  type PtySessionProcessIdentity
 } from './pty-session-identity'
 import type { ProcessTableRow } from './pty-process-table-parser'
 
 const BORN = 'Mon Jul 13 12:54:47 2026'
 const DARWIN: NodeJS.Platform = 'darwin'
+const OBSERVED_AT_MS = Date.parse('Mon Jul 13 12:55:00 2026')
+
+function ownedPgids(identity: PtySessionProcessIdentity): number[] {
+  return [...identity.ownedGroups.keys()].sort((left, right) => left - right)
+}
 
 function row(pid: number, ppid: number, pgid: number): ProcessTableRow {
   return { pid, ppid, pgid, startedAt: BORN }
@@ -21,18 +28,48 @@ const TERMINAL_ROWS = [row(500, 400, 500), row(610, 500, 610), row(611, 610, 610
 describe('observePtySessionTerminal', () => {
   it('records the root and the groups of work traceable to it, not every group on the terminal', () => {
     const identity = createPtySessionProcessIdentity({ rootPid: 500, slavePath: '/dev/ttys003' })
-    observePtySessionTerminal(identity, TERMINAL_ROWS)
+    observePtySessionTerminal(identity, TERMINAL_ROWS, OBSERVED_AT_MS)
 
     expect(identity.rootStartedAt).toBe(BORN)
-    expect([...identity.knownPgids].sort()).toEqual([500, 610])
+    expect(ownedPgids(identity)).toEqual([500, 610])
   })
 
   it('learns nothing once the root has exited', () => {
     const identity = createPtySessionProcessIdentity({ rootPid: 500, slavePath: '/dev/ttys003' })
     markPtySessionRootExited(identity, Date.now())
-    observePtySessionTerminal(identity, TERMINAL_ROWS)
+    observePtySessionTerminal(identity, TERMINAL_ROWS, OBSERVED_AT_MS)
 
-    expect(identity.knownPgids.size).toBe(0)
+    expect(identity.ownedGroups.size).toBe(0)
+  })
+})
+
+describe('observeSessionDescendantGroups', () => {
+  it('forgets a group once a whole-host capture shows it empty, since its id is then free', () => {
+    const identity = createPtySessionProcessIdentity({ rootPid: 500, slavePath: '/dev/ttys003' })
+    observeSessionDescendantGroups(identity, TERMINAL_ROWS, OBSERVED_AT_MS)
+    expect(ownedPgids(identity)).toEqual([610])
+
+    // The job finished: nothing is left in group 610.
+    observeSessionDescendantGroups(identity, [row(500, 400, 500)], OBSERVED_AT_MS + 60_000)
+
+    expect(ownedPgids(identity)).toEqual([])
+  })
+
+  it('keeps every group when the capture tier has no group column to judge by', () => {
+    const identity = createPtySessionProcessIdentity({ rootPid: 500, slavePath: '/dev/ttys003' })
+    observeSessionDescendantGroups(identity, TERMINAL_ROWS, OBSERVED_AT_MS)
+
+    observeSessionDescendantGroups(identity, [{ pid: 500, ppid: 400 }], OBSERVED_AT_MS + 60_000)
+
+    expect(ownedPgids(identity)).toEqual([610])
+  })
+
+  it("moves a group's last-owned time forward each time the live tree still holds it", () => {
+    const identity = createPtySessionProcessIdentity({ rootPid: 500, slavePath: '/dev/ttys003' })
+    observeSessionDescendantGroups(identity, TERMINAL_ROWS, OBSERVED_AT_MS)
+    observeSessionDescendantGroups(identity, TERMINAL_ROWS, OBSERVED_AT_MS + 60_000)
+
+    expect(identity.ownedGroups.get(610)?.lastOwnedAtMs).toBe(OBSERVED_AT_MS + 60_000)
   })
 })
 
@@ -50,7 +87,7 @@ describe('openPtySessionIdentity', () => {
 
     await vi.advanceTimersByTimeAsync(750)
     expect(readTtyTable).toHaveBeenCalledWith('ttys003')
-    expect([...identity.knownPgids].sort()).toEqual([500, 610])
+    expect(ownedPgids(identity)).toEqual([500, 610])
   })
 
   it('reads nothing on Windows or for a session without a terminal', async () => {

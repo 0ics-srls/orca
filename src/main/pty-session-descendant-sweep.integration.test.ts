@@ -6,10 +6,13 @@ import { readProcessTable } from './pty-descendant-termination'
 import {
   createPtySessionProcessIdentity,
   markPtySessionRootExited,
-  observePtySessionIdentity,
-  observeSessionDescendantGroups
+  observePtySessionIdentity
 } from './pty-session-identity'
-import { getCheapProcessTableSnapshot } from '../shared/cheap-process-table-snapshot-reader'
+import {
+  getCheapProcessTableSnapshot,
+  resetCheapProcessTableSnapshotForTests
+} from '../shared/cheap-process-table-snapshot-reader'
+import { observeLiveSessionProcessIdentities } from './daemon/terminal-host-session-identity-observation'
 import { readPtsName } from './pty/node-pty-pts-name'
 
 const itOnPosix = process.platform === 'win32' ? it.skip : it
@@ -83,10 +86,21 @@ async function spawnSessionWithEscapedJob(token: string): Promise<{
   })
   proc.write(`/bin/sh -c 'trap "" HUP TERM INT; while :; do sleep 60; done' ${token} &\n`)
   await waitFor(() => findTaggedPids(token).length > 0)
-  // Stands in for the post-spawn capture that records the root's own coordinates,
-  // and for the shared captures a live TerminalHost folds in as they are taken.
-  observePtySessionIdentity(identity, (await readProcessTable()).rows)
-  observeSessionDescendantGroups(identity, await getCheapProcessTableSnapshot())
+  // ps reports whole seconds: a job observed in its birth second cannot prove it predates the observation.
+  await new Promise((resolve) => setTimeout(resolve, 1_100))
+  // Stands in for the post-spawn capture that records the root's own coordinates.
+  const own = await readProcessTable()
+  observePtySessionIdentity(identity, own.rows, own.capturedAtMs)
+  // The job's group is learned the way a live TerminalHost learns it: from a shared host capture.
+  const stop = observeLiveSessionProcessIdentities(
+    new Map([['session', { isAlive: true, processIdentity: identity }]])
+  )
+  try {
+    resetCheapProcessTableSnapshotForTests()
+    await getCheapProcessTableSnapshot()
+  } finally {
+    stop()
+  }
   return { proc, identity, exited }
 }
 

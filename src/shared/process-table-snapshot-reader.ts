@@ -274,11 +274,12 @@ async function captureProcessTable(args: readonly string[]): Promise<string> {
 
 const processTableReader = createProcessTableSnapshotReader<ProcessTableCapture>({
   runPs: async () => {
+    const capturedAtMs = Date.now()
     const stdout = await captureProcessTable(PS_ARGS)
     const baseCapture = createProcessTableCapture(stdout)
     const startTimesByPid = await readLinuxProcessStartTimes(baseCapture.lenient())
     const capture = createProcessTableCapture(stdout, startTimesByPid, process.platform === 'linux')
-    notifyProcessTableCapture(() => capture.lenient())
+    notifyProcessTableCapture(() => capture.lenient(), capturedAtMs)
     return capture
   },
   now: () => Date.now()
