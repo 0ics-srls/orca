@@ -1,4 +1,4 @@
-import { spawn as nodeSpawn } from 'node:child_process'
+import { spawnProcess } from '../shared/child-process/run-process'
 
 export const LINUX_LID_SLEEP_ASSERTION_RETRY_MS = 30_000
 
@@ -9,6 +9,10 @@ type SystemdInhibitExitListener = (code: number | null, signal: NodeJS.Signals |
 
 type SystemdInhibitProcess = {
   kill: () => boolean
+  stdin: {
+    destroy(): void
+    on(event: 'error', listener: SystemdInhibitErrorListener): void
+  } | null
   on(event: 'error', listener: SystemdInhibitErrorListener): void
   on(event: 'exit', listener: SystemdInhibitExitListener): void
   off(event: 'error', listener: SystemdInhibitErrorListener): void
@@ -19,7 +23,7 @@ type SystemdInhibitProcess = {
 type SystemdInhibitSpawn = (
   command: string,
   args: string[],
-  options: { stdio: 'ignore'; windowsHide: true; shell?: false }
+  options: { stdio: ['pipe', 'ignore', 'ignore']; windowsHide: true; shell?: false }
 ) => SystemdInhibitProcess
 
 type LinuxLidSleepAssertionOptions = {
@@ -51,7 +55,8 @@ export class LinuxLidSleepAssertion {
     this.now = options.now ?? Date.now
     this.onUnexpectedFailure = options.onUnexpectedFailure ?? (() => {})
     this.platform = options.platform ?? process.platform
-    this.spawn = options.spawn ?? nodeSpawn
+    this.spawn =
+      options.spawn ?? ((program, args, { stdio }) => spawnProcess({ program, args, stdio }))
   }
 
   start(reason: string): void {
@@ -74,11 +79,11 @@ export class LinuxLidSleepAssertion {
           '--who=Orca',
           '--why=Agents are working',
           '--mode=block',
-          'sleep',
-          'infinity'
+          // EOF releases the inhibitor even when Orca is killed without running cleanup.
+          'cat'
         ],
         {
-          stdio: 'ignore',
+          stdio: ['pipe', 'ignore', 'ignore'],
           windowsHide: true
         }
       )
@@ -109,6 +114,7 @@ export class LinuxLidSleepAssertion {
     })
     child.on('error', onError)
     child.on('exit', onExit)
+    child.stdin?.on('error', onError)
     this.resetRetrySuppression()
     this.resetFailureStreak()
   }
@@ -121,10 +127,14 @@ export class LinuxLidSleepAssertion {
     }
     const child = this.child
     this.child = null
+    // A queued spawn error can arrive after stop, so retain its listeners until exit.
     this.intentionalStops.add(child)
-    this.detachChildListeners(child)
     try {
-      child.kill()
+      if (child.stdin) {
+        child.stdin.destroy()
+      } else {
+        child.kill()
+      }
     } catch (error) {
       if (!isEsrchError(error)) {
         this.logger.warn('[agent-awake] failed to stop Linux lid sleep assertion', { error })
@@ -144,8 +154,8 @@ export class LinuxLidSleepAssertion {
     details: unknown
   ): void {
     this.detachChildListeners(child)
+    child.stdin?.destroy()
     if (this.intentionalStops.has(child)) {
-      this.intentionalStops.delete(child)
       return
     }
     if (this.reportedFailures.has(child)) {
