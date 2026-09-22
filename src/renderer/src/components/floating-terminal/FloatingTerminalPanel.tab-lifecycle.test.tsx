@@ -12,6 +12,7 @@ import {
 } from './floating-terminal-panel-test-fixtures'
 import { mocks, setupFloatingTerminalPanelTest } from './floating-terminal-panel-test-harness'
 import {
+  findByProp,
   findByTypeName,
   flushAsyncWork,
   renderPanel,
@@ -486,6 +487,23 @@ describe('FloatingTerminalPanel tab drag wiring', () => {
     // reorder in the strip or split against the tree.
     expect(findByTypeName(element, 'TabBar')).toBeDefined()
     expect(findByTypeName(element, 'TabGroupSplitNodeTree')).toBeDefined()
+  })
+
+  it('mounts the tree and pane overlays inside the absolute flex surface frame', async () => {
+    setFloatingTabs([makeTab({ id: 'tab-1' })])
+
+    const element = await renderPanel(true)
+    const frame = findByProp(element, 'data-floating-workspace-surface-frame')
+
+    // Regression (0px panes): the tree's nodes size themselves as flex items, so their host
+    // must be a flex container that owns the body rect — TabGroupSplitNodeTree's host
+    // contract. Without it every group body, and every pane anchored to one, measures 0px
+    // tall. jsdom computes no layout, so pin the class contract; the e2e spec measures boxes.
+    expect(frame.props.className).toBe('absolute inset-0 flex')
+    expect(findByTypeName(frame, 'TabGroupSplitNodeTree')).toBeDefined()
+    // The overlays share the frame so anchor()/fallback geometry resolves in the same
+    // containing block as the group bodies they cover — as in WorktreeSplitSurface.
+    expect(findByTypeName(frame, 'WorkspacePaneOverlayLayers')).toBeDefined()
   })
 
   it('leaves the drag scope inactive while the closed panel stays mounted', async () => {

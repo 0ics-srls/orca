@@ -271,6 +271,10 @@ function SplitNode({
 /**
  * The chrome-free group tree: recursive splits, resize handles, and one TabGroupPanel per leaf.
  * The host owns the drag scope (WorkspaceTabDragLayer), outer chrome, and edge policy.
+ *
+ * Host contract: the tree's nodes size themselves as flex items (`flex-1`), so the host must
+ * mount it in a flex container that owns its rect (WorktreeSplitSurface's `absolute inset-0
+ * flex`, the floating panel's surface frame). In a block parent every pane collapses to 0px.
  */
 export function TabGroupSplitNodeTree({
   layout,

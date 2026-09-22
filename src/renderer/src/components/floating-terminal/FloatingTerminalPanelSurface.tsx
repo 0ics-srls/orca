@@ -214,7 +214,10 @@ export function renderFloatingTerminalPanelSurface({
               {/* Why also gated on resolvable items: stale unified tabs whose entities are gone
                   must show the empty state (with its CTAs), not a blank group body. */}
               {surface.kind === 'workspace' && hasVisibleFloatingTabs ? (
-                <>
+                // Why the flex frame: the tree's nodes size themselves as flex items (flex-1), so
+                // the host must own their rect with a flex container — same contract as
+                // WorktreeSplitSurface. In a block parent every pane collapses to 0px.
+                <div className="absolute inset-0 flex" data-floating-workspace-surface-frame>
                   <TabGroupSplitNodeTree
                     layout={surface.layout}
                     worktreeId={FLOATING_TERMINAL_WORKTREE_ID}
@@ -253,7 +256,7 @@ export function renderFloatingTerminalPanelSurface({
                     // Why: the active workspace's listener owns the chord while the panel overlays it.
                     ownsNativeChatToggleShortcut={false}
                   />
-                </>
+                </div>
               ) : (
                 <FloatingTerminalEmptyState
                   onNewTerminal={() => createFloatingTerminalTab()}
