@@ -287,6 +287,57 @@ describe('producer linkage on the persisted row', () => {
     expect(row?.v).toBe(AGENT_SESSION_JOURNAL_SCHEMA_VERSION)
   })
 
+  /** A row this host did not write: a remote peer's, or a corrupted line. */
+  function parseForeign(overrides: Record<string, unknown>): JournalRow | null {
+    const parsed = parseJournalRow(
+      JSON.stringify({
+        v: AGENT_SESSION_JOURNAL_SCHEMA_VERSION,
+        epoch: 'epoch-1',
+        seq: 7,
+        fence: 1,
+        ts: 1_700_000_000_000,
+        kind: 'item',
+        itemId: 'claude:claude-session:u-1',
+        revision: 0,
+        body,
+        ...overrides
+      })
+    )
+    return parsed.ok ? parsed.row : null
+  }
+
+  it('keeps the row but drops an empty agentId, which would read as a subagent', () => {
+    // Presence, not truthiness: `''` left in place hides the row from its own
+    // author on every parent-scoped surface, permanently and with no backfill.
+    const row = parseForeign({ agentId: '' })
+    expect(row).not.toBeNull()
+    expect(row && 'agentId' in row).toBe(false)
+  })
+
+  it('keeps the row but drops a wrong-typed linkage field', () => {
+    const row = parseForeign({ agentId: 42, attempt: 'two', producerKind: '' })
+    expect(row).not.toBeNull()
+    expect(row && 'agentId' in row).toBe(false)
+    expect(row && 'attempt' in row).toBe(false)
+    expect(row && 'producerKind' in row).toBe(false)
+  })
+
+  it('never lets a bad linkage field reject the row itself', () => {
+    // A row validator that REJECTS is a whole-store kill switch: the row leaves
+    // the timeline entirely. The content must survive its own bad metadata.
+    const row = parseForeign({ agentId: '', parentAgentId: null, providerParentRef: 7 })
+    expect(row?.body).toEqual(body)
+    expect(row?.seq).toBe(7)
+  })
+
+  it('leaves a well-formed foreign linkage bundle untouched', () => {
+    // The positive control: the sanitizer must not be dropping everything.
+    expect(parseForeign({ agentId: 'task-9', attempt: 3 })).toMatchObject({
+      agentId: 'task-9',
+      attempt: 3
+    })
+  })
+
   it("omits every key on a row the session's own agent produced", () => {
     const row = roundTrip(false)
     expect(row && 'agentId' in row).toBe(false)

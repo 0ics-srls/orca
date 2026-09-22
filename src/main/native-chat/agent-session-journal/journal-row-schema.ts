@@ -157,7 +157,29 @@ export function parseJournalRow(line: string): JournalRowParse {
     return { ok: false, unreadable: true }
   }
   const upcast = upcastRow(record, version)
+  dropUnusableProducerLinkage(upcast)
   return isJournalRow(upcast) ? { ok: true, row: upcast } : { ok: false, unreadable: false }
+}
+
+/** Linkage ids this build cannot trust, removed from a row it still keeps.
+ *
+ *  Deliberately NOT part of `isJournalRow`: rejecting a row there drops it from
+ *  the timeline, so a validator tightened against one bad field becomes a
+ *  whole-store kill switch. Dropping the field degrades the row to the
+ *  session's own agent — what every row said before linkage existed — while
+ *  keeping the content, which is always the safer direction. An `agentId` that
+ *  survives is a real one: the reader scopes on PRESENCE, so `''` or a
+ *  non-string left in place would hide the row from its own author for good. */
+function dropUnusableProducerLinkage(record: Record<string, unknown>): void {
+  for (const field of ['agentId', 'parentAgentId', 'providerParentRef', 'producerKind']) {
+    const value = record[field]
+    if (value !== undefined && (typeof value !== 'string' || value.length === 0)) {
+      delete record[field]
+    }
+  }
+  if (record.attempt !== undefined && !Number.isInteger(record.attempt)) {
+    delete record.attempt
+  }
 }
 
 /** Read-time upcast chain. Each step raises a row exactly one version. */

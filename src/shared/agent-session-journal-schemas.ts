@@ -241,10 +241,13 @@ export const AgentJournalItemBodySchema = z.discriminatedUnion('kind', [
  *  `producerKind` stays an open string for the reason the header gives: a host
  *  that learns a third kind must not make its rows unreadable to this client. */
 export const AgentJournalProducerLinkageFields = {
-  agentId: z.string().optional(),
-  parentAgentId: z.string().optional(),
-  providerParentRef: z.string().optional(),
-  producerKind: z.string().optional(),
+  // `.min(1)` on every id: an EMPTY string is present, and the reader that
+  // scopes a parent's surfaces tests presence, not truthiness. `agentId: ''`
+  // would read as a subagent and hide the row from its own author for good.
+  agentId: z.string().min(1).optional(),
+  parentAgentId: z.string().min(1).optional(),
+  providerParentRef: z.string().min(1).optional(),
+  producerKind: z.string().min(1).optional(),
   attempt: z.number().int().optional()
 } as const
 
