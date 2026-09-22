@@ -15,6 +15,7 @@ export type SkillInstallProviderId =
   | 'trae'
   | 'grok'
   | 'aug'
+  | 'muse'
 
 export type SkillInstallProviderDefinition = {
   id: SkillInstallProviderId
@@ -80,6 +81,14 @@ export const SKILL_INSTALL_PROVIDERS: readonly SkillInstallProviderDefinition[] 
     displayName: 'Augment',
     globalSegments: ['.augment', 'skills'],
     workspaceSegments: ['.augment', 'skills']
+  },
+  // Why: project skills are the canonical `.agents/skills` root. Personal skills
+  // live under the Muse config dir, and `$HOME/.agents/skills` is import-only.
+  {
+    id: 'muse',
+    displayName: 'Muse',
+    globalSegments: ['.config', 'muse', 'skills'],
+    workspaceSegments: null
   }
 ]
 

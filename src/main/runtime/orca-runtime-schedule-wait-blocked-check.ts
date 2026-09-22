@@ -20,6 +20,7 @@ import { ownRetainedString } from '../../shared/own-retained-string'
 import type { ProcessedAgentStatusChunk } from '../../shared/agent-status-osc'
 import { createAgentStatusOscProcessor } from '../../shared/agent-status-osc'
 import type { RuntimePtyTitleTrackerEntry } from './runtime-terminal-state-records'
+import { clearMuseTerminalActivity, nextMuseTerminalStatus } from './muse-terminal-activity'
 
 export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPtyData {
   protected scheduleWaitBlockedCheck(ptyId: string, appendedText: string, at: number): void {
@@ -79,6 +80,15 @@ export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPt
       pty.waitBlockedAt = at
       this.recordAgentPromptPermissionObservation(ptyId)
     }
+    // Muse cannot attribute hooks to a pane, so the screen itself is the evidence.
+    const museStatus = nextMuseTerminalStatus(ptyId, nextWaitState.waitText)
+    if (museStatus) {
+      this.emitTerminalAgentStatusEvents(ptyId, {
+        cleanData: '',
+        payloads: [museStatus],
+        lastPayloadCleanOffset: null
+      })
+    }
     state.lastAt = at
     state.lastWaitState = nextWaitState
     resetWaitBlockedCarry(state.appended)
@@ -114,6 +124,7 @@ export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPt
       clearTimeout(state.timer)
     }
     this.waitBlockedCheckStateByPtyId.delete(ptyId)
+    clearMuseTerminalActivity(ptyId)
   }
 
   protected processAgentStatusOscForPty(ptyId: string, data: string): ProcessedAgentStatusChunk {

@@ -6,6 +6,11 @@ import {
 } from '../../shared/agent-detection'
 import type { RuntimeTerminalWaitBlockedReason } from '../../shared/runtime-types'
 import { findAntigravityReadyPromptIndex } from './antigravity-terminal-readiness'
+import {
+  findMuseApprovalPromptIndex,
+  findMuseInteractiveQuestionIndex
+} from '../../shared/muse-interactive-question'
+import { findMuseReadyPromptIndex } from '../../shared/muse-ready-prompt'
 import { startOfLastLines, startOfLastNonBlankLines } from './terminal-wait-tail-window'
 
 const EXPLICIT_IDLE_TITLE_RE = /(^|\s)(ready|idle|done)(\s|$|[.!?])/i
@@ -80,7 +85,8 @@ function findDismissedStartupModalIndex(normalized: string): number | null {
   const indexes = [
     findCodexReadyPromptIndex(normalized),
     findAntigravityReadyPromptIndex(normalized),
-    findCursorActivePromptIndex(normalized)
+    findCursorActivePromptIndex(normalized),
+    findMuseReadyPromptIndex(normalized)
   ].filter((index): index is number => index !== null)
   return indexes.length > 0 ? Math.max(...indexes) : null
 }
@@ -89,7 +95,8 @@ function findKnownReadyPromptIndex(normalized: string): number | null {
   const indexes = [
     findCodexReadyPromptIndex(normalized),
     findAntigravityReadyPromptIndex(normalized),
-    findCursorReadyPromptIndex(normalized)
+    findCursorReadyPromptIndex(normalized),
+    findMuseReadyPromptIndex(normalized)
   ].filter((index): index is number => index !== null)
   return indexes.length > 0 ? Math.max(...indexes) : null
 }
@@ -125,7 +132,7 @@ function findCodexReadyPromptIndex(normalized: string): number | null {
 }
 
 export const TERMINAL_WAIT_BLOCKED_SENTINEL_RE =
-  /update available|choose working directory to|codex just got an upgrade|hooks need review|do you trust|trust this|trusted workspace|press enter to (?:confirm|continue|view|insert)|press t to trust|permission required|requires permission|allow once|allow always|run this command\?/i
+  /update available|choose working directory to|codex just got an upgrade|hooks need review|do you trust|trust this|trusted workspace|request user input|enter to select|press enter to (?:confirm|continue|view|insert)|press t to trust|permission required|requires permission|allow once|allow always|reject once|run this command\?/i
 
 // Why text at all: cursor-agent has no approval hook, so the key-bound menu is the only authority.
 const CURSOR_APPROVAL_CHOICE_MARKERS = [
@@ -263,6 +270,14 @@ function findBlockedSignalInLiveWindow(
   const cursorApprovalIndex = findCursorApprovalPromptIndex(normalized)
   if (cursorApprovalIndex !== null) {
     candidates.push({ reason: 'agent-approval-prompt', index: cursorApprovalIndex })
+  }
+  const museApprovalIndex = findMuseApprovalPromptIndex(normalized)
+  if (museApprovalIndex !== null) {
+    candidates.push({ reason: 'agent-approval-prompt', index: museApprovalIndex })
+  }
+  const museQuestionIndex = findMuseInteractiveQuestionIndex(normalized)
+  if (museQuestionIndex !== null) {
+    candidates.push({ reason: 'agent-interactive-prompt', index: museQuestionIndex })
   }
   const permissionPromptIndex = Math.max(
     normalized.lastIndexOf('permission required'),

@@ -49,6 +49,8 @@ export const SKILLS_CLI_AGENT_KEY_BY_TUI_AGENT = {
   copilot: 'github-copilot',
   grok: 'grok',
   devin: 'devin',
+  // Why: the community skills CLI has no muse key, so installs fall back to the universal target.
+  muse: null,
   ante: null,
   // Why: Orca detects trae by `traecli`, an alias only TRAE CN ships.
   trae: 'trae-cn'

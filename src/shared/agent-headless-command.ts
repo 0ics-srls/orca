@@ -1,4 +1,5 @@
 import { isAnteHeadlessOneShotCommand } from './ante-headless-command'
+import { isMuseHeadlessOneShotCommand } from './muse-headless-command'
 import { isPrimeAgentHeadlessOneShotCommand } from './prime-agent-headless-command'
 import { isPrintModeHeadlessOneShotCommand } from './print-mode-headless-command'
 import type { TuiAgent } from './tui-agent'
@@ -12,7 +13,8 @@ const HEADLESS_ONE_SHOT_MATCHERS: Partial<
   claude: isPrintModeHeadlessOneShotCommand,
   trae: isPrintModeHeadlessOneShotCommand,
   'prime-agent': isPrimeAgentHeadlessOneShotCommand,
-  ante: isAnteHeadlessOneShotCommand
+  ante: isAnteHeadlessOneShotCommand,
+  muse: isMuseHeadlessOneShotCommand
 }
 
 export function isHeadlessOneShotAgentCommand(agent: TuiAgent, tokens: readonly string[]): boolean {

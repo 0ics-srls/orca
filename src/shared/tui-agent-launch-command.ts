@@ -10,6 +10,7 @@ import {
   tokenizeStartupCommand,
   type AgentStartupShell
 } from './tui-agent-startup-shell'
+import { finalizeMuseLaunchCommand } from './muse-launch-command'
 import type { TuiAgent } from './tui-agent'
 
 export type ResolvedAgentLaunchCommand =
@@ -88,14 +89,25 @@ export function resolveAgentLaunchCommand(args: {
   const commandWithOverrides = overrideTokens.length
     ? `${command} ${overrideTokens.map((token) => quoteStartupArg(token, args.shell)).join(' ')}`
     : command
+  const launchCommand = args.sessionOptionsOverrideAgentArgs
+    ? commandWithOverrides
+    : suffix.suffix
+      ? `${commandWithOptions} ${suffix.suffix}`
+      : commandWithOptions
   return {
     ok: true,
-    command: args.sessionOptionsOverrideAgentArgs
-      ? commandWithOverrides
-      : suffix.suffix
-        ? `${commandWithOptions} ${suffix.suffix}`
-        : commandWithOptions,
-    commandWithoutSessionOptions,
+    command: finalizeMuseLaunchCommand({
+      agent: args.agent,
+      command: launchCommand,
+      platform: args.platform,
+      shell: args.shell
+    }),
+    commandWithoutSessionOptions: finalizeMuseLaunchCommand({
+      agent: args.agent,
+      command: commandWithoutSessionOptions,
+      platform: args.platform,
+      shell: args.shell
+    }),
     appliedSessionOptions: resolvedOptions.appliedValues
   }
 }

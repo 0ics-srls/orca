@@ -4,6 +4,8 @@ import type { AgentType } from './agent-status-types'
 import type { TuiAgent } from './tui-agent'
 import { filterHeadlessOneShotAgentCommand } from './agent-headless-command'
 import { getFirstCommandToken } from './command-token-scanner'
+import { packagedAgentForProcessName } from './agent-packaged-process-name'
+import { isMuseExpectedProcess } from './muse-process-recognition'
 import { isFreshOmpLaunchCommand } from './omp-fresh-launch'
 
 export type RecognizedAgentProcess = { agent: TuiAgent; processName: string }
@@ -82,19 +84,10 @@ for (const [agent, config] of Object.entries(TUI_AGENT_CONFIG) as [
 }
 
 function agentForNormalizedProcess(normalized: string): TuiAgent | undefined {
-  const exact = PROCESS_TO_AGENT.get(normalized)
-  if (exact) {
-    return exact
-  }
-  // Why: node-pty can report Codex's packaged platform binary
-  // (for example codex-aarch64-ap) instead of the launch command.
-  if (normalized.startsWith('codex-')) {
-    return PROCESS_TO_AGENT.get('codex')
-  }
-  if (normalized.startsWith('grok-')) {
-    return PROCESS_TO_AGENT.get('grok')
-  }
-  return undefined
+  return (
+    PROCESS_TO_AGENT.get(normalized) ??
+    packagedAgentForProcessName(normalized, (name) => PROCESS_TO_AGENT.get(name))
+  )
 }
 
 function recognizedAgentForProcess(normalized: string): RecognizedAgentProcess | null {
@@ -266,7 +259,8 @@ export function isExpectedAgentProcess(
   }
   return (
     normalizedProcess === normalizedExpected ||
-    normalizedProcess.startsWith(`${normalizedExpected}.`)
+    normalizedProcess.startsWith(`${normalizedExpected}.`) ||
+    isMuseExpectedProcess(normalizedProcess, normalizedExpected)
   )
 }
 

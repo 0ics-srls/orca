@@ -312,6 +312,13 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
     detectCmd: 'devin',
     // Why: `devin -- <prompt>` auto-submits immediately (docs.devin.ai/cli), so start the REPL with no argv prompt.
     promptInjectionMode: 'stdin-after-start'
+  },
+  muse: {
+    detectCmd: 'muse',
+    // Why: trust the workspace so skills load. `--yolo` stays on the full-auto permission mode.
+    // Why: a positional prompt is parsed as a subcommand, so the task is pasted after the composer is ready.
+    launchCmd: 'muse --trust-workspace',
+    promptInjectionMode: 'stdin-after-start'
   }
 }
 
