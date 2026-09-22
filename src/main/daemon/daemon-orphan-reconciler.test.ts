@@ -80,13 +80,19 @@ function readRecords(store: PtyOwnershipRecordStore): PtyOwnershipRecord[] {
   return read.status === 'readable' ? read.records : []
 }
 
+/** The reconciling daemon. It shares the test runner's pid with PRIOR_DAEMON, and only the start
+ *  time tells them apart — the same way a restarted daemon that drew the same pid is told apart. */
+const THIS_DAEMON = { pid: process.pid, startedAtMs: Date.now() }
+/** A daemon that died before its sessions were torn down: the case the reaper exists for. */
+const PRIOR_DAEMON = { pid: process.pid, startedAtMs: Date.now() - 10 * 60 * 60_000 }
+
 /** Record a root the way the daemon does, then flush the batch rather than wait out its delay. */
-async function recordRoot(store: PtyOwnershipRecordStore, pid: number): Promise<void> {
-  const recorder = new PtyOwnershipRecorder({
-    store,
-    daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 },
-    isLive: () => true
-  })
+async function recordRoot(
+  store: PtyOwnershipRecordStore,
+  pid: number,
+  daemon: { pid: number; startedAtMs: number } = PRIOR_DAEMON
+): Promise<void> {
+  const recorder = new PtyOwnershipRecorder({ store, daemon, isLive: () => true })
   recorder.record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
   await recorder.flush()
 }
@@ -97,6 +103,57 @@ function backdate(store: PtyOwnershipRecordStore, ageMs: number): PtyOwnershipRe
   const aged = { ...current, recordedAt: Date.now() - ageMs }
   store.upsert(aged)
   return aged
+}
+
+/**
+ * A shell that leaves one process behind in its own group, then dies — the reported leak. A live
+ * tick writes the survivor down first, then the root is killed with nothing torn down.
+ */
+async function strandSurvivor(daemon: { pid: number; startedAtMs: number }): Promise<{
+  store: PtyOwnershipRecordStore
+  survivorPid: number
+}> {
+  const store = makeStore()
+  const dir = mkdtempSync(join(tmpdir(), 'orca-orphan-child-'))
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  const childPidFile = join(dir, 'child.pid')
+
+  const root = spawn(
+    '/bin/sh',
+    ['-c', `(trap "" TERM; exec sleep 120) & echo $! > ${childPidFile}; exec sleep 121`],
+    { detached: true, stdio: 'ignore' }
+  )
+  root.unref()
+  const rootPid = root.pid!
+  cleanups.push(() => {
+    try {
+      process.kill(-rootPid, 'SIGKILL')
+    } catch {
+      // Already gone.
+    }
+  })
+  await delay(1_300)
+
+  await recordRoot(store, rootPid, daemon)
+  const survivorPid = Number(readFileSync(childPidFile, 'utf8').trim())
+  expect(Number.isSafeInteger(survivorPid) && survivorPid > 0).toBe(true)
+
+  // While the session is live, a tick writes down the tree it can still walk from the root.
+  await new DaemonOrphanReconciler({
+    store,
+    daemonStartedAtMs: daemon.startedAtMs,
+    listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: rootPid }],
+    log: () => {}
+  }).runOnce()
+  expect(readRecords(store)[0].processes.map((entry) => entry.pid)).toEqual([survivorPid])
+  backdate(store, 10 * 60_000)
+
+  // The root dies without ever tearing anything down — a crash, a force quit, an updater.
+  process.kill(rootPid, 'SIGKILL')
+  expect(await waitForExit(rootPid, 5_000)).toBe(true)
+  expect(isRunning(survivorPid)).toBe(true)
+
+  return { store, survivorPid }
 }
 
 afterEach(() => {
@@ -124,6 +181,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     const events: { event: string; details?: Record<string, unknown> }[] = []
     const reconciler = new DaemonOrphanReconciler({
       store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
       // The daemon restart: the persisted record survives, the in-memory session map does not.
       listLiveSessions: () => [],
       log: (event, details) => events.push({ event, ...(details ? { details } : {}) }),
@@ -155,49 +213,11 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
   }, 45_000)
 
   it('finds a survivor the root left behind, which is what no parent walk can still reach', async () => {
-    const store = makeStore()
-    const dir = mkdtempSync(join(tmpdir(), 'orca-orphan-child-'))
-    cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
-    const childPidFile = join(dir, 'child.pid')
-
-    // A shell that leaves one process behind in its own group, then dies: the reported leak.
-    const root = spawn(
-      '/bin/sh',
-      ['-c', `(trap "" TERM; exec sleep 120) & echo $! > ${childPidFile}; exec sleep 121`],
-      { detached: true, stdio: 'ignore' }
-    )
-    root.unref()
-    const rootPid = root.pid!
-    cleanups.push(() => {
-      try {
-        process.kill(-rootPid, 'SIGKILL')
-      } catch {
-        // Already gone.
-      }
-    })
-    await delay(1_300)
-
-    await recordRoot(store, rootPid)
-    const survivorPid = Number(readFileSync(childPidFile, 'utf8').trim())
-    expect(Number.isSafeInteger(survivorPid) && survivorPid > 0).toBe(true)
-
-    // While the session is live, a tick writes down the tree it can still walk from the root.
-    await new DaemonOrphanReconciler({
-      store,
-      listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: rootPid }],
-      log: () => {}
-    }).runOnce()
-    expect(readRecords(store)[0].processes.map((entry) => entry.pid)).toEqual([survivorPid])
-    backdate(store, 10 * 60_000)
-
-    // The root dies without ever tearing anything down — a crash, a force quit, an updater.
-    process.kill(rootPid, 'SIGKILL')
-    expect(await waitForExit(rootPid, 5_000)).toBe(true)
-    expect(isRunning(survivorPid)).toBe(true)
-
+    const { store, survivorPid } = await strandSurvivor(PRIOR_DAEMON)
     const events: { event: string; details?: Record<string, unknown> }[] = []
     const reconciler = new DaemonOrphanReconciler({
       store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
       listLiveSessions: () => [],
       log: (event, details) => events.push({ event, ...(details ? { details } : {}) }),
       escalationGraceMs: 300
@@ -214,6 +234,26 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     })
   }, 45_000)
 
+  it('leaves what a session left behind to the daemon it ended under', async () => {
+    // `nohup server & exit`: the session ended under this still-running daemon. The last live
+    // tick's snapshot is not kill authority for anything that outlived that teardown.
+    const { store, survivorPid } = await strandSurvivor(THIS_DAEMON)
+
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
+      listLiveSessions: () => [],
+      log: () => {},
+      escalationGraceMs: 300
+    })
+    await reconciler.runOnce()
+    await reconciler.runOnce()
+
+    await delay(1_000)
+    expect(isRunning(survivorPid)).toBe(true)
+    expect(readRecords(store)).toEqual([])
+  }, 45_000)
+
   it('leaves a recorded process alone while its session is still live', async () => {
     const store = makeStore()
     const child = spawnOrphan()
@@ -225,6 +265,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
 
     const reconciler = new DaemonOrphanReconciler({
       store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
       listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1', pid }],
       log: () => {},
       escalationGraceMs: 300
@@ -256,6 +297,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
 
     const reconciler = new DaemonOrphanReconciler({
       store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
       listLiveSessions: () => [],
       log: () => {},
       escalationGraceMs: 300
@@ -282,6 +324,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     let captures = 0
     const reconciler = new DaemonOrphanReconciler({
       store,
+      daemonStartedAtMs: THIS_DAEMON.startedAtMs,
       listLiveSessions: () => [],
       log: () => {},
       platform: 'win32',

@@ -57,6 +57,7 @@ export class DaemonServer {
       // this daemon's own start time, neither of which is resolved yet at this point.
       onPtySpawned: (identity) => this.ptyOwnership?.recorder.record(identity),
       onSessionReaped: (sessionId) => {
+        this.ptyOwnership?.recorder.retire(sessionId)
         this.attachments.release(sessionId)
         this.transientFactRelay.onSessionExit(sessionId)
         this.streamDataBatcher.refreshSessionDroppability(sessionId)

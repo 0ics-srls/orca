@@ -8,7 +8,15 @@
 // leader exits, and on macOS every launchd app is parented by pid 1, so neither "is in a group we
 // once used" nor "looks orphaned" says anything about whose process it is.
 
-import { collectDescendantRows, hasUnambiguousStartTime } from '../pty-descendant-termination'
+import { hasUnambiguousStartTime } from '../pty-descendant-termination'
+import {
+  buildOrphanProcessTree,
+  collectProtectedAncestry,
+  descendantsOf,
+  isProtected,
+  protectLiveTree,
+  type OrphanProcessTree
+} from './daemon-orphan-process-tree'
 import type { ProcessTableRow } from '../pty-process-table-parser'
 import {
   MAX_OWNED_PROCESSES_PER_RECORD,
@@ -30,6 +38,10 @@ export type OrphanRecordDropReason =
   /** A recorded pid is alive but under an identity that cannot be proven ours, and a record that
    *  is not live can never gain proof later. */
   | 'unprovable'
+  /** This daemon wrote the record and the session has since ended under it. Whatever the session
+   *  left running outlived a teardown that did run; this reaper only answers for daemons that died
+   *  before theirs could. */
+  | 'session_ended'
 
 /** Why a record was left alone this tick. Named rather than silent, because "nothing was there"
  *  and "we refused to act on what was there" are different facts when a leak is investigated. */
@@ -83,6 +95,9 @@ export type OrphanReapPlanInput = {
   capturedAtMs: number
   /** This daemon's own pid: its ancestry is excluded from every candidate set. */
   selfPid: number
+  /** This daemon's start time, so a record written by an earlier daemon that held the same pid is
+   *  not mistaken for one of ours. Null when unknown. */
+  selfStartedAtMs: number | null
   /** Record keys that already looked reapable on the previous tick. */
   pendingConfirmations: ReadonlySet<string>
   nowMs: number
@@ -96,77 +111,12 @@ export type OrphanReapPlanInput = {
   daemonStartToleranceMs: number
 }
 
-type ProtectedProcesses = { pids: Set<number>; pgids: Set<number> }
-
 function parseStartedAtMs(startedAt: string | null | undefined): number | null {
   if (!startedAt) {
     return null
   }
   const parsed = Date.parse(startedAt)
   return Number.isFinite(parsed) ? parsed : null
-}
-
-function indexByPid(table: readonly ProcessTableRow[]): Map<number, ProcessTableRow> {
-  const byPid = new Map<number, ProcessTableRow>()
-  for (const row of table) {
-    // A non-atomic capture can carry both an old and a recycled row for one pid; keep the first
-    // so every reader of this index agrees on which one it saw.
-    if (!byPid.has(row.pid)) {
-      byPid.set(row.pid, row)
-    }
-  }
-  return byPid
-}
-
-/**
- * Every pid in this daemon's own parent chain, plus the process group of each. A development
- * daemon shares a terminal and often a process group with the shell that launched it, and no
- * record may ever make one of those a reap candidate.
- */
-export function collectProtectedAncestry(
-  table: readonly ProcessTableRow[],
-  selfPid: number
-): ProtectedProcesses {
-  const byPid = indexByPid(table)
-  const pids = new Set<number>([selfPid])
-  // 0 and 1 are the kernel and init groups; signalling either is never this mechanism's job.
-  const pgids = new Set<number>([0, 1])
-  const selfRow = byPid.get(selfPid)
-  if (selfRow) {
-    pgids.add(selfRow.pgid)
-  }
-  for (let row = selfRow; row && row.ppid > 0;) {
-    const parent = byPid.get(row.ppid)
-    if (!parent || pids.has(parent.pid)) {
-      break
-    }
-    pids.add(parent.pid)
-    pgids.add(parent.pgid)
-    row = parent
-  }
-  return { pids, pgids }
-}
-
-/** Add a live root and everything under it, pids and groups both, to the protected set. */
-function protectLiveTree(
-  protectedProcesses: ProtectedProcesses,
-  rootPid: number,
-  table: readonly ProcessTableRow[],
-  capturedAtMs: number
-): void {
-  const snapshot = collectDescendantRows(rootPid, table, capturedAtMs)
-  protectedProcesses.pids.add(rootPid)
-  if (snapshot.rootPgid !== null) {
-    protectedProcesses.pgids.add(snapshot.rootPgid)
-  }
-  for (const row of snapshot.descendants) {
-    protectedProcesses.pids.add(row.pid)
-    protectedProcesses.pgids.add(row.pgid)
-  }
-}
-
-function isProtected(row: ProcessTableRow, protectedProcesses: ProtectedProcesses): boolean {
-  return protectedProcesses.pids.has(row.pid) || protectedProcesses.pgids.has(row.pgid)
 }
 
 /** The live row for a recorded identity, only when its start time is exactly the recorded one. */
@@ -181,8 +131,21 @@ function matchIdentity(
     : undefined
 }
 
+/** True when this very daemon wrote the record: same pid, and no start time that says otherwise. */
+function writtenBySelf(record: PtyOwnershipRecord, input: OrphanReapPlanInput): boolean {
+  if (record.daemon.pid !== input.selfPid) {
+    return false
+  }
+  // Unknown on either side reads as ours: that only ever retires a record, never signals one.
+  return (
+    record.daemon.startedAtMs === null ||
+    input.selfStartedAtMs === null ||
+    Math.abs(record.daemon.startedAtMs - input.selfStartedAtMs) <= input.daemonStartToleranceMs
+  )
+}
+
 /** True when the daemon that wrote this record is still the process running under that pid. */
-function owningDaemonStillAlive(
+export function owningDaemonStillAlive(
   record: PtyOwnershipRecord,
   byPid: ReadonlyMap<number, ProcessTableRow>,
   selfPid: number,
@@ -214,6 +177,7 @@ function owningDaemonStillAlive(
 function refreshLiveRecord(
   record: PtyOwnershipRecord,
   rootRow: ProcessTableRow | undefined,
+  tree: OrphanProcessTree,
   input: OrphanReapPlanInput
 ): PtyOwnershipRecord {
   if (!rootRow) {
@@ -221,8 +185,7 @@ function refreshLiveRecord(
   }
   const processes: OwnedProcessIdentity[] = []
   const pgids = new Set<number>(rootRow.pgid > 1 ? [rootRow.pgid] : [])
-  const { descendants } = collectDescendantRows(rootRow.pid, input.table, input.capturedAtMs)
-  for (const row of descendants) {
+  for (const row of descendantsOf(tree, rootRow.pid)) {
     // A start time in the capture's own second could belong to a same-second reuse; leave it for
     // the next tick rather than pin a stranger's identity.
     if (!hasUnambiguousStartTime(row.startedAt, input.capturedAtMs)) {
@@ -247,9 +210,9 @@ function refreshLiveRecord(
 /** The recorded identities still alive, and everything still descended from them. */
 function collectOwnedMembers(
   record: PtyOwnershipRecord,
-  byPid: ReadonlyMap<number, ProcessTableRow>,
-  input: OrphanReapPlanInput
+  tree: OrphanProcessTree
 ): { rootRow: ProcessTableRow | undefined; members: ProcessTableRow[] } {
+  const byPid = tree.byPid
   const rootRow = matchIdentity(record.root, byPid)
   const seeds = [
     ...(rootRow ? [rootRow] : []),
@@ -258,8 +221,7 @@ function collectOwnedMembers(
   const members = new Map<number, ProcessTableRow>()
   for (const seed of seeds) {
     members.set(seed.pid, seed)
-    const { descendants } = collectDescendantRows(seed.pid, input.table, input.capturedAtMs)
-    for (const row of descendants) {
+    for (const row of descendantsOf(tree, seed.pid)) {
       members.set(row.pid, row)
     }
   }
@@ -282,15 +244,17 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
     dropped: [],
     skipped: []
   }
-  const byPid = indexByPid(input.table)
-  const protectedProcesses = collectProtectedAncestry(input.table, input.selfPid)
+  // One index per tick: every walk below shares it rather than rescanning the table per seed.
+  const tree = buildOrphanProcessTree(input.table)
+  const byPid = tree.byPid
+  const protectedProcesses = collectProtectedAncestry(tree, input.selfPid)
   const liveKeys = new Set<string>()
   const liveRootPidByKey = new Map<string, number>()
   const liveSessionIdsOfUnknownGeneration = new Set<string>()
   for (const session of input.liveSessions) {
     const livePid = typeof session.pid === 'number' && session.pid > 0 ? session.pid : null
     if (livePid !== null) {
-      protectLiveTree(protectedProcesses, livePid, input.table, input.capturedAtMs)
+      protectLiveTree(protectedProcesses, tree, livePid)
     }
     if (session.incarnationId === undefined) {
       liveSessionIdsOfUnknownGeneration.add(session.sessionId)
@@ -318,8 +282,12 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
       const rootRow =
         matchIdentity(record.root, byPid) ??
         (liveRootPidByKey.get(key) === record.root.pid ? byPid.get(record.root.pid) : undefined)
-      plan.refreshed.push(refreshLiveRecord(record, rootRow, input))
+      plan.refreshed.push(refreshLiveRecord(record, rootRow, tree, input))
       skip('live_session')
+      continue
+    }
+    if (writtenBySelf(record, input)) {
+      drop('session_ended')
       continue
     }
     if (input.nowMs - record.recordedAt > input.maxRecordAgeMs) {
@@ -331,7 +299,7 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
       continue
     }
 
-    const owned = collectOwnedMembers(record, byPid, input)
+    const owned = collectOwnedMembers(record, tree)
     const members = owned.members.filter((row) => !isProtected(row, protectedProcesses))
     if (members.length === 0) {
       if (owned.members.length > 0) {

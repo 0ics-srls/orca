@@ -114,6 +114,41 @@ describe('PtyOwnershipRecorder', () => {
   })
 })
 
+describe('PtyOwnershipRecorder.retire', () => {
+  it('removes an ended session’s record but keeps a live respawn under the same id', async () => {
+    const store = makeStore()
+    const live = new Set(['a:inc-2'])
+    const recorder = new PtyOwnershipRecorder({
+      store,
+      daemon: { pid: 400, startedAtMs: 1 },
+      platform: 'darwin',
+      now: () => NOW,
+      isLive: (identity) => live.has(`${identity.sessionId}:${identity.incarnationId}`),
+      probeIdentities: async () => new Map()
+    })
+    const row = (sessionId: string, incarnationId: string, pid: number) => ({
+      sessionId,
+      incarnationId,
+      root: { pid, startedAt: STARTED },
+      processes: [],
+      pgids: [pid],
+      tty: null,
+      daemon: { pid: 400, startedAtMs: 1 },
+      recordedAt: NOW
+    })
+    store.upsertMany([row('a', 'inc-1', 500), row('a', 'inc-2', 510), row('b', 'inc-1', 520)])
+
+    recorder.retire('a')
+    await recorder.flush()
+
+    const read = store.read()
+    expect(
+      read.status === 'readable' &&
+        read.records.map((entry) => entry.incarnationId + entry.sessionId)
+    ).toEqual(['inc-2a', 'inc-1b'])
+  })
+})
+
 describe('parsePtyRootIdentities', () => {
   it('reads one row per pid and skips rows that do not parse', () => {
     const parsed = parsePtyRootIdentities(

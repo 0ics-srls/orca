@@ -23,10 +23,11 @@ import {
   type OrphanReapPlan,
   type OrphanReapTarget
 } from './daemon-orphan-reap-plan'
+import { adoptLegacyPtyOwnershipStores } from './pty-ownership-legacy-stores'
 import type { PtyOwnershipRecordStore } from './pty-ownership-record-store'
 
-/** Matches the cadence the same job runs at elsewhere in the product: long enough that a whole-host
- *  `ps` is free, short enough that a leak is measured in minutes rather than days. */
+/** Long enough that a whole-host `ps` is noise (0.12s on a 1,900-process host), short enough that
+ *  a leak is measured in minutes rather than days. */
 export const ORPHAN_RECONCILE_INTERVAL_MS = 5 * 60 * 1000
 
 /** The first tick only ever observes — reaping needs a second one — so it runs early rather than a
@@ -62,6 +63,11 @@ export type DaemonOrphanReconcilerOptions = {
   log: (event: string, details?: Record<string, unknown>) => void
   platform?: NodeJS.Platform
   selfPid?: number
+  /** When this daemon started. A record it wrote itself is never reap authority: the session
+   *  ended under a daemon that ran its teardown. */
+  daemonStartedAtMs: number | null
+  /** Ownership files other protocol versions left behind, adopted once their daemons are gone. */
+  listLegacyStores?: () => string[]
   now?: () => number
   intervalMs?: number
   initialDelayMs?: number
@@ -150,14 +156,15 @@ export class DaemonOrphanReconciler {
   }
 
   private async reconcile(): Promise<void> {
-    const stored = this.options.store.read()
+    let stored = this.options.store.read()
     if (stored.status !== 'readable') {
       // Refusing to act on an unreadable store is the safe direction: an empty read would look
       // exactly like "this daemon never owned anything".
       this.options.log('pty-orphan-records-unreadable')
       return
     }
-    if (stored.records.length === 0) {
+    const legacyStores = this.options.listLegacyStores?.() ?? []
+    if (stored.records.length === 0 && legacyStores.length === 0) {
       this.pendingConfirmations.clear()
       return
     }
@@ -169,14 +176,35 @@ export class DaemonOrphanReconciler {
       this.options.log('pty-orphan-process-table-empty')
       return
     }
+    const selfPid = this.options.selfPid ?? process.pid
+    const nowMs = (this.options.now ?? Date.now)()
+    if (legacyStores.length > 0) {
+      const adopted = adoptLegacyPtyOwnershipStores({
+        paths: legacyStores,
+        into: this.options.store,
+        table: capture.rows,
+        selfPid,
+        daemonStartToleranceMs: DAEMON_START_TOLERANCE_MS,
+        nowMs,
+        maxRecordAgeMs: ORPHAN_RECORD_MAX_AGE_MS,
+        log: this.options.log
+      })
+      if (adopted > 0) {
+        stored = this.options.store.read()
+        if (stored.status !== 'readable') {
+          return
+        }
+      }
+    }
     const plan = planOrphanReap({
       records: stored.records,
       liveSessions: this.options.listLiveSessions(),
       table: capture.rows,
       capturedAtMs: capture.capturedAtMs,
-      selfPid: this.options.selfPid ?? process.pid,
+      selfPid,
+      selfStartedAtMs: this.options.daemonStartedAtMs,
       pendingConfirmations: this.pendingConfirmations,
-      nowMs: (this.options.now ?? Date.now)(),
+      nowMs,
       spawnGraceMs: ORPHAN_SPAWN_GRACE_MS,
       maxRecordAgeMs: ORPHAN_RECORD_MAX_AGE_MS,
       daemonStartToleranceMs: DAEMON_START_TOLERANCE_MS

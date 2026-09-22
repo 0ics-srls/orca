@@ -51,6 +51,12 @@ function parseStore(text: string): PtyOwnershipRecord[] {
   return records.slice(-MAX_PTY_OWNERSHIP_RECORDS)
 }
 
+function capRecords(records: PtyOwnershipRecord[]): PtyOwnershipRecord[] {
+  return records.length > MAX_PTY_OWNERSHIP_RECORDS
+    ? records.slice(records.length - MAX_PTY_OWNERSHIP_RECORDS)
+    : records
+}
+
 /** Matches the local idiom in daemon-pid-identity.ts: only ENOENT proves absence. */
 function isMissingFileError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'
@@ -83,19 +89,45 @@ export class PtyOwnershipRecordStore {
   }
 
   /** Add or replace records in one write. Per-key merge rather than a whole-set replace, so a
-   *  writer only has to hold the truth about its own PTYs — no caller reconstructs the others. */
-  upsertMany(incoming: readonly PtyOwnershipRecord[]): void {
-    if (incoming.length === 0) {
+   *  writer only has to hold the truth about its own PTYs — no caller reconstructs the others.
+   *  `retire` removes existing rows in the same write; it never sees the incoming ones. */
+  upsertMany(
+    incoming: readonly PtyOwnershipRecord[],
+    retire?: (existing: PtyOwnershipRecord) => boolean
+  ): void {
+    if (incoming.length === 0 && !retire) {
       return
     }
     const byKey = new Map(incoming.map((record) => [recordKeyOf(record), record]))
     this.mutate((records) => {
-      const next = records.filter((existing) => !byKey.has(recordKeyOf(existing)))
+      const next = records.filter(
+        (existing) => !byKey.has(recordKeyOf(existing)) && !retire?.(existing)
+      )
       next.push(...byKey.values())
-      return next.length > MAX_PTY_OWNERSHIP_RECORDS
-        ? next.slice(next.length - MAX_PTY_OWNERSHIP_RECORDS)
-        : next
+      return capRecords(next)
     })
+  }
+
+  /** Add rows whose keys this store does not hold yet, leaving every held row untouched. Returns
+   *  whether the write landed, so a caller can tell a merge from a silent failure. */
+  insertMissing(incoming: readonly PtyOwnershipRecord[]): boolean {
+    return this.mutate((records) => {
+      const held = new Set(records.map(recordKeyOf))
+      return capRecords([
+        ...records,
+        ...incoming.filter((record) => !held.has(recordKeyOf(record)))
+      ])
+    })
+  }
+
+  /** Delete the file. Absent already counts as deleted. */
+  remove(): boolean {
+    try {
+      unlinkSync(this.filePath)
+      return true
+    } catch (error) {
+      return isMissingFileError(error)
+    }
   }
 
   /** Replace the records the reconciler re-derived and delete the ones it retired, in one write.
@@ -122,17 +154,17 @@ export class PtyOwnershipRecordStore {
     })
   }
 
-  private mutate(update: (records: PtyOwnershipRecord[]) => PtyOwnershipRecord[]): void {
+  private mutate(update: (records: PtyOwnershipRecord[]) => PtyOwnershipRecord[]): boolean {
     const current = this.read()
     // Why refuse: rewriting an unreadable file from an empty base would destroy every record it
     // still holds, which is the one failure this store exists to survive.
     if (current.status !== 'readable') {
-      return
+      return false
     }
-    this.write(update(current.records))
+    return this.write(update(current.records))
   }
 
-  private write(records: PtyOwnershipRecord[]): void {
+  private write(records: PtyOwnershipRecord[]): boolean {
     const payload = `${JSON.stringify({ version: STORE_VERSION, records })}\n`
     const temporaryPath = `${this.filePath}.tmp`
     try {
@@ -142,12 +174,14 @@ export class PtyOwnershipRecordStore {
       writeFileSync(temporaryPath, payload, { mode: PRIVATE_FILE_MODE })
       renameSync(temporaryPath, this.filePath)
       tightenPathMode(this.filePath, PRIVATE_FILE_MODE)
+      return true
     } catch {
       try {
         unlinkSync(temporaryPath)
       } catch {
         // Nothing to clean up, or the volume is read-only; either way the store is unchanged.
       }
+      return false
     }
   }
 }

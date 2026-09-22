@@ -4,6 +4,7 @@
 
 import { dirname } from 'node:path'
 import { DaemonOrphanReconciler } from './daemon-orphan-reconciler'
+import { listLegacyPtyOwnershipStorePaths } from './pty-ownership-legacy-stores'
 import { PtyOwnershipRecordStore, getPtyOwnershipRecordPath } from './pty-ownership-record-store'
 import { PtyOwnershipRecorder } from './pty-ownership-recorder'
 import type { LiveSessionIdentity } from './daemon-orphan-reap-plan'
@@ -34,8 +35,9 @@ export function createDaemonPtyOwnership(
   if (!options.pidPath) {
     return null
   }
+  const runtimeDir = dirname(options.pidPath)
   const store = new PtyOwnershipRecordStore(
-    getPtyOwnershipRecordPath(dirname(options.pidPath), options.protocolVersion)
+    getPtyOwnershipRecordPath(runtimeDir, options.protocolVersion)
   )
   return {
     recorder: new PtyOwnershipRecorder({
@@ -54,6 +56,8 @@ export function createDaemonPtyOwnership(
     reconciler: new DaemonOrphanReconciler({
       store,
       listLiveSessions: options.listLiveSessions,
+      daemonStartedAtMs: options.daemonStartedAtMs,
+      listLegacyStores: () => listLegacyPtyOwnershipStorePaths(runtimeDir, options.protocolVersion),
       log: options.log
     })
   }

@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { ProcessTableRow } from '../pty-process-table-parser'
 import {
+  buildOrphanProcessTree,
   collectProtectedAncestry,
-  planOrphanReap,
-  type OrphanReapPlanInput
-} from './daemon-orphan-reap-plan'
+  descendantsOf
+} from './daemon-orphan-process-tree'
+import { planOrphanReap, type OrphanReapPlanInput } from './daemon-orphan-reap-plan'
 import { ptyOwnershipRecordKey, type PtyOwnershipRecord } from './pty-ownership-record'
 
 const NOW = Date.parse('Mon Sep 21 12:00:00 2026')
 const ROOT_STARTED_AT = 'Mon Sep 21 09:00:00 2026'
 const AFTER_ROOT = 'Mon Sep 21 09:00:05 2026'
 const LATER = 'Mon Sep 21 11:00:00 2026'
+const SELF_STARTED_AT_MS = Date.parse('Mon Sep 21 11:30:00 2026')
 
 // Defaults describe a leftover: reparented to init, in its own group, started after the root.
 function row(overrides: Partial<ProcessTableRow> & { pid: number }): ProcessTableRow {
@@ -40,6 +42,7 @@ function plan(overrides: Partial<OrphanReapPlanInput> = {}) {
     table: [],
     capturedAtMs: NOW,
     selfPid: 900,
+    selfStartedAtMs: SELF_STARTED_AT_MS,
     pendingConfirmations: new Set<string>(),
     nowMs: NOW,
     spawnGraceMs: 60_000,
@@ -294,6 +297,60 @@ describe('planOrphanReap', () => {
     expect(result.reap.map((target) => target.incarnationId)).toEqual(['inc-1'])
     expect(result.refreshed.map((entry) => entry.incarnationId)).toEqual(['inc-2'])
   })
+
+  it('never reaps what a session left behind when the daemon that ran it is still this one', () => {
+    // `nohup server & exit`: the shell exits, the daemon tears the session down and keeps
+    // running, and the recorded server survives reparented to init.
+    const result = plan({
+      records: [
+        record({
+          root: { pid: 500, startedAt: ROOT_STARTED_AT },
+          processes: [SURVIVOR],
+          daemon: { pid: 900, startedAtMs: SELF_STARTED_AT_MS }
+        })
+      ],
+      table: [row({ pid: 601, ppid: 1, pgid: 601 })],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap).toEqual([])
+    expect(result.confirmNext).toEqual([])
+    expect(result.dropped.map((entry) => entry.reason)).toEqual(['session_ended'])
+  })
+
+  it('still reaps for an earlier daemon that happened to hold the same pid', () => {
+    const result = plan({
+      records: [
+        record({
+          processes: [SURVIVOR],
+          daemon: { pid: 900, startedAtMs: SELF_STARTED_AT_MS - 10 * 60 * 60_000 }
+        })
+      ],
+      table: [row({ pid: 601, ppid: 1, pgid: 601 })],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap.map((target) => target.reason)).toEqual(['orphaned_descendant'])
+  })
+})
+
+describe('descendantsOf', () => {
+  it('terminates on a cycle and grants no children to a root listed twice', () => {
+    const cyclic = buildOrphanProcessTree([
+      row({ pid: 500, ppid: 1 }),
+      row({ pid: 601, ppid: 602 }),
+      row({ pid: 602, ppid: 601 }),
+      row({ pid: 603, ppid: 500 })
+    ])
+    expect(descendantsOf(cyclic, 601).map((entry) => entry.pid)).toEqual([602])
+
+    const duplicated = buildOrphanProcessTree([
+      row({ pid: 500, ppid: 1 }),
+      row({ pid: 500, ppid: 1, startedAt: LATER }),
+      row({ pid: 603, ppid: 500 })
+    ])
+    expect(descendantsOf(duplicated, 500)).toEqual([])
+  })
 })
 
 describe('collectProtectedAncestry', () => {
@@ -304,7 +361,7 @@ describe('collectProtectedAncestry', () => {
       row({ pid: 700, pgid: 700 })
     ]
 
-    const protectedAncestry = collectProtectedAncestry(table, 900)
+    const protectedAncestry = collectProtectedAncestry(buildOrphanProcessTree(table), 900)
 
     expect([...protectedAncestry.pids].sort()).toEqual([700, 800, 900])
     expect([...protectedAncestry.pgids].sort()).toEqual([0, 1, 700, 800, 890])
@@ -313,6 +370,8 @@ describe('collectProtectedAncestry', () => {
   it('terminates on a parent cycle a non-atomic capture can produce', () => {
     const table = [row({ pid: 900, ppid: 800 }), row({ pid: 800, ppid: 900 })]
 
-    expect([...collectProtectedAncestry(table, 900).pids].sort()).toEqual([800, 900])
+    expect([...collectProtectedAncestry(buildOrphanProcessTree(table), 900).pids].sort()).toEqual([
+      800, 900
+    ])
   })
 })

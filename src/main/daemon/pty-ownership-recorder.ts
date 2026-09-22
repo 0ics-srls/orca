@@ -87,6 +87,7 @@ type PendingRecord = { identity: SpawnedPtyIdentity; recordedAt: number }
  */
 export class PtyOwnershipRecorder {
   private pending = new Map<string, PendingRecord>()
+  private retiring = new Set<string>()
   private timer: ReturnType<typeof setTimeout> | null = null
   private inFlight: Promise<void> = Promise.resolve()
 
@@ -105,6 +106,23 @@ export class PtyOwnershipRecorder {
       identity,
       recordedAt: now()
     })
+    this.schedule()
+  }
+
+  /**
+   * The session ended under this daemon, so its record stops being evidence of anything the
+   * reconciler may act on. Whatever it left running outlived a teardown that did run; answering
+   * for that is the natural-exit sweep's job, not a reason to hand a stale snapshot kill authority.
+   */
+  retire(sessionId: string): void {
+    if (!this.supported) {
+      return
+    }
+    this.retiring.add(sessionId)
+    this.schedule()
+  }
+
+  private schedule(): void {
     if (this.timer) {
       return
     }
@@ -123,9 +141,11 @@ export class PtyOwnershipRecorder {
       this.timer = null
     }
     const batch = [...this.pending.values()]
+    const retiring = this.retiring
     this.pending = new Map()
+    this.retiring = new Set()
     // Serialized so two batches never interleave their read-modify-write of the store.
-    this.inFlight = this.inFlight.then(() => this.writeBatch(batch))
+    this.inFlight = this.inFlight.then(() => this.writeBatch(batch, retiring))
     return this.inFlight
   }
 
@@ -135,17 +155,23 @@ export class PtyOwnershipRecorder {
       this.timer = null
     }
     this.pending.clear()
+    this.retiring.clear()
   }
 
-  private async writeBatch(batch: readonly PendingRecord[]): Promise<void> {
-    if (batch.length === 0) {
+  private async writeBatch(
+    batch: readonly PendingRecord[],
+    retiring: ReadonlySet<string>
+  ): Promise<void> {
+    if (batch.length === 0 && retiring.size === 0) {
       return
     }
     let probed = new Map<number, PtyRootIdentity>()
     try {
-      probed = await (this.options.probeIdentities ?? probePtyRootIdentities)(
-        batch.map((entry) => entry.identity.pid)
-      )
+      if (batch.length > 0) {
+        probed = await (this.options.probeIdentities ?? probePtyRootIdentities)(
+          batch.map((entry) => entry.identity.pid)
+        )
+      }
     } catch {
       // Unprobed rows are still written; the reconciler completes them while the root is alive.
     }
@@ -169,8 +195,12 @@ export class PtyOwnershipRecorder {
         recordedAt
       })
     }
+    // A session id respawned since it ended keeps its newer, live generation's record.
+    const retire = (existing: PtyOwnershipRecord): boolean =>
+      retiring.has(existing.sessionId) &&
+      !this.options.isLive({ ...existing, pid: existing.root.pid })
     try {
-      this.options.store.upsertMany(records)
+      this.options.store.upsertMany(records, retiring.size > 0 ? retire : undefined)
     } catch {
       // A terminal must open whether or not its bookkeeping did.
     }
