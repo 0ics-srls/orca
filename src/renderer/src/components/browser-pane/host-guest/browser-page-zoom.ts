@@ -108,8 +108,9 @@ export function addBrowserPageZoomEventListener(
   callback: (command: BrowserPageZoomCommand) => void
 ): () => void {
   const listener = (event: Event): void => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this event name is private to Orca and always carries a zoom command.
-    callback((event as CustomEvent<BrowserPageZoomCommand>).detail)
+    if (event instanceof CustomEvent) {
+      callback(event.detail)
+    }
   }
   window.addEventListener(ORCA_BROWSER_PAGE_ZOOM_EVENT, listener)
   return () => window.removeEventListener(ORCA_BROWSER_PAGE_ZOOM_EVENT, listener)
