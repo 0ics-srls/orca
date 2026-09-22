@@ -658,3 +658,78 @@ describe('re-adding a tombstoned row', () => {
     expect(renderJournalState(state).items).toEqual([])
   })
 })
+
+describe('producer linkage round-trips through the reducer', () => {
+  const identity: AgentJournalItemIdentity = {
+    provider: 'claude',
+    sessionId: 'claude-session',
+    uuid: 'child-1'
+  }
+  const linkage = {
+    agentId: 'task-1',
+    parentAgentId: 'task-parent',
+    providerParentRef: 'toolu_1',
+    producerKind: 'agent' as const,
+    attempt: 2
+  }
+
+  it('copies the whole bundle onto the render item on the plain item path', () => {
+    const state = createJournalReducerState('session-1', EPOCH)
+    applyJournalRow(
+      state,
+      buildJournalItemRow({
+        state,
+        identity,
+        body: text('looking'),
+        seq: 1,
+        fence: 1,
+        ts: 1_001,
+        linkage
+      })
+    )
+    expect(renderJournalState(state).items[0]).toMatchObject(linkage)
+  })
+
+  it('copies it on the lifecycle-batch path too, which is a separate upsert', () => {
+    const state = createJournalReducerState('session-1', EPOCH)
+    applyJournalRow(state, {
+      kind: 'lifecycle-batch',
+      settlementId: 'settle-1',
+      mutations: [{ kind: 'item', itemId: 'i-child', revision: 1, body: text('looking') }],
+      ...base(1),
+      ...linkage
+    })
+    expect(renderJournalState(state).items[0]).toMatchObject(linkage)
+  })
+
+  it('keeps linkage when a later revision rewrites the row', () => {
+    // The resolved-append path lost the marker once before by rebuilding the
+    // row without it, so the SECOND write is the one that matters here.
+    const state = createJournalReducerState('session-1', EPOCH)
+    for (const [seq, body] of [
+      [1, text('look')],
+      [2, text('looking at the lane')]
+    ] as const) {
+      applyJournalRow(
+        state,
+        buildJournalItemRow({ state, identity, body, seq, fence: 1, ts: 1_000 + seq, linkage })
+      )
+    }
+    const items = renderJournalState(state).items
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ revision: 2, ...linkage })
+  })
+
+  it("renders a row that predates linkage as the session's own", () => {
+    const state = createJournalReducerState('session-1', EPOCH)
+    applyJournalRow(state, {
+      kind: 'item',
+      itemId: 'i-legacy',
+      revision: 1,
+      body: text('written before linkage existed'),
+      ...base(1)
+    })
+    const item = renderJournalState(state).items[0]
+    expect(item && 'agentId' in item).toBe(false)
+  })
+})
