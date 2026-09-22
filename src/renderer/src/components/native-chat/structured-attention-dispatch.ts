@@ -76,10 +76,9 @@ export function dispatchStructuredTurnCompletionAttention(
     return
   }
   const row = state.agentStatusByPaneKey[paneKey]
-  // Minted from the row the user's acknowledgement will read, so viewing the chat retires the
-  // banner. This can outrun the status re-projection and mint from the working episode's start,
-  // which `collectAcknowledgedAgentNotificationIds` covers by rebuilding ids for the row's left
-  // episodes too. Null only when no row has landed at all; delivery still goes out then,
+  // Minted from the row as it stands; the row's start can move afterwards (this can outrun the
+  // settled re-projection), so acknowledgement retires the id the delivery tail recorded rather
+  // than rebuilding it. Null only when no row has landed at all; delivery still goes out then,
   // undismissible, rather than being held back for bookkeeping.
   const notificationId = buildAgentNotificationId({
     worktreeId: tab.worktreeId,

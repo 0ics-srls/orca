@@ -1,7 +1,8 @@
 import type { StoredAgentAttentionUnread } from '@/attention/agent-attention-contract'
+import { takeDispatchedAgentNotificationIds } from '@/attention/dispatched-agent-notification-ids'
 import type { UISlice, UISliceGet, UISliceSet } from './ui-slice-contract'
 import {
-  collectAcknowledgedAgentNotificationIds,
+  collectAcknowledgedAgentNotificationId,
   latestAgentTurnTimestamp,
   resolvePaneKeyWorktreeIdFromTabs,
   usableTimestamp
@@ -40,22 +41,22 @@ export function createUiActivityActions(set: UISliceSet, _get: UISliceGet): Acti
           let stamp = now
           const liveEntry = s.agentStatusByPaneKey?.[key]
           if (liveEntry) {
-            collectAcknowledgedAgentNotificationIds({
+            collectAcknowledgedAgentNotificationId({
               ids: notificationIdsToDismiss,
               worktreeId: resolvePaneKeyWorktreeIdFromTabs(s, key) ?? liveEntry.worktreeId,
               paneKey: key,
-              entry: liveEntry,
+              stateStartedAt: liveEntry.stateStartedAt,
               previousAckAt: prev
             })
             stamp = Math.max(stamp, latestAgentTurnTimestamp(liveEntry))
           }
           const retained = s.retainedAgentsByPaneKey?.[key]
           if (retained) {
-            collectAcknowledgedAgentNotificationIds({
+            collectAcknowledgedAgentNotificationId({
               ids: notificationIdsToDismiss,
               worktreeId: retained.worktreeId,
               paneKey: key,
-              entry: retained.entry,
+              stateStartedAt: retained.entry.stateStartedAt,
               previousAckAt: prev
             })
             stamp = Math.max(stamp, latestAgentTurnTimestamp(retained.entry))
@@ -86,6 +87,13 @@ export function createUiActivityActions(set: UISliceSet, _get: UISliceGet): Acti
           ...(nextManual ? { manuallyUnreadTurnsByPaneKey: nextManual } : {})
         }
       })
+      // Why: the rebuild above reads the row as it stands now; what was actually dispatched is the
+      // authority for banners raised before the row's start moved.
+      for (const key of paneKeys) {
+        for (const id of takeDispatchedAgentNotificationIds(key)) {
+          notificationIdsToDismiss.add(id)
+        }
+      }
       const ids = [...notificationIdsToDismiss]
       if (ids.length > 0 && typeof window !== 'undefined') {
         void window.api?.notifications?.dismiss?.(ids)

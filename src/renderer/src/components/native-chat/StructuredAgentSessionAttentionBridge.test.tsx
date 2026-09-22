@@ -63,6 +63,7 @@ vi.mock('@/runtime/structured-agent-session-client', () => ({
 
 import { StructuredAgentSessionAttentionBridge } from './StructuredAgentSessionAttentionBridge'
 import { resetStructuredAgentSessionTurnCompletionFeedsForTests } from '@/runtime/structured-agent-session-turn-completion-feed'
+import { resetDispatchedAgentNotificationIdsForTests } from '@/attention/dispatched-agent-notification-ids'
 import {
   makeTabGroup,
   makeUnifiedTab,
@@ -124,6 +125,8 @@ function completionFrameWithoutOutcome(): AgentSessionTurnCompletionEvent {
 
 /** Every request the renderer handed the preload notification bridge, in order. */
 const dispatched: NotificationDispatchRequest[] = []
+/** Every id batch an acknowledgement asked main to retire, in order. */
+const dismissed: string[][] = []
 
 /** The single dispatch a settled turn is allowed to make. */
 function onlyDispatch(): NotificationDispatchRequest {
@@ -157,12 +160,18 @@ describe('StructuredAgentSessionAttentionBridge', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dispatched.length = 0
+    dismissed.length = 0
+    resetDispatchedAgentNotificationIdsForTests()
     // happy-dom makes globalThis the window, so this is `window.api` as the delivery tail reads it.
     vi.stubGlobal('api', {
       notifications: {
         dispatch: (request: NotificationDispatchRequest) => {
           dispatched.push(request)
           return Promise.resolve({ delivered: true })
+        },
+        dismiss: (ids: string[]) => {
+          dismissed.push(ids)
+          return Promise.resolve({ dismissed: 0 })
         }
       }
     })
@@ -246,6 +255,44 @@ describe('StructuredAgentSessionAttentionBridge', () => {
         tabDot: 'agent-completion'
       })
       expect(onlyDispatch()).toMatchObject({ agentState: 'done', agentInterrupted: true })
+    }
+  )
+
+  // The row's start moves after the banner is minted: a completion can outrun the settled
+  // re-projection (working -> done), and a settled row is re-stamped with no history entry by any
+  // later journal row, such as the status note a cancel appends (done -> done).
+  it.each(['working', 'done'] as const)(
+    'retires the banner it raised after a %s row moves its start',
+    async (rowStateAtDispatch) => {
+      mocks.store
+        ?.getState()
+        .setAgentStatus(
+          CHAT_SUBJECT,
+          { state: rowStateAtDispatch, prompt: 'Stop that', agentType: 'claude' },
+          'Chat',
+          { updatedAt: 1_000, stateStartedAt: 1_000 },
+          { tabId: CHAT_TAB, worktreeId: WORKSPACE }
+        )
+      render(<StructuredAgentSessionAttentionBridge />)
+      await waitFor(() => expect(mocks.subscribeCompletions).toHaveBeenCalledOnce())
+
+      act(() => hostStream()(completionFrame(SESSION, 'cancellation')))
+      const raised = onlyDispatch().notificationId
+      expect(raised).toBeTruthy()
+      mocks.store
+        ?.getState()
+        .setAgentStatus(
+          CHAT_SUBJECT,
+          { state: 'done', prompt: 'Stop that', agentType: 'claude' },
+          'Chat',
+          { updatedAt: 2_000, stateStartedAt: 2_000, allowOlderTimestamp: true },
+          { tabId: CHAT_TAB, worktreeId: WORKSPACE }
+        )
+      expect(mocks.store?.getState().agentStatusByPaneKey[CHAT_SUBJECT]?.stateStartedAt).toBe(2_000)
+
+      mocks.store?.getState().acknowledgeAgents([CHAT_SUBJECT])
+
+      expect(dismissed.flat()).toContain(raised)
     }
   )
 

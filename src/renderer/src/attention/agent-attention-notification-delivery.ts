@@ -13,6 +13,7 @@
 import { playDesktopNotificationSound } from '@/lib/desktop-notification-sound'
 import { showBlockedNotificationFallbackToast } from '@/lib/blocked-notification-fallback'
 import type { NotificationDispatchRequest } from '../../../shared/notification-settings-types'
+import { recordDispatchedAgentNotificationId } from './dispatched-agent-notification-ids'
 
 export type AgentAttentionNotificationSound = {
   customSoundId: string
@@ -23,6 +24,9 @@ export function deliverAgentAttentionNotification(
   request: NotificationDispatchRequest,
   sound: AgentAttentionNotificationSound
 ): void {
+  if (request.notificationId && request.paneKey) {
+    recordDispatchedAgentNotificationId(request.paneKey, request.notificationId)
+  }
   void window.api.notifications
     .dispatch(request)
     .then((result) => {
