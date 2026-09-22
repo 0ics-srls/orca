@@ -358,8 +358,9 @@ describe('StructuredAgentSessionStatusBridge', () => {
         })
       })
     )
+    // Monitoring is its own displayed state, so its clock starts when the label does.
     expect(statuses()).toEqual([
-      expect.objectContaining({ state: 'working', workingMode: 'monitoring', stateStartedAt: 1 })
+      expect.objectContaining({ state: 'working', workingMode: 'monitoring', stateStartedAt: 2 })
     ])
 
     act(() =>
@@ -377,6 +378,47 @@ describe('StructuredAgentSessionStatusBridge', () => {
     )
     expect(statuses()).toEqual([
       expect.objectContaining({ state: 'done', workingMode: undefined, stateStartedAt: 3 })
+    ])
+  })
+
+  // A watch loop's age is not how long the agent has been working: the clock restarts when the
+  // user's prompt turns a monitoring row into a real turn.
+  it('restarts the state clock when monitoring becomes a real turn', async () => {
+    render(<StructuredAgentSessionStatusBridge />)
+    await waitFor(() => expect(mocks.subscribeStatus).toHaveBeenCalledOnce())
+
+    act(() =>
+      feed().emit({
+        type: 'snapshot',
+        sessions: [
+          summary({
+            status: 'idle',
+            updatedAt: 1,
+            backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+          })
+        ]
+      })
+    )
+    expect(statuses()).toEqual([
+      expect.objectContaining({ state: 'working', workingMode: 'monitoring', stateStartedAt: 1 })
+    ])
+
+    act(() =>
+      feed().emit({
+        type: 'status',
+        session: summary({
+          status: 'working',
+          updatedAt: 2_700_001,
+          backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+        })
+      })
+    )
+    expect(statuses()).toEqual([
+      expect.objectContaining({
+        state: 'working',
+        workingMode: undefined,
+        stateStartedAt: 2_700_001
+      })
     ])
   })
 

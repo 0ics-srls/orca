@@ -26,8 +26,9 @@ export function structuredAgentSessionAgentStatus(
 ): StructuredAgentSessionAgentStatus {
   const resolution = foldAgentLeadStatus({
     leadState: structuredAgentSessionLeadState(summary.status),
-    // The task list is the provider's live roster, so a settled task leaves it on its own;
-    // there is no hook-time inventory snapshot for an interrupt to distrust.
+    // Inert, not decided: a projected session status has no interrupted member, so this lane
+    // cannot express one. The hook lane's guard exists to distrust a stale inventory snapshot;
+    // here the task list is the provider's live roster and a settled task leaves it on its own.
     interrupted: false,
     childWorkLiveness: agentChildWorkLiveness(summary.backgroundTasks)
   })

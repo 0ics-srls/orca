@@ -139,6 +139,56 @@ describe('AgentHookServer ingestStructuredStatus', () => {
     expect(server.getStatusSnapshot()[0]).not.toHaveProperty('workingMode')
   })
 
+  // The timer beside the row belongs to the state it labels: monitoring that becomes a real turn
+  // must not report the watch loop's age as how long the agent has been working.
+  it('restarts the state clock when monitoring becomes a real turn', () => {
+    const server = new AgentHookServer()
+    server.ingestStructuredStatus(
+      summary({
+        status: 'idle',
+        backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+      }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      workingMode: 'monitoring',
+      stateStartedAt: OBSERVED_AT
+    })
+
+    server.ingestStructuredStatus(
+      summary({
+        status: 'working',
+        updatedAt: OBSERVED_AT + 2_700_000,
+        backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+      }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      stateStartedAt: OBSERVED_AT + 2_700_000
+    })
+    expect(server.getStatusSnapshot()[0]).not.toHaveProperty('workingMode')
+  })
+
+  // `summary.updatedAt` is the journal's last activity, which a background-task edge does not
+  // advance, so every fold transition must still commit on an unchanged clock.
+  it('folds task edges that carry no new journal activity', () => {
+    const server = new AgentHookServer()
+    for (const backgroundTasks of [
+      [{ id: 'child-1', kind: 'agent' as const, state: 'working' as const }],
+      [{ id: 'child-1', kind: 'agent' as const, state: 'done' as const }],
+      []
+    ]) {
+      server.ingestStructuredStatus(summary({ status: 'idle', backgroundTasks }), SUBJECT)
+    }
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'done',
+      stateStartedAt: OBSERVED_AT,
+      evidenceObservedAt: OBSERVED_AT
+    })
+  })
+
   it('marks a session whose provider child is gone as held, not owned', () => {
     const server = new AgentHookServer()
     server.ingestStructuredStatus(summary({ hostExecutionOwned: undefined }), SUBJECT)

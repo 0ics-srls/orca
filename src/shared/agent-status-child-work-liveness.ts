@@ -22,7 +22,10 @@ export function isAgentChildWorkKind(kind: AgentChildWorkKind): boolean {
 /** The settlement rule `resolveAgentChildWorkFreshness` already reads rows by: only an explicit
  *  settled state retires child work. An absent state (an old host's live task), an unknown kind
  *  and a child that lost contact all fail active, so nothing untyped or out of touch can silently
- *  retire — and a blocked subagent cannot count for less than the shell beside it. */
+ *  retire — and a blocked subagent cannot count for less than the shell beside it.
+ *  The escape hatch is the roster's own lifetime, not a state: it is per-session host memory that
+ *  dies when the session closes (Claude also clears it on provider `ended`), so a producer that
+ *  ever reported a failure IN PLACE rather than settling it would pin `working` until then. */
 function isLiveChildWork(child: AgentChildWorkLivenessCandidate): boolean {
   return child.state !== 'done' && child.state !== 'idle'
 }

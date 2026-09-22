@@ -64,7 +64,12 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
         : {}),
       receivedAt: Math.max(Date.now(), priorStatus?.receivedAt ?? 0),
       evidenceObservedAt: summary.updatedAt,
-      stateStartedAt: priorStatus?.state === state ? priorStatus.stateStartedAt : summary.updatedAt,
+      // Continuity is the whole published work identity: `state` alone no longer means "a turn is
+      // running", so monitoring that becomes a real turn must restart the clock, not inherit it.
+      stateStartedAt:
+        priorStatus?.state === state && priorStatus.workingMode === workingMode
+          ? priorStatus.stateStartedAt
+          : summary.updatedAt,
       observation: {
         origin: 'structured',
         kind: 'transition',

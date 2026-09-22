@@ -114,8 +114,12 @@ function projectStatus(
       updatedAt: summary.updatedAt,
       // This ordered host feed can correct a legacy publication clock after upgrade.
       allowOlderTimestamp: true,
+      // Same continuity key as the host ingest: monitoring and working are distinct published
+      // states, so the timer beside the label must restart when the label changes.
       stateStartedAt:
-        desired.state !== 'done' && current?.state === desired.state
+        desired.state !== 'done' &&
+        current?.state === desired.state &&
+        current.workingMode === desired.workingMode
           ? current.stateStartedAt
           : summary.updatedAt,
       evidenceObservedAt: summary.updatedAt
