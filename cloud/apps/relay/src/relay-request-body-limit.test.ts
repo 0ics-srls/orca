@@ -27,7 +27,7 @@ describe('relay HTTP request body limit', () => {
       ORCA_RELAY_CELL_URL: 'http://127.0.0.1:8080',
       ORCA_RELAY_AUTH_ISSUER: 'https://auth.example.test',
       ORCA_RELAY_JWKS_URL: 'https://auth.example.test/jwks',
-      ORCA_RELAY_ASSIGNMENT_SIGNING_KEY: 'test-assignment-key-at-least-32-bytes',
+      ORCA_RELAY_ASSIGNMENT_SIGNING_KEY: 'test-assignment-key-with-at-least-32-bytes',
       ORCA_RELAY_ADMIN_AUDIENCE: 'https://relay.example.test/admin',
       ORCA_RELAY_DEPLOY_SERVICE_ACCOUNT: 'deploy@example.test',
       ORCA_RELAY_CELLS_JSON: JSON.stringify([
