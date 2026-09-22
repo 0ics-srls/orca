@@ -7,8 +7,8 @@ import {
   projectRemoteAppStatus,
   resolveDesktopWindowStatus
 } from '../../shared/cli-app-status-projection'
-import { RuntimeRpcFailureError, type RuntimeRpcSuccess } from './types'
-import { isRuntimeAccessDeniedError } from './runtime-access-denied'
+import { RuntimeClientError, RuntimeRpcFailureError, type RuntimeRpcSuccess } from './types'
+import { RUNTIME_ACCESS_DENIED_CODE } from './runtime-access-denied'
 
 export { projectRemoteAppStatus, resolveDesktopWindowStatus }
 
@@ -71,7 +71,7 @@ export async function getCliStatus(
     })
   } catch (error) {
     // Why: a denied caller cannot tell a live Orca from a dead one, so report the denial, not a state.
-    if (isRuntimeAccessDeniedError(error)) {
+    if (error instanceof RuntimeClientError && error.code === RUNTIME_ACCESS_DENIED_CODE) {
       throw error
     }
     const running = isProcessRunning(metadata.pid)

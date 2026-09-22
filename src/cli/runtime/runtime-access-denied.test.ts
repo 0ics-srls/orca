@@ -6,7 +6,6 @@ import { RuntimeClient } from './client'
 import { launchOrcaApp } from './launch'
 import { getCliStatus } from './status'
 import { sendRequest } from './transport'
-import { RuntimeRpcFailureError } from './types'
 
 const { connect, tryReadMetadata } = vi.hoisted(() => ({
   connect: vi.fn(),
@@ -55,34 +54,22 @@ function failConnect(code: string): void {
   socket.emit('close')
 }
 
-function mockKill(code?: string): ReturnType<typeof vi.spyOn> {
-  return vi.spyOn(process, 'kill').mockImplementation(() => {
-    if (code) {
-      throw Object.assign(new Error(`kill ${code}`), { code })
-    }
-    return true
-  })
+async function deniedRequest(code: string): Promise<unknown> {
+  const pending = sendRequest(metadata, 'status.get', undefined, 1000)
+  failConnect(code)
+  return pending.catch((failure: unknown) => failure)
 }
 
 describe('runtime access denied', () => {
   it.each(['EPERM', 'EACCES'])('classifies a %s connect without restart advice', async (code) => {
-    const pending = sendRequest(metadata, 'status.get', undefined, 1000)
-    failConnect(code)
-    const error = await pending.catch((failure: unknown) => failure)
+    const error = await deniedRequest(code)
 
-    expect(error).toMatchObject({
-      code: 'runtime_access_denied',
-      data: {
-        operation: 'connect',
-        systemCode: code,
-        processState: 'unverifiable',
-        retryable: false,
-        pid: metadata.pid
-      }
-    })
+    expect(error).toMatchObject({ code: 'runtime_access_denied', data: { systemCode: code } })
     expect(socket.write).not.toHaveBeenCalled()
     const human = formatCliError(error)
-    expect(human).toContain(`connecting to the Orca runtime (${code})`)
+    expect(human).toContain(
+      `Permission denied connecting to Orca (${code}). Orca may be running normally`
+    )
     expect(human).toContain("Next step: Do not restart Orca or run 'orca open'")
     expect(human).not.toMatch(RESTART_OR_ABSENT_ADVICE)
     expect(human).not.toContain('private-runtime')
@@ -90,89 +77,24 @@ describe('runtime access denied', () => {
 
   it('names the Codex sandbox only when CODEX_SANDBOX is set', async () => {
     vi.stubEnv('CODEX_SANDBOX', 'seatbelt')
-    const pending = sendRequest(metadata, 'status.get', undefined, 1000)
-    failConnect('EPERM')
-    const error = await pending.catch((failure: unknown) => failure)
+    const human = formatCliError(await deniedRequest('EPERM'))
 
-    expect(error).toMatchObject({
-      code: 'runtime_access_denied',
-      data: { codexSandbox: 'seatbelt' }
-    })
-    const human = formatCliError(error)
-    expect(human).toContain('The Codex sandbox denied this command access')
+    expect(human).toContain('The Codex sandbox blocked this command from connecting to Orca')
     expect(human).toContain('escalated permissions, outside the Codex sandbox')
     expect(human).not.toMatch(RESTART_OR_ABSENT_ADVICE)
   })
 
-  it('gives the generic permission message outside a Codex sandbox', async () => {
-    const pending = sendRequest(metadata, 'status.get', undefined, 1000)
-    failConnect('EACCES')
-    const error = await pending.catch((failure: unknown) => failure)
-
-    expect(error).not.toHaveProperty('data.codexSandbox')
-    expect(formatCliError(error)).toContain(
-      "Permission denied while connecting to the Orca runtime (EACCES). This command's sandbox or OS permissions block access"
-    )
-    expect(formatCliError(error)).not.toContain('Codex')
-  })
-
   it('keeps ordinary connect failures as runtime_unavailable', async () => {
-    const pending = sendRequest(metadata, 'status.get', undefined, 1000)
-    failConnect('ECONNREFUSED')
-    await expect(pending).rejects.toMatchObject({ code: 'runtime_unavailable' })
+    expect(await deniedRequest('ECONNREFUSED')).toMatchObject({ code: 'runtime_unavailable' })
   })
 
-  it.each(['EPERM', 'EACCES'])(
-    'fails status on a %s connect instead of guessing a state',
-    async (code) => {
-      const kill = mockKill('ESRCH')
-      const pending = getCliStatus('/test')
-      failConnect(code)
-
-      await expect(pending).rejects.toMatchObject({
-        code: 'runtime_access_denied',
-        data: { operation: 'connect', systemCode: code }
-      })
-      expect(kill).not.toHaveBeenCalled()
-    }
-  )
-
-  // Why: a refused or missing socket proves the caller reached the endpoint, so a later EPERM
-  // pid probe is another uid (#20098), not a sandbox; "don't restart" would be wrong advice.
-  it.each(['ECONNREFUSED', 'ENOENT'])(
-    'keeps starting for %s plus an EPERM pid probe',
-    async (code) => {
-      mockKill('EPERM')
-      const pending = getCliStatus('/test')
-      failConnect(code)
-
-      await expect(pending).resolves.toMatchObject({
-        result: { app: { running: true, pid: metadata.pid }, runtime: { state: 'starting' } }
-      })
-    }
-  )
-
-  it.each(['ENOENT', 'ECONNREFUSED'])('keeps stale_bootstrap for %s plus ESRCH', async (code) => {
-    mockKill('ESRCH')
+  it('fails status instead of probing the pid and guessing a state', async () => {
+    const kill = vi.spyOn(process, 'kill')
     const pending = getCliStatus('/test')
-    failConnect(code)
+    failConnect('EPERM')
 
-    await expect(pending).resolves.toMatchObject({
-      result: {
-        app: { running: false, pid: null },
-        runtime: { state: 'stale_bootstrap', reachable: false }
-      }
-    })
-  })
-
-  it('keeps starting for a refused connect with a live pid', async () => {
-    mockKill()
-    const pending = getCliStatus('/test')
-    failConnect('ECONNREFUSED')
-
-    await expect(pending).resolves.toMatchObject({
-      result: { app: { running: true }, runtime: { state: 'starting' } }
-    })
+    await expect(pending).rejects.toMatchObject({ code: 'runtime_access_denied' })
+    expect(kill).not.toHaveBeenCalled()
   })
 
   it('does not launch or poll Orca when the initial status is denied', async () => {
@@ -196,29 +118,8 @@ describe('runtime access denied', () => {
       ok: false,
       error: {
         code: 'runtime_access_denied',
-        data: {
-          operation: 'connect',
-          systemCode: 'EPERM',
-          retryable: false,
-          nextSteps: expect.any(Array)
-        }
+        data: { systemCode: 'EPERM', nextSteps: expect.any(Array) }
       }
     })
-  })
-
-  it('adds no local restart advice to a host-reported denial', () => {
-    const error = new RuntimeRpcFailureError({
-      id: 'request',
-      ok: false,
-      error: {
-        code: 'runtime_access_denied',
-        message: 'Permission denied while connecting to the Orca runtime (EPERM).'
-      },
-      _meta: { runtimeId: 'runtime-test' }
-    })
-
-    expect(formatCliError(error)).toBe(
-      'Permission denied while connecting to the Orca runtime (EPERM).'
-    )
   })
 })

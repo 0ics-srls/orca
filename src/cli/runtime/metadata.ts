@@ -7,7 +7,6 @@ import {
   type RuntimeMetadata
 } from '../../shared/runtime-bootstrap'
 import { RuntimeClientError } from './types'
-import { accessDeniedSystemCode, runtimeAccessDeniedError } from './runtime-access-denied'
 
 export function readMetadata(userDataPath: string): RuntimeMetadata {
   const metadataPath = getRuntimeMetadataPath(userDataPath)
@@ -24,7 +23,6 @@ export function readMetadata(userDataPath: string): RuntimeMetadata {
     if (error instanceof RuntimeClientError) {
       throw error
     }
-    throwIfAccessDenied(error)
     throw new RuntimeClientError(
       'runtime_unavailable',
       `Could not read Orca runtime metadata at ${metadataPath}. Start the Orca app first.`
@@ -36,17 +34,8 @@ export function tryReadMetadata(userDataPath: string): RuntimeMetadata | null {
   const metadataPath = getRuntimeMetadataPath(userDataPath)
   try {
     return JSON.parse(readFileSync(metadataPath, 'utf8')) as RuntimeMetadata | null
-  } catch (error) {
-    // Why: a denied read says nothing about whether Orca is running, so it must not read as absent.
-    throwIfAccessDenied(error)
+  } catch {
     return null
-  }
-}
-
-function throwIfAccessDenied(error: unknown): void {
-  const systemCode = accessDeniedSystemCode(error)
-  if (systemCode) {
-    throw runtimeAccessDeniedError('read_metadata', systemCode)
   }
 }
 
