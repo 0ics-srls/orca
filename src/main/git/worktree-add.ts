@@ -216,8 +216,12 @@ async function performAddWorktree(
   }
   // Why: resolve per call — hoisting this to a module const would freeze the override at import.
   const timeout = resolveWorktreeAddTimeoutMs()
-  const git: SplitWorktreeAddGit = (gitArgs, cwd, extra) =>
-    gitExecFileAsync(gitArgs, { ...gitExecOptions(cwd, options), timeout, ...extra })
+  const git: SplitWorktreeAddGit = (gitArgs, cwd, { detached, ...extra } = {}) =>
+    gitExecFileAsync(gitArgs, {
+      ...gitExecOptions(cwd, detached ? { ...options, signal: undefined } : options),
+      timeout,
+      ...extra
+    })
   // Git may have written the target's `.git` marker even when it reports a late
   // failure, so drop any pre-create route before the follow-up commands route.
   const afterAdminWrite = () => invalidateWslLinkedWorktreeGitRouting(worktreePath)
@@ -238,6 +242,7 @@ async function performAddWorktree(
           addArgs: args,
           git,
           capabilities,
+          timeoutMs: timeout,
           afterAdminWrite
         })
     )

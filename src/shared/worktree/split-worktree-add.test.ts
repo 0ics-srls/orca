@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GitCapabilityCache } from '../git-capability-cache'
 import {
   addWorktreeWithCheckoutOutsideAdminLock,
+  SPLIT_WORKTREE_ADD_CLEANUP_TIMEOUT_MS,
   type SplitWorktreeAddGit
 } from './split-worktree-add'
 
@@ -65,7 +66,7 @@ describe('addWorktreeWithCheckoutOutsideAdminLock', () => {
     expect(capabilities.shouldTry('hook-run')).toBe(false)
   })
 
-  it('removes the worktree without the admin lane when the checkout fails', async () => {
+  it('removes the worktree, detached and without the admin lane, when the checkout fails', async () => {
     const git = gitWith((args) => (args.includes('reset') ? new Error('checkout failed') : null))
     await expect(addWorktreeWithCheckoutOutsideAdminLock(request(git))).rejects.toThrow(
       'checkout failed'
@@ -73,8 +74,45 @@ describe('addWorktreeWithCheckoutOutsideAdminLock', () => {
     expect(git.mock.calls.at(-1)).toEqual([
       ['-c', 'core.longpaths=true', 'worktree', 'remove', '--force', '/wt'],
       '/repo',
-      { worktreeAdminLock: false }
+      {
+        worktreeAdminLock: false,
+        detached: true,
+        timeout: SPLIT_WORKTREE_ADD_CLEANUP_TIMEOUT_MS
+      }
     ])
+  })
+
+  it('shares one deadline across the steps instead of a full timeout each', async () => {
+    vi.useFakeTimers()
+    try {
+      const git = vi.fn<SplitWorktreeAddGit>(async (args) => {
+        vi.advanceTimersByTime(args.includes('add') ? 600 : 100)
+        return { stdout: args.includes('rev-parse') ? `${HEAD}\n` : '' }
+      })
+      await addWorktreeWithCheckoutOutsideAdminLock({ ...request(git), timeoutMs: 1000 })
+      expect(git.mock.calls.map(([, , options]) => options?.timeout)).toEqual([
+        1000, 900, 300, 200, 100
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('fails with a timeout, and cleans up, once the shared deadline is spent', async () => {
+    vi.useFakeTimers()
+    try {
+      const git = vi.fn<SplitWorktreeAddGit>(async (args) => {
+        vi.advanceTimersByTime(args.includes('add') ? 1000 : 0)
+        return { stdout: '' }
+      })
+      await expect(
+        addWorktreeWithCheckoutOutsideAdminLock({ ...request(git), timeoutMs: 1000 })
+      ).rejects.toMatchObject({ code: 'ETIMEDOUT' })
+      expect(git.mock.calls.some(([args]) => args.includes('reset'))).toBe(false)
+      expect(git.mock.calls.at(-1)?.[0]).toContain('remove')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('fails the create but keeps the worktree when post-checkout fails', async () => {

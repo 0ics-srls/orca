@@ -191,6 +191,46 @@ it.skipIf(process.platform === 'win32')(
   30_000
 )
 
+it.skipIf(process.platform === 'win32')(
+  'unregisters the worktree when the create is cancelled mid-checkout',
+  async () => {
+    const { root, repo } = await createRepo()
+    const filterStarted = join(root, 'filter.started')
+    const filterRelease = join(root, 'filter.release')
+    await writeFile(join(repo, '.gitattributes'), 'slow.txt filter=slow\n')
+    await writeFile(join(repo, 'slow.txt'), 'slow\n')
+    await gitExecFileAsync(['add', '.'], { cwd: repo })
+    await gitExecFileAsync(
+      ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'slow'],
+      { cwd: repo }
+    )
+    // A smudge filter that blocks keeps the checkout in flight until the test cancels it.
+    await gitExecFileAsync(
+      [
+        'config',
+        'filter.slow.smudge',
+        `touch '${filterStarted}'; while [ ! -e '${filterRelease}' ]; do sleep 0.05; done; cat`
+      ],
+      { cwd: repo }
+    )
+    const worktreePath = join(root, 'created')
+    const controller = new AbortController()
+    const created = addWorktree(repo, worktreePath, 'created', 'main', false, false, {
+      signal: controller.signal
+    })
+    try {
+      await vi.waitFor(() => stat(filterStarted), { timeout: 15_000 })
+      controller.abort()
+      await expect(created).rejects.toThrow()
+    } finally {
+      await writeFile(filterRelease, '')
+    }
+    const listed = await gitExecFileAsync(['worktree', 'list', '--porcelain'], { cwd: repo })
+    expect(listed.stdout).not.toContain(worktreePath)
+  },
+  30_000
+)
+
 it('deletes a prepared checkout without queueing on a held admin lane', async () => {
   const { root, repo } = await createRepo()
   const prepared = join(root, 'prepared')
