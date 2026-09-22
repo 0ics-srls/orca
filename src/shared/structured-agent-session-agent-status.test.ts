@@ -32,6 +32,14 @@ describe('structuredAgentSessionAgentStatus', () => {
     ).toEqual({ state: 'working', workingMode: 'monitoring' })
   })
 
+  it('keeps an idle lead working while a subagent is blocked or out of contact', () => {
+    for (const state of ['waiting', 'blocked', 'unverifiable'] as const) {
+      expect(
+        structuredAgentSessionAgentStatus({ status: 'idle', backgroundTasks: [task({ state })] })
+      ).toEqual({ state: 'working' })
+    }
+  })
+
   it('settles an idle lead once every task has settled', () => {
     expect(
       structuredAgentSessionAgentStatus({

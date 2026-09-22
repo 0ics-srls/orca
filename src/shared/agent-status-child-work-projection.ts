@@ -68,8 +68,10 @@ export function agentChildWorkProjectionCandidateFromBackgroundTask(
       ...(task.state !== undefined ? { state: task.state } : {}),
       membership: 'live',
       firstObservedAt: task.startedAt ?? 0,
-      ...(task.name !== undefined ? { name: task.name, agentType: task.name } : {}),
-      ...(task.description !== undefined ? { description: task.description } : {}),
+      // Truthy, not present: an empty label carries no identity and would beat the
+      // `description ?? agentType ?? 'unknown'` fallbacks every child-row reader relies on.
+      ...(task.name ? { name: task.name, agentType: task.name } : {}),
+      ...(task.description ? { description: task.description } : {}),
       ...(task.totalTokens !== undefined ? { totalTokens: task.totalTokens } : {}),
       stoppable: task.stoppable ?? true
     }

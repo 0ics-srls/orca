@@ -19,20 +19,11 @@ export function isAgentChildWorkKind(kind: AgentChildWorkKind): boolean {
   return kind === 'agent' || kind === 'workflow'
 }
 
-function isLiveAgentWork(child: AgentChildWorkLivenessCandidate): boolean {
-  if (!isAgentChildWorkKind(child.kind)) {
-    return false
-  }
-  // Absent state is an old host's live task; live means working here.
-  return child.state === undefined || child.state === 'working' || child.state === 'monitoring'
-}
-
-function isLiveNonAgentWork(child: AgentChildWorkLivenessCandidate): boolean {
-  if (isAgentChildWorkKind(child.kind)) {
-    return false
-  }
-  // Why: only an explicit settled state retires a shell or monitor; an unknown kind or an
-  // unverifiable state fails active, so untyped work can never silently retire.
+/** The settlement rule `resolveAgentChildWorkFreshness` already reads rows by: only an explicit
+ *  settled state retires child work. An absent state (an old host's live task), an unknown kind
+ *  and a child that lost contact all fail active, so nothing untyped or out of touch can silently
+ *  retire — and a blocked subagent cannot count for less than the shell beside it. */
+function isLiveChildWork(child: AgentChildWorkLivenessCandidate): boolean {
   return child.state !== 'done' && child.state !== 'idle'
 }
 
@@ -51,8 +42,11 @@ export function agentChildWorkLiveness(
   let hasLiveAgentWork = false
   let hasLiveNonAgentWork = false
   for (const child of children ?? []) {
-    hasLiveAgentWork ||= isLiveAgentWork(child)
-    hasLiveNonAgentWork ||= isLiveNonAgentWork(child)
+    if (!isLiveChildWork(child)) {
+      continue
+    }
+    hasLiveAgentWork ||= isAgentChildWorkKind(child.kind)
+    hasLiveNonAgentWork ||= !isAgentChildWorkKind(child.kind)
   }
   return agentChildWorkLivenessFromEvidence({ hasLiveAgentWork, hasLiveNonAgentWork })
 }

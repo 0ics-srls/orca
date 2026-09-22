@@ -33,8 +33,15 @@ describe('agentChildWorkLiveness', () => {
     expect(agentChildWorkLiveness([child({ kind: 'workflow' })])).toBe('working')
   })
 
-  it('does not read a waiting, blocked, settled or unverifiable agent as live', () => {
-    for (const state of ['waiting', 'blocked', 'done', 'idle', 'unverifiable'] as const) {
+  it('keeps a waiting, blocked or unverifiable agent live, the way a shell in those states is', () => {
+    for (const state of ['waiting', 'blocked', 'unverifiable'] as const) {
+      expect(agentChildWorkLiveness([child({ state })])).toBe('working')
+      expect(agentChildWorkLiveness([child({ kind: 'command', state })])).toBe('monitoring')
+    }
+  })
+
+  it('retires an agent only on an explicitly settled state', () => {
+    for (const state of ['done', 'idle'] as const) {
       expect(agentChildWorkLiveness([child({ state })])).toBeNull()
     }
   })
