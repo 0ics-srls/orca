@@ -54,29 +54,30 @@ export const MODEL_PRICING: Record<string, CodexModelPricing> = {
     cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 1 }],
     outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 45 }]
   },
+  // Why: Sol's $4/$20 is OpenAI's promotional rate, listed through at least 2026-11-21.
   'gpt-5.6-sol': {
-    input: 5,
-    cachedInput: 0.5,
-    output: 30,
-    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 10 }],
-    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 1 }],
-    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 45 }]
+    input: 4,
+    cachedInput: 0.4,
+    output: 20,
+    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 8 }],
+    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.8 }],
+    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 30 }]
   },
   'gpt-5.6-terra': {
-    input: 2.5,
-    cachedInput: 0.25,
-    output: 15,
-    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 5 }],
-    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.5 }],
-    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 22.5 }]
+    input: 2,
+    cachedInput: 0.2,
+    output: 12,
+    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 4 }],
+    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.4 }],
+    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 18 }]
   },
   'gpt-5.6-luna': {
-    input: 1,
-    cachedInput: 0.1,
-    output: 6,
-    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 2 }],
-    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.2 }],
-    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 9 }]
+    input: 0.2,
+    cachedInput: 0.02,
+    output: 1.2,
+    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.4 }],
+    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.04 }],
+    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 1.8 }]
   },
   'gpt-6-astra': {
     input: 10,
@@ -85,6 +86,22 @@ export const MODEL_PRICING: Record<string, CodexModelPricing> = {
     inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 20 }],
     cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 2 }],
     outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 75 }]
+  },
+  'gpt-6-sol': {
+    input: 2,
+    cachedInput: 0.2,
+    output: 10,
+    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 4 }],
+    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.4 }],
+    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 15 }]
+  },
+  'gpt-6-luna': {
+    input: 0.1,
+    cachedInput: 0.01,
+    output: 0.5,
+    inputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.2 }],
+    cachedInputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.02 }],
+    outputTiers: [{ threshold: LONG_CONTEXT_THRESHOLD_TOKENS, price: 0.75 }]
   }
 }
 
@@ -181,6 +198,12 @@ export function normalizeModelForPricing(model: string | null): string | null {
   }
   if (normalized === 'gpt-6-astra' || normalized.startsWith('gpt-6-astra-')) {
     return 'gpt-6-astra'
+  }
+  if (normalized === 'gpt-6-sol' || normalized.startsWith('gpt-6-sol-')) {
+    return 'gpt-6-sol'
+  }
+  if (normalized === 'gpt-6-luna' || normalized.startsWith('gpt-6-luna-')) {
+    return 'gpt-6-luna'
   }
   // Why: OpenAI routes the bare `gpt-5.6` alias to Sol. Match it exactly — a
   // `gpt-5.6-` prefix match would swallow the tier IDs above and any future
