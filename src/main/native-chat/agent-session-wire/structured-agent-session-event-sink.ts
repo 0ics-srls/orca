@@ -1,5 +1,4 @@
 import { agentJournalItemKey } from '../../../shared/agent-session-journal-item-key'
-import { agentJournalLinkageFields } from '../../../shared/agent-session-journal-producer'
 import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity,
@@ -180,8 +179,8 @@ export function createDeferredStructuredAgentSessionEventSink(
           bound.journal.appendLifecycleBatch({
             settlementId,
             mutations,
-            fence: bound.fence,
-            ...agentJournalLinkageFields(options)
+            // Linkage is deliberately not forwarded: see the batch row builder.
+            fence: bound.fence
           })
       },
       { ...options, lifecycle: true }

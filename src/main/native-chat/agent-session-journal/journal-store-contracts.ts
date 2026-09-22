@@ -47,7 +47,7 @@ export type JournalItemAppendOptions = AgentJournalProducerLinkage & {
 }
 export type JournalTombstoneInput = { fence: number }
 
-export type JournalLifecycleBatchInput = AgentJournalProducerLinkage & {
+export type JournalLifecycleBatchInput = {
   settlementId: string
   mutations: readonly JournalLifecycleMutationInput[]
   fence: number

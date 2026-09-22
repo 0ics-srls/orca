@@ -454,7 +454,10 @@ describe('producer linkage reaches the journal through every append path', () =>
     }
   })
 
-  it('forwards it on the lifecycle-batch path', async () => {
+  it('does NOT forward it on the lifecycle-batch path, which is one row for N mutations', async () => {
+    // A batch row carries one producer for every mutation in it, so forwarding
+    // would stamp whoever opened the batch onto all of them. Both callers are
+    // single-producer today; a mixed batch would have to stamp per mutation.
     const log: Recorded[] = []
     const deferred = createDeferredStructuredAgentSessionEventSink()
     deferred.bind(target(5, log))
@@ -463,9 +466,11 @@ describe('producer linkage reaches the journal through every append path', () =>
       [{ kind: 'item', identity: identity(1), body: BODY }],
       { ...LINKAGE }
     )
+
     await deferred.drained()
 
-    expect(journalAppendOptions).toEqual([{ fence: 5, ...LINKAGE }])
+    // The fence and nothing else: no linkage key reaches the batch row.
+    expect(journalAppendOptions).toEqual([{ fence: 5 }])
     deferred.close()
   })
 

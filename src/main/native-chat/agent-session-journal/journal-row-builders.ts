@@ -107,7 +107,12 @@ export function journalLifecycleBatchRowBuilder(
   state: () => JournalReducerState,
   settlementId: string,
   mutations: readonly JournalLifecycleMutationInput[],
-  options: AgentJournalProducerLinkage & { fence: number; recovered?: true }
+  /** No producer linkage: one batch row covers N mutations, so a row-level
+   *  producer would stamp whoever opened the batch onto every one of them. The
+   *  reducer still READS linkage off a batch row, because a row may come from a
+   *  host that writes one; a mixed-producer batch would have to stamp per
+   *  mutation, which nothing needs yet. */
+  options: { fence: number; recovered?: true }
 ): RowBuilder<JournalLifecycleBatchRow> {
   return (seq, ts) => {
     if (mutations.length === 0 || mutations.length > MAX_JOURNAL_LIFECYCLE_BATCH_MUTATIONS) {
@@ -140,8 +145,7 @@ export function journalLifecycleBatchRowBuilder(
         ts,
         built.flatMap((mutation) => (mutation.kind === 'item' ? [mutation.body] : []))
       ),
-      ...(options.recovered ? { recovered: options.recovered } : {}),
-      ...agentJournalLinkageFields(options)
+      ...(options.recovered ? { recovered: options.recovered } : {})
     }
     if (Buffer.byteLength(JSON.stringify(row), 'utf8') + 1 > MAX_JOURNAL_LIFECYCLE_BATCH_BYTES) {
       throw new Error('journal_lifecycle_batch_byte_bound_exceeded')
