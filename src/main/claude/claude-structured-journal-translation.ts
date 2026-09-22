@@ -19,10 +19,12 @@ import {
 import { taskFrameSentence } from './claude-background-task-frames'
 import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import { ClaudeForwardedToolRegistry } from './claude-forwarded-tool-registry'
+import { ClaudePendingChildRows } from './claude-pending-child-rows'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
 import {
+  claudeFrameParentRef,
   claudeStreamTurnStartSource,
   claudeStreamTurnSource,
   isRootClaudeFrame
@@ -86,11 +88,16 @@ export function createClaudeJournalTranslator(
     deps.sink,
     deps.fallbackIdPrefix ?? 'acquisition'
   )
+  const forwardedTools = new ClaudeForwardedToolRegistry()
   const subagents = new ClaudeSubagentRoster({
     sink: deps.sink,
-    currentGroupKey: () => turn.groupKey
+    currentGroupKey: () => turn.groupKey,
+    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
+    // A settled group can receive no further announcement, so anything still
+    // waiting on one has to be written now rather than held for ever.
+    onIdentitiesFinal: () => pendingChildRows.drain()
   })
-  const forwardedTools = new ClaudeForwardedToolRegistry()
+  const pendingChildRows = new ClaudePendingChildRows(subagents.linkage)
   const backgroundTasks = new ClaudeBackgroundTaskRows({
     sink: deps.sink,
     isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
@@ -105,8 +112,9 @@ export function createClaudeJournalTranslator(
   const streamedText = createClaudeStreamedTextCheckpoints({
     ...(deps.coalesceMs === undefined ? {} : { coalesceMs: deps.coalesceMs }),
     ...(deps.schedule ? { schedule: deps.schedule } : {}),
-    persist: (identity, text) => {
-      deps.sink.appendItem(identity, claudeStreamingMessageBody(text))
+    producer: subagents.linkage,
+    persist: (identity, text, options) => {
+      deps.sink.appendItem(identity, claudeStreamingMessageBody(text), options)
       deps.sink.publish()
     }
   })
@@ -131,7 +139,7 @@ export function createClaudeJournalTranslator(
     if (!delta) {
       return false
     }
-    streamedText.append(delta.identity, delta.text)
+    streamedText.append(delta.identity, delta.text, delta.parentToolUseId)
     return true
   }
 
@@ -144,6 +152,7 @@ export function createClaudeJournalTranslator(
     forwardedTools,
     backgroundTasks,
     providerFallback,
+    pendingChildRows,
     turn
   }
 
@@ -199,10 +208,24 @@ export function createClaudeJournalTranslator(
         const kind = claudeProviderFrameKind(event.message)
         const failure = claudeResultFailure(event.message)
         if (failure || !isSettledClaudeResultKind(kind)) {
-          providerFallback.append(kind, event.message, failure?.text)
+          providerFallback.append(
+            kind,
+            event.message,
+            failure?.text,
+            undefined,
+            undefined,
+            // A result that settles no turn is a CHILD's result: this
+            // translator only ever opens root turns.
+            settlesTurn
+              ? undefined
+              : pendingChildRows.admissionFor(claudeFrameParentRef(event.message))
+          )
         }
       } else if (event.type === 'message') {
-        subagents.observeSystemFrame(event.message)
+        if (subagents.observeSystemFrame(event.message)) {
+          // An announcement may have just fixed an identity rows are waiting on.
+          pendingChildRows.retry()
+        }
         const backgroundTaskCovered = backgroundTasks.observe(
           event.message,
           event.observedAt ?? Date.now()
@@ -221,7 +244,8 @@ export function createClaudeJournalTranslator(
             event.message,
             taskFrameSentence(event.message),
             undefined,
-            { coveredByTypedTranslator: backgroundTaskCovered }
+            { coveredByTypedTranslator: backgroundTaskCovered },
+            pendingChildRows.admissionFor(claudeFrameParentRef(event.message))
           )
         }
         publishActivity(kind, event.message)
@@ -249,6 +273,7 @@ export function createClaudeJournalTranslator(
       return streamedText.pending
     },
     dispose: () => {
+      streamedText.flush()
       streamedText.dispose()
       tools.clear()
       prompts.clear()

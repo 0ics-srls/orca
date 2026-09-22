@@ -1,17 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentJournalItemIdentity } from '../../shared/agent-session-journal-types'
+import type { StructuredAgentSessionAppendOptions } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
+import type { ClaudeSubagentLinkageSource } from './claude-subagent-linkage'
 
 function identityOf(uuid: string): AgentJournalItemIdentity {
   return { provider: 'claude', sessionId: 'claude-session', uuid }
 }
 
-function checkpoints() {
+/** Every block is the session's own agent's unless a test says otherwise. */
+const rootProducer: ClaudeSubagentLinkageSource = {
+  linkageFor: () => ({ kind: 'root' }),
+  settledLinkageFor: () => ({ kind: 'root' })
+}
+
+function checkpoints(producer: ClaudeSubagentLinkageSource = rootProducer) {
   const rows: { uuid: string; text: string }[] = []
+  /** Attribution kept beside the rows rather than on them, so the assertions
+   *  about text stay about text — and so a harness that dropped the argument
+   *  would show up as an empty list rather than as silence. */
+  const stamps: StructuredAgentSessionAppendOptions[] = []
   let scheduled: (() => void) | null = null
   const store = createClaudeStreamedTextCheckpoints({
-    persist: (identity, text) => {
+    producer,
+    persist: (identity, text, options) => {
       rows.push({ uuid: 'uuid' in identity ? identity.uuid : '', text })
+      stamps.push(options)
     },
     schedule: (run) => {
       scheduled = run
@@ -23,6 +37,7 @@ function checkpoints() {
   return {
     store,
     rows,
+    stamps,
     runWindow: () => {
       const run = scheduled as (() => void) | null
       run?.()

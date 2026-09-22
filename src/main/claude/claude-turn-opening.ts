@@ -59,6 +59,15 @@ export function isRootClaudeFrame(frame: Record<string, unknown>): boolean {
   return typeof frame.parent_tool_use_id !== 'string'
 }
 
+/** The parent this frame names, or null on a root frame. Reads the same field
+ *  by the same rule as above, so nothing can disagree with it about which
+ *  frames are a child's. An empty string names no parent and is not one. */
+export function claudeFrameParentRef(frame: Record<string, unknown>): string | null {
+  return typeof frame.parent_tool_use_id === 'string' && frame.parent_tool_use_id.length > 0
+    ? frame.parent_tool_use_id
+    : null
+}
+
 export type ClaudeTurnSource = { sessionId: string; uuid: string; assistant: boolean }
 
 /** Reads a turn source off a raw frame, for the streamed path that has no envelope. */

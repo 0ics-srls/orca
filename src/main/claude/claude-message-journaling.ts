@@ -34,6 +34,7 @@ import {
 } from './claude-structured-provider-fallback'
 import type { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import type { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
+import type { ClaudePendingChildRows } from './claude-pending-child-rows'
 import type { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { claudeTurnOpenedBySendEcho, type ClaudeTurnSource } from './claude-turn-opening'
 import type { ClaudeOpenTurn } from './claude-open-turn'
@@ -47,6 +48,9 @@ export type ClaudeMessageJournalContext = {
   forwardedTools: ClaudeForwardedToolRegistry
   backgroundTasks: ClaudeBackgroundTaskRows
   providerFallback: ClaudeProviderFrameFallback
+  /** Attributes every row this module writes to the agent that produced it, and
+   *  holds a child's rows while that agent's identity is still provisional. */
+  pendingChildRows: ClaudePendingChildRows
   /** The session's open turn. Sole owner of turn identity and of the reopen
    *  latch; this module asks it rather than tracking a copy. */
   turn: ClaudeOpenTurn
@@ -68,6 +72,10 @@ export function journalClaudeMessage(
   if (envelope.parentToolUseId) {
     ctx.subagents.observeChildActivity(envelope.parentToolUseId)
   }
+  // Everything this envelope journals belongs to whoever produced the envelope.
+  // A child's rows live in the parent's journal, so without this the parent's
+  // own "what am I doing" readers report the child's newest output as their own.
+  const admit = ctx.pendingChildRows.admissionFor(envelope.parentToolUseId)
   const outputEnvelope = claudeOutputEnvelope(envelope)
   const body = claudeMessageBody(outputEnvelope)
   const identity =
@@ -86,7 +94,7 @@ export function journalClaudeMessage(
     // output; a reader that scans back to the turn record and stops would
     // otherwise look straight past the row that opened it.
     ctx.turn.ensureOpen(message, source, observedAt)
-    ctx.sink.appendItem(identity, body)
+    admit((options) => ctx.sink.appendItem(identity, body, options))
     changed = true
   }
   for (const tool of claudeToolUses(outputEnvelope)) {
@@ -97,7 +105,13 @@ export function journalClaudeMessage(
     if (!envelope.parentToolUseId) {
       ctx.forwardedTools.record(tool.id)
     }
-    ctx.sink.appendItem(claudeToolIdentity(envelope.sessionId, tool.id), claudeToolBody({ tool }))
+    admit((options) =>
+      ctx.sink.appendItem(
+        claudeToolIdentity(envelope.sessionId, tool.id),
+        claudeToolBody({ tool }),
+        options
+      )
+    )
     changed = true
   }
   const results = claudeToolResults(envelope)
@@ -107,9 +121,12 @@ export function journalClaudeMessage(
       name: 'tool',
       input: null
     }
-    ctx.sink.appendItem(
-      claudeToolIdentity(envelope.sessionId, result.toolUseId),
-      claudeToolBody({ tool, result })
+    admit((options) =>
+      ctx.sink.appendItem(
+        claudeToolIdentity(envelope.sessionId, result.toolUseId),
+        claudeToolBody({ tool, result }),
+        options
+      )
     )
     ctx.subagents.observeToolResult(result.toolUseId, result.failed)
     if (
@@ -125,17 +142,24 @@ export function journalClaudeMessage(
   }
   if (thinking) {
     ctx.turn.ensureOpen(message, source, observedAt)
-    ctx.sink.appendItem(claudeThinkingIdentity(envelope.sessionId, envelope.uuid), {
-      kind: 'message',
-      role: 'reasoning',
-      blocks: [
-        { type: 'text', text: boundInlineText(thinking, DEFAULT_JOURNAL_PAYLOAD_LIMITS).text }
-      ]
-    })
+    admit((options) =>
+      ctx.sink.appendItem(
+        claudeThinkingIdentity(envelope.sessionId, envelope.uuid),
+        {
+          kind: 'message',
+          role: 'reasoning',
+          blocks: [
+            { type: 'text', text: boundInlineText(thinking, DEFAULT_JOURNAL_PAYLOAD_LIMITS).text }
+          ]
+        },
+        options
+      )
+    )
     changed = true
   }
   changed =
-    appendUnmodeledContent(ctx.providerFallback, outputEnvelope, message, openOutputTurn) || changed
+    appendUnmodeledContent(ctx.providerFallback, outputEnvelope, message, openOutputTurn, admit) ||
+    changed
   // The send's turn is anchored to the user row journaled just above it.
   const sendEchoTurn = claudeTurnOpenedBySendEcho({
     envelope,

@@ -18,8 +18,12 @@ import {
 import type { NativeChatSubagentEntry } from '../../shared/native-chat-types'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { isBoundedClaudeTaskId } from './claude-background-task-tracker'
-import { claudeSubagentGroupBody, claudeSubagentGroupIdentity } from './claude-subagent-group-row'
+import {
+  claudeSubagentGroupIdentity,
+  writeClaudeSubagentGroupRow
+} from './claude-subagent-group-row'
 import { ClaudeSubagentIds } from './claude-subagent-id-aliases'
+import { ClaudeSubagentLinkage, type ClaudeSubagentLinkageSource } from './claude-subagent-linkage'
 import { readClaudeSubagentTaskFrame } from './claude-subagent-task-frames'
 import {
   applyClaudeSubagentInvocation,
@@ -42,6 +46,15 @@ export type ClaudeSubagentRosterDeps = {
   sink: StructuredAgentSessionEventSink
   /** The turn that owns children spawned right now; null outside any turn. */
   currentGroupKey: () => string | null
+  /** Whether a tool id was forwarded at the TOP level. A child parented to one
+   *  was spawned by a call the transcript shows, so its announcement is still
+   *  expected; a child parented to anything else names an id that only ever
+   *  existed inside a sidechain, which this CLI will never announce. */
+  isForwardedParentTool?: (toolUseId: string) => boolean
+  /** A settled group can receive no further announcement, so an identity still
+   *  provisional will stay that way. Fires on EVERY settle path, so a caller
+   *  holding rows against a pending identity cannot miss one. */
+  onIdentitiesFinal?: () => void
   now?: () => number
 }
 
@@ -51,6 +64,8 @@ export class ClaudeSubagentRoster {
    *  from an earlier turn revises that turn's row instead of the live one. */
   private readonly groupIdByEntry = new Map<string, string>()
   private readonly ids = new ClaudeSubagentIds()
+  /** Who produced a row, for every write site journaling this session. */
+  readonly linkage: ClaudeSubagentLinkageSource
   /** Set by ANY `task_started`, including one the subagent filter rejects. Once
    *  this CLI has proven it declares its tasks, child traffic for an id it never
    *  announced is a nested tool or a grandchild, not a subagent. */
@@ -59,6 +74,12 @@ export class ClaudeSubagentRoster {
 
   constructor(private readonly deps: ClaudeSubagentRosterDeps) {
     this.now = deps.now ?? (() => Date.now())
+    this.linkage = new ClaudeSubagentLinkage({
+      ids: this.ids,
+      announcesTasks: () => this.announcesTasks,
+      trackedFor: (canonicalId) => this.locate(canonicalId)?.tracked ?? null,
+      isForwardedParentTool: deps.isForwardedParentTool
+    })
   }
 
   /** Consume a `message:system:task_*` frame. Returns false when it is not one. */
@@ -177,6 +198,7 @@ export class ClaudeSubagentRoster {
     // unrelated turn ending is no evidence about a child announced outside it.
     // `settleSession` reaches what no turn does.
     this.sweep(this.groups.get(groupKey ?? OUTSIDE_TURN), false)
+    this.deps.onIdentitiesFinal?.()
   }
 
   /** The provider is gone. Nothing more will arrive for any child, backgrounded
@@ -185,6 +207,7 @@ export class ClaudeSubagentRoster {
     for (const group of this.groups.values()) {
       this.sweep(group, true)
     }
+    this.deps.onIdentitiesFinal?.()
   }
 
   dispose(): void {
@@ -217,7 +240,7 @@ export class ClaudeSubagentRoster {
       changed = true
     }
     if (changed) {
-      this.write(group)
+      writeClaudeSubagentGroupRow(this.deps.sink, group)
     }
   }
 
@@ -240,6 +263,7 @@ export class ClaudeSubagentRoster {
       toolUseId,
       invocationIds: new Set(toolUseId ? [toolUseId] : []),
       labelBase,
+      attempt: 1,
       entry: {
         id,
         label: claimClaudeSubagentLabel(group, labelBase),
@@ -249,7 +273,7 @@ export class ClaudeSubagentRoster {
       }
     })
     this.groupIdByEntry.set(id, group.groupId)
-    this.write(group)
+    writeClaudeSubagentGroupRow(this.deps.sink, group)
   }
 
   private revise(
@@ -288,7 +312,7 @@ export class ClaudeSubagentRoster {
       }
     }
     group.entries.set(id, next)
-    this.write(group)
+    writeClaudeSubagentGroupRow(this.deps.sink, group)
   }
 
   /** Re-key a provisional entry from its tool id onto the canonical task id the
@@ -318,7 +342,7 @@ export class ClaudeSubagentRoster {
     }
     located.group.entries.delete(id)
     this.groupIdByEntry.delete(id)
-    this.write(located.group)
+    writeClaudeSubagentGroupRow(this.deps.sink, located.group)
   }
 
   private locate(id: string): { group: RosterGroup; tracked: TrackedEntry } | null {
@@ -358,31 +382,5 @@ export class ClaudeSubagentRoster {
       this.groups.delete(oldest.value)
     }
     return group
-  }
-
-  private write(group: RosterGroup): void {
-    const agents = [...group.entries.values()].map((tracked) => tracked.entry)
-    const options = { coalescingKey: `claude-subagents:${group.groupId}` }
-    if (agents.length === 0) {
-      // The row's last child turned out not to be a subagent. An empty roster is
-      // not a roster of nothing, so the row goes rather than reading "Ran 0".
-      if (group.lastSerialized !== null) {
-        group.lastSerialized = null
-        this.deps.sink.appendTombstone(group.identity, options)
-        this.deps.sink.publish()
-      }
-      return
-    }
-    const body = claudeSubagentGroupBody(group.groupId, agents)
-    const serialized = JSON.stringify(body)
-    if (serialized === group.lastSerialized) {
-      // Nothing changed — a duplicate delivery must not burn a revision.
-      return
-    }
-    group.lastSerialized = serialized
-    this.deps.sink.appendItem(group.identity, body, options)
-    // Publish keeps the sink's own coalescing slot: sharing the row's key makes
-    // each queued publish evict the append it was meant to flush.
-    this.deps.sink.publish()
   }
 }
