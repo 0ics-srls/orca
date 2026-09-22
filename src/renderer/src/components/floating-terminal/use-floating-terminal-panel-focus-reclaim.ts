@@ -4,7 +4,7 @@ import {
   consumeFloatingPanelReclaimIntent
 } from '@/lib/floating-workspace-focus-reclaim'
 import { reportFloatingFocus } from './floating-terminal-focus-reporting'
-import type { FloatingTerminalPanelItems } from './use-floating-terminal-panel-items'
+import type { FloatingWorkspaceChromeModel } from './use-floating-workspace-chrome-model'
 import type { FloatingTerminalPanelLocalState } from './use-floating-terminal-panel-local-state'
 import type { FloatingTerminalPanelStoreState } from './use-floating-terminal-panel-store-state'
 
@@ -12,7 +12,7 @@ type FloatingTerminalPanelFocusReclaimInput = Pick<
   FloatingTerminalPanelLocalState,
   'panelRef' | 'shortcutFocusFrameRef' | 'shortcutFocusTimeoutRef' | 'pendingReclaimArmByFileIdRef'
 > &
-  Pick<FloatingTerminalPanelItems, 'visibleFloatingItemCount'> &
+  Pick<FloatingWorkspaceChromeModel, 'visibleFloatingItemCount'> &
   Pick<FloatingTerminalPanelStoreState, 'floatingFiles'>
 
 export function useFloatingTerminalPanelFocusReclaim({

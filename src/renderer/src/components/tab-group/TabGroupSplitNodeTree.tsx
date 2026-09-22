@@ -145,6 +145,7 @@ function SplitNode({
   isWorktreeActive,
   hasSplitGroups,
   tabStrip,
+  markdownAnnotationsEnabled,
   touchesTopEdge,
   touchesRightEdge,
   touchesLeftEdge,
@@ -162,6 +163,7 @@ function SplitNode({
   isWorktreeActive: boolean
   hasSplitGroups: boolean
   tabStrip: TabGroupPanelTabStrip
+  markdownAnnotationsEnabled: boolean
   touchesTopEdge: boolean
   touchesRightEdge: boolean
   touchesLeftEdge: boolean
@@ -188,6 +190,7 @@ function SplitNode({
         isFocused={isWorktreeActive && node.groupId === focusedGroupId}
         hasSplitGroups={hasSplitGroups}
         tabStrip={tabStrip}
+        markdownAnnotationsEnabled={markdownAnnotationsEnabled}
         touchesRightEdge={touchesRightEdge}
         touchesLeftEdge={touchesLeftEdge}
         touchesBottomEdge={touchesBottomEdge}
@@ -221,6 +224,7 @@ function SplitNode({
           isWorktreeActive={isWorktreeActive}
           hasSplitGroups={hasSplitGroups}
           tabStrip={tabStrip}
+          markdownAnnotationsEnabled={markdownAnnotationsEnabled}
           touchesTopEdge={touchesTopEdge}
           touchesRightEdge={isHorizontal ? false : touchesRightEdge}
           touchesLeftEdge={touchesLeftEdge}
@@ -248,6 +252,7 @@ function SplitNode({
           isWorktreeActive={isWorktreeActive}
           hasSplitGroups={hasSplitGroups}
           tabStrip={tabStrip}
+          markdownAnnotationsEnabled={markdownAnnotationsEnabled}
           touchesTopEdge={isHorizontal ? touchesTopEdge : false}
           touchesRightEdge={touchesRightEdge}
           touchesLeftEdge={isHorizontal ? false : touchesLeftEdge}
@@ -275,6 +280,7 @@ export function TabGroupSplitNodeTree({
   isTabDragActive,
   hoveredTabInsertion,
   tabStrip = 'attached',
+  markdownAnnotationsEnabled = true,
   rootTouchesBottomEdge = false
 }: {
   layout: TabGroupLayoutNode
@@ -284,6 +290,8 @@ export function TabGroupSplitNodeTree({
   isTabDragActive: boolean
   hoveredTabInsertion: HoveredTabInsertion | null
   tabStrip?: TabGroupPanelTabStrip
+  /** Off for scratch workspaces (the floating panel) whose markdown is not a review surface. */
+  markdownAnnotationsEnabled?: boolean
   /** True when the host's own chrome bounds the tree's bottom edge (no border-b to paint). */
   rootTouchesBottomEdge?: boolean
 }): React.JSX.Element {
@@ -296,6 +304,7 @@ export function TabGroupSplitNodeTree({
       isWorktreeActive={isWorktreeActive}
       hasSplitGroups={layout.type === 'split'}
       tabStrip={tabStrip}
+      markdownAnnotationsEnabled={markdownAnnotationsEnabled}
       touchesTopEdge={true}
       touchesRightEdge={true}
       touchesLeftEdge={true}

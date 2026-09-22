@@ -19,6 +19,11 @@ import {
   runEffects
 } from './floating-terminal-panel-render-probe'
 
+vi.mock('zustand/react/shallow', () => ({
+  // Why: zustand resolves the real react (unmocked in node_modules); the memo wrapper is inert here.
+  useShallow: (selector: unknown) => selector
+}))
+
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react') // eslint-disable-line @typescript-eslint/consistent-type-imports -- vi.importActual requires inline import()
   const { createReactHookOverrides } = await import('./floating-terminal-panel-test-module-mocks')
@@ -333,9 +338,9 @@ describe('FloatingTerminalPanel close behavior', () => {
     attachRef(findByProp(element, 'data-floating-terminal-panel').props.ref, panelElement)
     runEffects()
 
-    // The last-pane close authority (L3 → onCloseTab) closes the tab while the panel owns focus.
-    const terminalPane = findByTypeName(element, 'TerminalPane')
-    ;(terminalPane.props.onCloseTab as () => void)()
+    // The last-tab close authority (strip close → confirmed close) runs while the panel owns focus.
+    const tabBar = findByTypeName(element, 'TabBar')
+    ;(tabBar.props.onClose as (tabId: string) => void)('tab-1')
     expect(mocks.closeTerminalTab).toHaveBeenCalledWith(
       'tab-1',
       expect.objectContaining({ onClosed: expect.any(Function) })
@@ -370,8 +375,8 @@ describe('FloatingTerminalPanel close behavior', () => {
     attachRef(findByProp(element, 'data-floating-terminal-panel').props.ref, panelElement)
     runEffects()
 
-    const terminalPane = findByTypeName(element, 'TerminalPane')
-    ;(terminalPane.props.onCloseTab as () => void)()
+    const tabBar = findByTypeName(element, 'TabBar')
+    ;(tabBar.props.onClose as (tabId: string) => void)('tab-1')
 
     // Emptying schedules the reclaim frame (id 42, callback not yet run); unmounting cancels it.
     setFloatingTabs([])

@@ -39,6 +39,7 @@ export default function TabGroupPanel({
   isFocused,
   hasSplitGroups,
   tabStrip = 'attached',
+  markdownAnnotationsEnabled = true,
   touchesRightEdge,
   touchesLeftEdge,
   touchesBottomEdge = false,
@@ -56,6 +57,8 @@ export default function TabGroupPanel({
   isFocused: boolean
   hasSplitGroups: boolean
   tabStrip?: TabGroupPanelTabStrip
+  /** Off for scratch workspaces (the floating panel) whose markdown is not a review surface. */
+  markdownAnnotationsEnabled?: boolean
   touchesRightEdge: boolean
   touchesLeftEdge: boolean
   touchesBottomEdge?: boolean
@@ -379,6 +382,7 @@ export default function TabGroupPanel({
                   activeViewStateId={activeTab.id}
                   isVisible={isVisible}
                   isCmdSaveOwner={isFocused}
+                  markdownAnnotationsEnabled={markdownAnnotationsEnabled}
                 />
               </Suspense>
             </div>

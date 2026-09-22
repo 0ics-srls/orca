@@ -10,7 +10,7 @@ import { focusTerminalTabSurface } from '@/lib/focus-terminal-tab-surface'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
-import type { FloatingTerminalPanelItems } from './use-floating-terminal-panel-items'
+import type { FloatingWorkspaceChromeModel } from './use-floating-workspace-chrome-model'
 import type { FloatingTerminalPanelLocalState } from './use-floating-terminal-panel-local-state'
 import type { FloatingTerminalPanelStoreState } from './use-floating-terminal-panel-store-state'
 
@@ -25,7 +25,7 @@ type FloatingTerminalCreateActionsInput = Pick<
   | 'browserDefaultUrl'
   | 'openFile'
 > &
-  Pick<FloatingTerminalPanelItems, 'activeGroup' | 'groupTabs'> &
+  Pick<FloatingWorkspaceChromeModel, 'activeGroup' | 'groupTabs'> &
   Pick<FloatingTerminalPanelLocalState, 'markdownCwd'>
 
 export function useFloatingTerminalCreateActions({

@@ -85,7 +85,10 @@ describe('TabGroupSplitLayout', () => {
       asElement(getLayoutWrapper(element)).props.children as React.ReactNode
     )
     const splitBody = layoutWrapperChildren[1]
-    const treeElement = React.Children.only(asElement(splitBody).props.children as React.ReactNode)
+    const treeElement = React.Children.only(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the wrapper's split body renders exactly the tree element; props are untyped in this shallow-walk rig.
+      asElement(splitBody).props.children as React.ReactNode
+    )
     // TabGroupSplitNodeTree renders the recursive SplitNode; invoke both to reach the leaf/split.
     const splitNodeElement = invokeComponent(asElement(treeElement))
     return invokeComponent(asElement(splitNodeElement))

@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import type { TerminalPaneHandle } from '@/components/terminal-pane/TerminalPane'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { ModifierDoubleTapDetector } from '../../../../shared/modifier-double-tap-detector'
 import type {
@@ -12,7 +11,6 @@ import {
   hasOrchestrationSetupMarker,
   isOrchestrationSetupDismissed
 } from '@/lib/orchestration-setup-state'
-import { createTerminalPaneHandleRegistry } from './terminal-pane-handle-registry'
 import {
   readInitialPanelBounds,
   type FloatingTerminalPanelBoundsState
@@ -48,9 +46,6 @@ export function useFloatingTerminalPanelLocalState() {
   const pendingReclaimArmByFileIdRef = useRef<Map<string, () => void>>(new Map())
   const saveDialogFileIdRef = useRef<string | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
-  const [terminalPaneRegistry] = useState(() =>
-    createTerminalPaneHandleRegistry<TerminalPaneHandle>()
-  )
   const doubleTapDetectorRef = useRef<ModifierDoubleTapDetector | null>(null)
   if (!doubleTapDetectorRef.current) {
     // The detector must exist before event handlers are published.
@@ -93,7 +88,6 @@ export function useFloatingTerminalPanelLocalState() {
     pendingReclaimArmByFileIdRef,
     saveDialogFileIdRef,
     panelRef,
-    terminalPaneRegistry,
     doubleTapDetectorRef,
     shortcutFocusFrameRef,
     shortcutFocusTimeoutRef,

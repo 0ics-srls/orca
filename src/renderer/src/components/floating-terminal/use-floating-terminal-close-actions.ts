@@ -12,7 +12,7 @@ import { guardPinnedTabClose, resolvePinnedTabLabel } from '@/store/pinned-tab-c
 import type { Tab } from '../../../../shared/tab-types'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import type { FloatingTerminalEditorCloseQueue } from './use-floating-terminal-editor-close-queue'
-import type { FloatingTerminalPanelItems } from './use-floating-terminal-panel-items'
+import type { FloatingWorkspaceChromeModel } from './use-floating-workspace-chrome-model'
 import type { FloatingTerminalPanelLocalState } from './use-floating-terminal-panel-local-state'
 import type { FloatingTerminalPanelStoreState } from './use-floating-terminal-panel-store-state'
 
@@ -20,7 +20,7 @@ type FloatingTerminalCloseActionsInput = Pick<
   FloatingTerminalPanelStoreState,
   'closeTab' | 'closeBrowserTab' | 'closeFile' | 'closeUnifiedTab'
 > &
-  Pick<FloatingTerminalPanelItems, 'activeGroup' | 'groupTabs'> &
+  Pick<FloatingWorkspaceChromeModel, 'activeGroup' | 'groupTabs'> &
   Pick<FloatingTerminalPanelLocalState, 'pendingReclaimArmByFileIdRef'> &
   Pick<FloatingTerminalEditorCloseQueue, 'queueEditorCloseRequests'>
 
@@ -52,6 +52,9 @@ export function useFloatingTerminalCloseActions({
       for (const item of items) {
         if (item.contentType === 'terminal') {
           closeTab(item.entityId, { reason: 'cleanup' })
+        } else if (item.contentType === 'agent-session') {
+          // Mirrors the shared workspace close: a structured chat closes by its unified tab.
+          closeUnifiedTab(item.id)
         } else if (item.contentType === 'browser') {
           destroyWorkspaceWebviews(state.browserPagesByWorkspace, item.entityId)
           closeBrowserTab(item.entityId)
