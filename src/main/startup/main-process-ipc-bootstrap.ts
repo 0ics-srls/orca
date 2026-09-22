@@ -23,7 +23,9 @@ export function registerMainProcessIpcHandlers(): void {
       state.firstWindowStartupServicesReady,
       state.managedWslCliStartupBarrierReady
     ])
-    await state.runtime?.prepareStructuredAgentSessionStartupRestoration()
+    await state.runtime?.prepareStructuredAgentSessionStartupRestoration(
+      state.localPtyProviderStartupReady
+    )
   })
   ipcMain.handle('app:recoverLegacyWorkerTerminalsForRendererStartup', () =>
     recoverLegacyWorkerTerminalsForRendererStartup({

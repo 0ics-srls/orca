@@ -27,7 +27,7 @@ describe('structured session cold restoration', () => {
     expect(reconcileRestartLeases).not.toHaveBeenCalled()
   })
 
-  it('starts the readable sweep at startup but keeps journal parsing off the terminal-safety fence', async () => {
+  it('starts the readable sweep off the terminal-safety fence, once the PTY provider answers', async () => {
     const runtime = new OrcaRuntimeService()
     const refresh = vi.fn(async () => new Set<string>())
     const ensureHost = vi.fn(async () => undefined)
@@ -47,15 +47,25 @@ describe('structured session cold restoration', () => {
       { experimentalStructuredNativeChat: true } as never
     )
     setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
+    let answerProvider = (): void => {}
+    const localPtyProviderReady = new Promise<void>((resolve) => {
+      answerProvider = resolve
+    })
 
-    await runtime.prepareStructuredAgentSessionStartupRestoration()
+    await runtime.prepareStructuredAgentSessionStartupRestoration(localPtyProviderReady)
 
     expect(ensureHost).toHaveBeenCalledOnce()
     expect(refresh).toHaveBeenCalledOnce()
     expect(reconcileRestartLeases).toHaveBeenCalledOnce()
-    expect(restoreReadableSessions).toHaveBeenCalledOnce()
-    expect(reconcileRestartLeases.mock.invocationCallOrder[0]).toBeLessThan(
-      restoreReadableSessions.mock.invocationCallOrder[0] ?? Infinity
+    // A census taken before the daemon answers cannot see the PTYs TUI-owner recovery looks up.
+    expect(restoreReadableSessions).not.toHaveBeenCalled()
+
+    answerProvider()
+
+    await vi.waitFor(() => expect(restoreReadableSessions).toHaveBeenCalledOnce())
+    expect(refresh).toHaveBeenCalledTimes(2)
+    expect(refresh.mock.invocationCallOrder[1]).toBeLessThan(
+      restoreReadableSessions.mock.invocationCallOrder[0] ?? -1
     )
   })
 
@@ -77,7 +87,8 @@ describe('structured session cold restoration', () => {
     )
     setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
 
-    await runtime.prepareStructuredAgentSessionStartupRestoration()
+    await runtime.prepareStructuredAgentSessionStartupRestoration(Promise.resolve())
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(reconcileRestartLeases).toHaveBeenCalledOnce()
     expect(restoreReadableSessions).not.toHaveBeenCalled()

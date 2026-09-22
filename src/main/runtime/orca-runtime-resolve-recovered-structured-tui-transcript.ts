@@ -264,16 +264,23 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     return this.structuredAgentSessionTabRestorePromise
   }
 
-  prepareStructuredAgentSessionStartupRestoration(): Promise<void> {
+  /** `localPtyProviderReady`, when given, starts the readable sweep once that provider answers. */
+  prepareStructuredAgentSessionStartupRestoration(
+    localPtyProviderReady?: Promise<void>
+  ): Promise<void> {
     this.structuredAgentSessionStartupRestorePromise ??=
-      this.prepareStructuredAgentSessionStartupRestorationOnce().catch((error) => {
-        this.structuredAgentSessionStartupRestorePromise = null
-        throw error
-      })
+      this.prepareStructuredAgentSessionStartupRestorationOnce(localPtyProviderReady).catch(
+        (error) => {
+          this.structuredAgentSessionStartupRestorePromise = null
+          throw error
+        }
+      )
     return this.structuredAgentSessionStartupRestorePromise
   }
 
-  protected async prepareStructuredAgentSessionStartupRestorationOnce(): Promise<void> {
+  protected async prepareStructuredAgentSessionStartupRestorationOnce(
+    localPtyProviderReady?: Promise<void>
+  ): Promise<void> {
     if (!this.hasPersistedStructuredAgentSessionStore()) {
       return
     }
@@ -282,16 +289,20 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     await this.refreshMobileSessionPtyRecords()
     await getStructuredAgentSessionHost()?.reconcileRestartLeases()
     // Why started here, and why not awaited: a restored chat pane subscribes as soon as its tab
-    // model hydrates, and a read refused for want of a readable session is what it paints as a
-    // failure — so readability must not wait for the first tab inventory, which itself waits on
-    // the client's whole terminal-restoration chain. Journal parsing still stays off the
-    // terminal-safety fence this method fences: the sweep runs alongside terminal restoration,
-    // and the tab projection awaits the same sweep. Gated like that projection: with structured
-    // chat off, no surface can read a chat, so startup owes it no sweep.
-    if (isStructuredNativeChatEnabled(this)) {
-      void this.restoreReadableStructuredSessions().catch((error: unknown) => {
-        console.warn('[agent-session] startup readable restore failed', error)
-      })
+    // model hydrates, and the first tab inventory waits on the client's whole terminal-restoration
+    // chain — so readability must not wait for it, and journal parsing stays off this fence (the
+    // tab projection awaits the same latched sweep). Why after the provider, on a fresh census:
+    // the sweep re-proves live TUI owners against the PTY census, and the one above can predate
+    // the daemon when the first window fails open without it; an owner missing from it would be
+    // latched into manual recovery. Gated like the projection: with structured chat off, no
+    // surface can read a chat.
+    if (localPtyProviderReady && isStructuredNativeChatEnabled(this)) {
+      void localPtyProviderReady
+        .then(() => this.refreshMobileSessionPtyRecords())
+        .then(() => this.restoreReadableStructuredSessions())
+        .catch((error: unknown) => {
+          console.warn('[agent-session] startup readable restore failed', error)
+        })
     }
   }
 
