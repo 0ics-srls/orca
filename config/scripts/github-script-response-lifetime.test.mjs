@@ -1,8 +1,8 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, expect, it, onTestFinished, vi } from 'vitest'
 import { listPullFiles, updatePullRequest } from '../../.github/scripts/pr-test-loc-summary.mjs'
-
-vi.mock('node:fs/promises', () => ({ mkdir: vi.fn(), writeFile: vi.fn() }))
 
 const pullOptions = {
   owner: 'example',
@@ -158,7 +158,6 @@ it.each([403, 503])('releases failed downloads badge responses (%i)', async (sta
   }
   expect(owner.cancellations).toBe(30)
   expect(owner.active.size).toBe(0)
-  expect(writeFile).not.toHaveBeenCalled()
 })
 
 it('preserves the badge request error when body cancellation rejects', async () => {
@@ -173,6 +172,7 @@ it('preserves the badge request error when body cancellation rejects', async () 
 })
 
 it('consumes successful badge pages and writes the accumulated count', async () => {
+  const outputRoot = await mkdtemp(join(tmpdir(), 'orca-downloads-badge-'))
   const responses = [
     Response.json([
       { draft: false, assets: [{ download_count: 1200 }, { download_count: 100 }] },
@@ -184,15 +184,15 @@ it('consumes successful badge pages and writes the accumulated count', async () 
   let page = 0
   const fetchImpl = vi.fn(async () => responses[page++])
   vi.stubGlobal('fetch', fetchImpl)
-  vi.stubEnv('DOWNLOADS_BADGE_PATH', 'docs/assets/test-downloads.svg')
+  vi.stubEnv('DOWNLOADS_BADGE_PATH', join(outputRoot, 'test-downloads.svg'))
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.resetModules()
-  await import('../../.github/scripts/render-readme-downloads-badge.mjs')
-  expect(fetchImpl).toHaveBeenCalledTimes(3)
-  expect(responses.every((response) => response.bodyUsed)).toBe(true)
-  expect(mkdir).toHaveBeenCalledWith('docs/assets', { recursive: true })
-  expect(writeFile).toHaveBeenCalledWith(
-    'docs/assets/test-downloads.svg',
-    expect.stringContaining('2k')
-  )
+  try {
+    await import('../../.github/scripts/render-readme-downloads-badge.mjs')
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    expect(responses.every((response) => response.bodyUsed)).toBe(true)
+    expect(await readFile(join(outputRoot, 'test-downloads.svg'), 'utf8')).toContain('2k')
+  } finally {
+    await rm(outputRoot, { recursive: true, force: true })
+  }
 })
