@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runMonacoSetupSteps } from './monaco-setup-steps'
 
+const recordRendererCrashBreadcrumb = vi.hoisted(() => vi.fn())
+vi.mock('./crash-breadcrumb-recorder', () => ({ recordRendererCrashBreadcrumb }))
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
@@ -23,5 +26,9 @@ describe('runMonacoSetupSteps', () => {
 
     expect(ran).toEqual(['first', 'third'])
     expect(consoleError).toHaveBeenCalledWith('[Monaco Setup] second failed', expect.any(Error))
+    expect(recordRendererCrashBreadcrumb).toHaveBeenCalledWith('monaco_setup_step_failed', {
+      step: 'second',
+      message: 'registration exploded'
+    })
   })
 })
