@@ -15,6 +15,7 @@ import { folderWorkspaceKey, parseWorkspaceKey } from '../../shared/workspace-sc
 import type { FolderWorkspace } from '../../shared/folder-workspace-types'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 import { folderWorkspaceToWorktree } from '../../shared/folder-workspace-worktree'
+import { floatingWorkspaceToWorktree } from '../../shared/floating-workspace-worktree'
 import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
 import { resolveTerminalStartupCwd } from '../../shared/terminal-startup-cwd'
 import type { ResolvedTerminalWorkspaceLaunchTarget } from './orca-runtime-core'

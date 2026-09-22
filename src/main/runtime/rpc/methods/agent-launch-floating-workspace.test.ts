@@ -2,6 +2,7 @@ import { homedir } from 'node:os'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import { OrcaRuntimeService } from '../../orca-runtime'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
 import { AGENT_LAUNCH_METHODS } from './agent-launch'
 import { CAPABLE_CLIENT, methodNamed, STRUCTURED_PREFERENCE } from './agent-launch.test-fixture'
 
@@ -16,6 +17,30 @@ const launch = methodNamed(AGENT_LAUNCH_METHODS, 'agent.launch')
 const selectors = [FLOATING_TERMINAL_WORKTREE_ID, `id:${FLOATING_TERMINAL_WORKTREE_ID}`]
 
 afterEach(() => vi.restoreAllMocks())
+
+describe('floating workspace resolved-worktree minting', () => {
+  // Regression: this mixin file is @ts-nocheck, so a missing module import there is invisible to
+  // `pnpm tc` and only fails at call time (shipped once as a ReferenceError from the structured
+  // createSupport path). Calling the real method pins the import wiring.
+  it('mints the synthetic floating row through the shared module', () => {
+    class FloatingResolverProbe extends OrcaRuntimeService {
+      mintFloatingResolvedWorktree(path: string): ResolvedWorktree {
+        return this.floatingWorkspaceToResolvedWorktree(path)
+      }
+    }
+
+    const resolved = new FloatingResolverProbe().mintFloatingResolvedWorktree('/tmp/floating-qa')
+
+    expect(resolved).toMatchObject({
+      id: FLOATING_TERMINAL_WORKTREE_ID,
+      path: '/tmp/floating-qa',
+      parentWorktreeId: null,
+      childWorktreeIds: [],
+      lineage: null,
+      git: { path: '/tmp/floating-qa', head: '', branch: '', isBare: false, isMainWorktree: false }
+    })
+  })
+})
 
 describe('agent.launch with the real floating workspace resolver', () => {
   it.each(selectors)('resolves %s without a managed worktree record', async (selector) => {
