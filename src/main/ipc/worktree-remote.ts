@@ -2105,6 +2105,8 @@ export async function createRemoteWorktree(
     }
     throw err
   }
+  // Why: the worktree is listable from here on; a scan that began before it appeared is overtaken.
+  runWorktreeChangeInvalidators(repo.id)
   if (sparseDirectories.length > 0) {
     try {
       // Why: SSH providers expose generic git exec, so remote sparse mirrors local addSparseWorktree without a new relay method.

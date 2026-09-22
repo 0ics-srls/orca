@@ -22,7 +22,6 @@ import type {
   DetectedWorktreeRefreshOutcome
 } from './worktree-slice-types'
 import { teardownMissingWorktreeTerminalsBestEffort } from '../teardown/missing-worktree-terminal-teardown'
-import { currentWorktreeCreateSequence } from '../create/created-worktree-sequence'
 import { directSshAuthorityIsComplete } from './direct-ssh-authority'
 import {
   detectedWorktreeRefreshKey,
@@ -31,24 +30,10 @@ import {
   startDetectedWorktreeProviderRequest
 } from './detected-worktree-provider-request'
 
-// Why: coalescing hands a joiner a scan that began before it asked. The create fence that travels
-// with the result must therefore be the invocation's, captured when its scan began — a worktree
-// created since is unseen by that scan, and must not read as deleted.
 const runtimeDetectedWorktreeRefreshesInFlight = new Map<
   string,
-  { result: Promise<DetectedWorktreeListResult>; createSequenceAtRequestStart: number }
+  Promise<DetectedWorktreeListResult>
 >()
-
-// Why captured where the invocation starts, not where a waiter awaits: a waiter released early
-// resolves alone while the invocation stays joinable, so no waiter may own this entry's lifetime.
-const createSequenceAtInvocationStart = new Map<ProviderRequestId, number>()
-
-/** The local create sequence when the provider invocation began; absent once it has settled. */
-export function createSequenceWhenInvocationBegan(
-  providerRequestId: ProviderRequestId
-): number | undefined {
-  return createSequenceAtInvocationStart.get(providerRequestId)
-}
 
 const STALE_RUNTIME_GENERATION_ERROR = 'runtime_environment_generation_changed'
 // Why exactly one: a second stale answer means the connection is still churning, and
@@ -60,22 +45,7 @@ export function isStaleRuntimeGenerationError(error: unknown): boolean {
 }
 
 export const detectedWorktreeRefreshLeaseRegistry = createDetectedWorktreeRefreshLeaseRegistry({
-  startProviderRequest: (request) => {
-    createSequenceAtInvocationStart.set(request.providerRequestId, currentWorktreeCreateSequence())
-    const forget = (): void => {
-      createSequenceAtInvocationStart.delete(request.providerRequestId)
-    }
-    let result: Promise<HostQualifiedDetectedWorktreeResult>
-    try {
-      result = startDetectedWorktreeProviderRequest(request)
-    } catch (error) {
-      forget()
-      throw error
-    }
-    // Why: the registry settles the invocation right after this, and never hands out a settled one.
-    void result.then(forget, forget)
-    return result
-  },
+  startProviderRequest: startDetectedWorktreeProviderRequest,
   cancelProviderRequest: async (request) => {
     await window.api.worktrees.cancelListDetected?.({
       providerRequestId: request.providerRequestId
@@ -185,17 +155,13 @@ async function listDetectedWorktreesForRuntimeRepoOnce(
   const runtimeConnectionGeneration = getRuntimeEnvironmentConnectionGeneration(environmentId)
   let refresh = runtimeDetectedWorktreeRefreshesInFlight.get(key)
   if (!refresh) {
-    refresh = {
-      result: listDetectedWorktreesForRepo(settings, repoId, {
-        reuseRecentCompatibilityFailure: options.reuseRecentCompatibilityFailure
-      }),
-      createSequenceAtRequestStart: currentWorktreeCreateSequence()
-    }
+    refresh = listDetectedWorktreesForRepo(settings, repoId, {
+      reuseRecentCompatibilityFailure: options.reuseRecentCompatibilityFailure
+    })
     runtimeDetectedWorktreeRefreshesInFlight.set(key, refresh)
   }
-  const { createSequenceAtRequestStart } = refresh
   try {
-    const result = await refresh.result
+    const result = await refresh
     if (
       getEnvironmentSshStateGeneration(environmentId) !== connectionGeneration ||
       getRuntimeEnvironmentConnectionGeneration(environmentId) !== runtimeConnectionGeneration
@@ -220,8 +186,7 @@ async function listDetectedWorktreesForRuntimeRepoOnce(
         environmentId,
         connectionGeneration,
         runtimeConnectionGeneration
-      },
-      createSequenceAtRequestStart
+      }
     }
   } finally {
     if (runtimeDetectedWorktreeRefreshesInFlight.get(key) === refresh) {
@@ -258,8 +223,6 @@ export async function listDetectedWorktreesForRepoCoalesced(
   }
 
   const lease = acquireDetectedWorktreeRefreshLeaseForRepo(settings, repoId, options)
-  // Why read here, synchronously: the entry lives exactly as long as the invocation is joinable.
-  const createSequenceAtRequestStart = createSequenceWhenInvocationBegan(lease.providerRequestId)
   let providerResult: HostQualifiedDetectedWorktreeResult
   try {
     providerResult = await lease.result
@@ -301,7 +264,6 @@ export async function listDetectedWorktreesForRepoCoalesced(
     result: providerResult.result,
     providerResult,
     executionHostId: options.executionHostId,
-    directSshAuthority: options.directSshAuthority,
-    ...(createSequenceAtRequestStart === undefined ? {} : { createSequenceAtRequestStart })
+    directSshAuthority: options.directSshAuthority
   }
 }

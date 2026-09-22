@@ -1,7 +1,7 @@
 import type { Store } from '../../../persistence/loading-store/store'
 import type { Repo } from '../../../../shared/repo-types'
 import { getSshGitProvider } from '../../../providers/ssh-git-dispatch'
-import type { DetectedWorktreeListResult, GitWorktreeInfo } from '../../../../shared/worktree/types'
+import type { DetectedWorktreeListResult } from '../../../../shared/worktree/types'
 import { isFolderRepo } from '../../../../shared/repo-kind'
 import { projectResolvedWorktreeLineage } from '../../../../shared/resolved-worktree-lineage'
 import type { DirectSshDetectedWorktreeRequest } from '../../../../shared/detected-worktree-provider-contract'
@@ -22,9 +22,13 @@ import { hasConflictingStoredWorktreeOwner } from './worktree-host-ownership'
 import {
   applyFreshDetectedWorktreeScanSideEffects,
   listDetectedGitWorktrees,
-  type DetectedWorktreeMetadataPrune,
-  type DetectedWorktreeSideEffectToken
+  type DetectedWorktreeScanResult
 } from './detected-worktree-scan-cache'
+import {
+  getLocalWorktreeScanGeneration,
+  isLocalWorktreeScanGenerationCurrent
+} from '../../../local-worktree-scan-generation'
+import type { SshGitProvider } from '../../../providers/ssh-git-provider'
 import {
   describeWorktreeScanFailure,
   loggedWorktreeListFailures,
@@ -36,6 +40,49 @@ import { classifyWorktreeScanFailure } from '../../../../shared/worktree-scan-fa
 // Why two: one covers the create/delete overlap the scan is re-run for; a second mutation landing
 // inside that re-run is the churn case, and a third pass would only chase it.
 const SUPERSEDED_SCAN_RESCANS = 2
+
+/**
+ * Runs the scan again while a worktree mutation overtook it. A listing speaks for the catalog as of
+ * when its scan began, so a scan that a create or delete landed under describes a catalog that no
+ * longer exists; published as authoritative, it tells every client that a worktree created during
+ * the scan was deleted, and the client retires it. Re-running through the same thunk keeps the
+ * guard chain (cache, joiners, side-effect tokens) intact for the second pass.
+ *
+ * Why null past the bound rather than a non-authoritative answer: non-authoritative rows still
+ * replace the client's rows for this host, so a worktree the last overtaking mutation created
+ * would vanish from the sidebar until the next listing. Null becomes a stale rejection, which
+ * leaves client state untouched; the overtaking mutation's own change event, sent after its
+ * generation bump and therefore ahead of this reply, is what brings the listing that reflects it.
+ */
+async function scanUntilNotOvertaken<T extends { superseded: boolean }>(
+  scanOnce: () => Promise<T>,
+  mayRescan: () => boolean
+): Promise<T | null> {
+  let scan = await scanOnce()
+  for (let rescans = 0; scan.superseded; rescans += 1) {
+    if (rescans >= SUPERSEDED_SCAN_RESCANS || !mayRescan()) {
+      return null
+    }
+    scan = await scanOnce()
+  }
+  return scan
+}
+
+// Why here: an SSH listing bypasses the scan cache, so nothing else witnesses a mutation overtaking
+// it. The generation is the one the cache compares, bumped by every worktree change invalidator.
+async function listSshWorktreesWithMutationWitness(
+  provider: SshGitProvider,
+  repo: Repo,
+  signal: AbortSignal | undefined
+): Promise<DetectedWorktreeScanResult> {
+  const generation = getLocalWorktreeScanGeneration(repo.id)
+  const gitWorktrees = await provider.listWorktrees(repo.path, { signal })
+  return {
+    gitWorktrees,
+    fresh: true,
+    superseded: !isLocalWorktreeScanGenerationCurrent(repo.id, generation)
+  }
+}
 
 export async function listDetectedWorktreesForCapturedRepo(
   store: Store,
@@ -56,12 +103,8 @@ export async function listDetectedWorktreesForCapturedRepo(
     (cachedSshWorktreeMetaIndex ??= createSshWorktreeMetaIndex(Object.entries(allMeta ?? {})))
 
   try {
-    let gitWorktrees: GitWorktreeInfo[]
-    let freshScan = true
-    let authoritative = true
-    let sideEffectToken: DetectedWorktreeSideEffectToken | undefined
-    let metadataPrune: DetectedWorktreeMetadataPrune | undefined
-    let hygieneDue: boolean | undefined
+    // Why no re-scan for folder repos: their rows come from the store synchronously below, so no
+    // mutation can land under the read.
     if (isFolderRepo(repo)) {
       if (!isCurrent()) {
         return null
@@ -87,51 +130,32 @@ export async function listDetectedWorktreesForCapturedRepo(
         )
       }
     }
-    if (repo.connectionId) {
-      if (!capturedProvider) {
-        const aborted = abortedResult()
-        if (aborted) {
-          return aborted
-        }
-        if (!isCurrent()) {
-          return null
-        }
-        const worktrees = listDisconnectedSshWorktrees(store, repo, sshWorktreeMetaIndex())
-        return {
-          repoId: repo.id,
-          authoritative: false,
-          source: 'metadata-fallback',
-          worktrees: buildDisconnectedDetectedWorktrees(store, repo, worktrees)
-        }
+    if (repo.connectionId && !capturedProvider) {
+      const aborted = abortedResult()
+      if (aborted) {
+        return aborted
       }
-      gitWorktrees = await capturedProvider.listWorktrees(repo.path, {
-        signal: providerAbort?.signal
-      })
-    } else {
-      let scan = await listDetectedGitWorktrees(store, repo)
-      // Why re-scan rather than publish: a worktree mutation overtook this scan, so its rows describe
-      // a catalog that no longer exists -- published as authoritative, a worktree created during the
-      // scan reads as deleted and the client retires it. The mutation already dropped the cache, so
-      // asking again scans afresh (or joins the scan a sibling has started); the bound keeps
-      // continuous churn from spinning here. Past the bound the rows still ship, only not as proof
-      // of absence -- and not as a failure, which is what `unavailableReason` would present as.
-      for (
-        let rescan = 0;
-        scan.superseded && rescan < SUPERSEDED_SCAN_RESCANS && !providerAbort?.signal.aborted;
-        rescan += 1
-      ) {
-        if (!isCurrent()) {
-          return null
-        }
-        scan = await listDetectedGitWorktrees(store, repo)
+      if (!isCurrent()) {
+        return null
       }
-      gitWorktrees = scan.gitWorktrees
-      freshScan = scan.fresh
-      authoritative = !scan.superseded
-      sideEffectToken = scan.sideEffectToken
-      metadataPrune = scan.metadataPrune
-      hygieneDue = scan.hygieneDue
+      const worktrees = listDisconnectedSshWorktrees(store, repo, sshWorktreeMetaIndex())
+      return {
+        repoId: repo.id,
+        authoritative: false,
+        source: 'metadata-fallback',
+        worktrees: buildDisconnectedDetectedWorktrees(store, repo, worktrees)
+      }
     }
+    const scan = await scanUntilNotOvertaken(
+      repo.connectionId && capturedProvider
+        ? () => listSshWorktreesWithMutationWitness(capturedProvider, repo, providerAbort?.signal)
+        : () => listDetectedGitWorktrees(store, repo),
+      () => isCurrent() && !providerAbort?.signal.aborted
+    )
+    if (!scan) {
+      return abortedResult() ?? null
+    }
+    const { gitWorktrees, fresh: freshScan, sideEffectToken, metadataPrune, hygieneDue } = scan
     const aborted = abortedResult()
     if (aborted) {
       return aborted
@@ -166,7 +190,7 @@ export async function listDetectedWorktreesForCapturedRepo(
     loggedWorktreeListFailures.delete(`${repo.id}:${repo.path}`)
     return {
       repoId: repo.id,
-      authoritative,
+      authoritative: true,
       source: 'git',
       worktrees: buildDetectedGitWorktrees(store, repo, gitWorktrees, allMeta)
     }

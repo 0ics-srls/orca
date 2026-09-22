@@ -468,7 +468,7 @@ describe('registerWorktreeHandlers', () => {
     })
   })
 
-  it('stops re-scanning after two overtaken passes and answers without a failure reason', async () => {
+  it('stops re-scanning after two overtaken passes and answers stale, not failed', async () => {
     const mainWorktree: GitWorktreeInfo = {
       path: '/workspace/repo',
       head: 'main-head',
@@ -484,7 +484,11 @@ describe('registerWorktreeHandlers', () => {
         })
     )
 
-    const pendingList = handlers['worktrees:listDetected'](null, { repoId: 'repo-1' })
+    const pendingList = handlers['worktrees:listDetected'](null, {
+      repoId: 'repo-1',
+      executionHostId: 'local',
+      providerRequestId: 'provider-1'
+    })
     for (let pass = 1; pass <= 3; pass += 1) {
       await vi.waitFor(() => expect(listWorktreesMock).toHaveBeenCalledTimes(pass))
       notifyWorktreesChanged(mainWindow as never, 'repo-1')
@@ -494,14 +498,15 @@ describe('registerWorktreeHandlers', () => {
     const result = await pendingList
 
     expect(listWorktreesMock).toHaveBeenCalledTimes(3)
-    // Why: the rows still ship and the absence claim is withheld, but nothing failed, so the
-    // sidebar's scan-failure indicator must not light up for a routine create/delete overlap.
-    expect(result).toMatchObject({
-      authoritative: false,
-      source: 'git',
-      worktrees: [expect.objectContaining({ path: '/workspace/repo' })]
+    // Why stale: no scan in the chain describes the current catalog, and a non-authoritative answer
+    // would still replace the client's rows -- dropping a worktree the last mutation created. A
+    // stale reply leaves client state alone; that mutation's own change event brings the next
+    // listing. Nothing failed, so no failure reason ships and no scan-failure indicator lights up.
+    expect(result).toEqual({
+      providerRequestId: 'provider-1',
+      executionHostId: 'local',
+      status: 'stale'
     })
-    expect(result).not.toHaveProperty('unavailableReason')
   })
 
   it('does not retain invalidated detected scans after they settle', async () => {

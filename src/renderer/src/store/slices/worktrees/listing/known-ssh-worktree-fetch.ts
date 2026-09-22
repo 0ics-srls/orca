@@ -23,7 +23,6 @@ import { settingsForRepoOwner } from './worktree-owner-settings'
 import { getCurrentDirectSshAuthority } from './direct-ssh-authority'
 import {
   acquireDetectedWorktreeRefreshLeaseForRepo,
-  createSequenceWhenInvocationBegan,
   normalizeNotAdmittedProviderResult,
   qualifiedProviderResultIsAdmitted
 } from './detected-worktree-refresh'
@@ -222,9 +221,6 @@ export function acquireDirectSshDetectedWorktreeRefresh(
     requireAuthoritative: request.requireAuthoritative
   }
   const lease = acquireDetectedWorktreeRefreshLeaseForRepo(settings, request.repoId, options)
-  // Why now, not in merge(): SSH hosts have no scan cache to mark an overtaken scan, so this fence is
-  // the only thing keeping a reconnect listing from retiring a worktree created while it ran.
-  const createSequenceAtRequestStart = createSequenceWhenInvocationBegan(lease.providerRequestId)
   let mergedResult: HostQualifiedDetectedWorktreeResult | undefined
 
   return {
@@ -260,8 +256,7 @@ export function acquireDirectSshDetectedWorktreeRefresh(
         result: providerResult.result,
         providerResult,
         executionHostId: request.executionHostId,
-        directSshAuthority: request.authority,
-        ...(createSequenceAtRequestStart === undefined ? {} : { createSequenceAtRequestStart })
+        directSshAuthority: request.authority
       }
       const admitted = mergeFetchedWorktrees(
         store.setState as Parameters<StateCreator<AppState, [], [], WorktreeSlice>>[0],

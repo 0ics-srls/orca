@@ -36,12 +36,6 @@ export type AdmittedDetectedWorktreeRefresh = {
   result: DetectedWorktreeListResult
   providerResult?: HostQualifiedDetectedWorktreeResult
   executionHostId: ExecutionHostId
-  /**
-   * The local create sequence when the provider invocation this result came from BEGAN, not when
-   * this caller joined it. A listing can only prove the absence of worktrees that existed when its
-   * scan started; a worktree this client created afterwards is unseen, never removed.
-   */
-  createSequenceAtRequestStart?: number
   directSshAuthority?: DirectSshAuthority
   runtimeAuthority?: {
     environmentId: string

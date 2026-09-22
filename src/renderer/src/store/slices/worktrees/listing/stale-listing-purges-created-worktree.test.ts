@@ -17,11 +17,6 @@ import {
   hasStructuredAgentSessionLaunchCancellationTombstone,
   resetStructuredAgentLaunchRegistryForTests
 } from '@/lib/structured-agent-session-launch-registry'
-import {
-  currentWorktreeCreateSequence,
-  recordLocallyCreatedWorktree,
-  resetWorktreeCreateSequenceForTests
-} from '../create/created-worktree-sequence'
 
 vi.mock('sonner', () => ({
   toast: { warning: vi.fn(), info: vi.fn(), success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }
@@ -118,11 +113,7 @@ function seedCreatedWorkspaceWithPendingLaunch(
   })
 }
 
-function applyListing(
-  store: ReturnType<typeof createTestStore>,
-  rows: Worktree[],
-  createSequenceAtRequestStart?: number
-): boolean {
+function applyListing(store: ReturnType<typeof createTestStore>, rows: Worktree[]): boolean {
   return mergeFetchedWorktrees(store.setState, {
     repoId: REPO_ID,
     hostId: 'local',
@@ -136,57 +127,15 @@ function applyListing(
         authoritative: true,
         source: 'git',
         worktrees: rows.map(detected)
-      },
-      ...(createSequenceAtRequestStart !== undefined ? { createSequenceAtRequestStart } : {})
+      }
     }
   })
 }
 
-describe('an authoritative listing whose scan began before the worktree was created', () => {
-  beforeEach(() => {
-    resetStructuredAgentLaunchPersistenceForTests()
-    resetStructuredAgentLaunchRegistryForTests()
-    resetWorktreeCreateSequenceForTests()
-  })
-
-  it('cannot retire the launch, the tabs, the selection or the row it never saw', () => {
-    const store = createTestStore()
-    // The provider invocation began, then this client completed the create.
-    const sequenceWhenScanBegan = currentWorktreeCreateSequence()
-    recordLocallyCreatedWorktree(CREATED_ID)
-    seedCreatedWorkspaceWithPendingLaunch(store, true)
-    const existingRow = store.getState().worktreesByRepo[REPO_ID]![0]!
-
-    expect(applyListing(store, [existingRow], sequenceWhenScanBegan)).toBe(true)
-
-    const state = store.getState()
-    expect(hasStructuredAgentSessionLaunchCancellationTombstone(CREATED_ID, SESSION_ID)).toBe(false)
-    expect(state.activeWorktreeId).toBe(CREATED_ID)
-    expect(state.unifiedTabsByWorktree[CREATED_ID]).toHaveLength(2)
-    expect(state.tabsByWorktree[CREATED_ID]).toHaveLength(1)
-    expect(state.worktreesByRepo[REPO_ID]!.map((worktree) => worktree.id)).toEqual([
-      EXISTING_ID,
-      CREATED_ID
-    ])
-  })
-
-  it('still retires a worktree whose create finished before the scan began and is now gone', () => {
-    const store = createTestStore()
-    recordLocallyCreatedWorktree(CREATED_ID)
-    const sequenceWhenScanBegan = currentWorktreeCreateSequence()
-    seedCreatedWorkspaceWithPendingLaunch(store, true)
-    const existingRow = store.getState().worktreesByRepo[REPO_ID]![0]!
-
-    expect(applyListing(store, [existingRow], sequenceWhenScanBegan)).toBe(true)
-
-    const state = store.getState()
-    expect(hasStructuredAgentSessionLaunchCancellationTombstone(CREATED_ID, SESSION_ID)).toBe(true)
-    expect(state.activeWorktreeId).toBeNull()
-    expect(state.worktreesByRepo[REPO_ID]!.map((worktree) => worktree.id)).toEqual([EXISTING_ID])
-  })
-})
-
-describe('a stale authoritative listing that omits a just-created worktree (no inception fence)', () => {
+// Why this suite exists: it pins what an authoritative listing that omits a known worktree does to
+// the client, which is exactly why the host re-runs a scan that a create overtook instead of
+// publishing it (see detected-provider-listing.ts). The client keeps no fence of its own.
+describe('an authoritative listing that omits a just-created worktree', () => {
   beforeEach(() => {
     resetStructuredAgentLaunchPersistenceForTests()
     resetStructuredAgentLaunchRegistryForTests()
