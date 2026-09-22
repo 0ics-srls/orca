@@ -8,7 +8,7 @@ import { PtyOwnershipRecorder } from './pty-ownership-recorder'
 import { PtyOwnershipRecordStore, getPtyOwnershipRecordPath } from './pty-ownership-record-store'
 import type { PtyOwnershipRecord } from './pty-ownership-record'
 
-// Every correlation this exercises — process group, parentage, `ps` start time — is POSIX. On
+// Every correlation this exercises — parentage and `ps` start time — is POSIX. On
 // Windows a PTY's descendants belong to its job object, which teardown already terminates.
 const describePosix = process.platform === 'win32' ? describe.skip : describe
 
@@ -80,16 +80,15 @@ function readRecords(store: PtyOwnershipRecordStore): PtyOwnershipRecord[] {
   return read.status === 'readable' ? read.records : []
 }
 
-/** The recorder writes twice: once with what it already holds, then again once `ps` answers. Wait
- *  for the completed row rather than a fixed sleep, because that probe is a subprocess. */
-async function waitForRecordedRootIdentity(store: PtyOwnershipRecordStore): Promise<void> {
-  const deadline = Date.now() + 15_000
-  while (Date.now() < deadline) {
-    if (readRecords(store)[0]?.root.startedAt) {
-      return
-    }
-    await delay(100)
-  }
+/** Record a root the way the daemon does, then flush the batch rather than wait out its delay. */
+async function recordRoot(store: PtyOwnershipRecordStore, pid: number): Promise<void> {
+  const recorder = new PtyOwnershipRecorder({
+    store,
+    daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 },
+    isLive: () => true
+  })
+  recorder.record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
+  await recorder.flush()
 }
 
 /** Age the record past the spawn grace, which is what a record written before a restart is. */
@@ -115,12 +114,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     // so let the child cross a second boundary before it is ever captured.
     await delay(1_300)
 
-    const recorder = new PtyOwnershipRecorder({
-      store,
-      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
-    })
-    recorder.record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
-    await waitForRecordedRootIdentity(store)
+    await recordRoot(store, pid)
 
     const recorded = backdate(store, 10 * 60_000)
     expect(recorded.root.pid).toBe(pid)
@@ -183,15 +177,18 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     })
     await delay(1_300)
 
-    new PtyOwnershipRecorder({
-      store,
-      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
-    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid: rootPid })
-    await waitForRecordedRootIdentity(store)
-    backdate(store, 10 * 60_000)
-
+    await recordRoot(store, rootPid)
     const survivorPid = Number(readFileSync(childPidFile, 'utf8').trim())
     expect(Number.isSafeInteger(survivorPid) && survivorPid > 0).toBe(true)
+
+    // While the session is live, a tick writes down the tree it can still walk from the root.
+    await new DaemonOrphanReconciler({
+      store,
+      listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: rootPid }],
+      log: () => {}
+    }).runOnce()
+    expect(readRecords(store)[0].processes.map((entry) => entry.pid)).toEqual([survivorPid])
+    backdate(store, 10 * 60_000)
 
     // The root dies without ever tearing anything down — a crash, a force quit, an updater.
     process.kill(rootPid, 'SIGKILL')
@@ -212,8 +209,8 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     expect(await waitForExit(survivorPid, 15_000)).toBe(true)
     expect(events.find((entry) => entry.event === 'pty-orphan-reap')?.details).toMatchObject({
       sessionId: 'session-a',
-      reason: 'orphaned_group',
-      pgids: [rootPid]
+      reason: 'orphaned_descendant',
+      pids: [survivorPid]
     })
   }, 45_000)
 
@@ -223,16 +220,12 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     const pid = child.pid!
     await delay(1_300)
 
-    new PtyOwnershipRecorder({
-      store,
-      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
-    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
-    await waitForRecordedRootIdentity(store)
+    await recordRoot(store, pid)
     backdate(store, 10 * 60_000)
 
     const reconciler = new DaemonOrphanReconciler({
       store,
-      listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1' }],
+      listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1', pid }],
       log: () => {},
       escalationGraceMs: 300
     })
@@ -251,11 +244,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
     const pid = child.pid!
     await delay(1_300)
 
-    new PtyOwnershipRecorder({
-      store,
-      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
-    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
-    await waitForRecordedRootIdentity(store)
+    await recordRoot(store, pid)
 
     // The pid was recycled: same number, a process that started long before ours.
     const [current] = readRecords(store)
@@ -284,6 +273,7 @@ describePosix('DaemonOrphanReconciler against real processes', () => {
       sessionId: 'session-a',
       incarnationId: 'inc-1',
       root: { pid: 500, startedAt: 'Mon Sep 21 09:00:00 2026' },
+      processes: [],
       pgids: [500],
       tty: null,
       daemon: { pid: 400, startedAtMs: 1 },

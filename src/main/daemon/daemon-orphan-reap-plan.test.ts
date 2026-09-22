@@ -9,8 +9,8 @@ import { ptyOwnershipRecordKey, type PtyOwnershipRecord } from './pty-ownership-
 
 const NOW = Date.parse('Mon Sep 21 12:00:00 2026')
 const ROOT_STARTED_AT = 'Mon Sep 21 09:00:00 2026'
-const BEFORE_ROOT = 'Mon Sep 21 08:59:59 2026'
 const AFTER_ROOT = 'Mon Sep 21 09:00:05 2026'
+const LATER = 'Mon Sep 21 11:00:00 2026'
 
 // Defaults describe a leftover: reparented to init, in its own group, started after the root.
 function row(overrides: Partial<ProcessTableRow> & { pid: number }): ProcessTableRow {
@@ -22,6 +22,7 @@ function record(overrides: Partial<PtyOwnershipRecord> = {}): PtyOwnershipRecord
     sessionId: 'session-a',
     incarnationId: 'inc-1',
     root: { pid: 500, startedAt: ROOT_STARTED_AT },
+    processes: [],
     pgids: [500],
     tty: 'ttys004',
     // The reconciler never correlates on tty; it is carried for the per-session sweeps, which can
@@ -37,6 +38,7 @@ function plan(overrides: Partial<OrphanReapPlanInput> = {}) {
     records: [record()],
     liveSessions: [],
     table: [],
+    capturedAtMs: NOW,
     selfPid: 900,
     pendingConfirmations: new Set<string>(),
     nowMs: NOW,
@@ -48,23 +50,51 @@ function plan(overrides: Partial<OrphanReapPlanInput> = {}) {
 }
 
 const KEY = ptyOwnershipRecordKey('session-a', 'inc-1')
+const CONFIRMED = new Set([KEY])
+const SURVIVOR = { pid: 601, startedAt: AFTER_ROOT }
 
 describe('planOrphanReap', () => {
-  it('never reaps a record backed by a live session, and re-derives its groups', () => {
+  it('records the live tree as exact identities and prunes groups that no longer exist', () => {
     const result = plan({
-      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-1' }],
+      records: [record({ pgids: [500, 777] })],
+      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: 500 }],
       table: [
         row({ pid: 500, ppid: 900, pgid: 500, startedAt: ROOT_STARTED_AT }),
-        // A child that moved itself into its own group: reachable only while the root is alive.
-        row({ pid: 601, ppid: 500, pgid: 601 })
+        row({ pid: 601, ppid: 500, pgid: 601 }),
+        row({ pid: 602, ppid: 601, pgid: 601 }),
+        // Born in the capture's own second: indistinguishable from a same-second reuse.
+        row({ pid: 603, ppid: 500, pgid: 500, startedAt: 'Mon Sep 21 12:00:00 2026' })
       ]
     })
 
     expect(result.reap).toEqual([])
-    expect(result.confirmNext).toEqual([])
     expect(result.skipped.map((entry) => entry.reason)).toEqual(['live_session'])
-    expect(result.refreshed[0].pgids.sort()).toEqual([500, 601])
+    expect(result.refreshed[0].processes).toEqual([
+      { pid: 601, startedAt: AFTER_ROOT },
+      { pid: 602, startedAt: AFTER_ROOT }
+    ])
+    expect([...result.refreshed[0].pgids].sort()).toEqual([500, 601])
     expect(result.refreshed[0].recordedAt).toBe(NOW)
+  })
+
+  it('completes a missing root start time only from the pid the host names for that generation', () => {
+    const table = [row({ pid: 500, ppid: 900, pgid: 500, startedAt: ROOT_STARTED_AT })]
+    const unproven = record({ root: { pid: 500, startedAt: null } })
+
+    const adopted = plan({
+      records: [unproven],
+      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: 500 }],
+      table
+    })
+    expect(adopted.refreshed[0].root).toEqual({ pid: 500, startedAt: ROOT_STARTED_AT })
+
+    const elsewhere = plan({
+      records: [unproven],
+      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-1', pid: 510 }],
+      table
+    })
+    expect(elsewhere.refreshed[0].root).toEqual({ pid: 500, startedAt: null })
+    expect(elsewhere.refreshed[0].processes).toEqual([])
   })
 
   it('protects every generation of a session whose live generation is unreported', () => {
@@ -72,110 +102,143 @@ describe('planOrphanReap', () => {
       records: [record({ incarnationId: 'inc-1' }), record({ incarnationId: 'inc-2' })],
       // An older protocol can report a live session without naming its generation.
       liveSessions: [{ sessionId: 'session-a' }],
-      table: [row({ pid: 601, pgid: 500 })],
-      pendingConfirmations: new Set([KEY])
+      table: [row({ pid: 500, startedAt: ROOT_STARTED_AT })],
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
     expect(result.skipped.map((entry) => entry.reason)).toEqual(['live_session', 'live_session'])
   })
 
-  it('requires two consecutive observations before signalling an orphaned group', () => {
-    const table = [row({ pid: 601, pgid: 500 })]
+  it('requires two consecutive observations before signalling a stranded root', () => {
+    const table = [
+      row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT }),
+      row({ pid: 601, ppid: 500, pgid: 500 })
+    ]
 
     const first = plan({ table })
     expect(first.reap).toEqual([])
     expect(first.confirmNext).toEqual([KEY])
     expect(first.skipped.map((entry) => entry.reason)).toEqual(['awaiting_second_observation'])
 
-    const second = plan({ table, pendingConfirmations: new Set([KEY]) })
+    const second = plan({ table, pendingConfirmations: CONFIRMED })
     expect(second.reap).toHaveLength(1)
-    expect(second.reap[0].reason).toBe('orphaned_group')
-    expect(second.reap[0].members.map((member) => member.pid)).toEqual([601])
+    expect(second.reap[0].reason).toBe('stranded_root')
+    expect(second.reap[0].members.map((member) => member.pid).sort()).toEqual([500, 601])
     // Kept pending so a kill that does not land is retried rather than restarting the clock.
     expect(second.confirmNext).toEqual([KEY])
   })
 
-  it('reaps a root that survived its daemon, root included, once confirmed', () => {
-    const table = [
-      row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT }),
-      row({ pid: 601, pgid: 500 })
-    ]
-
-    const result = plan({ table, pendingConfirmations: new Set([KEY]) })
+  it('reaps a recorded descendant, and what it spawned, after the root is gone', () => {
+    const result = plan({
+      records: [record({ processes: [SURVIVOR] })],
+      table: [row({ pid: 601, pgid: 500 }), row({ pid: 602, ppid: 601, pgid: 500 })],
+      pendingConfirmations: CONFIRMED
+    })
 
     expect(result.reap).toHaveLength(1)
-    expect(result.reap[0].reason).toBe('stranded_root')
-    expect(result.reap[0].members.map((member) => member.pid).sort()).toEqual([500, 601])
-  })
-
-  it('refuses a recycled group whose members predate the recorded root', () => {
-    const result = plan({
-      table: [row({ pid: 601, pgid: 500, startedAt: BEFORE_ROOT })],
-      pendingConfirmations: new Set([KEY])
-    })
-
-    expect(result.reap).toEqual([])
-    expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'unclaimable' }])
-  })
-
-  it('refuses a group still held together by a live parent outside it', () => {
-    const result = plan({
-      table: [
-        row({ pid: 700, pgid: 700 }),
-        // Reusing pgid 500, but parented by a process that is neither init, this daemon, nor a
-        // member — someone else is still running this tree.
-        row({ pid: 601, ppid: 700, pgid: 500 })
-      ],
-      pendingConfirmations: new Set([KEY])
-    })
-
-    expect(result.reap).toEqual([])
-    expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'unclaimable' }])
-  })
-
-  it('accepts a group whose members are parented by each other', () => {
-    const result = plan({
-      table: [row({ pid: 601, pgid: 500 }), row({ pid: 602, ppid: 601, pgid: 500 })],
-      pendingConfirmations: new Set([KEY])
-    })
-
+    expect(result.reap[0].reason).toBe('orphaned_descendant')
     expect(result.reap[0].members.map((member) => member.pid).sort()).toEqual([601, 602])
   })
 
-  it('refuses a record whose root pid is live under a different identity', () => {
+  it('never signals an unrelated init-parented process that reused a recorded group', () => {
+    // The root is gone and nothing recorded survives; a launchd app now leads group 500.
     const result = plan({
-      table: [row({ pid: 500, pgid: 500, startedAt: AFTER_ROOT })],
-      pendingConfirmations: new Set([KEY])
+      table: [row({ pid: 601, ppid: 1, pgid: 500, startedAt: LATER })],
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
-    expect(result.skipped.map((entry) => entry.reason)).toEqual(['root_pid_reused'])
+    expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'settled' }])
   })
 
-  it('never signals a group that belongs to the daemon own ancestry', () => {
+  it('never signals a live session root that reused a recorded group', () => {
     const result = plan({
-      records: [record({ pgids: [800] })],
-      // 900 is the daemon; 800 is its parent and the group both share.
+      records: [record({ pgids: [500, 520] })],
+      liveSessions: [{ sessionId: 'session-b', incarnationId: 'inc-9', pid: 520 }],
+      // The daemon's own new shell, parented by the daemon, leading the reused group 520.
       table: [
-        row({ pid: 900, ppid: 800, pgid: 800 }),
-        row({ pid: 800, pgid: 800 }),
-        row({ pid: 601, pgid: 800 })
+        row({ pid: 520, ppid: 900, pgid: 520, startedAt: LATER }),
+        row({ pid: 521, ppid: 520, pgid: 520, startedAt: LATER })
       ],
-      pendingConfirmations: new Set([KEY])
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
-    expect(result.skipped.map((entry) => entry.reason)).toEqual(['protected_ancestry'])
+  })
+
+  it('never signals a recorded identity now inside a live session tree', () => {
+    const result = plan({
+      records: [record({ processes: [SURVIVOR] })],
+      liveSessions: [{ sessionId: 'session-b', incarnationId: 'inc-9', pid: 520 }],
+      table: [
+        row({ pid: 520, ppid: 900, pgid: 520, startedAt: LATER }),
+        row({ pid: 601, ppid: 520, pgid: 520 })
+      ],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap).toEqual([])
+    expect(result.skipped.map((entry) => entry.reason)).toEqual(['protected_process'])
+  })
+
+  it('never signals a reused root pid when the root start time was never captured', () => {
+    const result = plan({
+      records: [record({ root: { pid: 500, startedAt: null } })],
+      table: [row({ pid: 500, ppid: 1, pgid: 500, startedAt: LATER })],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap).toEqual([])
+    expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'unprovable' }])
+  })
+
+  it('never signals a root or descendant pid live under a different start time', () => {
+    const result = plan({
+      records: [record({ processes: [SURVIVOR] })],
+      table: [
+        row({ pid: 500, pgid: 500, startedAt: LATER }),
+        row({ pid: 601, pgid: 601, startedAt: LATER })
+      ],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap).toEqual([])
+    expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'unprovable' }])
+  })
+
+  it('counts, but never signals, group members that match no recorded identity', () => {
+    const result = plan({
+      table: [
+        row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT }),
+        row({ pid: 700, ppid: 1, pgid: 500 })
+      ],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap[0].members.map((member) => member.pid)).toEqual([500])
+    expect(result.reap[0].unverifiedGroupMembers).toBe(1)
+  })
+
+  it('never signals a recorded identity in the daemon own ancestry', () => {
+    const result = plan({
+      records: [record({ processes: [{ pid: 800, startedAt: AFTER_ROOT }] })],
+      // 900 is the daemon; 800 is its parent.
+      table: [row({ pid: 900, ppid: 800, pgid: 800 }), row({ pid: 800, pgid: 800 })],
+      pendingConfirmations: CONFIRMED
+    })
+
+    expect(result.reap).toEqual([])
+    expect(result.skipped.map((entry) => entry.reason)).toEqual(['protected_process'])
   })
 
   it('leaves another live daemon records alone', () => {
     const result = plan({
       table: [
         row({ pid: 400, pgid: 400, startedAt: 'Mon Sep 21 08:59:00 2026' }),
-        row({ pid: 601, pgid: 500 })
+        row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT })
       ],
-      pendingConfirmations: new Set([KEY])
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
@@ -185,27 +248,19 @@ describe('planOrphanReap', () => {
   it('holds off on a record younger than the spawn grace', () => {
     const result = plan({
       records: [record({ recordedAt: NOW - 5_000 })],
-      table: [row({ pid: 601, pgid: 500 })],
-      pendingConfirmations: new Set([KEY])
+      table: [row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT })],
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
     expect(result.skipped.map((entry) => entry.reason)).toEqual(['within_spawn_grace'])
   })
 
-  it('refuses to signal a record that never captured a root start time', () => {
+  it('retires a record whose recorded pids are all gone', () => {
     const result = plan({
-      records: [record({ root: { pid: 500, startedAt: null } })],
-      table: [row({ pid: 601, pgid: 500 })],
-      pendingConfirmations: new Set([KEY])
+      records: [record({ processes: [SURVIVOR] })],
+      table: [row({ pid: 999, pgid: 999 })]
     })
-
-    expect(result.reap).toEqual([])
-    expect(result.skipped.map((entry) => entry.reason)).toEqual(['no_root_identity'])
-  })
-
-  it('retires a record whose root and groups are all gone', () => {
-    const result = plan({ table: [row({ pid: 999, pgid: 999 })] })
 
     expect(result.dropped).toEqual([{ key: KEY, sessionId: 'session-a', reason: 'settled' }])
     expect(result.confirmNext).toEqual([])
@@ -214,8 +269,8 @@ describe('planOrphanReap', () => {
   it('expires a record that outlived its bounded age even while processes remain', () => {
     const result = plan({
       records: [record({ recordedAt: NOW - 25 * 60 * 60_000 })],
-      table: [row({ pid: 601, pgid: 500 })],
-      pendingConfirmations: new Set([KEY])
+      table: [row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT })],
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap).toEqual([])
@@ -224,13 +279,16 @@ describe('planOrphanReap', () => {
 
   it('keys records by incarnation so a respawn does not inherit the previous generation debt', () => {
     const result = plan({
-      records: [record({ incarnationId: 'inc-1' }), record({ incarnationId: 'inc-2' })],
-      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-2' }],
+      records: [
+        record({ incarnationId: 'inc-1', processes: [SURVIVOR] }),
+        record({ incarnationId: 'inc-2', root: { pid: 510, startedAt: LATER } })
+      ],
+      liveSessions: [{ sessionId: 'session-a', incarnationId: 'inc-2', pid: 510 }],
       table: [
-        row({ pid: 500, pgid: 500, startedAt: ROOT_STARTED_AT }),
+        row({ pid: 510, ppid: 900, pgid: 510, startedAt: LATER }),
         row({ pid: 601, pgid: 500 })
       ],
-      pendingConfirmations: new Set([KEY])
+      pendingConfirmations: CONFIRMED
     })
 
     expect(result.reap.map((target) => target.incarnationId)).toEqual(['inc-1'])

@@ -2,10 +2,17 @@
 //
 // This is the whole obligation, not the minimum field that answers one question: a reaper that
 // only knows a root pid cannot find anything once that root exits, because surviving children
-// reparent to pid 1 and leave no parent link back. What does survive the root is its process
-// group and its controlling terminal, so those are what an owner has to write down while it
-// still can — the parent links that would let anyone re-derive them are gone by the time the
-// question is asked.
+// reparent to pid 1 and leave no parent link back. So the owner writes down, while the root is
+// alive to prove it, the exact identity (pid plus start time) of every process in the tree. Only
+// those identities, and processes still descended from them, ever authorize a signal. Process
+// groups and the terminal are kept as discovery hints: both are reissued to strangers.
+
+/** One process, pinned by the pair that survives pid reuse. `startedAt` is `ps` lstart text. */
+export type OwnedProcessIdentity = { pid: number; startedAt: string }
+
+/** Bound on identities kept per record, so one fork-heavy tree cannot grow the store without
+ *  limit. Refresh replaces the list with the live tree, so this only clips pathological trees. */
+export const MAX_OWNED_PROCESSES_PER_RECORD = 256
 
 /** Where a record came from, and which questions it can still answer. */
 export type PtyOwnershipRecord = {
@@ -20,8 +27,13 @@ export type PtyOwnershipRecord = {
    *  no later capture has backfilled it. A record with no root start time can never authorize a
    *  signal, only expire. */
   root: { pid: number; startedAt: string | null }
-  /** Process groups this PTY owns. The root's own group is first; a group a child created with
-   *  `setpgid` under the same terminal is appended while the root is still alive to prove it. */
+  /** The root's descendants as of the last observation that proved them ours — a parent walk from
+   *  a root the daemon was still driving. Replaced wholesale each time, so a process that left the
+   *  tree while the session was live (deliberately detached) stops being claimed. */
+  processes: OwnedProcessIdentity[]
+  /** Groups the root and `processes` occupied at that observation, pruned to groups that still had
+   *  a member. A hint for finding candidates and for reporting what was left alone; a group id is
+   *  reissued once its leader exits, so it never authorizes a signal on its own. */
   pgids: number[]
   /** Controlling terminal as `ps -o tty=` prints it (no `/dev/` prefix), taken from node-pty's
    *  slave device path so it costs nothing to record. The periodic reconciler deliberately does
@@ -58,6 +70,16 @@ export function ttyNameFromSlavePath(slavePath: string | undefined): string | nu
 
 function isPositiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+}
+
+function parseOwnedProcess(value: unknown): OwnedProcessIdentity | null {
+  const row = asRecordObject(value)
+  return row &&
+    isPositiveInteger(row.pid) &&
+    typeof row.startedAt === 'string' &&
+    row.startedAt.length > 0
+    ? { pid: row.pid, startedAt: row.startedAt }
+    : null
 }
 
 function finiteNumberOrNull(value: unknown): number | null {
@@ -106,6 +128,12 @@ export function parsePtyOwnershipRecord(value: unknown): PtyOwnershipRecord | nu
       pid: root.pid,
       startedAt: typeof root.startedAt === 'string' ? root.startedAt : null
     },
+    processes: Array.isArray(row.processes)
+      ? row.processes
+          .map(parseOwnedProcess)
+          .filter((entry): entry is OwnedProcessIdentity => entry !== null)
+          .slice(0, MAX_OWNED_PROCESSES_PER_RECORD)
+      : [],
     pgids: Array.isArray(row.pgids) ? row.pgids.filter(isPositiveInteger) : [],
     tty: typeof row.tty === 'string' && row.tty.length > 0 ? row.tty : null,
     daemon: { pid: daemon.pid, startedAtMs: finiteNumberOrNull(daemon.startedAtMs) },

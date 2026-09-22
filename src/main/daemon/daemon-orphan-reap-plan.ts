@@ -2,22 +2,34 @@
 // processes are leftovers nobody owns any more. Pure: no clock, no signals, no disk — every input
 // is passed in, so the classification can be tested without a single real process.
 //
-// The correlation key is the process group, because it is the only thing about a PTY's tree that
-// survives the root: once the root exits its children reparent to pid 1 and a parent walk can
-// never find them again. A group id outlives its leader too, though, so a recorded group is
-// believed only after three independent screens agree it still holds our processes and nobody
-// else's — see `screenRecordedGroups`.
+// Kill authority is identity, never location. A process is signalled only when its pid and start
+// time exactly match one the daemon recorded while its root was alive to prove the parentage, or
+// when it still descends from such a process. Process groups are reissued to strangers once their
+// leader exits, and on macOS every launchd app is parented by pid 1, so neither "is in a group we
+// once used" nor "looks orphaned" says anything about whose process it is.
 
-import { collectDescendantRows } from '../pty-descendant-termination'
+import { collectDescendantRows, hasUnambiguousStartTime } from '../pty-descendant-termination'
 import type { ProcessTableRow } from '../pty-process-table-parser'
-import { ptyOwnershipRecordKey, recordKeyOf, type PtyOwnershipRecord } from './pty-ownership-record'
+import {
+  MAX_OWNED_PROCESSES_PER_RECORD,
+  ptyOwnershipRecordKey,
+  recordKeyOf,
+  type OwnedProcessIdentity,
+  type PtyOwnershipRecord
+} from './pty-ownership-record'
 
-/** Why a record is being acted on. `stranded_root` is the stronger of the two: the PTY's own root
- *  is still running under the identity we recorded, so ownership needs no inference at all. */
-export type OrphanReapReason = 'stranded_root' | 'orphaned_group'
+/** Why a record is being acted on. `stranded_root` means the PTY's own root is still running under
+ *  the identity recorded for it; `orphaned_descendant` means only recorded descendants survive. */
+export type OrphanReapReason = 'stranded_root' | 'orphaned_descendant'
 
-/** Why a record was retired. Both are ways for the obligation to die. */
-export type OrphanRecordDropReason = 'settled' | 'expired' | 'unclaimable'
+/** Why a record was retired. Every one is a way for the obligation to die. */
+export type OrphanRecordDropReason =
+  /** No recorded identity is alive any more. */
+  | 'settled'
+  | 'expired'
+  /** A recorded pid is alive but under an identity that cannot be proven ours, and a record that
+   *  is not live can never gain proof later. */
+  | 'unprovable'
 
 /** Why a record was left alone this tick. Named rather than silent, because "nothing was there"
  *  and "we refused to act on what was there" are different facts when a leak is investigated. */
@@ -25,9 +37,7 @@ export type OrphanReapSkipReason =
   | 'live_session'
   | 'owning_daemon_alive'
   | 'within_spawn_grace'
-  | 'no_root_identity'
-  | 'root_pid_reused'
-  | 'protected_ancestry'
+  | 'protected_process'
   | 'awaiting_second_observation'
 
 export type LiveSessionIdentity = {
@@ -36,6 +46,9 @@ export type LiveSessionIdentity = {
    *  record for the session id rather than none of them: "some generation of this is live" is a
    *  reason to leave all of them alone, never a reason to reap the ones that did not match. */
   incarnationId?: string
+  /** The live root this daemon is still driving. Its whole tree is excluded from every candidate
+   *  set, whether or not any record names it. */
+  pid?: number | null
 }
 
 export type OrphanReapTarget = {
@@ -45,14 +58,17 @@ export type OrphanReapTarget = {
   reason: OrphanReapReason
   pgids: number[]
   members: ProcessTableRow[]
+  /** Processes sitting in a recorded group that match no recorded identity. Reported so a leak
+   *  that escaped identity capture is visible, never signalled. */
+  unverifiedGroupMembers: number
 }
 
 export type OrphanReapPlan = {
-  /** Groups seen on two consecutive observations and cleared by every identity screen. */
+  /** Records seen on two consecutive observations whose recorded identities are still alive. */
   reap: OrphanReapTarget[]
   /** Record keys that looked reapable for the first time. Carried to the next tick, nothing else. */
   confirmNext: string[]
-  /** Live records whose groups and root identity were re-derived from this capture. */
+  /** Live records whose identities were re-derived from this capture. */
   refreshed: PtyOwnershipRecord[]
   dropped: { key: string; sessionId: string; reason: OrphanRecordDropReason }[]
   skipped: { key: string; sessionId: string; reason: OrphanReapSkipReason }[]
@@ -60,11 +76,12 @@ export type OrphanReapPlan = {
 
 export type OrphanReapPlanInput = {
   records: readonly PtyOwnershipRecord[]
-  /** Sessions this daemon currently has a live root for. */
+  /** Sessions this daemon currently has a live root for, listed after the capture was taken. */
   liveSessions: readonly LiveSessionIdentity[]
   table: readonly ProcessTableRow[]
-  /** This daemon's own pid: its ancestry is excluded from every candidate set, and a process it
-   *  still parents is by definition its own to reap. */
+  /** When the capture began; a start time in that same second cannot be told apart from a reuse. */
+  capturedAtMs: number
+  /** This daemon's own pid: its ancestry is excluded from every candidate set. */
   selfPid: number
   /** Record keys that already looked reapable on the previous tick. */
   pendingConfirmations: ReadonlySet<string>
@@ -72,13 +89,14 @@ export type OrphanReapPlanInput = {
   /** A record younger than this is never reaped, so a create still settling cannot be swept by a
    *  tick that lands between the spawn and the host's session map write. */
   spawnGraceMs: number
-  /** A record older than this is abandoned: a day of ticks never managed to identify its
-   *  processes, and holding it only accumulates pid-reuse exposure. */
+  /** A record older than this is abandoned, so nothing is held for pid reuse to catch up with. */
   maxRecordAgeMs: number
   /** Tolerance when matching a recorded daemon start time against a process table's second-
    *  resolution `lstart`. */
   daemonStartToleranceMs: number
 }
+
+type ProtectedProcesses = { pids: Set<number>; pgids: Set<number> }
 
 function parseStartedAtMs(startedAt: string | null | undefined): number | null {
   if (!startedAt) {
@@ -108,7 +126,7 @@ function indexByPid(table: readonly ProcessTableRow[]): Map<number, ProcessTable
 export function collectProtectedAncestry(
   table: readonly ProcessTableRow[],
   selfPid: number
-): { pids: Set<number>; pgids: Set<number> } {
+): ProtectedProcesses {
   const byPid = indexByPid(table)
   const pids = new Set<number>([selfPid])
   // 0 and 1 are the kernel and init groups; signalling either is never this mechanism's job.
@@ -129,77 +147,38 @@ export function collectProtectedAncestry(
   return { pids, pgids }
 }
 
-export type GroupScreenOutcome =
-  | { verdict: 'claimed'; members: ProcessTableRow[] }
-  | { verdict: 'empty' }
-  | { verdict: 'protected' }
-  /** The recorded group ids now hold processes that cannot be ours. */
-  | { verdict: 'unclaimable' }
-
-/**
- * Screen the processes sitting in a record's recorded groups.
- *
- * A process group id is only unique while its leader lives. Once our root has exited the number
- * can be reissued to a stranger, so occupancy alone proves nothing and three things must agree:
- *
- *  1. No member may be in the daemon's own ancestry, and no recorded group may be one of theirs.
- *  2. No member may have started before our root did — a process that predates the PTY cannot
- *     descend from it.
- *  3. Every member must look orphaned: parented by init, parented by this daemon, or parented by
- *     another member. A stranger's group is normally held together by a live parent outside it,
- *     and that parent is the thing this screen refuses to reach past.
- *
- * Any failure condemns the whole group rather than the one row, because a recycled group id makes
- * every other row in it a stranger too.
- */
-export function screenRecordedGroups(
-  record: PtyOwnershipRecord,
+/** Add a live root and everything under it, pids and groups both, to the protected set. */
+function protectLiveTree(
+  protectedProcesses: ProtectedProcesses,
+  rootPid: number,
   table: readonly ProcessTableRow[],
-  protectedAncestry: { pids: Set<number>; pgids: Set<number> },
-  selfPid: number,
-  /** The root's live row when it is provably ours. Its group counts even if the spawn-time probe
-   *  never managed to record one, because identity on the root proves the group under it. */
-  ourRootRow?: ProcessTableRow
-): GroupScreenOutcome {
-  const groups = new Set(record.pgids.filter((pgid) => pgid > 1))
-  if (ourRootRow && ourRootRow.pgid > 1) {
-    groups.add(ourRootRow.pgid)
+  capturedAtMs: number
+): void {
+  const snapshot = collectDescendantRows(rootPid, table, capturedAtMs)
+  protectedProcesses.pids.add(rootPid)
+  if (snapshot.rootPgid !== null) {
+    protectedProcesses.pgids.add(snapshot.rootPgid)
   }
-  if (groups.size === 0) {
-    return { verdict: 'empty' }
+  for (const row of snapshot.descendants) {
+    protectedProcesses.pids.add(row.pid)
+    protectedProcesses.pgids.add(row.pgid)
   }
-  for (const pgid of groups) {
-    if (protectedAncestry.pgids.has(pgid)) {
-      return { verdict: 'protected' }
-    }
-  }
-  const rootStartedAtMs = parseStartedAtMs(record.root.startedAt)
-  const members: ProcessTableRow[] = []
-  for (const row of table) {
-    if (!groups.has(row.pgid)) {
-      continue
-    }
-    if (protectedAncestry.pids.has(row.pid)) {
-      return { verdict: 'protected' }
-    }
-    const startedAtMs = parseStartedAtMs(row.startedAt)
-    // `ps` reports whole seconds, so a child forked inside the root's own second ties rather than
-    // losing; only a strictly earlier start proves the row predates our PTY.
-    if (rootStartedAtMs !== null && startedAtMs !== null && startedAtMs < rootStartedAtMs) {
-      return { verdict: 'unclaimable' }
-    }
-    members.push(row)
-  }
-  if (members.length === 0) {
-    return { verdict: 'empty' }
-  }
-  const memberPids = new Set(members.map((row) => row.pid))
-  for (const row of members) {
-    if (row.ppid !== 1 && row.ppid !== selfPid && !memberPids.has(row.ppid)) {
-      return { verdict: 'unclaimable' }
-    }
-  }
-  return { verdict: 'claimed', members }
+}
+
+function isProtected(row: ProcessTableRow, protectedProcesses: ProtectedProcesses): boolean {
+  return protectedProcesses.pids.has(row.pid) || protectedProcesses.pgids.has(row.pgid)
+}
+
+/** The live row for a recorded identity, only when its start time is exactly the recorded one. */
+function matchIdentity(
+  identity: { pid: number; startedAt: string | null },
+  byPid: ReadonlyMap<number, ProcessTableRow>
+): ProcessTableRow | undefined {
+  const row = byPid.get(identity.pid)
+  // No recorded start time is no identity at all: a pid alone is exactly what reuse recycles.
+  return row && identity.startedAt !== null && row.startedAt === identity.startedAt
+    ? row
+    : undefined
 }
 
 /** True when the daemon that wrote this record is still the process running under that pid. */
@@ -226,34 +205,65 @@ function owningDaemonStillAlive(
 }
 
 /**
- * Re-derive a live PTY's groups from the capture, by walking down from its root.
+ * Re-derive a live PTY's owned identities from the capture.
  *
- * Done only while the root is alive in this very capture, because the parent walk is what proves
- * ownership: a group reached from our own root is ours by construction, and needs no later
- * corroboration. This is the only moment a group a child created for itself can be learned at
- * all — after the root exits the link is gone, which is why the answer has to be written down.
+ * The parent walk from a root the daemon is still driving is what proves ownership, so this is the
+ * only moment an identity may be written down. The list is replaced rather than merged: it names
+ * exactly the tree as it stands, so dead entries and deliberately detached processes both fall out.
  */
 function refreshLiveRecord(
   record: PtyOwnershipRecord,
   rootRow: ProcessTableRow | undefined,
-  table: readonly ProcessTableRow[],
-  nowMs: number
+  input: OrphanReapPlanInput
 ): PtyOwnershipRecord {
   if (!rootRow) {
-    return { ...record, recordedAt: nowMs }
+    return { ...record, recordedAt: input.nowMs }
   }
-  const pgids = new Set<number>([rootRow.pgid, ...record.pgids.filter((pgid) => pgid > 1)])
-  for (const descendant of collectDescendantRows(rootRow.pid, table, nowMs).descendants) {
-    if (descendant.pgid > 1) {
-      pgids.add(descendant.pgid)
+  const processes: OwnedProcessIdentity[] = []
+  const pgids = new Set<number>(rootRow.pgid > 1 ? [rootRow.pgid] : [])
+  const { descendants } = collectDescendantRows(rootRow.pid, input.table, input.capturedAtMs)
+  for (const row of descendants) {
+    // A start time in the capture's own second could belong to a same-second reuse; leave it for
+    // the next tick rather than pin a stranger's identity.
+    if (!hasUnambiguousStartTime(row.startedAt, input.capturedAtMs)) {
+      continue
+    }
+    if (processes.length < MAX_OWNED_PROCESSES_PER_RECORD) {
+      processes.push({ pid: row.pid, startedAt: row.startedAt })
+    }
+    if (row.pgid > 1) {
+      pgids.add(row.pgid)
     }
   }
   return {
     ...record,
     root: { pid: rootRow.pid, startedAt: rootRow.startedAt },
+    processes,
     pgids: [...pgids],
-    recordedAt: nowMs
+    recordedAt: input.nowMs
   }
+}
+
+/** The recorded identities still alive, and everything still descended from them. */
+function collectOwnedMembers(
+  record: PtyOwnershipRecord,
+  byPid: ReadonlyMap<number, ProcessTableRow>,
+  input: OrphanReapPlanInput
+): { rootRow: ProcessTableRow | undefined; members: ProcessTableRow[] } {
+  const rootRow = matchIdentity(record.root, byPid)
+  const seeds = [
+    ...(rootRow ? [rootRow] : []),
+    ...record.processes.flatMap((identity) => matchIdentity(identity, byPid) ?? [])
+  ]
+  const members = new Map<number, ProcessTableRow>()
+  for (const seed of seeds) {
+    members.set(seed.pid, seed)
+    const { descendants } = collectDescendantRows(seed.pid, input.table, input.capturedAtMs)
+    for (const row of descendants) {
+      members.set(row.pid, row)
+    }
+  }
+  return { rootRow, members: [...members.values()] }
 }
 
 /**
@@ -273,15 +283,24 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
     skipped: []
   }
   const byPid = indexByPid(input.table)
-  const protectedAncestry = collectProtectedAncestry(input.table, input.selfPid)
+  const protectedProcesses = collectProtectedAncestry(input.table, input.selfPid)
   const liveKeys = new Set<string>()
+  const liveRootPidByKey = new Map<string, number>()
   const liveSessionIdsOfUnknownGeneration = new Set<string>()
   for (const session of input.liveSessions) {
+    const livePid = typeof session.pid === 'number' && session.pid > 0 ? session.pid : null
+    if (livePid !== null) {
+      protectLiveTree(protectedProcesses, livePid, input.table, input.capturedAtMs)
+    }
     if (session.incarnationId === undefined) {
       liveSessionIdsOfUnknownGeneration.add(session.sessionId)
       continue
     }
-    liveKeys.add(ptyOwnershipRecordKey(session.sessionId, session.incarnationId))
+    const key = ptyOwnershipRecordKey(session.sessionId, session.incarnationId)
+    liveKeys.add(key)
+    if (livePid !== null) {
+      liveRootPidByKey.set(key, livePid)
+    }
   }
 
   for (const record of input.records) {
@@ -292,20 +311,14 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
     const drop = (reason: OrphanRecordDropReason): void => {
       plan.dropped.push({ key, sessionId: record.sessionId, reason })
     }
-    const rootRow = byPid.get(record.root.pid)
-    const recordedRootStartedAtMs = parseStartedAtMs(record.root.startedAt)
-    const liveRootStartedAtMs = parseStartedAtMs(rootRow?.startedAt)
-    // An unparseable time on either side is not evidence of a mismatch, only absence of proof.
-    const ourRootRow =
-      rootRow !== undefined &&
-      (recordedRootStartedAtMs === null ||
-        liveRootStartedAtMs === null ||
-        liveRootStartedAtMs === recordedRootStartedAtMs)
-        ? rootRow
-        : undefined
 
     if (liveKeys.has(key) || liveSessionIdsOfUnknownGeneration.has(record.sessionId)) {
-      plan.refreshed.push(refreshLiveRecord(record, ourRootRow, input.table, input.nowMs))
+      // The host naming this exact generation's pid, after the capture, is what proves the row is
+      // ours even when the spawn-time probe never landed a start time.
+      const rootRow =
+        matchIdentity(record.root, byPid) ??
+        (liveRootPidByKey.get(key) === record.root.pid ? byPid.get(record.root.pid) : undefined)
+      plan.refreshed.push(refreshLiveRecord(record, rootRow, input))
       skip('live_session')
       continue
     }
@@ -318,62 +331,47 @@ export function planOrphanReap(input: OrphanReapPlanInput): OrphanReapPlan {
       continue
     }
 
-    const screen = screenRecordedGroups(
-      record,
-      input.table,
-      protectedAncestry,
-      input.selfPid,
-      ourRootRow
-    )
-    if (screen.verdict === 'protected') {
-      skip('protected_ancestry')
-      continue
-    }
-    if (screen.verdict === 'unclaimable') {
-      // Our processes are unreachable through these group ids and the record can only mislead a
-      // later tick. Retire it rather than re-testing it every five minutes for a day.
-      drop('unclaimable')
-      continue
-    }
-    if (screen.verdict === 'empty') {
-      // Nothing of ours is left in any group this record can name, and a live root would have put
-      // itself in one. The obligation is discharged, however it ended.
-      drop('settled')
+    const owned = collectOwnedMembers(record, byPid, input)
+    const members = owned.members.filter((row) => !isProtected(row, protectedProcesses))
+    if (members.length === 0) {
+      if (owned.members.length > 0) {
+        // Our identity is alive but now inside a live session's tree or the daemon's own ancestry.
+        // That cannot be a leftover; leave it and let the record expire if it never resolves.
+        skip('protected_process')
+        continue
+      }
+      const recordedPidStillInUse =
+        byPid.has(record.root.pid) || record.processes.some((entry) => byPid.has(entry.pid))
+      // Nothing recorded is alive under its recorded identity. A pid still in use belongs to
+      // somebody else — or to a root whose start time was never captured, which can never be
+      // proven now that no live session backs it. Either way nothing may be signalled.
+      drop(recordedPidStillInUse ? 'unprovable' : 'settled')
       continue
     }
     if (input.nowMs - record.recordedAt < input.spawnGraceMs) {
       skip('within_spawn_grace')
       continue
     }
-    if (rootRow !== undefined && ourRootRow === undefined) {
-      // The root pid is live but is somebody else's process, so the groups recorded under it may
-      // be theirs too.
-      skip('root_pid_reused')
-      continue
-    }
-    // With no root start time nothing can be identity-checked, so nothing may be signalled. A
-    // record in this state leaves only through expiry.
-    if (recordedRootStartedAtMs === null && ourRootRow === undefined) {
-      skip('no_root_identity')
-      continue
-    }
-
-    const members =
-      ourRootRow && !screen.members.some((row) => row.pid === ourRootRow.pid)
-        ? [ourRootRow, ...screen.members]
-        : screen.members
     if (!input.pendingConfirmations.has(key)) {
       plan.confirmNext.push(key)
       skip('awaiting_second_observation')
       continue
     }
+    const memberPids = new Set(members.map((row) => row.pid))
+    const recordedGroups = new Set(record.pgids)
     plan.reap.push({
       key,
       sessionId: record.sessionId,
       incarnationId: record.incarnationId,
-      reason: ourRootRow ? 'stranded_root' : 'orphaned_group',
+      reason: owned.rootRow ? 'stranded_root' : 'orphaned_descendant',
       pgids: [...new Set(members.map((row) => row.pgid))],
-      members
+      members,
+      unverifiedGroupMembers: input.table.filter(
+        (row) =>
+          recordedGroups.has(row.pgid) &&
+          !memberPids.has(row.pid) &&
+          !isProtected(row, protectedProcesses)
+      ).length
     })
     // A reaped record keeps its confirmation, so a kill that does not take effect is retried on
     // the next tick instead of restarting its two-observation clock.

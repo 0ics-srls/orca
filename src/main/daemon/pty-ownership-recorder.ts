@@ -1,15 +1,27 @@
-// Writes down what the daemon owns, at the moment it starts owning it.
+// Writes down what the daemon owns, shortly after it starts owning it.
 //
 // The record is a consequence of the spawn, never a reservation ahead of one: it is written after
 // node-pty has handed back a live pid, so a create that failed leaves nothing behind to be
-// reaped. And it is bookkeeping, so it never gates the create — a terminal the user asked for
-// opens whether or not this write lands.
+// reaped. And it is bookkeeping, so it never gates the create — the spawn only enqueues, and the
+// probe and the write happen later, batched, off the spawn path.
 
-import { execFile } from 'node:child_process'
-import { ttyNameFromSlavePath, type PtyOwnershipRecord } from './pty-ownership-record'
+import { runProcess } from '../../shared/child-process/run-process'
+import {
+  ptyOwnershipRecordKey,
+  ttyNameFromSlavePath,
+  type PtyOwnershipRecord
+} from './pty-ownership-record'
 import type { PtyOwnershipRecordStore } from './pty-ownership-record-store'
 
-const IDENTITY_PROBE_TIMEOUT_MS = 2_000
+/** Spawns arriving together (a restored workspace opens many at once) share one probe and one
+ *  store write instead of paying for each. */
+const RECORD_BATCH_DELAY_MS = 1_000
+
+/** Nothing waits on this probe, so it gets the deadline a background scan gets: a loaded host can
+ *  take seconds to answer `ps`, and a probe that times out only costs the start time. */
+const IDENTITY_PROBE_TIMEOUT_MS = 15_000
+
+const IDENTITY_PROBE_MAX_OUTPUT_BYTES = 256 * 1024
 
 export type SpawnedPtyIdentity = {
   sessionId: string
@@ -19,44 +31,37 @@ export type SpawnedPtyIdentity = {
   slavePath?: string
 }
 
-export type PtyRootIdentity = {
-  pgid: number
-  tty: string | null
-  startedAt: string
+export type PtyRootIdentity = { pgid: number; startedAt: string }
+
+/** `ps -o pid=,pgid=,lstart=` rows, keyed by pid. Rows that do not parse are left out. */
+export function parsePtyRootIdentities(psOutput: string): Map<number, PtyRootIdentity> {
+  const identities = new Map<number, PtyRootIdentity>()
+  for (const line of psOutput.split('\n')) {
+    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+?)\s*$/)
+    if (!match) {
+      continue
+    }
+    const pid = Number(match[1])
+    const pgid = Number(match[2])
+    if (Number.isSafeInteger(pid) && pid > 0 && Number.isSafeInteger(pgid) && pgid > 0) {
+      identities.set(pid, { pgid, startedAt: match[3] })
+    }
+  }
+  return identities
 }
 
-/** One `ps` row for one pid. Cheap enough to run per spawn, unlike the whole-host capture the
- *  reconciler takes; the columns are the ones that outlive the root. */
-export function parsePtyRootIdentity(psOutput: string): PtyRootIdentity | null {
-  const match = psOutput.trim().match(/^(\d+)\s+(\S+)\s+(.+?)\s*$/)
-  if (!match) {
-    return null
-  }
-  const pgid = Number(match[1])
-  if (!Number.isSafeInteger(pgid) || pgid <= 0) {
-    return null
-  }
-  const tty = match[2]
-  return {
-    pgid,
-    tty: tty === '?' || tty === '??' || tty === '-' ? null : tty,
-    startedAt: match[3]
-  }
-}
-
-function probePtyRootIdentity(pid: number): Promise<PtyRootIdentity | null> {
-  return new Promise((resolve) => {
-    execFile(
-      'ps',
-      ['-p', String(pid), '-o', 'pgid=,tty=,lstart='],
-      {
-        timeout: IDENTITY_PROBE_TIMEOUT_MS,
-        killSignal: 'SIGKILL',
-        env: { ...process.env, LANG: 'C', LC_ALL: 'C' }
-      },
-      (error, stdout) => resolve(error ? null : parsePtyRootIdentity(stdout))
-    )
+async function probePtyRootIdentities(
+  pids: readonly number[]
+): Promise<Map<number, PtyRootIdentity>> {
+  const result = await runProcess({
+    program: 'ps',
+    args: ['-p', pids.join(','), '-o', 'pid=,pgid=,lstart='],
+    env: { ...process.env, LANG: 'C', LC_ALL: 'C' },
+    timeoutMs: IDENTITY_PROBE_TIMEOUT_MS,
+    maxOutputBytes: IDENTITY_PROBE_MAX_OUTPUT_BYTES
   })
+  // `ps -p` exits non-zero when any listed pid is gone; the rows for the others are still good.
+  return result.timedOut ? new Map() : parsePtyRootIdentities(result.stdout)
 }
 
 export type PtyOwnershipRecorderOptions = {
@@ -64,19 +69,27 @@ export type PtyOwnershipRecorderOptions = {
   daemon: { pid: number; startedAtMs: number | null }
   platform?: NodeJS.Platform
   now?: () => number
-  probeIdentity?: (pid: number) => Promise<PtyRootIdentity | null>
+  probeIdentities?: (pids: readonly number[]) => Promise<Map<number, PtyRootIdentity>>
+  /** Whether the daemon still drives this exact PTY. A probe answered after the root exited could
+   *  describe whatever reused its pid, so only a still-live root's answer is written down. */
+  isLive: (identity: SpawnedPtyIdentity) => boolean
+  batchDelayMs?: number
 }
 
+type PendingRecord = { identity: SpawnedPtyIdentity; recordedAt: number }
+
 /**
- * Records one PTY's OS identity twice: once synchronously with everything already in hand, then
- * again once the group and start time have been read from the OS.
+ * Records each PTY's root identity: pid, start time and process group.
  *
- * The first write exists because the gap between the two is exactly where an updater's SIGKILL
- * lands; the second exists because a record without a start time can never authorize a signal.
- * A record the probe never completes is still repaired by the reconciler on any tick where the
- * root is alive, so neither write is load bearing on its own.
+ * A record the probe never completes is still written with a null start time, which authorizes
+ * nothing on its own; the reconciler's next live tick completes it from its own capture while the
+ * root is still alive.
  */
 export class PtyOwnershipRecorder {
+  private pending = new Map<string, PendingRecord>()
+  private timer: ReturnType<typeof setTimeout> | null = null
+  private inFlight: Promise<void> = Promise.resolve()
+
   constructor(private readonly options: PtyOwnershipRecorderOptions) {}
 
   private get supported(): boolean {
@@ -88,39 +101,78 @@ export class PtyOwnershipRecorder {
       return
     }
     const now = this.options.now ?? Date.now
-    const base: PtyOwnershipRecord = {
-      sessionId: identity.sessionId,
-      incarnationId: identity.incarnationId,
-      root: { pid: identity.pid, startedAt: null },
-      pgids: [],
-      tty: ttyNameFromSlavePath(identity.slavePath),
-      daemon: { ...this.options.daemon },
+    this.pending.set(ptyOwnershipRecordKey(identity.sessionId, identity.incarnationId), {
+      identity,
       recordedAt: now()
+    })
+    if (this.timer) {
+      return
     }
-    this.write(base)
-    void (this.options.probeIdentity ?? probePtyRootIdentity)(identity.pid).then((probed) => {
-      if (!probed) {
-        return
-      }
-      this.write({
-        ...base,
-        root: { pid: identity.pid, startedAt: probed.startedAt },
-        pgids: [probed.pgid],
-        tty: probed.tty ?? base.tty,
-        recordedAt: now()
-      })
-    }, noteProbeFailure)
+    this.timer = setTimeout(() => {
+      this.timer = null
+      void this.flush()
+    }, this.options.batchDelayMs ?? RECORD_BATCH_DELAY_MS)
+    // Unref'd so a pending batch can never be the reason an idle daemon stays alive.
+    this.timer.unref?.()
   }
 
-  private write(record: PtyOwnershipRecord): void {
+  /** Probe and write everything queued so far. Exposed so tests need not wait on the timer. */
+  flush(): Promise<void> {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    const batch = [...this.pending.values()]
+    this.pending = new Map()
+    // Serialized so two batches never interleave their read-modify-write of the store.
+    this.inFlight = this.inFlight.then(() => this.writeBatch(batch))
+    return this.inFlight
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    this.pending.clear()
+  }
+
+  private async writeBatch(batch: readonly PendingRecord[]): Promise<void> {
+    if (batch.length === 0) {
+      return
+    }
+    let probed = new Map<number, PtyRootIdentity>()
     try {
-      this.options.store.upsert(record)
+      probed = await (this.options.probeIdentities ?? probePtyRootIdentities)(
+        batch.map((entry) => entry.identity.pid)
+      )
+    } catch {
+      // Unprobed rows are still written; the reconciler completes them while the root is alive.
+    }
+    const records: PtyOwnershipRecord[] = []
+    for (const { identity, recordedAt } of batch) {
+      if (!this.options.isLive(identity)) {
+        continue
+      }
+      const probedRoot = probed.get(identity.pid)
+      // The root was born before it was queued; anything later is a process that reused its pid.
+      const root =
+        probedRoot && Date.parse(probedRoot.startedAt) <= recordedAt ? probedRoot : undefined
+      records.push({
+        sessionId: identity.sessionId,
+        incarnationId: identity.incarnationId,
+        root: { pid: identity.pid, startedAt: root?.startedAt ?? null },
+        processes: [],
+        pgids: root ? [root.pgid] : [],
+        tty: ttyNameFromSlavePath(identity.slavePath),
+        daemon: { ...this.options.daemon },
+        recordedAt
+      })
+    }
+    try {
+      this.options.store.upsertMany(records)
     } catch {
       // A terminal must open whether or not its bookkeeping did.
     }
   }
-}
-
-function noteProbeFailure(): void {
-  // The reconciler completes the record from its own capture while the root is still alive.
 }

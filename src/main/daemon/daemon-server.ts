@@ -224,9 +224,11 @@ export class DaemonServer {
       protocolVersion,
       daemonStartedAtMs: startedAtMs,
       listLiveSessions: () =>
-        this.host.listSessions().map(({ sessionId, incarnationId }) => ({
+        this.host.listSessions().map(({ sessionId, incarnationId, isAlive, pid }) => ({
           sessionId,
-          incarnationId
+          incarnationId,
+          // A dead session's pid may already belong to someone else; only a live root is ours.
+          pid: isAlive ? pid : null
         })),
       log: (event, details) => this.log.log(event, details)
     })
@@ -262,6 +264,7 @@ export class DaemonServer {
   private async disposeResources(): Promise<void> {
     this.endpoint.stopOwnershipWatch()
     this.ptyOwnership?.reconciler.stop()
+    this.ptyOwnership?.recorder.stop()
     this.stopStreamBacklogProbe()
     this.transientFactRelay.dispose()
     this.preparations.cancelAll()

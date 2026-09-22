@@ -78,13 +78,20 @@ export class PtyOwnershipRecordStore {
     }
   }
 
-  /** Add or replace one record. Per-key merge rather than a whole-set replace, so a writer only
-   *  has to hold the truth about its own PTY — no caller ever has to reconstruct the others. */
   upsert(record: PtyOwnershipRecord): void {
+    this.upsertMany([record])
+  }
+
+  /** Add or replace records in one write. Per-key merge rather than a whole-set replace, so a
+   *  writer only has to hold the truth about its own PTYs — no caller reconstructs the others. */
+  upsertMany(incoming: readonly PtyOwnershipRecord[]): void {
+    if (incoming.length === 0) {
+      return
+    }
+    const byKey = new Map(incoming.map((record) => [recordKeyOf(record), record]))
     this.mutate((records) => {
-      const key = recordKeyOf(record)
-      const next = records.filter((existing) => recordKeyOf(existing) !== key)
-      next.push(record)
+      const next = records.filter((existing) => !byKey.has(recordKeyOf(existing)))
+      next.push(...byKey.values())
       return next.length > MAX_PTY_OWNERSHIP_RECORDS
         ? next.slice(next.length - MAX_PTY_OWNERSHIP_RECORDS)
         : next

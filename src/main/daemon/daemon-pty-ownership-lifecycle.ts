@@ -40,7 +40,16 @@ export function createDaemonPtyOwnership(
   return {
     recorder: new PtyOwnershipRecorder({
       store,
-      daemon: { pid: process.pid, startedAtMs: options.daemonStartedAtMs }
+      daemon: { pid: process.pid, startedAtMs: options.daemonStartedAtMs },
+      isLive: ({ sessionId, incarnationId, pid }) =>
+        options
+          .listLiveSessions()
+          .some(
+            (session) =>
+              session.sessionId === sessionId &&
+              session.incarnationId === incarnationId &&
+              session.pid === pid
+          )
     }),
     reconciler: new DaemonOrphanReconciler({
       store,

@@ -7,7 +7,7 @@
 // map entry no longer exists anywhere, and nothing ever looks for them again.
 //
 // This reconciler is the thing that looks. Once every few minutes it reads one process table and
-// compares it against the durable ownership records the daemon writes at spawn, which is the only
+// compares it against the durable ownership records the daemon keeps while it is live, the only
 // correlation that still works after the root is gone.
 
 import {
@@ -95,7 +95,7 @@ export class DaemonOrphanReconciler {
 
   constructor(private readonly options: DaemonOrphanReconcilerOptions) {}
 
-  /** POSIX only: the correlation keys are the process group and the controlling terminal, and on
+  /** POSIX only: identity is a pid plus its `ps` start time, and on
    *  Windows a PTY's descendants are held by its job object, which teardown already terminates. */
   private get supported(): boolean {
     return (this.options.platform ?? process.platform) !== 'win32'
@@ -173,6 +173,7 @@ export class DaemonOrphanReconciler {
       records: stored.records,
       liveSessions: this.options.listLiveSessions(),
       table: capture.rows,
+      capturedAtMs: capture.capturedAtMs,
       selfPid: this.options.selfPid ?? process.pid,
       pendingConfirmations: this.pendingConfirmations,
       nowMs: (this.options.now ?? Date.now)(),
@@ -196,7 +197,8 @@ export class DaemonOrphanReconciler {
       reason: target.reason,
       pgids: cap(target.pgids),
       pids: cap(pids),
-      processCount: pids.length
+      processCount: pids.length,
+      unverifiedGroupMembers: target.unverifiedGroupMembers
     })
     if (this.options.terminateMembers) {
       this.options.terminateMembers(target, capturedAtMs)
@@ -236,10 +238,10 @@ export class DaemonOrphanReconciler {
     const countDropped = (reason: OrphanRecordDropReason): number =>
       plan.dropped.filter((entry) => entry.reason === reason).length
     const expired = countDropped('expired')
-    // `unclaimable` is reported even though nothing was signalled: a record whose groups now hold
-    // somebody else's processes is the shape a pid-reuse bug would take, and it must be visible.
-    const unclaimable = countDropped('unclaimable')
-    if (plan.reap.length === 0 && expired === 0 && unclaimable === 0) {
+    // `unprovable` is reported even though nothing was signalled: a recorded pid alive under some
+    // other identity is the shape a pid-reuse bug would take, and it must be visible.
+    const unprovable = countDropped('unprovable')
+    if (plan.reap.length === 0 && expired === 0 && unprovable === 0) {
       // Quiet ticks stay quiet: this log is read to find leaks, not to prove the timer fired.
       return
     }
@@ -247,7 +249,7 @@ export class DaemonOrphanReconciler {
       records: recordCount,
       reaped: plan.reap.length,
       expired,
-      unclaimable,
+      unprovable,
       settled: countDropped('settled'),
       pending: plan.confirmNext.length
     })

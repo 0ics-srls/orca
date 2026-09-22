@@ -27,6 +27,7 @@ function record(overrides: Partial<PtyOwnershipRecord> = {}): PtyOwnershipRecord
     sessionId: 'session-a',
     incarnationId: 'inc-1',
     root: { pid: 500, startedAt: 'Mon Sep 21 09:00:00 2026' },
+    processes: [{ pid: 601, startedAt: 'Mon Sep 21 09:00:05 2026' }],
     pgids: [500],
     tty: 'ttys004',
     daemon: { pid: 400, startedAtMs: 1_700_000_000_000 },
@@ -65,6 +66,23 @@ describe('PtyOwnershipRecordStore', () => {
     expect(read.status === 'readable' && read.records.map((row) => row.incarnationId)).toEqual([
       'inc-1',
       'inc-2'
+    ])
+  })
+
+  it('writes a batch of records in one rewrite, replacing any it already held', () => {
+    const { store, filePath } = makeStore()
+    store.upsert(record({ incarnationId: 'inc-1', pgids: [500] }))
+    const before = readFileSync(filePath, 'utf8')
+    store.upsertMany([
+      record({ incarnationId: 'inc-1', pgids: [510] }),
+      record({ incarnationId: 'inc-2' })
+    ])
+
+    const read = store.read()
+    expect(before).not.toEqual(readFileSync(filePath, 'utf8'))
+    expect(read.status === 'readable' && read.records.map((row) => row.pgids)).toEqual([
+      [510],
+      [500]
     ])
   })
 
@@ -161,6 +179,7 @@ describe('parsePtyOwnershipRecord', () => {
       sessionId: 'a',
       incarnationId: 'b',
       root: { pid: 1, startedAt: null },
+      processes: [],
       pgids: [],
       tty: null,
       daemon: { pid: 2, startedAtMs: null },
@@ -174,12 +193,19 @@ describe('parsePtyOwnershipRecord', () => {
         sessionId: 'a',
         incarnationId: 'b',
         root: { pid: 1, startedAt: 7 },
+        // An identity without a start time proves nothing, so it is not kept.
+        processes: [{ pid: 601, startedAt: 'Mon' }, { pid: 602 }, { pid: -1, startedAt: 'x' }, 'x'],
         pgids: [500, -1, 'x', 0],
         tty: 4,
         daemon: { pid: 2, startedAtMs: Number.NaN },
         recordedAt: 0
       })
-    ).toMatchObject({ root: { startedAt: null }, pgids: [500], tty: null })
+    ).toMatchObject({
+      root: { startedAt: null },
+      processes: [{ pid: 601, startedAt: 'Mon' }],
+      pgids: [500],
+      tty: null
+    })
   })
 
   it('rejects a row whose identity or routing is unusable', () => {
