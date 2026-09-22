@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { openPushDatabase } from './push-database.js'
 import { durablePushTestDatabaseUrl } from './durable-push-store.test-fixture.js'
 
-const QUEUE_INDEXES = ['push_batches_leased_device', 'push_batches_pending_device', 'push_batches_pending_due']
+const QUEUE_INDEXES = ['push_batches_pending_device']
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {
   vi.restoreAllMocks()
@@ -14,7 +14,7 @@ afterEach(async () => {
 // Push applies its schema with retryLockTimeout, so a lock timeout is retried, never deferred:
 // the new revision either boots with every index or does not boot at all.
 it.skipIf(!durablePushTestDatabaseUrl)(
-  'creates the queue indexes after waiting out a writer that holds the table',
+  'creates the queue index after waiting out a writer that holds the table',
   async () => {
     const admin = new pg.Client({ connectionString: durablePushTestDatabaseUrl })
     await admin.connect()

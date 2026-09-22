@@ -99,10 +99,9 @@ it.skipIf(!durablePushTestDatabaseUrl)(
   }
 )
 
-it('keeps claim, exclusion and prune correct without the queue indexes', async () => {
+it('keeps claim, exclusion and prune correct without the queue index', async () => {
   const { db, store, clock, advance } = await fixture()
-  for (const name of ['push_batches_pending_due', 'push_batches_pending_device', 'push_batches_leased_device'])
-    await db.query(`DROP INDEX ${name}`)
+  await db.query('DROP INDEX push_batches_pending_device')
   await store.accept('host', 'phone', notification(1))
   advance(1)
   await store.accept('host', 'phone', notification(2))
