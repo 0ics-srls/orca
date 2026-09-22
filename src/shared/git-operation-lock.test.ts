@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { _gitOperationLockWaiterCountForTests, runWithGitOperationLock } from './git-operation-lock'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  _gitOperationLockHeldForTests,
+  _gitOperationLockWaiterCountForTests,
+  runWithGitOperationLock
+} from './git-operation-lock'
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void
@@ -96,5 +100,57 @@ describe('runWithGitOperationLock', () => {
       })
     ).rejects.toThrow('boom')
     expect(await runWithGitOperationLock(key, undefined, async () => 'after')).toBe('after')
+  })
+
+  it('runs a waiter unlocked once its bounded wait expires, leaving the holder its lane', async () => {
+    vi.useFakeTimers()
+    try {
+      const key = 'bounded'
+      const holder = await holdLock(key)
+      let lease: { held: boolean } | undefined
+      const waiter = runWithGitOperationLock(
+        key,
+        undefined,
+        async (received) => {
+          lease = received
+          return 'ran'
+        },
+        { maxWaitMs: 1_000 }
+      )
+      await vi.advanceTimersByTimeAsync(999)
+      expect(lease).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(waiter).resolves.toBe('ran')
+      expect(lease?.held).toBe(false)
+      expect(_gitOperationLockWaiterCountForTests(key)).toBe(0)
+      // The unlocked run must not release a lane it never held.
+      expect(_gitOperationLockHeldForTests(key)).toBe(true)
+      await holder.release()
+      expect(_gitOperationLockHeldForTests(key)).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the lane after the work settles until every held promise settles', async () => {
+    const key = 'hold-until'
+    const exited = deferred()
+    const order: string[] = []
+    await expect(
+      runWithGitOperationLock(key, undefined, async (lease) => {
+        lease.holdUntil(exited.promise)
+        throw new Error('aborted')
+      })
+    ).rejects.toThrow('aborted')
+    const next = runWithGitOperationLock(key, undefined, async () => {
+      order.push('next')
+    })
+    await Promise.resolve()
+    expect(_gitOperationLockHeldForTests(key)).toBe(true)
+    expect(order).toEqual([])
+    exited.resolve()
+    await next
+    expect(order).toEqual(['next'])
+    expect(_gitOperationLockHeldForTests(key)).toBe(false)
   })
 })

@@ -6,6 +6,7 @@ import {
   resolveGitWorktreeAdminCommand,
   runWithGitWorktreeAdminLock
 } from '../../../shared/git-worktree-admin-lock'
+import type { GitOperationLease } from '../../../shared/git-operation-lock'
 import type { GitAdmissionTier, GitExecOptions } from './git-exec-options'
 import { resolveGitAdmissionTier } from './git-operation-executor'
 
@@ -15,17 +16,24 @@ const WORKTREE_ADMIN_LOCK_PRIORITY: Record<GitAdmissionTier, number> = {
   background: 0
 }
 
-/** Shared-metadata locks a git command must hold; `run` gets the admin-lock wait when one applied. */
+export type GitExecLockGrant = {
+  readonly lease: GitOperationLease
+  /** Set when the command queued on the repo's worktree admin lane. */
+  readonly worktreeAdminLockWaitMs?: number
+}
+
+/** Shared-metadata locks a git command must hold; `run` gets the grant when one applied. */
 export function runWithGitExecLocks<T>(
   args: readonly string[],
-  options: Pick<GitExecOptions, 'cwd' | 'signal' | 'admissionTier'>,
-  run: (worktreeAdminLockWaitMs?: number) => Promise<T>
+  options: Pick<GitExecOptions, 'cwd' | 'signal' | 'admissionTier' | 'worktreeAdminLock'>,
+  run: (grant?: GitExecLockGrant) => Promise<T>
 ): Promise<T> {
   const fetchHead = resolveGitFetchHeadCommand(args, options.cwd)
   if (fetchHead.needsLock) {
     return runWithGitFetchHeadLock(fetchHead.cwd, options.signal, () => run(), fetchHead.gitDir)
   }
-  const adminCommand = resolveGitWorktreeAdminCommand(args, options.cwd)
+  const adminCommand =
+    options.worktreeAdminLock === false ? null : resolveGitWorktreeAdminCommand(args, options.cwd)
   if (!adminCommand) {
     return run()
   }
@@ -35,7 +43,7 @@ export function runWithGitExecLocks<T>(
   return runWithGitWorktreeAdminLock(
     adminCommand,
     options.signal,
-    () => run(performance.now() - queuedAt),
+    (lease) => run({ lease, worktreeAdminLockWaitMs: performance.now() - queuedAt }),
     { priority }
   )
 }

@@ -138,6 +138,35 @@ describe('runWithGitWorktreeAdminLock', () => {
     expect(run).toHaveBeenCalledOnce()
   })
 
+  it('runs a command unlocked with a warning when the lane stays busy past the bound', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let releaseFirst!: () => void
+    const started = Promise.withResolvers<void>()
+    const first = runWithGitWorktreeAdminLock({ cwd: repoPath }, undefined, async () => {
+      started.resolve()
+      await new Promise<void>((resolve) => {
+        releaseFirst = resolve
+      })
+    })
+    try {
+      await started.promise
+      const held = await runWithGitWorktreeAdminLock(
+        { cwd: repoPath },
+        undefined,
+        async (lease) => lease.held,
+        { maxWaitMs: 5 }
+      )
+      expect(held).toBe(false)
+      expect(warn).toHaveBeenCalledWith(
+        '[git] worktree admin lock still busy after 5 ms; running unlocked'
+      )
+    } finally {
+      releaseFirst()
+      await first
+      warn.mockRestore()
+    }
+  })
+
   it('propagates cancellation during key derivation instead of running unlocked', async () => {
     const controller = new AbortController()
     controller.abort()

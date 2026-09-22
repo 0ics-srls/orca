@@ -3,7 +3,7 @@ import {
   locateGitSubcommand,
   resolveCanonicalGitCommonDir
 } from './git-common-dir-location'
-import { runWithGitOperationLock } from './git-operation-lock'
+import { runWithGitOperationLock, type GitOperationLease } from './git-operation-lock'
 
 // Each of these rewrites `<common-dir>/worktrees` and scans every admin entry, so two at once on one
 // repo contend for the same directory. `worktree list` only reads it and stays unlocked.
@@ -65,10 +65,16 @@ async function resolveWorktreeAdminLockKey(
   return key
 }
 
+// Why bounded: callers already bound each git command; an unbounded queue would let a create wait
+// for every queued command's timeout in turn. Past this the command runs unlocked, as before the lock.
+export const WORKTREE_ADMIN_LOCK_MAX_WAIT_MS = 15_000
+
+const UNLOCKED_LEASE: GitOperationLease = { held: false, holdUntil: () => {} }
+
 export type GitWorktreeAdminLockOptions = {
-  readonly gitDir?: string
   /** Higher runs first among queued waiters, so a user's create is not stuck behind warm-up. */
   readonly priority?: number
+  readonly maxWaitMs?: number
 }
 
 /**
@@ -80,7 +86,7 @@ export type GitWorktreeAdminLockOptions = {
 export async function runWithGitWorktreeAdminLock<T>(
   command: GitWorktreeAdminCommand,
   signal: AbortSignal | undefined,
-  run: () => Promise<T>,
+  run: (lease: GitOperationLease) => Promise<T>,
   options: GitWorktreeAdminLockOptions = {}
 ): Promise<T> {
   let key: string
@@ -91,9 +97,20 @@ export async function runWithGitWorktreeAdminLock<T>(
       throw error
     }
     console.warn('[git] worktree admin lock unavailable; running unlocked', error)
-    return run()
+    return run(UNLOCKED_LEASE)
   }
-  return runWithGitOperationLock(key, signal, run, { priority: options.priority })
+  const maxWaitMs = options.maxWaitMs ?? WORKTREE_ADMIN_LOCK_MAX_WAIT_MS
+  return runWithGitOperationLock(
+    key,
+    signal,
+    (lease) => {
+      if (!lease.held) {
+        console.warn(`[git] worktree admin lock still busy after ${maxWaitMs} ms; running unlocked`)
+      }
+      return run(lease)
+    },
+    { priority: options.priority, maxWaitMs }
+  )
 }
 
 /** The lane key a command would queue on; exposed so tests can hold or inspect that lane. */

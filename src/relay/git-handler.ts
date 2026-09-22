@@ -163,7 +163,7 @@ export class GitHandler {
     opts?: GitHandlerCommandOptions
   ): Promise<GitHandlerCommandResult> {
     const expandedCwd = expandTilde(cwd)
-    const run = async (): Promise<{ stdout: string; stderr: string }> => {
+    const run = async (toTermination = false): Promise<{ stdout: string; stderr: string }> => {
       const env = opts?.nonInteractive ? buildRelayUnattendedGitEnv() : buildRelayGitEnv()
       if (opts?.disableOptionalLocks) {
         env.GIT_OPTIONAL_LOCKS = '0'
@@ -176,8 +176,8 @@ export class GitHandler {
         timeout: opts?.timeout,
         signal: opts?.signal
       } satisfies ExecFileOptions
-      if (opts?.terminationBarrier) {
-        return runGitToTermination(args, execOptions, opts.stdin)
+      if (opts?.terminationBarrier || toTermination) {
+        return runGitToTermination(args, execOptions, opts?.stdin)
       }
       if (opts?.stdin !== undefined) {
         return execFileWithStdin('git', args, execOptions, opts.stdin)
@@ -187,10 +187,14 @@ export class GitHandler {
     }
     const command = resolveGitFetchHeadCommand(args, expandedCwd)
     if (command.needsLock) {
-      return runWithGitFetchHeadLock(command.cwd, opts?.signal, run, command.gitDir)
+      return runWithGitFetchHeadLock(command.cwd, opts?.signal, () => run(), command.gitDir)
     }
-    const adminCommand = resolveGitWorktreeAdminCommand(args, expandedCwd)
-    return adminCommand ? runWithGitWorktreeAdminLock(adminCommand, opts?.signal, run) : run()
+    const adminCommand =
+      opts?.worktreeAdminLock === false ? null : resolveGitWorktreeAdminCommand(args, expandedCwd)
+    // Why to termination: execFile settles on abort while git still runs, and the lane must outlive it.
+    return adminCommand
+      ? runWithGitWorktreeAdminLock(adminCommand, opts?.signal, () => run(true))
+      : run()
   }
 
   private async gitBuffer(args: string[], cwd: string): Promise<Buffer> {

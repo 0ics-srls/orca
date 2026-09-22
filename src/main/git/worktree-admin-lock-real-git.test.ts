@@ -1,16 +1,24 @@
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { gitExecFileAsync } from './runner'
 import { listWorktrees } from './worktree'
+import { addWorktree } from './worktree-add'
+import {
+  discardPreparedWorktree,
+  prepareWorktreeCreateCheckout
+} from './worktree-create-preparation'
 import { worktreeCreateGit } from './worktree-create-git-executor'
 import { consumePreparedWorktreeCreate } from '../worktree-create-preparation'
 import {
   _resetPreparationPoolForTests,
   startPreparation
 } from '../worktree-create-preparation-pool'
-import { _gitOperationLockWaiterCountForTests } from '../../shared/git-operation-lock'
+import {
+  _gitOperationLockHeldForTests,
+  _gitOperationLockWaiterCountForTests
+} from '../../shared/git-operation-lock'
 import {
   _resolveGitWorktreeAdminLockKeyForTests,
   runWithGitWorktreeAdminLock
@@ -149,3 +157,58 @@ it('serializes a pool re-arm and a create in one repo, and runs the create first
     true
   )
 })
+
+it.skipIf(process.platform === 'win32')(
+  'checks out and runs post-checkout after the admin lane is released',
+  async () => {
+    const { root, repo } = await createRepo()
+    const hookLog = join(root, 'hook.log')
+    const hookRelease = join(root, 'hook.release')
+    const hookPath = join(repo, '.git', 'hooks', 'post-checkout')
+    await writeFile(
+      hookPath,
+      [
+        '#!/bin/sh',
+        `printf '%s %s %s %s\\n' "$1" "$2" "$3" "$(cat file.txt)" > '${hookLog}'`,
+        `while [ ! -e '${hookRelease}' ]; do sleep 0.05; done`,
+        ''
+      ].join('\n')
+    )
+    await chmod(hookPath, 0o755)
+    const key = await _resolveGitWorktreeAdminLockKeyForTests(repo)
+
+    const created = addWorktree(repo, join(root, 'created'), 'created', 'main')
+    await vi.waitFor(() => stat(hookLog), { timeout: 15_000 })
+    // The hook is still running, so the checkout it saw is complete and the lane must be free.
+    expect(_gitOperationLockHeldForTests(key)).toBe(false)
+    await gitExecFileAsync(['worktree', 'prune'], { cwd: repo })
+
+    await writeFile(hookRelease, '')
+    await created
+    const head = (await gitExecFileAsync(['rev-parse', 'HEAD'], { cwd: repo })).stdout.trim()
+    expect(await readFile(hookLog, 'utf8')).toBe(`${'0'.repeat(head.length)} ${head} 1 main\n`)
+  },
+  30_000
+)
+
+it('deletes a prepared checkout without queueing on a held admin lane', async () => {
+  const { root, repo } = await createRepo()
+  const prepared = join(root, 'prepared')
+  await prepareWorktreeCreateCheckout(repo, prepared, 'main', 'orca test')
+  let releaseHolder!: () => void
+  const holderStarted = Promise.withResolvers<void>()
+  const holder = runWithGitWorktreeAdminLock({ cwd: repo }, undefined, async () => {
+    holderStarted.resolve()
+    await new Promise<void>((resolve) => {
+      releaseHolder = resolve
+    })
+  })
+  await holderStarted.promise
+  try {
+    await discardPreparedWorktree(repo, prepared)
+    await expect(stat(prepared)).rejects.toMatchObject({ code: 'ENOENT' })
+  } finally {
+    releaseHolder()
+    await holder
+  }
+}, 10_000)
