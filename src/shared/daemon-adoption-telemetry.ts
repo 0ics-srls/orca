@@ -22,6 +22,20 @@ export type DaemonSpawnerPathClass = (typeof DAEMON_SPAWNER_PATH_CLASSES)[number
 
 export const DAEMON_TCC_ATTRIBUTION_VALUES = ['intact', 'severed', 'unknown'] as const
 
+/**
+ * What macOS itself can still say about the daemon process's own code (#21826). `parked` is the
+ * copy Squirrel moves the outgoing bundle to during an update and deletes afterwards;
+ * `unresolvable` is the state after that delete, where tccd can no longer resolve the daemon's
+ * code identity at all. Measurement only — nothing reads this verdict to decide anything.
+ */
+export const DAEMON_CODE_IDENTITY_VALUES = [
+  'resolved',
+  'parked',
+  'unresolvable',
+  'probe-failed'
+] as const
+export type DaemonCodeIdentity = (typeof DAEMON_CODE_IDENTITY_VALUES)[number]
+
 /** Which macOS-protected folder class the denied cwd falls under. */
 export const DAEMON_PTY_CWD_CLASSES = [
   'documents',

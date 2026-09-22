@@ -16,6 +16,7 @@ import {
 } from './daemon-audit-eligibility'
 import {
   DAEMON_ADOPTED_APP_VERSION_MATCH,
+  DAEMON_CODE_IDENTITY_VALUES,
   DAEMON_PTY_CWD_CLASSES,
   DAEMON_SPAWNER_PATH_CLASSES,
   DAEMON_TCC_ATTRIBUTION_VALUES
@@ -58,10 +59,13 @@ export const mainThreadHangDetectedSchema = z
 
 // Why: #17696 — a macOS app adopting a daemon from an earlier bundle is invisible to
 // `daemon_lifecycle` (nothing is replaced). Once per macOS launch that adopts; enum-only.
+// `code_identity` is the #21826 hypothesis under measurement: that the denials track the daemon's
+// own executable being unlinked by an update, not the spawner path `tcc_attribution` reads.
 export const daemonAdoptedSchema = z
   .object({
     app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
     spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
+    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES),
     tcc_attribution: z.enum(DAEMON_TCC_ATTRIBUTION_VALUES),
     live_session_count_bucket: z.enum(DAEMON_LIFECYCLE_SESSION_BUCKETS)
   })
@@ -73,7 +77,8 @@ export const daemonPtyCwdDeniedSchema = z
   .object({
     cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES),
     app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
-    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES)
+    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
+    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
   })
   .strict()
 
