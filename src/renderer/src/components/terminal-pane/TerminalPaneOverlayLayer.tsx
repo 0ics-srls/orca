@@ -32,7 +32,8 @@ const TerminalPaneOverlayLayer = memo(function TerminalPaneOverlayLayer({
   shouldMeasureHiddenWorktree = false,
   activityTerminalPortals = EMPTY_ACTIVITY_PORTALS,
   backgroundMountTabIds = null,
-  activationDeferredMountTabIds = null
+  activationDeferredMountTabIds = null,
+  ownsNativeChatToggleShortcut = true
 }: {
   worktreeId: string
   worktreePath: string
@@ -46,6 +47,9 @@ const TerminalPaneOverlayLayer = memo(function TerminalPaneOverlayLayer({
   backgroundMountTabIds?: ReadonlySet<string> | null
   /** Cold-activation deferred tabs receive immediate parked watcher coverage. */
   activationDeferredMountTabIds?: ReadonlySet<string> | null
+  /** False for overlay hosts whose workspace is visible while another owns global keyboard
+   *  chords — the toggle listener is gated to one live workspace at a time. */
+  ownsNativeChatToggleShortcut?: boolean
 }): React.JSX.Element | null {
   const { terminalTabs, unifiedTabs, groups, activeGroupId } = useAppStore(
     useShallow((state) => ({
@@ -60,7 +64,7 @@ const TerminalPaneOverlayLayer = memo(function TerminalPaneOverlayLayer({
   const setActiveWorktree = useAppStore((state) => state.setActiveWorktree)
   const reconcileWorktreeTabModel = useAppStore((state) => state.reconcileWorktreeTabModel)
 
-  useNativeChatToggleShortcut(worktreeId, isWorktreeActive)
+  useNativeChatToggleShortcut(worktreeId, isWorktreeActive && ownsNativeChatToggleShortcut)
 
   const leaveWorktreeIfEmpty = useCallback(() => {
     const state = useAppStore.getState()
