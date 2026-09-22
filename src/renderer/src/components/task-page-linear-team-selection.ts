@@ -1,13 +1,7 @@
 import type { LinearTeam } from '../../../shared/linear/workspace-types'
 
-/**
- * The persisted `defaultLinearTeamSelection` as the page may use it: a string
- * array, or null for sticky-all.
- *
- * Why: the value comes off disk or from a paired host and is not validated on
- * the way in; a string reached 1.4.207 and crashed page.tasks (0a2b6e7f).
- * Anything but an array of strings is read as sticky-all, never thrown on.
- */
+// Why: the persisted value is not validated on the way in and a string reached
+// 1.4.207 (0a2b6e7f); anything but a string array reads as sticky-all.
 export function storedLinearTeamSelection(value: unknown): string[] | null {
   if (!Array.isArray(value)) {
     return null
@@ -15,6 +9,7 @@ export function storedLinearTeamSelection(value: unknown): string[] | null {
   return value.filter((id): id is string => typeof id === 'string')
 }
 
+// Why `unknown`: this is the crash site, so it must hold for the raw setting too.
 export function reconcileLinearTeamSelection(
   availableTeams: LinearTeam[],
   storedSelection: unknown
