@@ -17556,7 +17556,12 @@
         "title": "Drop to attach to this chat",
         "subtitle": "Files are added to your message as paths the agent can read."
       },
-      "copyCode": "Copy code"
+      "copyCode": "Copy code",
+      "contextUsage": {
+        "label": "Context {{used}} of {{window}} tokens, {{percent}}% used",
+        "title": "Context",
+        "estimated": "Estimated from the last response."
+      }
     },
     "tab": {
       "bar": {

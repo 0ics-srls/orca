@@ -9,6 +9,7 @@ import { NATIVE_FILE_DROP_TARGET } from '../../../../shared/native-file-drop'
 import type { ComposerAutocomplete, NativeChatPickerItem } from './native-chat-composer-state'
 import { NativeChatMentionHint, NativeChatPickerMenu } from './NativeChatAutocompleteMenus'
 import { NativeChatComposerActions } from './NativeChatComposerActions'
+import type { NativeChatContextUsageSummary } from './native-chat-context-usage-summary'
 import { nativeChatComposerPlaceholder } from './native-chat-composer-target'
 import type {
   SessionOptionDescriptor,
@@ -55,6 +56,7 @@ export type NativeChatComposerFieldProps = {
   onStop?: () => void
   sessionOptionsSurface: SessionOptionsSurface | null
   sessionOptionsSnapshot: SessionOptionDescriptor[]
+  contextUsage?: NativeChatContextUsageSummary | null
   sessionOptionsPickerRequest?: NativeChatOptionPickerRequest | null
 }
 
@@ -127,6 +129,7 @@ export function NativeChatComposerField({
   onStop,
   sessionOptionsSurface,
   sessionOptionsSnapshot,
+  contextUsage,
   sessionOptionsPickerRequest
 }: NativeChatComposerFieldProps): React.JSX.Element {
   // Value the IME started from, and whether a programmatic clear was dropped on top of it.
@@ -282,6 +285,7 @@ export function NativeChatComposerField({
                 onStop={onStop}
                 sessionOptionsSurface={sessionOptionsSurface}
                 sessionOptionsSnapshot={sessionOptionsSnapshot}
+                contextUsage={contextUsage}
                 sessionOptionsPickerRequest={sessionOptionsPickerRequest}
               />
             </div>

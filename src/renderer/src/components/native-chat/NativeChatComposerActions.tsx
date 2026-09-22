@@ -7,6 +7,8 @@ import type {
   SessionOptionsSurface
 } from '../../../../shared/native-chat-session-options'
 import { NativeChatSessionOptionPickers } from './NativeChatSessionOptionPickers'
+import { NativeChatContextUsageRing } from './NativeChatContextUsageRing'
+import type { NativeChatContextUsageSummary } from './native-chat-context-usage-summary'
 import type { NativeChatOptionPickerRequest } from './native-chat-composer-types'
 
 export type NativeChatComposerActionsProps = {
@@ -25,6 +27,8 @@ export type NativeChatComposerActionsProps = {
   sessionOptionsSurface: SessionOptionsSurface | null
   sessionOptionsSnapshot: SessionOptionDescriptor[]
   sessionOptionsPickerRequest?: NativeChatOptionPickerRequest | null
+  /** Absent until the session has reported or the transcript can estimate. */
+  contextUsage?: NativeChatContextUsageSummary | null
 }
 
 export function NativeChatComposerActions({
@@ -42,7 +46,8 @@ export function NativeChatComposerActions({
   onStop,
   sessionOptionsSurface,
   sessionOptionsSnapshot,
-  sessionOptionsPickerRequest
+  sessionOptionsPickerRequest,
+  contextUsage
 }: NativeChatComposerActionsProps): React.JSX.Element {
   const handleCriticalAction = (event: React.MouseEvent<HTMLButtonElement>): void => {
     // A double-click commonly lands after the first send has started and the button has
@@ -90,6 +95,7 @@ export function NativeChatComposerActions({
           isWorking={isWorking}
           pickerRequest={sessionOptionsPickerRequest}
         />
+        {contextUsage ? <NativeChatContextUsageRing usage={contextUsage} /> : null}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
