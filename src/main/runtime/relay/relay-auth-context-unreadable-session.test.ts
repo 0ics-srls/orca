@@ -27,18 +27,6 @@ const profile = {
 const authConfig = {} as never
 
 describe('readRelayAuthContext session-read taxonomy', () => {
-  it('refuses to call an unreadable session file a sign-out', async () => {
-    // EACCES/EBUSY/EMFILE on the session file means "present, could not read it" — the store
-    // itself declines to delete one for that reason. Reporting it as signed-out tells every
-    // paired phone to sign in on the desktop for a failure a retry would have cleared.
-    fakes.ensureActiveOrcaProfile.mockReturnValue(profile)
-    fakes.readFreshOrcaCloudSession.mockResolvedValue({ status: 'unreadable' })
-
-    await expect(readRelayAuthContext(authConfig, '/tmp/x')).rejects.toThrow(
-      'orca_cloud_session_unreadable'
-    )
-  })
-
   it('still reports a genuinely absent session as gone', async () => {
     fakes.ensureActiveOrcaProfile.mockReturnValue(profile)
     fakes.readFreshOrcaCloudSession.mockResolvedValue({ status: 'reconnect-required' })
@@ -47,8 +35,11 @@ describe('readRelayAuthContext session-read taxonomy', () => {
   })
 
   it('classifies an unreadable session as auth_unavailable, never signed_out', async () => {
+    // EACCES/EBUSY/EMFILE on the session file means "present, could not read it", which the
+    // refresh layer raises. Reporting it as signed-out tells every paired phone to sign in on
+    // the desktop for a failure a retry would have cleared.
     fakes.ensureActiveOrcaProfile.mockReturnValue(profile)
-    fakes.readFreshOrcaCloudSession.mockResolvedValue({ status: 'unreadable' })
+    fakes.readFreshOrcaCloudSession.mockRejectedValue(new Error('orca_cloud_session_unreadable'))
     const broker = { closeNow: vi.fn() }
     const coordinator = new RelayAuthCoordinator({
       readContext: () => readRelayAuthContext(authConfig, '/tmp/x'),
