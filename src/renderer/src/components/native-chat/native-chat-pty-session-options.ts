@@ -40,9 +40,8 @@ export type NativeChatPtySessionOptionsSurface = SessionOptionsSurface & {
   recordOutgoingCommand(command: string): void
   reportSessionOptions(values: Record<string, SessionOptionValue>): void
   replaceModels(models: CatalogModel[]): void
-  /** The host CLI's resolved id for the tracked model, or null when nothing is
-   *  tracked or no probe has named what it resolves to. */
-  resolvedSessionModel(): string | null
+  /** The context window the host's model listing states for `modelId`, or null. */
+  contextWindowTokens(modelId: string): number | null
 }
 
 export type CreateNativeChatPtySessionOptionsArgs = {
@@ -225,12 +224,7 @@ export function createNativeChatPtySessionOptions(
       untrackRetiredModel()
       publish()
     },
-    resolvedSessionModel: () => {
-      const trackedId = typeof record.model?.value === 'string' ? record.model.value : null
-      // Why: only a probe states what an alias resolves to; the seed would be a guess.
-      const tracked =
-        modelsAreDiscovered && trackedId ? models.find((m) => m.id === trackedId) : null
-      return tracked?.resolvedModel ?? null
-    }
+    contextWindowTokens: (modelId) =>
+      models.find((model) => model.id === modelId)?.contextWindowTokens ?? null
   }
 }

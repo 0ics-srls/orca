@@ -2,10 +2,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CatalogModel } from '../../../../shared/agent-session-option-catalog'
-import type { SessionOptionValue } from '../../../../shared/native-chat-session-options'
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
-import { readClaudeSessionOptionsFromTerminalScreen } from './claude-terminal-session-options'
-import type { NativeChatCommandMarker } from './native-chat-command-marker'
 import { createNativeChatPtySessionOptions } from './native-chat-pty-session-options'
 import { clearNativeChatSessionOptionCacheForTests } from './native-chat-session-option-cache'
 import {
@@ -38,21 +35,20 @@ vi.mock('@/lib/native-chat-telemetry', () => ({
   emitNativeChatSendClassified: vi.fn()
 }))
 
-// `list_models` rows as Claude Code 2.1.280 reports them, `resolvedModel` included.
+// `omp models --json` rows as OMP 17.0.5 prints them, reduced to what discovery keeps.
 const DISCOVERED: CatalogModel[] = [
-  { id: 'opus[1m]', label: 'Opus (1M context)', resolvedModel: 'claude-opus-5-5[1m]', options: [] },
-  { id: 'sonnet', label: 'Sonnet', resolvedModel: 'claude-sonnet-5', options: [] },
-  {
-    id: 'sonnet[1m]',
-    label: 'Sonnet 5 (1M context)',
-    resolvedModel: 'claude-sonnet-5[1m]',
-    options: []
-  },
-  { id: 'haiku', label: 'Haiku', resolvedModel: 'claude-haiku-4-5-20251001', options: [] }
+  { id: 'openai-codex/gpt-5.5', label: 'GPT-5.5', contextWindowTokens: 272_000, options: [] },
+  { id: 'openai-codex/gpt-5.4', label: 'GPT-5.4', contextWindowTokens: 1_000_000, options: [] },
+  { id: 'anthropic/claude-opus', label: 'Claude Opus', options: [] }
 ]
 
-// A 1M session's transcript still records the bare id.
-function response(tokens: number, timestamp: number, model = 'claude-opus-5-5'): NativeChatMessage {
+// A reply as OMP records it: provider and model on the row, usage per request.
+function response(
+  promptTokens: number,
+  timestamp: number,
+  model = 'gpt-5.5',
+  provider = 'openai-codex'
+): NativeChatMessage {
   return {
     id: `a-${timestamp}`,
     role: 'assistant',
@@ -60,29 +56,23 @@ function response(tokens: number, timestamp: number, model = 'claude-opus-5-5'):
     timestamp,
     source: 'transcript',
     model,
+    provider,
     usage: {
-      inputTokens: 2,
-      cacheCreationInputTokens: 1_000,
-      cacheReadInputTokens: tokens - 1_002,
-      outputTokens: 40
+      inputTokens: 680,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: promptTokens - 680,
+      outputTokens: 16
     }
   }
 }
 
-function marker(command: string, sentAt: number): NativeChatCommandMarker {
-  return { id: `${sentAt}`, command, sentAt }
-}
-
-function liveSurface(
-  reportedValues: Record<string, SessionOptionValue> | null,
-  models?: CatalogModel[]
-) {
+function liveSurface(models?: CatalogModel[]) {
   return createNativeChatPtySessionOptions({
-    agent: 'claude',
+    agent: 'omp',
     scopeKey: 'pty-context',
     ...(models ? { initialModels: models } : {}),
     mode: 'live',
-    reportedValues,
+    reportedValues: { model: 'openai-codex/gpt-5.5' },
     dispatchCommand: vi.fn()
   })!
 }
@@ -93,88 +83,80 @@ beforeEach(() => {
   mocks.sendNativeChatMessageWithImageAttachments.mockClear()
 })
 
-describe('the session model the /context window is read from', () => {
-  it('resolves the terminal header through the host catalog to the CLI id', () => {
-    const header = readClaudeSessionOptionsFromTerminalScreen(
-      'Claude Code v2.1.280\r\nOpus 5.5 (1M context) with high effort · API Usage Billing\r\n~/repo',
-      DISCOVERED
-    )
-    expect(liveSurface(header, DISCOVERED).resolvedSessionModel()).toBe('claude-opus-5-5[1m]')
+describe('the context window the model listing states', () => {
+  it('reads the window of a listed model once discovery has run', () => {
+    const surface = liveSurface(DISCOVERED)
+    expect(surface.contextWindowTokens('openai-codex/gpt-5.4')).toBe(1_000_000)
+    expect(surface.contextWindowTokens('anthropic/claude-opus')).toBeNull()
+    expect(surface.contextWindowTokens('unlisted/model')).toBeNull()
   })
 
-  it('follows a /model switch sent from the chat', () => {
-    const surface = liveSurface({ model: 'opus[1m]' }, DISCOVERED)
-    surface.recordOutgoingCommand('/model sonnet')
-    expect(surface.resolvedSessionModel()).toBe('claude-sonnet-5')
+  it('knows no window before discovery', () => {
+    expect(liveSurface().contextWindowTokens('openai-codex/gpt-5.5')).toBeNull()
   })
 
-  it('names nothing before a probe, or when no model is tracked', () => {
-    expect(liveSurface({ model: 'opus' }).resolvedSessionModel()).toBeNull()
-    expect(liveSurface(null, DISCOVERED).resolvedSessionModel()).toBeNull()
+  it('follows a later discovery result', () => {
+    const surface = liveSurface()
+    surface.replaceModels(DISCOVERED)
+    expect(surface.contextWindowTokens('openai-codex/gpt-5.5')).toBe(272_000)
   })
 })
 
 describe('answerNativeChatLocalCommand', () => {
-  function answer(args: {
-    messages: NativeChatMessage[]
-    resolvedSessionModel?: string | null
-    markers?: NativeChatCommandMarker[]
-    command?: string
-  }): string | null {
+  const surface = liveSurface(DISCOVERED)
+
+  function answer(args: { messages: NativeChatMessage[]; command?: string }): string | null {
     return answerNativeChatLocalCommand({
-      agent: 'claude',
+      agent: 'omp',
       command: args.command ?? '/context',
       messages: args.messages,
-      markers: args.markers ?? [],
-      resolvedSessionModel: args.resolvedSessionModel ?? null
+      contextWindowTokens: surface.contextWindowTokens
     })
   }
 
-  it('states the 1M window for a session the host resolves to a [1m] model', () => {
-    expect(
-      answer({ messages: [response(450_000, 10)], resolvedSessionModel: 'claude-opus-5-5[1m]' })
-    ).toBe('Context: 450k / 1m tokens (45%), estimated from the last response.')
+  it('states the window of the model that served the last response', () => {
+    expect(answer({ messages: [response(21_672, 10)] })).toBe(
+      'Context: 21.7k / 272k tokens (8%), estimated from the last response.'
+    )
+    // A switch in the TUI shows up on the next reply, not in the picker.
+    expect(answer({ messages: [response(21_672, 10), response(450_000, 20, 'gpt-5.4')] })).toBe(
+      'Context: 450k / 1m tokens (45%), estimated from the last response.'
+    )
   })
 
-  it('gives the used figure alone rather than guess a window', () => {
+  it('gives the used figure alone when the listing states no window', () => {
     const used = 'Context: 54.6k tokens used, estimated from the last response.'
-    // Untracked session.
-    expect(answer({ messages: [response(54_600, 10)] })).toBe(used)
-    // A model whose window the CLI decides by account and provider.
-    expect(
-      answer({
-        messages: [response(54_600, 10, 'claude-sonnet-5')],
-        resolvedSessionModel: 'claude-sonnet-5'
-      })
-    ).toBe(used)
-    // The tracked model is stale: the transcript shows another model answering.
-    expect(
-      answer({
-        messages: [response(54_600, 10, 'claude-sonnet-5')],
-        resolvedSessionModel: 'claude-opus-5-5[1m]'
-      })
-    ).toBe(used)
+    expect(answer({ messages: [response(54_600, 10, 'claude-opus', 'anthropic')] })).toBe(used)
+    // The same bare model under a provider the listing does not have.
+    expect(answer({ messages: [response(54_600, 10, 'gpt-5.5', 'openrouter')] })).toBe(used)
   })
 
-  it('reports nothing until a response lands after a /compact or /clear sent here', () => {
+  it('reports nothing between a compaction and the next response', () => {
     const unavailable =
       'Context usage is not known yet. It becomes available once the agent has answered in this session.'
-    const messages = [response(450_000, 10)]
-    expect(answer({ messages, markers: [marker('/compact', 20)] })).toBe(unavailable)
-    expect(answer({ messages, markers: [marker('/clear', 20)] })).toBe(unavailable)
-    expect(
-      answer({
-        messages: [...messages, response(30_000, 30)],
-        markers: [marker('/compact', 20)],
-        resolvedSessionModel: 'claude-opus-5-5[1m]'
-      })
-    ).toBe('Context: 30k / 1m tokens (3%), estimated from the last response.')
+    const compaction: NativeChatMessage = {
+      id: 'c',
+      role: 'system',
+      blocks: [{ type: 'text', text: 'Context compacted', presentation: 'compaction' }],
+      timestamp: 20,
+      source: 'transcript'
+    }
+    const messages = [response(200_000, 10), compaction]
+    expect(answer({ messages })).toBe(unavailable)
+    expect(answer({ messages: [...messages, response(30_000, 30)] })).toBe(
+      'Context: 30k / 272k tokens (11%), estimated from the last response.'
+    )
   })
 
   it('does not promise a later answer when the host never reports usage', () => {
     const pending =
       'Context usage is not known yet. It becomes available once the agent has answered in this session.'
-    const { model: _model, usage: _usage, ...olderHostRow } = response(54_600, 10)
+    const {
+      model: _model,
+      provider: _provider,
+      usage: _usage,
+      ...olderHostRow
+    } = response(54_600, 10)
     // An older host decodes the same reply without its model or usage.
     expect(answer({ messages: [olderHostRow] })).toBe(
       'Context usage is not available for this session.'
@@ -184,8 +166,16 @@ describe('answerNativeChatLocalCommand', () => {
     expect(answer({ messages: [{ ...olderHostRow, source: 'hook' }] })).toBe(pending)
   })
 
-  it('leaves every other command to the agent', () => {
+  it('leaves every other command, and other agents, to the agent', () => {
     expect(answer({ messages: [], command: '/compact' })).toBeNull()
+    expect(
+      answerNativeChatLocalCommand({
+        agent: 'openclaude',
+        command: '/context',
+        messages: [],
+        contextWindowTokens: surface.contextWindowTokens
+      })
+    ).toBeNull()
   })
 })
 
@@ -194,13 +184,13 @@ describe('host-answered /context in the composer', () => {
 
   function composerArgs(answerCommandLocally: NativeChatLocalCommandAnswer) {
     return {
-      agent: 'claude' as const,
+      agent: 'omp' as const,
       disabled: false,
       isDispatchingSessionOption: false,
       resolveTarget: () => target,
       onSlashCommand: vi.fn(),
       answerCommandLocally,
-      sessionOptionsSurface: liveSurface({ model: 'opus[1m]' }, DISCOVERED),
+      sessionOptionsSurface: liveSurface(DISCOVERED),
       trackPendingSend: vi.fn(),
       setHistory: vi.fn(),
       setDraft: vi.fn(),
@@ -225,10 +215,14 @@ describe('host-answered /context in the composer', () => {
     return args
   }
 
-  it('answers a typed /context in the chat with the session model, keeping attachments', () => {
-    const answerCommandLocally = vi.fn(() => 'Context: 450k / 1m tokens (45%)')
+  it('answers a typed /context in the chat with the listing windows, keeping attachments', () => {
+    const answerCommandLocally = vi.fn<NativeChatLocalCommandAnswer>(
+      () => 'Context: 450k / 1m tokens (45%)'
+    )
     const args = typedSend('/context', answerCommandLocally)
-    expect(answerCommandLocally).toHaveBeenCalledWith('/context', 'claude-opus-5-5[1m]')
+    expect(answerCommandLocally).toHaveBeenCalledWith('/context', expect.any(Function))
+    const windowFor = answerCommandLocally.mock.calls[0]![1]
+    expect(windowFor('openai-codex/gpt-5.4')).toBe(1_000_000)
     expect(args.onSlashCommand).toHaveBeenCalledWith('/context', 'Context: 450k / 1m tokens (45%)')
     expect(mocks.sendNativeChatMessage).not.toHaveBeenCalled()
     expect(mocks.sendNativeChatMessageWithImageAttachments).not.toHaveBeenCalled()
@@ -243,7 +237,9 @@ describe('host-answered /context in the composer', () => {
   })
 
   it('answers a picked /context the same way as a typed one', () => {
-    const answerCommandLocally = vi.fn(() => 'Context: 450k / 1m tokens (45%)')
+    const answerCommandLocally = vi.fn<NativeChatLocalCommandAnswer>(
+      () => 'Context: 450k / 1m tokens (45%)'
+    )
     const args = { ...composerArgs(answerCommandLocally), setActiveSuggestion: vi.fn() }
     const { result } = renderHook(() => useNativeChatPickerCommandDispatch(args))
     result.current({
@@ -253,7 +249,7 @@ describe('host-answered /context in the composer', () => {
       token: '/context',
       skillCollision: false
     })
-    expect(answerCommandLocally).toHaveBeenCalledWith('/context', 'claude-opus-5-5[1m]')
+    expect(answerCommandLocally.mock.calls[0]![1]('openai-codex/gpt-5.5')).toBe(272_000)
     expect(args.onSlashCommand).toHaveBeenCalledWith('/context', 'Context: 450k / 1m tokens (45%)')
     expect(mocks.sendNativeChatMessage).not.toHaveBeenCalled()
     expect(args.clearImageAttachments).not.toHaveBeenCalled()

@@ -229,7 +229,6 @@ export function NativeChatResolvedView({
     },
     [commandMarkerScope]
   )
-  const answerLocally = useNativeChatLocalCommandAnswer(agent, session.messages, commandMarkers)
 
   const launchPromptMessage = useMemo(
     () => launchPromptAsMessage(paneLaunchPrompt, session.messages),
@@ -248,6 +247,8 @@ export function NativeChatResolvedView({
       ? sessionWithLaunchPrompt
       : { ...sessionWithLaunchPrompt, messages }
   }, [sessionWithLaunchPrompt, commandMarkers])
+  // Why: answer from the conversation the pane shows, so a `/clear` sent here reads as reset.
+  const answerLocally = useNativeChatLocalCommandAnswer(agent, sessionAfterCommandBoundaries)
   const failedLaunchPromptMessageIds = useMemo(() => {
     const id = paneLaunchPrompt?.failed ? launchPromptMessage?.id : null
     if (!id || !sessionAfterCommandBoundaries.messages.some((message) => message.id === id)) {

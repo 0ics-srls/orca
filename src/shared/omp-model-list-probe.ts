@@ -54,12 +54,19 @@ export function parseOmpModelList(stdout: string): CommitMessageModel[] {
       continue
     }
     const name = 'name' in value && typeof value.name === 'string' ? value.name.trim() : ''
+    const contextWindow =
+      'contextWindow' in value && typeof value.contextWindow === 'number'
+        ? value.contextWindow
+        : null
     byId.set(id, {
       id,
       label: name || labelFromModelId(id),
       // Why: the same model name ships under several providers; the provider is
       // what tells two "DeepSeek V4 Pro" rows apart in the picker.
-      ...(provider ? { description: provider } : {})
+      ...(provider ? { description: provider } : {}),
+      ...(contextWindow !== null && Number.isFinite(contextWindow) && contextWindow > 0
+        ? { contextWindowTokens: contextWindow }
+        : {})
     })
   }
   return [...byId.values()]

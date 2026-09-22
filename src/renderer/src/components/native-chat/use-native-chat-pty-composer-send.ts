@@ -65,7 +65,7 @@ export function useNativeChatPtyComposerSend(args: {
       classification === 'command'
         ? (args.answerCommandLocally?.(
             text.trim(),
-            args.sessionOptionsSurface?.resolvedSessionModel() ?? null
+            (modelId) => args.sessionOptionsSurface?.contextWindowTokens(modelId) ?? null
           ) ?? null)
         : null
     if (localAnswer !== null) {

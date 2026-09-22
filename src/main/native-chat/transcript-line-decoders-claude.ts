@@ -5,8 +5,7 @@ import {
   type NativeChatBlock,
   type NativeChatEditPatch,
   type NativeChatEditPatchHunk,
-  type NativeChatMessage,
-  type NativeChatTokenUsage
+  type NativeChatMessage
 } from '../../shared/native-chat-types'
 import {
   asRecord,
@@ -122,42 +121,13 @@ export function decodeClaudeTranscriptLine(
     return null
   }
   const messageId = extractString(record.uuid) ?? extractString(message?.id)
-  const model = role === 'assistant' ? extractString(message?.model) : null
-  const usage = role === 'assistant' ? claudeTokenUsage(message?.usage) : null
   return {
     id: messageId ?? fallbackId,
     role: claudeMessageRole(role, blocks),
     blocks,
     timestamp,
-    source: 'transcript',
-    ...(model ? { model } : {}),
-    ...(usage ? { usage } : {})
+    source: 'transcript'
   }
-}
-
-function tokenCount(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
-}
-
-/** The API's accounting on an assistant record; null for the all-zero usage the
- *  CLI stamps on rows it synthesizes, which say nothing about the window. */
-function claudeTokenUsage(value: unknown): NativeChatTokenUsage | null {
-  const usage = asRecord(value)
-  if (!usage) {
-    return null
-  }
-  const decoded = {
-    inputTokens: tokenCount(usage.input_tokens),
-    cacheCreationInputTokens: tokenCount(usage.cache_creation_input_tokens),
-    cacheReadInputTokens: tokenCount(usage.cache_read_input_tokens),
-    outputTokens: tokenCount(usage.output_tokens)
-  }
-  const total =
-    decoded.inputTokens +
-    decoded.cacheCreationInputTokens +
-    decoded.cacheReadInputTokens +
-    decoded.outputTokens
-  return total > 0 ? decoded : null
 }
 
 // Keep only genuine image companion records; a marker mixed with prose must

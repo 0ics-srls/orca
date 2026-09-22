@@ -61,7 +61,10 @@ export function useNativeChatPickerCommandDispatch(args: {
         return
       }
       const localAnswer =
-        answerCommandLocally?.(text, sessionOptionsSurface?.resolvedSessionModel() ?? null) ?? null
+        answerCommandLocally?.(
+          text,
+          (modelId) => sessionOptionsSurface?.contextWindowTokens(modelId) ?? null
+        ) ?? null
       if (localAnswer !== null) {
         // Why: the host answers in place of the PTY, so nothing is written to the
         // terminal and attachments stay armed, matching the typed path.

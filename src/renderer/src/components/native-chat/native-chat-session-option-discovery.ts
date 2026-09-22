@@ -90,7 +90,7 @@ export async function discoverNativeChatCatalogModels(
     label: model.label,
     ...(model.description ? { description: model.description } : {}),
     ...(model.isDefault ? { isDefault: true as const } : {}),
-    ...(model.resolvedModel ? { resolvedModel: model.resolvedModel } : {}),
+    ...(model.contextWindowTokens ? { contextWindowTokens: model.contextWindowTokens } : {}),
     options:
       agent === 'claude'
         ? createClaudeCatalogOptions({
