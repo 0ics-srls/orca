@@ -76,23 +76,29 @@ monacoTS.javascriptDefaults.setCompilerOptions({
   jsx: monacoTS.JsxEmit.Preserve
 })
 
-try {
-  registerVueLanguage(monaco)
-  registerSvelteLanguage(monaco)
-  registerAstroLanguage(monaco)
-  registerNimLanguage(monaco)
-  registerJsonlLanguage(monaco)
-  registerShellMarkdownAliases(monaco)
-  installMonacoDelayerCancellationGuard()
-  installMonacoDiffEditorDisposalGuard(monaco)
-  installMonacoPeekReferencesPreviewOptions()
+function runMonacoSetupStep(name: string, setup: () => void): void {
+  try {
+    setup()
+  } catch (error) {
+    console.error(`[Monaco Setup] ${name} failed`, error)
+  }
+}
+
+runMonacoSetupStep('Vue language registration', () => registerVueLanguage(monaco))
+runMonacoSetupStep('Svelte language registration', () => registerSvelteLanguage(monaco))
+runMonacoSetupStep('Astro language registration', () => registerAstroLanguage(monaco))
+runMonacoSetupStep('Nim language registration', () => registerNimLanguage(monaco))
+runMonacoSetupStep('JSONL language registration', () => registerJsonlLanguage(monaco))
+runMonacoSetupStep('shell Markdown alias registration', () => registerShellMarkdownAliases(monaco))
+runMonacoSetupStep('delayer cancellation guard', installMonacoDelayerCancellationGuard)
+runMonacoSetupStep('diff editor disposal guard', () => installMonacoDiffEditorDisposalGuard(monaco))
+runMonacoSetupStep('peek references preview options', installMonacoPeekReferencesPreviewOptions)
+runMonacoSetupStep('context-menu paste', () => {
   // Why: Monaco's built-in context-menu Paste reads navigator.clipboard, which is
   // blocked in Orca's sandboxed renderer. Route it through the trusted IPC bridge
   // so right-click Paste works like Cmd+V (which already works via native events).
   installMonacoContextMenuPaste(monaco)
-} catch (error) {
-  console.error('[Monaco Setup] Language/feature registration failed', error)
-}
+})
 
 // Configure Monaco to use the locally bundled editor instead of CDN
 loader.config({ monaco })
