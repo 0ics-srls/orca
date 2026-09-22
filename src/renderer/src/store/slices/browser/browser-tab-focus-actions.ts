@@ -99,12 +99,15 @@ export function createBrowserTabFocusActions(
           return s
         }
         return {
-          activeBrowserTabId: tabId,
+          // Why: the global fields project the active workspace; another workspace's selection
+          // (a retained worktree, the floating panel) lands only in its own maps.
+          ...(browserTab.worktreeId === s.activeWorktreeId
+            ? { activeBrowserTabId: tabId, activeTabType: 'browser' as const }
+            : {}),
           activeBrowserTabIdByWorktree: {
             ...s.activeBrowserTabIdByWorktree,
             [browserTab.worktreeId]: tabId
           },
-          activeTabType: 'browser',
           activeTabTypeByWorktree: {
             ...s.activeTabTypeByWorktree,
             [browserTab.worktreeId]: 'browser'

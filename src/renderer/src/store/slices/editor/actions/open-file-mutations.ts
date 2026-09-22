@@ -25,14 +25,20 @@ export function createOpenFileMutations(
         const file = s.openFiles.find((f) => f.id === fileId)
         const worktreeId = file?.worktreeId
         return {
-          activeFileId: fileId,
+          // Why: the global field projects the active workspace; another workspace's selection
+          // (a retained worktree, the floating panel) lands only in its own map.
+          ...(worktreeId === undefined || worktreeId === s.activeWorktreeId
+            ? { activeFileId: fileId }
+            : {}),
           activeFileIdByWorktree: worktreeId
             ? { ...s.activeFileIdByWorktree, [worktreeId]: fileId }
             : s.activeFileIdByWorktree
         }
       })
       const state = get()
-      const worktreeId = state.activeWorktreeId
+      // Why the file's own workspace: its tab lives in that workspace's group, not the active one's.
+      const worktreeId =
+        state.openFiles.find((f) => f.id === fileId)?.worktreeId ?? state.activeWorktreeId
       if (!worktreeId) {
         return
       }
