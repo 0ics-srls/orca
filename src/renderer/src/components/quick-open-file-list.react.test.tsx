@@ -598,7 +598,45 @@ describe('useRuntimeFileListForWorktree', () => {
       // Why: the render before the effect restarts the request is the one that can leak.
       expect(states.length).toBeGreaterThan(rendersBeforeChange)
       for (const state of states.slice(rendersBeforeChange)) {
-        expect(state).toMatchObject({ files: [], truncated: false })
+        expect(state).toMatchObject({ files: [], loading: true, truncated: false })
+      }
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reports the new remote query as loading after the previous one failed', async () => {
+    vi.useFakeTimers()
+    seedRemoteWorktree()
+    const states: RuntimeFileListState[] = []
+    searchRuntimeFilePathsMock.mockRejectedValue(new Error('scan failed'))
+
+    try {
+      const root = await renderProbe({
+        enabled: true,
+        onState: (state) => states.push(state),
+        query: 'tar',
+        worktreeId: 'wt-remote'
+      })
+      await act(async () => vi.advanceTimersByTimeAsync(120))
+      await flushEffects()
+      expect(states.at(-1)).toMatchObject({ files: [], loading: false, loadError: 'scan failed' })
+
+      const rendersBeforeChange = states.length
+      await act(async () => {
+        root.render(
+          createElement(HookProbe, {
+            enabled: true,
+            onState: (state: RuntimeFileListState) => states.push(state),
+            query: 'target',
+            worktreeId: 'wt-remote'
+          })
+        )
+      })
+
+      expect(states.length).toBeGreaterThan(rendersBeforeChange)
+      for (const state of states.slice(rendersBeforeChange)) {
+        expect(state).toMatchObject({ files: [], loading: true })
       }
     } finally {
       vi.useRealTimers()
