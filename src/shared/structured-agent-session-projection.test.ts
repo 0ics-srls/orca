@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { AGENT_STATUS_MAX_FIELD_LENGTH } from './agent-status-field-normalization'
-import type { AgentJournalRenderItem, AgentJournalSubmission } from './agent-session-journal-types'
+import type {
+  AgentJournalRenderItem,
+  AgentJournalSubmission,
+  AgentJournalToolCallState
+} from './agent-session-journal-types'
 import { parsePaneKey } from './stable-pane-id'
 import {
   activeStructuredAgentSessionTurnId,
@@ -324,6 +328,71 @@ describe('structured agent session status projection', () => {
     expect(projectStructuredAgentSessionStatusSummary([ask, abandoned, running])).toEqual({
       status: 'working',
       latestPrompt: 'go'
+    })
+  })
+
+  describe('tool line between tool calls', () => {
+    const ask = item('ask', 1, {
+      kind: 'message',
+      role: 'user',
+      blocks: [{ type: 'text', text: 'go' }]
+    })
+    const running = item('running', 2, {
+      kind: 'status',
+      text: 'Working',
+      turnLifecycle: { turnId: 'turn-1', state: 'running' }
+    })
+    const call = (id: string, sequence: number, name: string, state: AgentJournalToolCallState) =>
+      item(id, sequence, {
+        kind: 'tool-call',
+        name,
+        input: { file_path: `/repo/${name}.ts` },
+        state
+      })
+
+    it('keeps naming the finished tool while the agent thinks, as the hook lane does', () => {
+      const summary = projectStructuredAgentSessionStatusSummary([
+        ask,
+        running,
+        call('read', 3, 'Read', 'completed')
+      ])
+      expect(summary).toMatchObject({ toolName: 'Read', toolInput: '/repo/Read.ts' })
+    })
+
+    it('names no tool after a failed call, as the hook lane does', () => {
+      const summary = projectStructuredAgentSessionStatusSummary([
+        ask,
+        running,
+        call('read', 3, 'Read', 'completed'),
+        call('edit', 4, 'Edit', 'failed')
+      ])
+      expect(summary.toolName).toBeUndefined()
+      expect(summary.toolInput).toBeUndefined()
+    })
+
+    it('prefers a running call over a newer finished one', () => {
+      const summary = projectStructuredAgentSessionStatusSummary([
+        ask,
+        running,
+        call('bash', 3, 'Bash', 'running'),
+        call('read', 4, 'Read', 'completed')
+      ])
+      expect(summary.toolName).toBe('Bash')
+    })
+
+    it("never carries an earlier turn's finished tool into the live one", () => {
+      const nextTurn = item('next-turn', 4, {
+        kind: 'status',
+        text: 'Working',
+        turnLifecycle: { turnId: 'turn-2', state: 'running' }
+      })
+      const summary = projectStructuredAgentSessionStatusSummary([
+        ask,
+        running,
+        call('read', 3, 'Read', 'completed'),
+        nextTurn
+      ])
+      expect(summary.toolName).toBeUndefined()
     })
   })
 

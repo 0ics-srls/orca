@@ -141,3 +141,36 @@ export function activeStructuredAgentSessionToolCall(
   }
   return null
 }
+
+/** The tool the status row names: the running call, else the turn's newest root call if it
+ *  completed. Matches the hook lane, whose post-tool event keeps naming the finished tool while
+ *  the agent thinks and whose failure event clears it. */
+export function statusStructuredAgentSessionToolCall(
+  items: readonly AgentJournalRenderItem[]
+): AgentJournalToolCallItem | null {
+  let newestSettled: AgentJournalToolCallItem | null | undefined
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index]
+    const body = item?.body
+    if (readAgentJournalTurn(body)) {
+      break
+    }
+    if (!isRootAgentJournalItem(item)) {
+      continue
+    }
+    // Why: a legacy journal may lack turn records; the prompt still bounds this turn.
+    if (body?.kind === 'message' && body.role === 'user') {
+      break
+    }
+    if (body?.kind !== 'tool-call') {
+      continue
+    }
+    if (body.state === 'running') {
+      return body
+    }
+    if (newestSettled === undefined) {
+      newestSettled = body.state === 'completed' ? body : null
+    }
+  }
+  return newestSettled ?? null
+}

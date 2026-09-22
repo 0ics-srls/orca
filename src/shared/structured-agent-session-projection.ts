@@ -11,8 +11,8 @@ import {
 } from './agent-status-types'
 import { describeToolInput } from './native-chat-tool-summary'
 import {
-  activeStructuredAgentSessionToolCall,
-  activeStructuredAgentSessionTurnId
+  activeStructuredAgentSessionTurnId,
+  statusStructuredAgentSessionToolCall
 } from './structured-agent-session-live-turn'
 
 import type { NativeChatBlock, NativeChatMessage } from './native-chat-types'
@@ -329,13 +329,13 @@ export function projectStructuredAgentSessionStatusSummary(
     return { status: null, latestPrompt: '' }
   }
   const status = projectStructuredAgentSessionStatus(items, submissions, currentFence)
-  const activeToolCall = status === 'working' ? activeStructuredAgentSessionToolCall(items) : null
-  const toolName = activeToolCall
-    ? normalizeOptionalField(activeToolCall.name, AGENT_STATUS_TOOL_NAME_MAX_LENGTH)
+  const statusToolCall = status === 'working' ? statusStructuredAgentSessionToolCall(items) : null
+  const toolName = statusToolCall
+    ? normalizeOptionalField(statusToolCall.name, AGENT_STATUS_TOOL_NAME_MAX_LENGTH)
     : undefined
-  const toolInput = activeToolCall
+  const toolInput = statusToolCall
     ? normalizeOptionalField(
-        describeToolInput(activeToolCall.input),
+        describeToolInput(statusToolCall.input),
         AGENT_STATUS_TOOL_INPUT_MAX_LENGTH
       )
     : undefined
