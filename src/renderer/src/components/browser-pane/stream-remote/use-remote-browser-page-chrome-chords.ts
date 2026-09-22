@@ -28,7 +28,9 @@ export function useRemoteBrowserPageChromeChords({
 }: {
   chromeShortcutScope: BrowserChromeShortcutScope
   workspaceId: string
-  runRemoteNavigation: (method: 'browser.reload') => Promise<void> | void
+  runRemoteNavigation: (
+    method: 'browser.reload' | 'browser.back' | 'browser.forward'
+  ) => Promise<void> | void
   setPaneNotice: Dispatch<SetStateAction<RemoteBrowserPaneNotice | null>>
 }): void {
   const keybindings = useAppStore((state) => state.keybindings)
@@ -46,6 +48,23 @@ export function useRemoteBrowserPageChromeChords({
         chromeShortcutScope === 'owned-target' &&
         !browserOverlayOwnsShortcutTarget(event.target, workspaceId)
       ) {
+        return
+      }
+      const historyMethod = keybindingMatchesAction(
+        'browser.back',
+        event,
+        shortcutPlatform,
+        keybindings
+      )
+        ? 'browser.back'
+        : keybindingMatchesAction('browser.forward', event, shortcutPlatform, keybindings)
+          ? 'browser.forward'
+          : null
+      if (historyMethod !== null) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        // Why: remote panes have no local webview, so history goes through runtime RPC.
+        void runRemoteNavigation(historyMethod)
         return
       }
       // Why: Cmd+F should open find even from the address bar (Chrome/Safari do), but reload must

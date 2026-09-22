@@ -153,10 +153,12 @@ export function useBrowserPageChromeFocus({
     if (!isActive) {
       return
     }
-    return window.api.ui.onFocusBrowserAddressBar(() => {
-      focusAddressBarNow()
+    return window.api.ui.onFocusBrowserAddressBar(({ browserPageId }) => {
+      if (browserPageId === browserTabId) {
+        focusAddressBarNow()
+      }
     })
-  }, [focusAddressBarNow, isActive])
+  }, [browserTabId, focusAddressBarNow, isActive])
 
   // Why: the IPC above only fires while the page itself holds focus; from chrome the chord
   // never leaves the renderer, and capture beats the workspace or an embedded editor to it.

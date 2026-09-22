@@ -270,6 +270,36 @@ describe('streamed browser pane chrome chords', () => {
     expect(mocks.runRemoteNavigation).not.toHaveBeenCalled()
   })
 
+  it('walks remote history from the focused split only', () => {
+    renderPane()
+    act(() => {
+      fireEvent.keyDown(screen.getByTestId('frame'), {
+        key: '[',
+        code: 'BracketLeft',
+        metaKey: true
+      })
+    })
+    expect(mocks.runRemoteNavigation).toHaveBeenCalledWith('browser.back')
+    expect(mocks.handleRemoteScreenshotKeyDown).not.toHaveBeenCalled()
+    cleanup()
+    mocks.runRemoteNavigation.mockClear()
+
+    renderPane('inactive')
+    const event = new KeyboardEvent('keydown', {
+      key: ']',
+      code: 'BracketRight',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
+    act(() => {
+      window.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(mocks.runRemoteNavigation).not.toHaveBeenCalled()
+  })
+
   // With no focused group known, only chords raised from inside this pane's own overlay count.
   it('answers an owned-target chord only when the event comes from its own overlay', () => {
     renderPane('owned-target')
