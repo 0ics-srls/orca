@@ -445,10 +445,12 @@ describe('registerWorktreeHandlers', () => {
       }
     ])
 
-    await pendingList
+    const result = await pendingList
 
     expect(store.removeWorktreeLineage).not.toHaveBeenCalled()
     expect(listWorktreesMock).toHaveBeenCalledTimes(1)
+    // Why: the rows are still shown, but a scan a mutation overtook may not vouch for what is absent.
+    expect(result).toMatchObject({ authoritative: false, source: 'git' })
   })
 
   it('does not retain invalidated detected scans after they settle', async () => {

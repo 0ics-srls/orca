@@ -5,6 +5,7 @@ import {
   repoHostId,
   withRepoHostOwnership
 } from '../listing/worktree-host-ownership'
+import { recordLocallyCreatedWorktree } from './created-worktree-sequence'
 
 /** Folds a fresh create result into the worktree, lineage and base-status maps. */
 export function applyCreatedWorktree(
@@ -12,6 +13,8 @@ export function applyCreatedWorktree(
   repoId: string,
   result: CreateWorktreeResult
 ) {
+  // Why before the write: a listing whose scan began before this point must not retire the row.
+  recordLocallyCreatedWorktree(result.worktree.id)
   // Why: worktrees.onChanged can add this worktree before this callback runs; appending blindly would duplicate it (React key clash).
   set((s) => {
     const hostId = repoHostId(s, repoId)

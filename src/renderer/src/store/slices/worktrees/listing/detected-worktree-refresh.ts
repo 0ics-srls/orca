@@ -22,6 +22,7 @@ import type {
   DetectedWorktreeRefreshOutcome
 } from './worktree-slice-types'
 import { teardownMissingWorktreeTerminalsBestEffort } from '../teardown/missing-worktree-terminal-teardown'
+import { currentWorktreeCreateSequence } from '../create/created-worktree-sequence'
 import { directSshAuthorityIsComplete } from './direct-ssh-authority'
 import {
   detectedWorktreeRefreshKey,
@@ -34,6 +35,21 @@ const runtimeDetectedWorktreeRefreshesInFlight = new Map<
   string,
   Promise<DetectedWorktreeListResult>
 >()
+
+// Why: coalescing hands a joiner a scan that began before it asked. The create fence that travels
+// with the result must therefore be the FIRST caller's, captured when the scan began — a worktree
+// created since is unseen by that scan, and must not read as deleted.
+const createSequenceAtInvocationStart = new Map<string, number>()
+
+function claimInvocationCreateSequence(invocationKey: string): number {
+  const existing = createSequenceAtInvocationStart.get(invocationKey)
+  if (existing !== undefined) {
+    return existing
+  }
+  const sequence = currentWorktreeCreateSequence()
+  createSequenceAtInvocationStart.set(invocationKey, sequence)
+  return sequence
+}
 
 const STALE_RUNTIME_GENERATION_ERROR = 'runtime_environment_generation_changed'
 // Why exactly one: a second stale answer means the connection is still churning, and
@@ -160,6 +176,7 @@ async function listDetectedWorktreesForRuntimeRepoOnce(
     })
     runtimeDetectedWorktreeRefreshesInFlight.set(key, refresh)
   }
+  const createSequenceAtRequestStart = claimInvocationCreateSequence(key)
   try {
     const result = await refresh
     if (
@@ -186,11 +203,13 @@ async function listDetectedWorktreesForRuntimeRepoOnce(
         environmentId,
         connectionGeneration,
         runtimeConnectionGeneration
-      }
+      },
+      createSequenceAtRequestStart
     }
   } finally {
     if (runtimeDetectedWorktreeRefreshesInFlight.get(key) === refresh) {
       runtimeDetectedWorktreeRefreshesInFlight.delete(key)
+      createSequenceAtInvocationStart.delete(key)
     }
   }
 }
@@ -223,10 +242,13 @@ export async function listDetectedWorktreesForRepoCoalesced(
   }
 
   const lease = acquireDetectedWorktreeRefreshLeaseForRepo(settings, repoId, options)
+  // Why keyed by provider request: waiters that joined one invocation share its scan and its inception.
+  const createSequenceAtRequestStart = claimInvocationCreateSequence(lease.providerRequestId)
   let providerResult: HostQualifiedDetectedWorktreeResult
   try {
     providerResult = await lease.result
   } catch {
+    createSequenceAtInvocationStart.delete(lease.providerRequestId)
     return {
       status: 'not-admitted',
       providerResult: {
@@ -238,6 +260,9 @@ export async function listDetectedWorktreesForRepoCoalesced(
       directSshAuthority: options.directSshAuthority
     }
   }
+  // Why here: once the result is in, no late joiner can arrive — the registry never hands out a
+  // settled invocation.
+  createSequenceAtInvocationStart.delete(lease.providerRequestId)
   if (
     !qualifiedProviderResultIsAdmitted(providerResult, lease.providerRequestId, repoId, options)
   ) {
@@ -264,6 +289,7 @@ export async function listDetectedWorktreesForRepoCoalesced(
     result: providerResult.result,
     providerResult,
     executionHostId: options.executionHostId,
-    directSshAuthority: options.directSshAuthority
+    directSshAuthority: options.directSshAuthority,
+    createSequenceAtRequestStart
   }
 }

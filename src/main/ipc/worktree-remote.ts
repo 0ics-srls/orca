@@ -2830,6 +2830,10 @@ async function performLocalWorktreeCreate(
     }
     throw error
   }
+  // Why: the worktree is listable from here on. Every scan that started earlier -- including a
+  // prepared checkout's, which listings hide while it is still locked -- now describes a catalog
+  // without it, and must not be served or cached as the current one.
+  runWorktreeChangeInvalidators(repo.id)
 
   // Why: fallible metadata work after creation must not leave a real workspace name reusable.
   if (shouldRetireGeneratedName) {

@@ -27,6 +27,7 @@ import {
   rememberAuthoritativelyRemovedWorktrees
 } from './authoritative-worktree-removal-memory'
 import type { FencedWorktreeMergeArgs } from './worktree-slice-types'
+import { worktreeCreatedAfter } from '../create/created-worktree-sequence'
 
 export function preserveConcurrentManualOrder<T extends Worktree>(
   incoming: readonly T[],
@@ -173,12 +174,24 @@ export function mergeFetchedWorktrees(
       hasBranchScopedReviewContext: hasBranchScopedHostedReviewContext,
       updateWorktreeGitIdentity: s.updateWorktreeGitIdentity
     })
-    const worktrees = sanitizeHostedReviewLinksForBranchClears(
-      incoming,
-      s.worktreesByRepo[args.repoId]
-    )
     const currentForHost = (s.worktreesByRepo[args.repoId] ?? []).filter((worktree) =>
       worktreeMatchesHost(worktree, args.hostId, matchOptions)
+    )
+    // Why: a listing speaks only for the catalog as of when its scan began. A worktree this client
+    // finished creating since is outside its evidence: an authoritative reply that lacks it may
+    // neither drop the row nor retire its state, or a scan that raced the create reads as "your new
+    // workspace was deleted" — blank Landing, cancelled agent launch. Hydrated rows are not fenced:
+    // they describe pre-launch state the scan did see, and a stale one must still be reaped.
+    const createSequence = args.refresh.createSequenceAtRequestStart
+    const createdAfterScanBegan = (worktreeId: string): boolean =>
+      createSequence !== undefined && worktreeCreatedAfter(worktreeId, createSequence)
+    const incomingIds = new Set(incoming.map((worktree) => worktree.id))
+    const rowsUnseenByScan = currentForHost.filter(
+      (worktree) => !incomingIds.has(worktree.id) && createdAfterScanBegan(worktree.id)
+    )
+    const worktrees = sanitizeHostedReviewLinksForBranchClears(
+      rowsUnseenByScan.length > 0 ? [...incoming, ...rowsUnseenByScan] : incoming,
+      s.worktreesByRepo[args.repoId]
     )
     const mergedDetected = mergeDetectedWorktreesForHost(
       s.detectedWorktreesByRepo[args.repoId],
@@ -203,7 +216,7 @@ export function mergeFetchedWorktrees(
       args.hostId,
       matchOptions
     )
-    const removedIds =
+    const removedIds = (
       args.purgeRemovedWorktrees === false
         ? []
         : getRemovedWorktreeIdsAfterAuthoritativeScan(
@@ -212,6 +225,7 @@ export function mergeFetchedWorktrees(
             args.refresh.result,
             args.hostId
           )
+    ).filter((worktreeId) => !createdAfterScanBegan(worktreeId))
     authoritativelyRemovedIds = removedIds
     if (args.refresh.result.authoritative) {
       authoritativelySeenIds = args.refresh.result.worktrees.map((worktree) => worktree.id)

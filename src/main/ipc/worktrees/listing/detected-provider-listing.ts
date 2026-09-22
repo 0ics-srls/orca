@@ -104,6 +104,18 @@ export async function listDetectedWorktreesForCapturedRepo(
       })
     } else {
       const scan = await listDetectedGitWorktrees(store, repo)
+      if (scan.superseded) {
+        // Why: a worktree mutation overtook this scan, so its rows describe a catalog that no longer
+        // exists. Published as authoritative, a worktree created during the scan reads as deleted and
+        // the renderer retires it. The rows are still worth showing; the absence claim is not.
+        return {
+          repoId: repo.id,
+          authoritative: false,
+          source: 'git',
+          worktrees: buildDetectedGitWorktrees(store, repo, scan.gitWorktrees, allMeta),
+          unavailableReason: 'Worktree scan was overtaken by a concurrent worktree change'
+        }
+      }
       gitWorktrees = scan.gitWorktrees
       freshScan = scan.fresh
       sideEffectToken = scan.sideEffectToken

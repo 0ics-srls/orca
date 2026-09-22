@@ -102,9 +102,13 @@ export function createWorktreeEventRuntime(
     if (!after) {
       return
     }
+    // Why: the merge is the authority on what the reply retired. A row it kept is one the reply
+    // could not vouch against (it was created after that scan began), so this diff must not purge
+    // it just because the host's detected list has not caught up yet.
+    const stillListed = getVisibleWorktreeIdsForRepo(afterState, repoId)
     const removed: string[] = []
     for (const id of before) {
-      if (after.has(id)) {
+      if (after.has(id) || stillListed.has(id)) {
         continue
       }
       // A recently renamed worktree's old/new id isn't a deletion — its state moved to the new id; the list just lags.
