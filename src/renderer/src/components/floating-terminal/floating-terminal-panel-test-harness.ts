@@ -149,6 +149,14 @@ function resetStore(tabs: TerminalTab[] = []): void {
     browserDefaultUrl: 'about:blank',
     keybindings: {},
     tabBarOrderByWorktree: { [FLOATING_TERMINAL_WORKTREE_ID]: tabs.map((tab) => tab.id) },
+    floatingWorkspacePath: null,
+    // The real slice stores the host-resolved cwd; mirror the write so panes see it next render.
+    setFloatingWorkspacePath: (path: string) => {
+      storeBox.state = {
+        ...(storeBox.state as FloatingPanelStoreState),
+        floatingWorkspacePath: path
+      }
+    },
     settings: { floatingTerminalCwd: '' }
   } satisfies FloatingPanelStoreState
 }

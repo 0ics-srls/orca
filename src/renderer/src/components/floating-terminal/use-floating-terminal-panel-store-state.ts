@@ -23,6 +23,9 @@ export function useFloatingTerminalPanelStoreState() {
   const openFile = useAppStore((state) => state.openFile)
   const browserDefaultUrl = useAppStore((state) => state.browserDefaultUrl)
   const floatingTerminalCwd = useAppStore((state) => state.settings?.floatingTerminalCwd ?? '')
+  // The host-resolved floating directory; the geometry hook keeps it fresh.
+  const cwd = useAppStore((state) => state.floatingWorkspacePath)
+  const setFloatingWorkspacePath = useAppStore((state) => state.setFloatingWorkspacePath)
   const generatedTabTitlesEnabled = useAppStore(
     (state) => state.settings?.tabAutoGenerateTitle === true
   )
@@ -56,6 +59,8 @@ export function useFloatingTerminalPanelStoreState() {
     openFile,
     browserDefaultUrl,
     floatingTerminalCwd,
+    cwd,
+    setFloatingWorkspacePath,
     generatedTabTitlesEnabled,
     managedBrowserCreationEnabled
   }
