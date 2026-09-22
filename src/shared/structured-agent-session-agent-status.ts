@@ -7,6 +7,9 @@ import type { StructuredAgentSessionProjectedStatus } from './structured-agent-s
 export type StructuredAgentSessionAgentStatus = {
   state: AgentStatusState
   workingMode?: AgentWorkingMode
+  /** The lead had settled and live child work is the only thing holding this row open. The
+   *  journal cannot date such a row: its clock stopped when the lead's turn did. */
+  fromChildWork: boolean
 }
 
 /** The lead state one projected session status stands for, before child work is folded in. */
@@ -24,8 +27,9 @@ export function structuredAgentSessionAgentStatus(
     status: StructuredAgentSessionProjectedStatus
   }
 ): StructuredAgentSessionAgentStatus {
+  const leadState = structuredAgentSessionLeadState(summary.status)
   const resolution = foldAgentLeadStatus({
-    leadState: structuredAgentSessionLeadState(summary.status),
+    leadState,
     // Inert, not decided: a projected session status has no interrupted member, so this lane
     // cannot express one. The hook lane's guard exists to distrust a stale inventory snapshot;
     // here the task list is the provider's live roster and a settled task leaves it on its own.
@@ -34,6 +38,7 @@ export function structuredAgentSessionAgentStatus(
   })
   return {
     state: resolution.stateName,
-    ...(resolution.workingMode ? { workingMode: resolution.workingMode } : {})
+    ...(resolution.workingMode ? { workingMode: resolution.workingMode } : {}),
+    fromChildWork: leadState === 'done' && resolution.stateName !== 'done'
   }
 }

@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AgentSessionStatusSummary } from '../../shared/agent-session-wire'
+import { isFreshNonDoneAgentStatus } from '../../shared/agent-status-freshness'
 import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
@@ -172,21 +173,23 @@ describe('AgentHookServer ingestStructuredStatus', () => {
   })
 
   // `summary.updatedAt` is the journal's last activity, which a background-task edge does not
-  // advance, so every fold transition must still commit on an unchanged clock.
-  it('folds task edges that carry no new journal activity', () => {
+  // advance. Dating the row by it aged a genuinely live monitoring session past the 30-minute
+  // staleness window every reader applies, so freshness is stamped when this host observed it.
+  it('dates a task edge by when the host saw it, not by the journal clock', () => {
     const server = new AgentHookServer()
-    for (const backgroundTasks of [
-      [{ id: 'child-1', kind: 'agent' as const, state: 'working' as const }],
-      [{ id: 'child-1', kind: 'agent' as const, state: 'done' as const }],
-      []
-    ]) {
-      server.ingestStructuredStatus(summary({ status: 'idle', backgroundTasks }), SUBJECT)
-    }
-    expect(server.getStatusSnapshot()[0]).toMatchObject({
-      state: 'done',
-      stateStartedAt: OBSERVED_AT,
-      evidenceObservedAt: OBSERVED_AT
-    })
+    const before = Date.now()
+    server.ingestStructuredStatus(
+      summary({
+        status: 'idle',
+        updatedAt: OBSERVED_AT,
+        backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+      }),
+      SUBJECT
+    )
+    const row = server.getStatusSnapshot()[0]
+    expect(row).toMatchObject({ state: 'working', workingMode: 'monitoring' })
+    expect(row?.evidenceObservedAt).toBeGreaterThanOrEqual(before)
+    expect(isFreshNonDoneAgentStatus({ ...row!, updatedAt: row!.evidenceObservedAt! })).toBe(true)
   })
 
   it('marks a session whose provider child is gone as held, not owned', () => {

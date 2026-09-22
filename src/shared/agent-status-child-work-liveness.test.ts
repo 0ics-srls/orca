@@ -26,11 +26,20 @@ describe('agentChildWorkLivenessFromEvidence', () => {
 })
 
 describe('agentChildWorkLiveness', () => {
-  it('reads working, monitoring and stateless agents and workflows as live agent work', () => {
+  it('reads working, monitoring and stateless agents as live agent work', () => {
     for (const state of ['working', 'monitoring', undefined] as const) {
       expect(agentChildWorkLiveness([child({ state })])).toBe('working')
     }
-    expect(agentChildWorkLiveness([child({ kind: 'workflow' })])).toBe('working')
+  })
+
+  // A workflow is a lane that runs agents, not an agent: the agents it runs announce themselves,
+  // and the children projection skips it, so counting it as agent work claims a child that the
+  // expanded row cannot show.
+  it('reads a live workflow as a watch loop, not as agent work', () => {
+    expect(agentChildWorkLiveness([child({ kind: 'workflow' })])).toBe('monitoring')
+    expect(agentChildWorkLiveness([child({ kind: 'workflow', state: undefined })])).toBe(
+      'monitoring'
+    )
   })
 
   it('keeps a waiting, blocked or unverifiable agent live, the way a shell in those states is', () => {

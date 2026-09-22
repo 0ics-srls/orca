@@ -1,5 +1,6 @@
 import { AGENT_STATUS_MAX_SUBAGENTS } from './agent-status-types'
 import { classifyClaudeBackgroundTaskKind } from './claude-background-task-kind'
+import { isAgentChildWorkKind } from './agent-status-child-work-liveness'
 
 const CLAUDE_TERMINAL_BACKGROUND_TASK_STATUSES = new Set([
   'idle',
@@ -68,7 +69,7 @@ export function readClaudeBackgroundAgentTasks(hookPayload: Record<string, unkno
       hasRunningNonAgentTask ||= !isTerminal
       continue
     }
-    const isAgentTask = classifyClaudeBackgroundTaskKind(taskType) === 'agent'
+    const isAgentTask = isAgentChildWorkKind(classifyClaudeBackgroundTaskKind(taskType))
     // Why: future non-agent types and nonterminal labels must fail active; only typed agent rows or explicit terminal states can safely retire work.
     if (!isAgentTask && !isTerminal) {
       hasRunningNonAgentTask = true

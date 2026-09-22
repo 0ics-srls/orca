@@ -35,7 +35,7 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
     }
     const previous = this.canonicalStatusStore.getParent(parsed)
     const priorStatus = previous?.status
-    const { state, workingMode } = structuredAgentSessionAgentStatus({
+    const { state, workingMode, fromChildWork } = structuredAgentSessionAgentStatus({
       status: summary.status,
       backgroundTasks: summary.backgroundTasks
     })
@@ -45,6 +45,7 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
       throw new Error('Structured status address conflicts with legacy evidence')
     }
     const snapshot = this.canonicalStatusStore.getSnapshot()
+    const observedAt = Math.max(Date.now(), priorStatus?.receivedAt ?? 0)
     const status: AgentStatusIpcPayload = {
       paneKey,
       tabId,
@@ -62,8 +63,12 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
       ...(summary.lastAssistantMessage
         ? { lastAssistantMessage: summary.lastAssistantMessage }
         : {}),
-      receivedAt: Math.max(Date.now(), priorStatus?.receivedAt ?? 0),
-      evidenceObservedAt: summary.updatedAt,
+      receivedAt: observedAt,
+      // The journal clock dates a lead's turn, so a restart's republish is not new evidence. It
+      // cannot date child work: it stopped when the lead did, and reading it as the evidence age
+      // retires a genuinely live roster at the 30-minute staleness window. Only then does the
+      // host's own observation clock stand in, matching what the hook lane stamps for its rows.
+      evidenceObservedAt: fromChildWork ? observedAt : summary.updatedAt,
       // Continuity is the whole published work identity: `state` alone no longer means "a turn is
       // running", so monitoring that becomes a real turn must restart the clock, not inherit it.
       stateStartedAt:

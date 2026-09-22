@@ -14,9 +14,10 @@ export type AgentChildWorkLivenessEvidence = {
   hasLiveNonAgentWork: boolean
 }
 
-/** Agents and the workflows that run them; everything else is a watch loop or a shell. */
+/** The one owner of the kind test: a new child-work kind decides here whether it is agent work.
+ *  A workflow is not — the roster claims agents upstream and leaves the shell and the workflow. */
 export function isAgentChildWorkKind(kind: AgentChildWorkKind): boolean {
-  return kind === 'agent' || kind === 'workflow'
+  return kind === 'agent'
 }
 
 /** The settlement rule `resolveAgentChildWorkFreshness` already reads rows by: only an explicit
