@@ -47,7 +47,13 @@ export function readCodexSubagentOrigin(
       ? null
       : { threadSource, parentage: readCodexSubagentParentage(payload, subagentSource) }
   }
-  if (subagentSource === undefined || subagentSource === null) {
+  // With no stated thread_source, `source` is the only signal, and it must be
+  // readable as one: every release spells a subagent source as either the spawn
+  // record or the agent's role. A value that is neither (a falsy primitive most
+  // of all, which reads as a negative flag) is treated as no statement — hiding
+  // a user's own thread on an unreadable value is the worse of the two errors,
+  // since letting a worker transcript through is at least visible.
+  if (!asRecord(subagentSource) && !extractString(subagentSource)) {
     return null
   }
   return { threadSource: null, parentage: readCodexSubagentParentage(payload, subagentSource) }

@@ -142,6 +142,15 @@ describe('readCodexSubagentOrigin', () => {
     expect(readCodexSubagentOrigin({ id: 'user-thread' })).toBeNull()
   })
 
+  it('keeps a thread whose only subagent signal is an unreadable value', () => {
+    // No release spells a subagent source this way. Reading one as a spawn
+    // would drop the user's own thread out of their history on nothing but a
+    // key that happens to be present, so an unreadable value states nothing.
+    for (const subagent of [false, true, 0, 1, '', '   ', []]) {
+      expect(readCodexSubagentOrigin({ id: 'user-thread', source: { subagent } })).toBeNull()
+    }
+  })
+
   it('lets a stated user thread_source outrank a subagent source', () => {
     expect(
       readCodexSubagentOrigin({
