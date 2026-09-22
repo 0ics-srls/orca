@@ -2,6 +2,25 @@ import { describe, expect, it } from 'vitest'
 import { detectLanguage } from './language-detect'
 
 describe('detectLanguage', () => {
+  it.each([
+    'report.abap',
+    'src/zcor0260.prog.abap',
+    'src/zcl_demo.clas.abap',
+    'src/zif_demo.intf.abap',
+    'C:\\repo\\src\\ZCL_DEMO.CLAS.ABAP',
+    '\\\\server\\share\\src\\ZREPORT.PROG.ABAP',
+    '/home/user/folder workspace/src/Report.AbAp'
+  ])('maps ABAP source %s to the Monaco built-in abap language id', (filePath) => {
+    expect(detectLanguage(filePath)).toBe('abap')
+  })
+
+  it.each(['src.abap/README', 'src\\abap.abap\\README', 'report.abap.bak', 'report.abapx'])(
+    'keeps non-ABAP file %s on plaintext',
+    (filePath) => {
+      expect(detectLanguage(filePath)).toBe('plaintext')
+    }
+  )
+
   it('maps .vue files to the custom vue language id', () => {
     expect(detectLanguage('src/components/App.vue')).toBe('vue')
   })
