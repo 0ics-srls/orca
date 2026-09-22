@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -15,7 +15,10 @@ vi.mock('./runner', async (importOriginal) => ({
   gitExecFileAsync: gitExecFileAsyncMock
 }))
 
-import { LOOSE_OBJECT_PACK_THRESHOLD } from '../../shared/repo-maintenance-policy'
+import {
+  LOOSE_OBJECT_PACK_KEEP_CONTENT,
+  LOOSE_OBJECT_PACK_THRESHOLD
+} from '../../shared/repo-maintenance-policy'
 import { createPackLooseObjectsMaintenanceTask } from './pack-loose-objects-maintenance-task'
 
 const NO_ABORT = new AbortController().signal
@@ -107,6 +110,26 @@ describe('loose-object maintenance task', () => {
     ])
     expect(packCall[1].cwd).toBe(repoPath)
     expect(report).toEqual({ batchExhausted: false })
+  })
+
+  it('keeps the pack it wrote before dropping the loose copies', async () => {
+    const { repoPath, commonDir } = await repoWithLooseObjects(3)
+    const hash = 'ab'.repeat(20)
+    const keepPath = join(commonDir, 'objects', 'pack', `loose-${hash}.keep`)
+    let keptBeforePrune: string | undefined
+    gitExecFileAsyncMock.mockImplementation(async (argv) => {
+      if (argv[0] === 'pack-objects') {
+        return { stdout: `${hash}\n`, stderr: '' }
+      }
+      if (gitExecFileAsyncMock.mock.calls.length > 1) {
+        keptBeforePrune = await readFile(keepPath, 'utf8').catch(() => undefined)
+      }
+      return { stdout: '', stderr: '' }
+    })
+
+    await taskFor(repoPath, commonDir).pack(NO_LOCK)
+
+    expect(keptBeforePrune).toBe(LOOSE_OBJECT_PACK_KEEP_CONTENT)
   })
 
   it('never persists anything into the user Git config', async () => {

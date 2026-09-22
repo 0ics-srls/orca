@@ -6,6 +6,7 @@ import type {
 } from '../../shared/repo-maintenance-policy'
 import { withSpan } from '../observability/tracer'
 import type { RepoCommonDirResolver } from './git-common-dir-paths'
+import { createObjectPackHousekeepingTask } from './object-pack-housekeeping-maintenance-task'
 import { createPackLooseObjectsMaintenanceTask } from './pack-loose-objects-maintenance-task'
 import { createPackRefsMaintenanceTask } from './pack-refs-maintenance-task'
 import { gitExecFileAsync } from './runner'
@@ -200,7 +201,7 @@ export function createLocalRepoMaintenanceTarget(
   args: LocalRepoMaintenanceTargetArgs
 ): RepoMaintenanceTarget {
   const gitOptions = args.wslDistro ? { wslDistro: args.wslDistro } : {}
-  // Every task probes before it packs, and both tasks want the same answer, so
+  // Every task probes before it packs, and every task wants the same answer, so
   // one `rev-parse` is resolved for the whole target rather than per call.
   let commonDir: string | undefined
   const resolveCommonDir: RepoCommonDirResolver = async (signal?: AbortSignal) => {
@@ -234,7 +235,9 @@ export function createLocalRepoMaintenanceTarget(
           ? {}
           : { threshold: overrides.objectThreshold }),
         ...(overrides?.batchSize === undefined ? {} : { batchSize: overrides.batchSize })
-      })
+      }),
+      // Last: it tends the packs the object task keeps, including any it just wrote.
+      createObjectPackHousekeepingTask(taskArgs)
     ],
     async isOptedOut(signal: AbortSignal) {
       const read = async (type: 'bool' | 'int', name: string): Promise<string | undefined> => {

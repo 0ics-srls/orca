@@ -48,6 +48,14 @@ export function objectsDirectoryForMainProcess(
   return joinInSpellingOf(commonDirForMainProcess(commonDir, wslDistro), 'objects')
 }
 
+/** Absolute `objects/pack/` path in the spelling the main process can open. */
+export function packDirectoryForMainProcess(
+  commonDir: string,
+  wslDistro: string | undefined
+): string {
+  return joinInSpellingOf(commonDirForMainProcess(commonDir, wslDistro), 'objects', 'pack')
+}
+
 /** The common dir itself in the spelling the main process can open. */
 export function gitCommonDirForMainProcess(
   commonDir: string,

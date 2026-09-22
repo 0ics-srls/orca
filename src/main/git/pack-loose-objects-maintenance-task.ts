@@ -13,8 +13,10 @@ import {
 import {
   objectPackBaseForGit,
   objectsDirectoryForMainProcess,
+  packDirectoryForMainProcess,
   type RepoCommonDirResolver
 } from './git-common-dir-paths'
+import { keepLooseObjectPack, packHashFromPackObjectsOutput } from './loose-object-pack-keep'
 import type { MaintenanceTaskArgs } from './pack-refs-maintenance-task'
 import { gitExecFileAsync } from './runner'
 
@@ -42,7 +44,7 @@ export function createPackLooseObjectsMaintenanceTask(
 ): RepoMaintenanceTask {
   const gitOptions = args.wslDistro ? { wslDistro: args.wslDistro } : {}
   const batchSize = args.batchSize ?? LOOSE_OBJECT_PACK_BATCH
-  const runGit = (argv: string[], stdin?: string): Promise<unknown> =>
+  const runGit = (argv: string[], stdin?: string): Promise<{ stdout: string }> =>
     gitExecFileAsync(argv, {
       cwd: args.repoPath,
       ...gitOptions,
@@ -93,13 +95,22 @@ export function createPackLooseObjectsMaintenanceTask(
       if (ids.length === 0) {
         return report
       }
-      await runGit(
+      const { stdout } = await runGit(
         [
           ...PACK_LOOSE_OBJECTS_ARGS,
           objectPackBaseForGit(resolved.commonDir, LOOSE_OBJECT_PACK_BASE_NAME)
         ],
         `${ids.join('\n')}\n`
       )
+      // Kept before the loose copies go, so there is no moment when a pre-cruft
+      // `gc` could explode the pack and find nothing loose left to fall back on.
+      const hash = packHashFromPackObjectsOutput(stdout)
+      if (hash) {
+        await keepLooseObjectPack(
+          packDirectoryForMainProcess(resolved.commonDir, args.wslDistro),
+          hash
+        )
+      }
       // And again, so the backlog the scheduler re-probes actually falls. Git's
       // own `repack -d` prunes immediately after writing its pack in the same
       // way: a reader that misses an object in its cached pack list re-reads the

@@ -173,6 +173,34 @@ export const PRUNE_PACKED_ARGS = ['prune-packed', '--quiet'] as const
 export const LOOSE_OBJECT_PACK_TIMEOUT_MS = 5 * 60_000
 
 /**
+ * Every pack Orca writes from loose objects carries a `.keep` with exactly this
+ * content, and Orca only ever removes a `.keep` that says so.
+ *
+ * The keep is what makes those packs safe on Git before 2.40, which has no
+ * cruft packs by default: there, `gc --auto` repacks with `-A`, which turns the
+ * unreachable objects of every unkept pack straight back into loose objects --
+ * undoing the pack and re-starting the loop it broke. Kept packs are left alone,
+ * and are not counted toward `gc.autoPackLimit` either.
+ */
+export const LOOSE_OBJECT_PACK_KEEP_CONTENT =
+  'orca: loose-object pack, released after gc.pruneExpire\n'
+
+/**
+ * Housekeeping on Orca's kept packs is owed as soon as there is any: one keep
+ * past its expiry, or two packs that can become one.
+ */
+export const OBJECT_PACK_HOUSEKEEPING_THRESHOLD = 1
+
+/**
+ * A kept pack at or past this many objects is never merged again, so no pack is
+ * rewritten over and over as the day's batches land beside it.
+ */
+export const OBJECT_PACK_MERGE_MAX_OBJECTS = 10 * LOOSE_OBJECT_PACK_BATCH
+
+/** Git's own default for `gc.pruneExpire`, used when the user has not set one. */
+export const DEFAULT_GC_PRUNE_EXPIRE_MS = 14 * 24 * 60 * 60_000
+
+/**
  * Backstop on a whole attempt: aborts it, rather than abandoning it. Every Git
  * child is already deadlined, but an admission wait is not, and the whole app
  * shares one maintenance slot. Abandoning would release that slot while a pack
@@ -182,7 +210,7 @@ export const LOOSE_OBJECT_PACK_TIMEOUT_MS = 5 * 60_000
 export const REPO_MAINTENANCE_ATTEMPT_DEADLINE_MS = PACK_REFS_TIMEOUT_MS + 5 * 60_000
 
 /** The tasks one attempt runs, in the order it runs them. */
-export type RepoMaintenanceTaskId = 'refs' | 'objects'
+export type RepoMaintenanceTaskId = 'refs' | 'objects' | 'object-packs'
 
 /** How a single task ended. */
 export type RepoMaintenanceTaskOutcome =

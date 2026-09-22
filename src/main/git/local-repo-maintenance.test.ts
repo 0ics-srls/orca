@@ -96,8 +96,8 @@ afterEach(() => {
 })
 
 describe('local repo maintenance target', () => {
-  it('carries the ref task and the loose-object task, refs first', () => {
-    expect(target().tasks.map((task) => task.id)).toEqual(['refs', 'objects'])
+  it('carries the ref, loose-object and kept-pack tasks, in that order', () => {
+    expect(target().tasks.map((task) => task.id)).toEqual(['refs', 'objects', 'object-packs'])
   })
 
   it('runs the ref task before the object task inside one attempt', async () => {
@@ -108,7 +108,7 @@ describe('local repo maintenance target', () => {
     const order: string[] = []
 
     getLocalRepoMaintenance().arm(recordingTarget(order))
-    await vi.waitFor(() => expect(order).toEqual(['refs', 'objects']))
+    await vi.waitFor(() => expect(order).toEqual(['refs', 'objects', 'object-packs']))
   })
 
   it('packs objects while agents are working, and leaves refs for a quiet window', async () => {
@@ -119,9 +119,9 @@ describe('local repo maintenance target', () => {
     const order: string[] = []
 
     getLocalRepoMaintenance().arm(recordingTarget(order))
-    await vi.waitFor(() => expect(order).toEqual(['objects']))
+    await vi.waitFor(() => expect(order).toEqual(['objects', 'object-packs']))
     await getLocalRepoMaintenance().whenAttemptSettled()
-    expect(order).toEqual(['objects'])
+    expect(order).toEqual(['objects', 'object-packs'])
   })
 
   it('packs nothing at all when the gate cannot be seen', async () => {
@@ -201,7 +201,7 @@ describe('local repo maintenance target', () => {
   it('reports an unresolvable repository rather than guessing a path', async () => {
     readRepoCommonDirFromGitMock.mockResolvedValue(undefined)
 
-    for (const id of ['refs', 'objects'] as const) {
+    for (const id of ['refs', 'objects', 'object-packs'] as const) {
       await expect(taskOf(id).probeBacklog(10, NO_ABORT)).resolves.toBeUndefined()
     }
   })

@@ -465,10 +465,13 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
     const loosePath = join(repoPath, '.git', 'objects', blob.slice(0, 2), blob.slice(2))
     await expect(readFile(loosePath)).resolves.toBeDefined()
 
-    await runGitWithStdin(
+    const { stdout: packHash } = await runGitWithStdin(
       ['pack-objects', '--quiet', '--non-empty', '.git/objects/pack/loose'],
       `${blob}\n`
     )
+    // The pack is kept, so a pre-cruft `repack -A` cannot explode it back to loose.
+    expect(packHash.trim()).toMatch(/^[0-9a-f]{40}$/)
+    await writeFile(join(repoPath, '.git', 'objects', 'pack', `loose-${packHash.trim()}.keep`), '')
     await runGit(['prune-packed', '--quiet'])
 
     // The loose copy is gone and the object still reads, out of the new pack.
@@ -478,6 +481,19 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
     })
     // Still unreachable, which is the point: no ref was created for it.
     await expect(runGit(['cat-file', '-t', blob])).resolves.toMatchObject({ stdout: 'blob\n' })
+
+    await runGit(['repack', '-d', '-l', '-A', '--unpack-unreachable=2.weeks.ago'])
+    await expect(readFile(loosePath)).rejects.toMatchObject({ code: 'ENOENT' })
+
+    // Keeps are released by age, read in Git's own spelling: `never` is 0.
+    await expect(
+      runGit(['config', '--type=expiry-date', '--get', 'gc.pruneExpire'])
+    ).rejects.toMatchObject({ code: 1 })
+    await runGit(['config', 'gc.pruneExpire', 'never'])
+    await expect(
+      runGit(['config', '--type=expiry-date', '--get', 'gc.pruneExpire'])
+    ).resolves.toMatchObject({ stdout: '0\n' })
+    await runGit(['config', '--unset', 'gc.pruneExpire'])
   })
 
   it('packs loose refs and reads the maintenance opt-out at the baseline', async () => {
@@ -503,14 +519,19 @@ describeBinaryCompatibility('real Git binary compatibility', () => {
     )
 
     // `--get` exits 1 on an unset key; that absence must read as consent, not opt-out.
-    await expect(runGit(['config', '--bool', '--get', 'maintenance.auto'])).rejects.toMatchObject({
-      code: 1
-    })
-    await runGit(['config', 'maintenance.auto', 'false'])
-    await expect(runGit(['config', '--bool', '--get', 'maintenance.auto'])).resolves.toMatchObject({
-      stdout: 'false\n'
-    })
+    await expect(
+      runGit(['config', '--type=bool', '--get', 'maintenance.auto'])
+    ).rejects.toMatchObject({ code: 1 })
+    await runGit(['config', 'maintenance.auto', 'off'])
+    await expect(
+      runGit(['config', '--type=bool', '--get', 'maintenance.auto'])
+    ).resolves.toMatchObject({ stdout: 'false\n' })
     await runGit(['config', '--unset', 'maintenance.auto'])
+    await runGit(['config', 'gc.auto', '0'])
+    await expect(runGit(['config', '--type=int', '--get', 'gc.auto'])).resolves.toMatchObject({
+      stdout: '0\n'
+    })
+    await runGit(['config', '--unset', 'gc.auto'])
   })
 
   it('fetches hosted review heads into dedicated refs', async () => {
