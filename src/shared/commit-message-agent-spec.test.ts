@@ -255,6 +255,7 @@ describe('model discovery parsers', () => {
             },
             {
               value: 'opus[1m]',
+              resolvedModel: 'claude-opus-5[1m]',
               displayName: 'Opus (1M context)',
               description: 'Opus 5 with 1M context · $5/$25 per Mtok',
               supportsEffort: true,
@@ -271,6 +272,7 @@ describe('model discovery parsers', () => {
         id: 'opus[1m]',
         label: 'Opus (1M context)',
         description: 'Opus 5 with 1M context · $5/$25 per Mtok',
+        resolvedModel: 'claude-opus-5[1m]',
         thinkingLevels: [
           { id: 'low', label: 'Low' },
           { id: 'medium', label: 'Medium' },

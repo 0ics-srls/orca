@@ -125,6 +125,7 @@ describe('native chat session option enrichment', () => {
           id: 'opus[1m]',
           label: 'Opus (1M context)',
           description: 'Opus 5 with 1M context',
+          resolvedModel: 'claude-opus-5[1m]',
           thinkingLevels: [
             { id: 'low', label: 'Low' },
             { id: 'high', label: 'High' }
@@ -162,6 +163,7 @@ describe('native chat session option enrichment', () => {
     expect(models.find(({ id }) => id === 'opus[1m]')).toMatchObject({
       id: 'opus[1m]',
       description: 'Opus 5 with 1M context',
+      resolvedModel: 'claude-opus-5[1m]',
       options: [
         expect.objectContaining({
           id: 'effort',
