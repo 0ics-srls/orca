@@ -79,12 +79,17 @@ describe('scanAiVaultSessions Codex worker sessions', () => {
           payload: {
             id: 'legacy-worker-session',
             cwd: '/repo/app',
+            parent_thread_id: 'user-session',
+            agent_nickname: 'Worker',
+            agent_path: '/root/legacy_worker',
             source: {
               subagent: {
                 thread_spawn: {
                   parent_thread_id: 'user-session',
                   depth: 1,
-                  agent_nickname: 'Worker'
+                  agent_nickname: 'Worker',
+                  agent_role: null,
+                  agent_path: '/root/legacy_worker'
                 }
               }
             }
@@ -97,6 +102,69 @@ describe('scanAiVaultSessions Codex worker sessions', () => {
             type: 'message',
             role: 'user',
             content: [{ type: 'text', text: 'Legacy internal worker task' }]
+          }
+        }
+      ])
+    )
+
+    await writeFile(
+      join(codexSessionsDir, '2026', '06', '12', 'rollout-nested-worker-session.jsonl'),
+      jsonLines([
+        {
+          timestamp: '2026-06-12T10:03:00.000Z',
+          type: 'session_meta',
+          payload: {
+            id: 'nested-worker-session',
+            cwd: '/repo/app',
+            source: {
+              subagent: {
+                thread_spawn: {
+                  parent_thread_id: 'legacy-worker-session',
+                  depth: 2,
+                  agent_nickname: 'Nested',
+                  agent_role: 'explorer',
+                  agent_path: '/root/legacy_worker/nested'
+                }
+              }
+            }
+          }
+        },
+        {
+          timestamp: '2026-06-12T10:03:01.000Z',
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'text', text: 'Nested internal worker task' }]
+          }
+        }
+      ])
+    )
+
+    // Codex 0.144-0.147 named the agent's role in `subagent` and stated the
+    // parent only on the payload's own key. `thread_source` is omitted here
+    // because older releases state none, and it is the only other signal that
+    // would keep this transcript out of the user's history.
+    await writeFile(
+      join(codexSessionsDir, '2026', '06', '12', 'rollout-role-only-worker-session.jsonl'),
+      jsonLines([
+        {
+          timestamp: '2026-06-12T10:04:00.000Z',
+          type: 'session_meta',
+          payload: {
+            id: 'role-only-worker-session',
+            cwd: '/repo/app',
+            parent_thread_id: 'user-session',
+            source: { subagent: 'review' }
+          }
+        },
+        {
+          timestamp: '2026-06-12T10:04:01.000Z',
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'text', text: 'Role-only internal worker task' }]
           }
         }
       ])
