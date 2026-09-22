@@ -15,8 +15,10 @@ type SystemdInhibitProcess = {
   } | null
   on(event: 'error', listener: SystemdInhibitErrorListener): void
   on(event: 'exit', listener: SystemdInhibitExitListener): void
+  on(event: 'close', listener: () => void): void
   off(event: 'error', listener: SystemdInhibitErrorListener): void
   off(event: 'exit', listener: SystemdInhibitExitListener): void
+  off(event: 'close', listener: () => void): void
   pid?: number
 }
 
@@ -108,12 +110,15 @@ export class LinuxLidSleepAssertion {
         signal
       })
     }
+    const onClose = (): void => this.detachChildListeners(child)
     this.childCleanups.set(child, () => {
       child.off('error', onError)
       child.off('exit', onExit)
+      child.off('close', onClose)
     })
     child.on('error', onError)
     child.on('exit', onExit)
+    child.on('close', onClose)
     child.stdin?.on('error', onError)
     this.resetRetrySuppression()
     this.resetFailureStreak()
@@ -127,7 +132,7 @@ export class LinuxLidSleepAssertion {
     }
     const child = this.child
     this.child = null
-    // A queued spawn error can arrive after stop, so retain its listeners until exit.
+    // Pipe and child errors can arrive after stop; close ends both event sources.
     this.intentionalStops.add(child)
     try {
       if (child.stdin) {
@@ -153,7 +158,6 @@ export class LinuxLidSleepAssertion {
     startReason: string,
     details: unknown
   ): void {
-    this.detachChildListeners(child)
     child.stdin?.destroy()
     if (this.intentionalStops.has(child)) {
       return

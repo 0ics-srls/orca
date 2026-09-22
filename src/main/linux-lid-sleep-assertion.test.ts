@@ -91,7 +91,7 @@ describe('LinuxLidSleepAssertion', () => {
     expect(child.kill).not.toHaveBeenCalled()
   })
 
-  it('keeps late spawn errors handled until the stopped child exits', () => {
+  it('keeps late spawn errors handled until the stopped child closes', () => {
     const child = new FakeSystemdInhibitProcess()
     const assertion = new LinuxLidSleepAssertion({
       logger: createLogger(),
@@ -107,8 +107,11 @@ describe('LinuxLidSleepAssertion', () => {
 
     expect(child.listenerCount('error')).toBe(1)
     child.emit('exit', 0, null)
+    expect(child.listenerCount('error')).toBe(1)
+    child.emit('close', 0, null)
     expect(child.listenerCount('error')).toBe(0)
     expect(child.listenerCount('exit')).toBe(0)
+    expect(child.listenerCount('close')).toBe(0)
   })
 
   it('does not report an intentional stop as a failed inhibitor', () => {
@@ -170,6 +173,7 @@ describe('LinuxLidSleepAssertion', () => {
     const error = new Error('Access denied') as Error & { code: string }
     error.code = 'EACCES'
     firstChild.emit('error', error)
+    firstChild.emit('close', -1, null)
     now += LINUX_LID_SLEEP_ASSERTION_RETRY_MS + 1
     assertion.start('status-change')
 
@@ -225,6 +229,34 @@ describe('LinuxLidSleepAssertion', () => {
     expect(spawn).toHaveBeenCalledTimes(2)
     assertion.dispose()
   })
+
+  it.each([true, false])(
+    'handles pipe then child errors until close (intentional stop: %s)',
+    (stop) => {
+      const child = new FakeSystemdInhibitProcess()
+      const onUnexpectedFailure = vi.fn()
+      const assertion = new LinuxLidSleepAssertion({
+        logger: createLogger(),
+        onUnexpectedFailure,
+        platform: 'linux',
+        spawn: vi.fn(() => child)
+      })
+      assertion.start('status-change')
+      if (stop) {
+        assertion.stop('settings-change')
+      }
+
+      child.stdin.emit('error', new Error('pipe failed'))
+      expect(() => child.emit('error', new Error('late spawn failure'))).not.toThrow()
+      child.emit('exit', 1, null)
+      expect(onUnexpectedFailure).toHaveBeenCalledTimes(stop ? 0 : 1)
+      child.emit('close', 1, null)
+      expect(child.listenerCount('error')).toBe(0)
+      expect(child.listenerCount('exit')).toBe(0)
+      expect(child.listenerCount('close')).toBe(0)
+      assertion.dispose()
+    }
+  )
 
   it('suppresses retry attempts until the shared retry gate expires', () => {
     vi.useFakeTimers()
