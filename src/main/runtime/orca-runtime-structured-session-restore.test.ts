@@ -27,50 +27,10 @@ describe('structured session cold restoration', () => {
     expect(reconcileRestartLeases).not.toHaveBeenCalled()
   })
 
-  it('starts the readable sweep off the terminal-safety fence, once the PTY provider answers', async () => {
+  it('keeps historical journal parsing outside the terminal-safety fence', async () => {
     const runtime = new OrcaRuntimeService()
     const refresh = vi.fn(async () => new Set<string>())
     const ensureHost = vi.fn(async () => undefined)
-    const reconcileRestartLeases = vi.fn(async () => undefined)
-    // Never settles: the fence must open without waiting on a single journal.
-    const restoreReadableSessions = vi.fn(() => new Promise<void>(() => undefined))
-    const internal = runtime as unknown as {
-      hasPersistedStructuredAgentSessionStore(): boolean
-      refreshMobileSessionPtyRecords(): Promise<Set<string> | null>
-      ensureStructuredAgentSessionHost(): Promise<void>
-    }
-    internal.hasPersistedStructuredAgentSessionStore = () => true
-    internal.refreshMobileSessionPtyRecords = refresh
-    internal.ensureStructuredAgentSessionHost = ensureHost
-    vi.spyOn(runtime, 'getClientSettings').mockReturnValue(
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the startup gate reads only experimentalStructuredNativeChat from client settings.
-      { experimentalStructuredNativeChat: true } as never
-    )
-    setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
-    let answerProvider = (): void => {}
-    const localPtyProviderReady = new Promise<void>((resolve) => {
-      answerProvider = resolve
-    })
-
-    await runtime.prepareStructuredAgentSessionStartupRestoration(localPtyProviderReady)
-
-    expect(ensureHost).toHaveBeenCalledOnce()
-    expect(refresh).toHaveBeenCalledOnce()
-    expect(reconcileRestartLeases).toHaveBeenCalledOnce()
-    // A census taken before the daemon answers cannot see the PTYs TUI-owner recovery looks up.
-    expect(restoreReadableSessions).not.toHaveBeenCalled()
-
-    answerProvider()
-
-    await vi.waitFor(() => expect(restoreReadableSessions).toHaveBeenCalledOnce())
-    expect(refresh).toHaveBeenCalledTimes(2)
-    expect(refresh.mock.invocationCallOrder[1]).toBeLessThan(
-      restoreReadableSessions.mock.invocationCallOrder[0] ?? -1
-    )
-  })
-
-  it('starts no readable sweep at startup while structured chat is off', async () => {
-    const runtime = new OrcaRuntimeService()
     const reconcileRestartLeases = vi.fn(async () => undefined)
     const restoreReadableSessions = vi.fn(async () => undefined)
     const internal = runtime as unknown as {
@@ -79,17 +39,14 @@ describe('structured session cold restoration', () => {
       ensureStructuredAgentSessionHost(): Promise<void>
     }
     internal.hasPersistedStructuredAgentSessionStore = () => true
-    internal.refreshMobileSessionPtyRecords = async () => new Set()
-    internal.ensureStructuredAgentSessionHost = async () => undefined
-    vi.spyOn(runtime, 'getClientSettings').mockReturnValue(
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the startup gate reads only experimentalStructuredNativeChat from client settings.
-      { experimentalStructuredNativeChat: false } as never
-    )
+    internal.refreshMobileSessionPtyRecords = refresh
+    internal.ensureStructuredAgentSessionHost = ensureHost
     setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
 
-    await runtime.prepareStructuredAgentSessionStartupRestoration(Promise.resolve())
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await runtime.prepareStructuredAgentSessionStartupRestoration()
 
+    expect(ensureHost).toHaveBeenCalledOnce()
+    expect(refresh).toHaveBeenCalledOnce()
     expect(reconcileRestartLeases).toHaveBeenCalledOnce()
     expect(restoreReadableSessions).not.toHaveBeenCalled()
   })

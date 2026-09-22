@@ -12,8 +12,6 @@ import {
   resolveStructuredAgentSessionAdoptionForCreate
 } from './structured-agent-session-create-adoption'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
-import { collectSavedStructuredAgentSessionIds } from './saved-structured-agent-session-restoration'
-import { isStructuredNativeChatEnabled } from './rpc/methods/structured-agent-session-policy'
 import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
 import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import type { AgentSessionAttachParams } from '../native-chat/agent-session-wire/structured-agent-session-attach'
@@ -264,23 +262,16 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     return this.structuredAgentSessionTabRestorePromise
   }
 
-  /** `localPtyProviderReady`, when given, starts the readable sweep once that provider answers. */
-  prepareStructuredAgentSessionStartupRestoration(
-    localPtyProviderReady?: Promise<void>
-  ): Promise<void> {
+  prepareStructuredAgentSessionStartupRestoration(): Promise<void> {
     this.structuredAgentSessionStartupRestorePromise ??=
-      this.prepareStructuredAgentSessionStartupRestorationOnce(localPtyProviderReady).catch(
-        (error) => {
-          this.structuredAgentSessionStartupRestorePromise = null
-          throw error
-        }
-      )
+      this.prepareStructuredAgentSessionStartupRestorationOnce().catch((error) => {
+        this.structuredAgentSessionStartupRestorePromise = null
+        throw error
+      })
     return this.structuredAgentSessionStartupRestorePromise
   }
 
-  protected async prepareStructuredAgentSessionStartupRestorationOnce(
-    localPtyProviderReady?: Promise<void>
-  ): Promise<void> {
+  protected async prepareStructuredAgentSessionStartupRestorationOnce(): Promise<void> {
     if (!this.hasPersistedStructuredAgentSessionStore()) {
       return
     }
@@ -288,47 +279,6 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     await this.ensureStructuredAgentSessionHost()
     await this.refreshMobileSessionPtyRecords()
     await getStructuredAgentSessionHost()?.reconcileRestartLeases()
-    // Why started here, and why not awaited: a restored chat pane subscribes as soon as its tab
-    // model hydrates, and the first tab inventory waits on the client's whole terminal-restoration
-    // chain — so readability must not wait for it, and journal parsing stays off this fence (the
-    // tab projection awaits the same latched sweep). Why after the provider, on a fresh census:
-    // the sweep re-proves live TUI owners against the PTY census, and the one above can predate
-    // the daemon when the first window fails open without it; an owner missing from it would be
-    // latched into manual recovery. Gated like the projection: with structured chat off, no
-    // surface can read a chat.
-    if (localPtyProviderReady && isStructuredNativeChatEnabled(this)) {
-      void localPtyProviderReady
-        .then(() => this.refreshMobileSessionPtyRecords())
-        .then(() => this.restoreReadableStructuredSessions())
-        .catch((error: unknown) => {
-          console.warn('[agent-session] startup readable restore failed', error)
-        })
-    }
-  }
-
-  /** The startup sweep that opens every persisted chat's journal for reading. The host latches it
-   *  once per process, so the startup and projection callers share one run. */
-  protected async restoreReadableStructuredSessions(): Promise<void> {
-    const host = getStructuredAgentSessionHost()
-    if (host) {
-      await host.restoreReadableSessions(this.selectStartupReadableStructuredSessionIds(host))
-    }
-  }
-
-  /** The persisted visible-tab index when the store keeps one, else every chat the saved
-   *  workspace session still shows a tab for. */
-  private selectStartupReadableStructuredSessionIds(
-    host: NonNullable<ReturnType<typeof getStructuredAgentSessionHost>>
-  ): readonly string[] {
-    const persistedVisibleIndex =
-      typeof host.getPersistedVisibleSessionTabIndex === 'function'
-        ? host.getPersistedVisibleSessionTabIndex()
-        : { present: false, sessionIds: [] }
-    return persistedVisibleIndex.present
-      ? persistedVisibleIndex.sessionIds
-      : collectSavedStructuredAgentSessionIds(
-          this.store?.getWorkspaceSession?.(LOCAL_EXECUTION_HOST_ID) ?? null
-        )
   }
 
   protected hasPersistedStructuredAgentSessionStore(): boolean {
