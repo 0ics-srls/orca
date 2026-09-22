@@ -29,8 +29,9 @@ describe('relay database', () => {
         blocker.exec('BEGIN IMMEDIATE')
         await expect(database.transaction(async () => {})).rejects.toThrow('database is locked')
         blocker.exec('ROLLBACK')
-        expect(await database.transaction((transaction) => transaction.query('SELECT 1 AS value')))
-          .toEqual([{ value: 1 }])
+        expect(
+          await database.transaction((transaction) => transaction.query('SELECT 1 AS value'))
+        ).toEqual([{ value: 1 }])
       }
     } finally {
       blocker.close()
