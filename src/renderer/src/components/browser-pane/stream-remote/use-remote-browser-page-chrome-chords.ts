@@ -3,7 +3,7 @@ import { getShortcutPlatform } from '@/hooks/useShortcutLabel'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { keybindingMatchesAction } from '../../../../../shared/keybindings'
-import { browserOverlayOwnsShortcutTarget } from '../describe-page/browser-overlay-shortcut-target'
+import { browserChromeShortcutOwnsEvent } from '../describe-page/browser-overlay-shortcut-target'
 import type { BrowserChromeShortcutScope } from '../describe-page/browser-page-types'
 import { isEditableKeyboardTarget } from '../host-guest/browser-keyboard'
 import {
@@ -44,10 +44,7 @@ export function useRemoteBrowserPageChromeChords({
     }
     const shortcutPlatform = getShortcutPlatform()
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (
-        chromeShortcutScope === 'owned-target' &&
-        !browserOverlayOwnsShortcutTarget(event.target, workspaceId)
-      ) {
+      if (!browserChromeShortcutOwnsEvent(chromeShortcutScope, event, workspaceId)) {
         return
       }
       const historyMethod = keybindingMatchesAction(

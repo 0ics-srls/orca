@@ -2,14 +2,10 @@ import { useEffect, type MutableRefObject } from 'react'
 import { getShortcutPlatform } from '@/hooks/useShortcutLabel'
 import { useAppStore } from '@/store'
 import { keybindingMatchesAction } from '../../../../../shared/keybindings'
-import {
-  browserChromeShortcutOwnsEvent,
-  browserOverlayOwnsShortcutTarget
-} from '../describe-page/browser-overlay-shortcut-target'
-import type { BrowserChromeShortcutScope } from '../describe-page/browser-page-types'
+import { browserChromeShortcutOwnsEvent } from '../describe-page/browser-overlay-shortcut-target'
+import type { BrowserChromeShortcutScope, GrabIntent } from '../describe-page/browser-page-types'
 import { isEditableKeyboardTarget } from './browser-keyboard'
 import { useBrowserPageWebviewShortcuts } from './use-browser-page-webview-shortcuts'
-import type { GrabIntent } from '../describe-page/browser-page-types'
 
 export function useBrowserPageKeyboardShortcuts({
   browserTabId,
@@ -59,8 +55,7 @@ export function useBrowserPageKeyboardShortcuts({
 
   // Why: Cmd+C is repurposed as the grab-mode gesture; native text copy in the guest is handled by Chromium and never reaches here.
   useEffect(() => {
-    // Why: isActive holds for every split's active tab, so it alone let a chord typed in a sibling
-    // split (e.g. Cmd+C in the chat transcript) arm grab here (STA-3319).
+    // Why: scope, not isActive — every split has an active tab.
     if (chromeShortcutScope === 'inactive') {
       return
     }
@@ -75,7 +70,8 @@ export function useBrowserPageKeyboardShortcuts({
         markupIsActive ||
         !keybindingMatchesAction('browser.grabElement', e, shortcutPlatform, keybindings) ||
         !browserChromeShortcutOwnsEvent(chromeShortcutScope, e, workspaceId) ||
-        hasTextSelectionOutsideOverlay(workspaceId)
+        // Why: a live selection means copy; selecting in the floating panel or a sidebar keeps scope.
+        window.getSelection()?.isCollapsed === false
       ) {
         return
       }
@@ -130,16 +126,4 @@ export function useBrowserPageKeyboardShortcuts({
       handleGrabActionShortcut(key)
     })
   }, [browserTabId, grabIsInteractive, handleGrabActionShortcut])
-}
-
-// Why: a live selection elsewhere in the window means Cmd/Ctrl+C is a copy, not a grab.
-function hasTextSelectionOutsideOverlay(overlayTabId: string): boolean {
-  const selection = window.getSelection()
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return false
-  }
-  return [selection.anchorNode, selection.focusNode].some((node) => {
-    const element = node instanceof Element ? node : (node?.parentElement ?? null)
-    return !browserOverlayOwnsShortcutTarget(element, overlayTabId)
-  })
 }

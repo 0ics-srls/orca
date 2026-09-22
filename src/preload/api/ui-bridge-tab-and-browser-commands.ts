@@ -1,13 +1,10 @@
 import { ipcRenderer } from 'electron'
 import { admitCloseActiveTabPayload } from '../close-active-tab-payload-admission'
 import type { CloseActiveTabPayload } from '../api/ui-command-event-api'
-import {
-  asBrowserHistoryNavigateCommand,
-  asBrowserPageCommandTarget,
-  asBrowserPageZoomCommand,
-  type BrowserHistoryNavigateCommand,
-  type BrowserPageCommandTarget,
-  type BrowserPageZoomCommand
+import type {
+  BrowserHistoryNavigateCommand,
+  BrowserPageCommandTarget,
+  BrowserPageZoomCommand
 } from '../../shared/browser-page-command-target'
 import type {
   WorktreeDefaultTabsLaunch,
@@ -65,45 +62,29 @@ export const uiTabAndBrowserCommandsApi = {
   onFocusBrowserAddressBar: (
     callback: (target: BrowserPageCommandTarget) => void
   ): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void => {
-      const target = asBrowserPageCommandTarget(payload)
-      if (target) {
-        callback(target)
-      }
-    }
+    const listener = (_event: Electron.IpcRendererEvent, target: BrowserPageCommandTarget) =>
+      callback(target)
     ipcRenderer.on('ui:focusBrowserAddressBar', listener)
     return () => ipcRenderer.removeListener('ui:focusBrowserAddressBar', listener)
   },
   onFindInBrowserPage: browserFindSubscriptions.subscribe,
   onReloadBrowserPage: (callback: (target: BrowserPageCommandTarget) => void): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void => {
-      const target = asBrowserPageCommandTarget(payload)
-      if (target) {
-        callback(target)
-      }
-    }
+    const listener = (_event: Electron.IpcRendererEvent, target: BrowserPageCommandTarget) =>
+      callback(target)
     ipcRenderer.on('ui:reloadBrowserPage', listener)
     return () => ipcRenderer.removeListener('ui:reloadBrowserPage', listener)
   },
   onBrowserHistoryNavigate: (
     callback: (command: BrowserHistoryNavigateCommand) => void
   ): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void => {
-      const command = asBrowserHistoryNavigateCommand(payload)
-      if (command) {
-        callback(command)
-      }
-    }
+    const listener = (_event: Electron.IpcRendererEvent, command: BrowserHistoryNavigateCommand) =>
+      callback(command)
     ipcRenderer.on('ui:browserHistoryNavigate', listener)
     return () => ipcRenderer.removeListener('ui:browserHistoryNavigate', listener)
   },
   onZoomBrowserPage: (callback: (command: BrowserPageZoomCommand) => void): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void => {
-      const command = asBrowserPageZoomCommand(payload)
-      if (command) {
-        callback(command)
-      }
-    }
+    const listener = (_event: Electron.IpcRendererEvent, command: BrowserPageZoomCommand) =>
+      callback(command)
     ipcRenderer.on('ui:zoomBrowserPage', listener)
     return () => ipcRenderer.removeListener('ui:zoomBrowserPage', listener)
   },
@@ -118,12 +99,8 @@ export const uiTabAndBrowserCommandsApi = {
     return () => ipcRenderer.removeListener('ui:scrollBrowserPage', listener)
   },
   onHardReloadBrowserPage: (callback: (target: BrowserPageCommandTarget) => void): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: unknown): void => {
-      const target = asBrowserPageCommandTarget(payload)
-      if (target) {
-        callback(target)
-      }
-    }
+    const listener = (_event: Electron.IpcRendererEvent, target: BrowserPageCommandTarget) =>
+      callback(target)
     ipcRenderer.on('ui:hardReloadBrowserPage', listener)
     return () => ipcRenderer.removeListener('ui:hardReloadBrowserPage', listener)
   },

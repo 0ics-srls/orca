@@ -19,11 +19,9 @@ export function browserChromeShortcutOwnsEvent(
   event: Event,
   overlayTabId: string
 ): boolean {
-  if (chromeShortcutScope === 'inactive') {
-    return false
-  }
   return (
     chromeShortcutScope === 'focused' ||
-    browserOverlayOwnsShortcutTarget(event.target, overlayTabId)
+    (chromeShortcutScope === 'owned-target' &&
+      browserOverlayOwnsShortcutTarget(event.target, overlayTabId))
   )
 }

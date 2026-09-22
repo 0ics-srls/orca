@@ -79,7 +79,6 @@ function PaneHarness({
       <button type="button" data-testid={`toolbar-${id}`}>
         toolbar
       </button>
-      <p data-testid={`chrome-text-${id}`}>chrome text</p>
     </div>
   )
 }
@@ -200,22 +199,13 @@ describe('useBrowserPageKeyboardShortcuts in a split of two active browser panes
     expect(b.startGrabIntent).not.toHaveBeenCalled()
   })
 
-  it('leaves Cmd+C to copy while text is selected outside the pane', () => {
-    const { a, b } = renderSplit('focused', 'owned-target')
+  it('leaves Cmd+C to copy while text is selected', () => {
+    const { a, b } = renderSplit('focused', 'inactive')
     selectText('transcript')
 
     press(document.body, { key: 'c', code: 'KeyC' })
 
     expect(a.startGrabIntent).not.toHaveBeenCalled()
     expect(b.startGrabIntent).not.toHaveBeenCalled()
-  })
-
-  it('still arms grab while the selection sits inside the pane', () => {
-    const { a } = renderSplit('focused', 'inactive')
-    selectText('chrome-text-a')
-
-    press(document.body, { key: 'c', code: 'KeyC' })
-
-    expect(a.startGrabIntent).toHaveBeenCalledTimes(1)
   })
 })

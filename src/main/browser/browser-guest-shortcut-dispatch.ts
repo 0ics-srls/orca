@@ -136,7 +136,6 @@ export function forwardGuestShortcutInput(
     keybindingMatchesAction('browser.focusAddressBar', input, process.platform, keybindings)
   ) {
     // Why: the address bar lives in renderer chrome, not the guest page; forward so the pane owning it can focus its input.
-    // These page-scoped chords carry the page id because every split's active pane listens (STA-8147).
     renderer.send('ui:focusBrowserAddressBar', { browserPageId: browserTabId })
   } else if (keybindingMatchesAction('browser.hardReload', input, process.platform, keybindings)) {
     // Why: forward hard reload so reloadIgnoringCache() runs on the renderer's parked-webview ref that owns the guest surface.

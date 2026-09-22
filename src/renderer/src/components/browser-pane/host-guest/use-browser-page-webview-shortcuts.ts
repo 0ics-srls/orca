@@ -45,7 +45,7 @@ export function useBrowserPageWebviewShortcuts({
   // Browser history shortcuts (renderer path: focus on browser chrome)
   // Why: macOS can't deliver Logitech side-buttons to Electron; Logi Options+ remaps them to history chords, handled here when chrome is focused.
   useEffect(() => {
-    // Why: isActive holds for every split's active tab, so it alone let each split act on one chord.
+    // Why: scope, not isActive — every split has an active tab.
     if (chromeShortcutScope === 'inactive') {
       return
     }
@@ -63,7 +63,7 @@ export function useBrowserPageWebviewShortcuts({
         return
       }
       e.preventDefault()
-      // Why: sibling panes register this same capture listener on window.
+      // Why: stop other window capture listeners (workspace, embedded editors) from also acting.
       e.stopImmediatePropagation()
       // Why: Logitech Options+ side-button remaps arrive as these chords on macOS; route through the same nav path as the toolbar.
       if (direction === 'back') {
