@@ -13,8 +13,10 @@ function serviceWithOfflineReason(offlineReason: RelayOfflineReason | null): {
     getLiveBroker: () => null,
     waitForLiveBrokerResult: async () => ({ broker: null, offlineReason })
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: requireActiveBroker reads only this.coordinator, which the next line assigns; no other field is reached.
   const service = Object.create(DesktopRelayService.prototype) as DesktopRelayService
   Object.assign(service, { coordinator })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: narrows the instance to the one private method under test; the cast adds no member the prototype lacks.
   return service as unknown as { requireActiveBroker: () => Promise<unknown> }
 }
 

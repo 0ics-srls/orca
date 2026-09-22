@@ -52,6 +52,7 @@ function serviceWithArmedRetry(): DesktopRelayService {
     accessToken: 'access-1',
     relayEntitled: true
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this double implements every runtime-RPC member DesktopRelayService touches on the pairing and endpoint paths; the rest of the surface is never reached.
   const runtimeRpc = {
     getE2EEKeypair: () => ({
       publicKey: new Uint8Array(32).fill(7),
@@ -68,6 +69,7 @@ function serviceWithArmedRetry(): DesktopRelayService {
     setMobileRelayBinding: () => true
   } as unknown as OrcaRuntimeRpcServer
   return new DesktopRelayService({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the broker is mocked, so only the two relay URLs are read, and both are present.
     authConfig: {
       relayDirectorUrl: 'https://relay.example.test',
       relayTokenEndpoint: 'https://login.example.test/relay-token'

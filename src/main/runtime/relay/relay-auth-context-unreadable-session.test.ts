@@ -23,6 +23,7 @@ const profile = {
   }
 }
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the session read is mocked, so readRelayAuthContext never dereferences the config on this path.
 const authConfig = {} as never
 
 describe('readRelayAuthContext session-read taxonomy', () => {
