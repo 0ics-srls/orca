@@ -9,7 +9,7 @@ export type MacCodeIdentityCommandRunner = (
   program: string,
   args: readonly string[],
   timeoutMs: number
-) => Promise<{ code: number | null; stderr: string; stdout: string }>
+) => Promise<{ code: number | null; stderr: string; stdout: string; timedOut: boolean }>
 
 const CODESIGN_PATH = '/usr/bin/codesign'
 const CODESIGN_TIMEOUT_MS = 3_000
@@ -49,6 +49,10 @@ async function probe(
       ['--display', '--verbose=1', `+${pid}`],
       CODESIGN_TIMEOUT_MS
     )
+    // A killed codesign can still have printed a path; that half-written display proves nothing.
+    if (result.timedOut) {
+      return 'probe-failed'
+    }
     // codesign writes both the display fields and its diagnostics to stderr.
     return classifyCodesignDisplayOutput(`${result.stderr}\n${result.stdout}`, result.code)
   } catch {

@@ -7,8 +7,8 @@ const HELPER_PATH =
 const PARKED_PATH =
   '/private/var/folders/x/T/com.stablyai.orca.ShipIt.abc/Orca.app/Contents/MacOS/Orca'
 
-function runnerReturning(stderr: string, code: number | null) {
-  return vi.fn(async () => ({ code, stdout: '', stderr }))
+function runnerReturning(stderr: string, code: number | null, timedOut = false) {
+  return vi.fn(async () => ({ code, stdout: '', stderr, timedOut }))
 }
 
 beforeEach(() => {
@@ -91,9 +91,16 @@ describe('getDaemonMacCodeIdentity', () => {
     runCommand.mockResolvedValue({
       code: 1,
       stdout: '',
-      stderr: '+3337: No such file or directory\n'
+      stderr: '+3337: No such file or directory\n',
+      timedOut: false
     })
     await expect(getDaemonMacCodeIdentity(3337, runCommand)).resolves.toBe('unresolvable')
+  })
+
+  it('discards a timed-out probe even when it printed a path first', async () => {
+    await expect(
+      getDaemonMacCodeIdentity(3337, runnerReturning('Executable=/x\n', null, true))
+    ).resolves.toBe('probe-failed')
   })
 
   it('coalesces concurrent asks about one pid into a single probe', async () => {
