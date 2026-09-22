@@ -135,25 +135,43 @@ describe('local repo maintenance target', () => {
     )
   })
 
-  it('reads either Git auto-maintenance opt-out, and unset keys as consent', async () => {
-    for (const stdout of [
-      'maintenance.auto false\n',
-      'gc.auto 0\n',
-      'gc.auto 6700\nmaintenance.auto false\n'
+  it("reads either Git auto-maintenance opt-out through Git's typed config", async () => {
+    const config = (values: Record<string, string | undefined>) =>
+      gitExecFileAsyncMock.mockImplementation(async (argv) => {
+        const value = values[argv.at(-1) ?? '']
+        if (value === undefined) {
+          throw new Error('exit 1')
+        }
+        return { stdout: `${value}\n`, stderr: '' }
+      })
+
+    for (const values of [
+      { 'maintenance.auto': 'false' },
+      { 'gc.auto': '0' },
+      { 'gc.auto': '-1' },
+      { 'maintenance.auto': 'true', 'gc.auto': '0' }
     ]) {
-      gitExecFileAsyncMock.mockResolvedValue({ stdout, stderr: '' })
+      config(values)
       await expect(target().isOptedOut?.(NO_ABORT)).resolves.toBe(true)
     }
+    for (const values of [{}, { 'maintenance.auto': 'true', 'gc.auto': '6700' }]) {
+      config(values)
+      await expect(target().isOptedOut?.(NO_ABORT)).resolves.toBe(false)
+    }
 
-    gitExecFileAsyncMock.mockResolvedValue({
-      stdout: 'maintenance.auto true\ngc.auto 6700\n',
-      stderr: ''
-    })
-    await expect(target().isOptedOut?.(NO_ABORT)).resolves.toBe(false)
-
-    // `git config --get-regexp` exits non-zero when nothing matches.
-    gitExecFileAsyncMock.mockRejectedValue(new Error('exit 1'))
-    await expect(target().isOptedOut?.(NO_ABORT)).resolves.toBe(false)
+    // Git does the spelling: `no`/`off`/`0` come back as `false`, `1k` as `1024`.
+    expect(gitExecFileAsyncMock.mock.calls.map((call) => call[0])).toContainEqual([
+      'config',
+      '--type=bool',
+      '--get',
+      'maintenance.auto'
+    ])
+    expect(gitExecFileAsyncMock.mock.calls.map((call) => call[0])).toContainEqual([
+      'config',
+      '--type=int',
+      '--get',
+      'gc.auto'
+    ])
   })
 
   it('reports an unresolvable repository rather than guessing a path', async () => {

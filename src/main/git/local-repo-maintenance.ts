@@ -154,16 +154,23 @@ export function _resetLocalRepoMaintenanceForTests(
 }
 
 /**
- * `maintenance.auto=false` and `gc.auto=0` are the two knobs a user reaches for
+ * `maintenance.auto=false` and `gc.auto<=0` are the two knobs a user reaches for
  * to tell Git to stop maintaining a repository on its own. Orca sets both on its
  * own fetches, but only as per-invocation `-c` flags, so this probe sees the
- * user's persisted config and never Orca's own suppression.
+ * user's persisted config and never Orca's own suppression. Values are Git's
+ * canonical `--type` output, so every spelling Git accepts (`no`, `off`, `0`,
+ * `1k`) is already normalised.
  */
-export function isGitAutoMaintenanceDisabled(configOutput: string): boolean {
-  return configOutput
-    .split('\n')
-    .map((line) => line.trim())
-    .some((line) => line === 'maintenance.auto false' || line === 'gc.auto 0')
+export function isGitAutoMaintenanceDisabled(config: {
+  maintenanceAuto?: string
+  gcAuto?: string
+}): boolean {
+  if (config.maintenanceAuto === 'false') {
+    return true
+  }
+  // Git's own `gc --auto` treats any threshold at or below zero as "never".
+  const gcAuto = Number.parseInt(config.gcAuto ?? '', 10)
+  return Number.isFinite(gcAuto) && gcAuto <= 0
 }
 
 export type LocalRepoMaintenanceTargetArgs = {
@@ -228,16 +235,26 @@ export function createLocalRepoMaintenanceTarget(
       })
     ],
     async isOptedOut(signal: AbortSignal) {
-      try {
-        const { stdout } = await gitExecFileAsync(
-          ['config', '--get-regexp', '^(maintenance\\.auto|gc\\.auto)$'],
-          { cwd: args.repoPath, ...gitOptions, admissionTier: 'background', signal }
-        )
-        return isGitAutoMaintenanceDisabled(stdout)
-      } catch {
-        // Neither key set is the common case and exits non-zero; that is consent.
-        return false
+      const read = async (type: 'bool' | 'int', name: string): Promise<string | undefined> => {
+        try {
+          const { stdout } = await gitExecFileAsync(['config', `--type=${type}`, '--get', name], {
+            cwd: args.repoPath,
+            ...gitOptions,
+            admissionTier: 'background',
+            signal
+          })
+          return stdout.trim()
+        } catch {
+          // Unset exits 1, which is consent. A value Git cannot parse is not an
+          // opt-out anyone can read, so it is treated the same way.
+          return undefined
+        }
       }
+      const maintenanceAuto = await read('bool', 'maintenance.auto')
+      if (isGitAutoMaintenanceDisabled({ maintenanceAuto })) {
+        return true
+      }
+      return isGitAutoMaintenanceDisabled({ gcAuto: await read('int', 'gc.auto') })
     }
   }
 }

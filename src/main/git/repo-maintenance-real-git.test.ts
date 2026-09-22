@@ -353,9 +353,15 @@ describe('idle loose-object maintenance against real Git', () => {
 })
 
 describe('a repository the user told Git not to maintain', () => {
+  // Every spelling Git itself accepts as "off", not just the canonical one.
   for (const [key, value] of [
     ['maintenance.auto', 'false'],
-    ['gc.auto', '0']
+    ['maintenance.auto', 'no'],
+    ['maintenance.auto', 'off'],
+    ['maintenance.auto', '0'],
+    ['maintenance.auto', 'FALSE'],
+    ['gc.auto', '0'],
+    ['gc.auto', '-1']
   ]) {
     it(`is left entirely alone when ${key}=${value}`, async () => {
       const repo = await createRepo({ looseRefs: REF_THRESHOLD + 30, looseObjects: 100 })
@@ -377,6 +383,19 @@ describe('a repository the user told Git not to maintain', () => {
       expect(await snapshotRefsAndIndex(repo.repoPath)).toEqual(before)
     }, 30_000)
   }
+
+  it('still maintains a repository whose settings leave Git maintenance on', async () => {
+    const repo = await createRepo({ looseObjects: 100 })
+    git(repo.repoPath, ['config', 'maintenance.auto', 'yes'])
+    git(repo.repoPath, ['config', 'gc.auto', '1k'])
+    const { maintenance, arm, packed } = createMaintenance({ refsThreshold: NEVER })
+
+    arm(repo.repoPath)
+    await settle(maintenance)
+    maintenance.dispose()
+
+    expect(packed).toEqual(['objects'])
+  }, 30_000)
 })
 
 describe('yielding the repository to work that deletes refs', () => {
