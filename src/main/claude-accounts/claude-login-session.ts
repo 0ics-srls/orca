@@ -49,8 +49,7 @@ export async function runClaudeLoginSession(
       controller.abort()
       return true
     })
-    // Keep the temporary config directory under the cleanup below even when
-    // the initial Keychain read fails before Claude is launched.
+    // An initial Keychain read failure must still release the temporary directory.
     previousLegacyKeychain = await readActiveClaudeKeychainCredentials()
     previousLegacyKeychainRead = true
     if (controller.signal.aborted) {
@@ -129,9 +128,7 @@ async function createTemporaryClaudeConfigDir(
   const linuxPath = created.stdout.replaceAll(String.fromCharCode(0), '').trim()
   const hasSafeTemporaryPath = isTemporaryClaudeLoginPath(linuxPath)
   if (created.code !== 0 || created.timedOut || !hasSafeTemporaryPath) {
-    // mktemp can create the directory before a timeout or a wrapper error is
-    // reported. Remove a path that matches the command's own output shape so
-    // failed WSL logins do not accumulate remote temp directories.
+    // A failed mktemp wrapper can still return the path it allocated.
     if (hasSafeTemporaryPath) {
       await removeTemporaryClaudeConfigDir({
         windowsPath: toWindowsWslPath(linuxPath, location.wslDistro),
@@ -149,7 +146,7 @@ async function createTemporaryClaudeConfigDir(
 }
 
 function isTemporaryClaudeLoginPath(value: string): boolean {
-  return /^\/(?:[^/\0\r\n]+\/)*orca-claude-login\.[^/\0\r\n]+$/.test(value)
+  return /^\/+(?:[^/\0\r\n]+\/+)*orca-claude-login\.[^/\0\r\n]+$/.test(value)
 }
 
 async function removeTemporaryClaudeConfigDir(config: ClaudeCommandConfig): Promise<void> {

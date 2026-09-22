@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { readdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import type * as NodeOs from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import type { ClaudeManagedAccount } from '../../shared/managed-account-types'
-import { readActiveClaudeKeychainCredentials } from './keychain'
+import {
+  deleteActiveClaudeKeychainCredentialsStrict,
+  readActiveClaudeKeychainCredentials,
+  writeActiveClaudeKeychainCredentials
+} from './keychain'
 import { getCmdExePath } from '../../shared/windows-batch-spawn'
 import {
   createService,
@@ -501,102 +506,117 @@ describe('ClaudeAccountService credential capture', () => {
     }
   })
 
-  it('removes the temporary login directory when the initial Keychain read fails', async () => {
-    setPlatform('linux')
+  it('cleans failed initial Keychain reads without changing global credentials', async () => {
     vi.resetModules()
     vi.mocked(readActiveClaudeKeychainCredentials).mockRejectedValueOnce(
       new Error('Keychain unavailable')
     )
-    const spawnMock = vi.fn()
-    vi.doMock('node:child_process', () => ({ spawn: spawnMock }))
-    const before = new Set(
-      readdirSync(tmpdir()).filter((entry) => entry.startsWith('orca-claude-login-'))
-    )
-
-    try {
-      const { ClaudeAccountService } = await import('./service')
-      const settings = {
-        claudeManagedAccounts: [],
-        activeClaudeManagedAccountId: null,
-        activeClaudeManagedAccountIdsByRuntime: { host: null, wsl: {} }
-      }
-      const store = {
-        getSettings: vi.fn(() => settings),
-        updateSettings: vi.fn()
-      }
-      const rateLimits = {
-        evictInactiveClaudeCache: vi.fn(),
-        refreshForClaudeAccountChange: vi.fn()
-      }
-      const service = new ClaudeAccountService(
-        store as never,
-        rateLimits as never,
-        {
-          clearLastWrittenCredentialsJson: vi.fn(),
-          forceMaterializeCurrentSelectionForRollback: vi.fn(async () => {})
-        } as never
-      )
-
-      await expect(service.addAccount()).rejects.toThrow('Keychain unavailable')
-      const leaked = readdirSync(tmpdir()).filter(
-        (entry) => entry.startsWith('orca-claude-login-') && !before.has(entry)
-      )
-      expect(leaked).toEqual([])
-      expect(spawnMock).not.toHaveBeenCalled()
-    } finally {
-      vi.doUnmock('node:child_process')
-    }
-  })
-
-  it('removes a WSL temporary login directory when mktemp times out', async () => {
-    setPlatform('win32')
-    vi.resetModules()
-    const runWslProcessMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        code: 1,
-        timedOut: true,
-        stdout: '/tmp/orca-claude-login.abcd\n',
-        stderr: '',
-        environmentResolved: true
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        timedOut: false,
-        stdout: '',
-        stderr: '',
-        environmentResolved: true
-      })
-    vi.doMock('../wsl/wsl-runner', () => ({ runWslProcess: runWslProcessMock }))
+    const testRoot = mkdtempSync(join(tmpdir(), 'orca-claude-login-test-'))
+    vi.doMock('node:os', async (importOriginal) => ({
+      ...(await importOriginal<typeof NodeOs>()),
+      tmpdir: () => testRoot
+    }))
 
     try {
       const { runClaudeLoginSession } = await import('./claude-login-session')
+      const dependencies = {
+        runCommand: vi.fn(),
+        capture: vi.fn(),
+        setCancel: vi.fn()
+      }
       await expect(
         runClaudeLoginSession(
           {
             managedAuthPath: '',
-            managedAuthRuntime: 'wsl',
-            wslDistro: 'Ubuntu',
+            managedAuthRuntime: 'host',
+            wslDistro: null,
             wslLinuxAuthPath: null
           },
-          {
-            runCommand: vi.fn(),
-            capture: vi.fn(),
-            setCancel: vi.fn()
-          }
+          dependencies
         )
-      ).rejects.toThrow('Could not create a temporary WSL Claude login directory.')
-      expect(runWslProcessMock).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          program: 'rm',
-          args: ['-rf', '--', '/tmp/orca-claude-login.abcd']
-        })
-      )
+      ).rejects.toThrow('Keychain unavailable')
+      expect(readdirSync(testRoot)).toEqual([])
+      expect(dependencies.runCommand).not.toHaveBeenCalled()
+      expect(dependencies.setCancel).toHaveBeenLastCalledWith(null)
+      expect(deleteActiveClaudeKeychainCredentialsStrict).toHaveBeenCalledTimes(1)
+      expect(deleteActiveClaudeKeychainCredentialsStrict).toHaveBeenCalledWith(expect.any(String))
+      expect(writeActiveClaudeKeychainCredentials).not.toHaveBeenCalled()
     } finally {
-      vi.doUnmock('../wsl/wsl-runner')
+      vi.doUnmock('node:os')
+      rmSync(testRoot, { recursive: true, force: true })
     }
   })
+
+  it.each([
+    { linuxPath: '/tmp/orca-claude-login.abcd12', timedOut: true, safePath: true },
+    { linuxPath: '/tmp//orca-claude-login.abcd12', timedOut: true, safePath: true },
+    { linuxPath: '/tmp//orca-claude-login.abcd12', timedOut: false, safePath: true },
+    { linuxPath: '/', timedOut: false, safePath: false },
+    { linuxPath: '/tmp/other', timedOut: true, safePath: false },
+    { linuxPath: '/tmp/orca-claude-login.abcd12/..', timedOut: true, safePath: false },
+    { linuxPath: '/tmp/orca-claude-login.abcd12\n/tmp/other', timedOut: true, safePath: false }
+  ])(
+    'handles WSL temporary path $linuxPath (mktemp timeout: $timedOut)',
+    async ({ linuxPath, timedOut, safePath }) => {
+      setPlatform('win32')
+      vi.resetModules()
+      vi.mocked(readActiveClaudeKeychainCredentials).mockResolvedValueOnce(null)
+      const runCommand = vi.fn().mockRejectedValue(new Error('Login stopped'))
+      const runWslProcessMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          code: timedOut ? 1 : 0,
+          timedOut,
+          stdout: `${linuxPath}\n`,
+          stderr: '',
+          environmentResolved: true
+        })
+        .mockResolvedValueOnce({
+          code: 0,
+          timedOut: false,
+          stdout: '',
+          stderr: '',
+          environmentResolved: true
+        })
+      vi.doMock('../wsl/wsl-runner', () => ({ runWslProcess: runWslProcessMock }))
+
+      try {
+        const { runClaudeLoginSession } = await import('./claude-login-session')
+        await expect(
+          runClaudeLoginSession(
+            {
+              managedAuthPath: '',
+              managedAuthRuntime: 'wsl',
+              wslDistro: 'Ubuntu',
+              wslLinuxAuthPath: null
+            },
+            {
+              runCommand,
+              capture: vi.fn(),
+              setCancel: vi.fn()
+            }
+          )
+        ).rejects.toThrow(
+          timedOut || !safePath
+            ? 'Could not create a temporary WSL Claude login directory.'
+            : 'Login stopped'
+        )
+        expect(runCommand).toHaveBeenCalledTimes(timedOut || !safePath ? 0 : 1)
+        expect(runWslProcessMock).toHaveBeenCalledTimes(safePath ? 2 : 1)
+        if (safePath) {
+          expect(runWslProcessMock).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+              program: 'rm',
+              args: ['-rf', '--', linuxPath]
+            })
+          )
+        }
+      } finally {
+        vi.doUnmock('../wsl/wsl-runner')
+      }
+    }
+  )
 
   it('supersedes the login a closed Settings pane abandoned instead of queueing behind it', async () => {
     setPlatform('linux')
