@@ -161,8 +161,7 @@ export class ClaudeProvisionalRowCorrections {
   }
 
   private stamp(parentToolUseId: string): StructuredAgentSessionAppendOptions {
-    const verdict = this.deps.settledLinkageFor(parentToolUseId)
-    return agentJournalLinkageFields(verdict.kind === 'linked' ? verdict.linkage : undefined)
+    return agentJournalLinkageFields(this.deps.settledLinkageFor(parentToolUseId).linkage)
   }
 
   /** Writes the correction only when it actually changes the row's attribution.

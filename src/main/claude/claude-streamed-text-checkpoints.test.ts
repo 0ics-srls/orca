@@ -14,10 +14,16 @@ function identityOf(uuid: string): AgentJournalItemIdentity {
   return { provider: 'claude', sessionId: 'claude-session', uuid }
 }
 
-/** Every block is the session's own agent's unless a test says otherwise. */
-const rootProducer: ClaudeSubagentLinkageSource = {
-  linkageFor: () => ({ kind: 'root' }),
-  settledLinkageFor: () => ({ kind: 'root' })
+/** A block streamed with no scope is the session's own agent's, and the producer
+ *  is never asked about it. Throwing pins that: a block that starts consulting
+ *  the resolver for a scopeless row shows up here rather than silently. */
+const unconsultedProducer: ClaudeSubagentLinkageSource = {
+  linkageFor: () => {
+    throw new Error('resolver consulted for a block with no scope')
+  },
+  settledLinkageFor: () => {
+    throw new Error('resolver consulted for a block with no scope')
+  }
 }
 
 /** The linkage a child's block carries once its announcement has landed. */
@@ -47,7 +53,7 @@ function scriptedProducer() {
   }
 }
 
-function checkpoints(producer: ClaudeSubagentLinkageSource = rootProducer) {
+function checkpoints(producer: ClaudeSubagentLinkageSource = unconsultedProducer) {
   const rows: { uuid: string; text: string }[] = []
   /** Attribution kept beside the rows rather than on them, so the assertions
    *  about text stay about text — and so a harness that dropped the argument

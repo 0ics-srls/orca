@@ -79,7 +79,6 @@ export class ClaudeSubagentRoster {
     this.now = deps.now ?? (() => Date.now())
     this.linkage = new ClaudeSubagentLinkage({
       ids: this.ids,
-      announcesTasks: () => this.announcesTasks,
       trackedFor: (canonicalId) => this.locate(canonicalId)?.tracked ?? null,
       isForwardedParentTool: deps.isForwardedParentTool,
       childOwnerRefOf: deps.childOwnerRefOf

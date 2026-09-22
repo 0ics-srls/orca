@@ -2,14 +2,16 @@
 //
 // Separate from the roster because it answers a different question. The roster
 // maintains the spawn-group row a user reads; this answers, for one frame's
-// `parent_tool_use_id`, whether the rows that frame produces are the session's
-// own agent's, some child's, or nobody's yet.
+// `parent_tool_use_id`, WHICH child produced the rows that frame carries. Never
+// whether one did: a non-null reference already settles that.
 //
-// The identity it hands out is always the CANONICAL task id, never the tool id
-// the frame arrived under. Claude re-announces a resumed task under a new tool
-// id while its task id stays put, so a durable row stamped with the tool id
-// splits one child into two the moment it resumes — and the journal is the
-// durable record, with no backfill to repair it afterwards.
+// It prefers the CANONICAL task id over the tool id the frame arrived under.
+// Claude re-announces a resumed task under a new tool id while its task id
+// stays put, so a row stamped with the tool id splits one child into two the
+// moment it resumes. That is a reason to prefer the task id, not to withhold a
+// row until one exists: a row written under the tool id is re-stamped in place
+// once the announcement lands, and a split child still beats a child whose
+// words are filed under its parent.
 
 import type { AgentJournalProducerLinkage } from '../../shared/agent-session-journal-types'
 import type { ClaudeSubagentIds } from './claude-subagent-id-aliases'
@@ -22,9 +24,11 @@ export type ClaudeSubagentLinkageVerdict =
    *  are still written now — with `settledLinkageFor`'s stamp — and this is what
    *  marks them as owing a correction once the announcement lands. */
   | { kind: 'pending' }
-  /** Read them as the session's own. Only for a CLI release that announces no
-   *  tasks at all, where nothing stable is ever reachable for these children. */
-  | { kind: 'root' }
+
+// There is deliberately no ROOT arm. A non-null `parent_tool_use_id` names a
+// child, always — so every row it produces is a child's, and the only open
+// question is which identity to stamp. Reading any of them as the session's own
+// would assert the parent wrote words it did not.
 
 /** This resolver, as a write site asking who produced a row sees it. */
 export type ClaudeSubagentLinkageSource = {
@@ -39,13 +43,11 @@ export type ClaudeSubagentLinkageEntry = { attempt: number }
 
 export type ClaudeSubagentLinkageDeps = {
   ids: ClaudeSubagentIds
-  /** Whether this CLI release has ever announced a task. */
-  announcesTasks: () => boolean
   trackedFor: (canonicalId: string) => ClaudeSubagentLinkageEntry | null
   /** Whether a tool id was forwarded at the TOP level. A child parented to one
-   *  was spawned by a call the transcript shows, so its announcement is still
-   *  expected; a child parented to anything else names an id that only ever
-   *  existed inside a sidechain, which this CLI will never announce. */
+   *  was spawned by a call the transcript shows, so an announcement naming it is
+   *  still expected. Gates only whether a CORRECTION is owed, never whether the
+   *  row is a child's, so a stale answer costs precision and not correctness. */
   isForwardedParentTool?: (toolUseId: string) => boolean
   /** The reference naming the child that journaled a tool call, when a child
    *  did rather than the session's own agent. A grandchild's own
@@ -96,25 +98,19 @@ export class ClaudeSubagentLinkage implements ClaudeSubagentLinkageSource {
     // settled — including the case where the two ids are the same string, which
     // comparing them could not tell from never having been announced.
     const announced = this.deps.ids.isAnnounced(parentToolUseId)
-    const awaitingOwnAnnouncement =
-      !excluded && !announced && this.deps.isForwardedParentTool?.(parentToolUseId) === true
-    if (!settled && awaitingOwnAnnouncement) {
+    if (
+      !settled &&
+      !excluded &&
+      !announced &&
+      this.deps.isForwardedParentTool?.(parentToolUseId) === true
+    ) {
       // A top-level spawn call whose `task_started` has not landed yet. Its rows
       // are written immediately under the id it already has and re-attributed
       // when the announcement names it; `pending` is what marks them as owing
-      // that correction. Ahead of the release check below because that one
-      // reads "no announcement SO FAR", which is also what the session's FIRST
-      // child looks like before its own lands.
+      // that correction. Nothing WAITS on this — it only decides whether a
+      // correction is owed — so a reference this misses costs a row the
+      // canonical id, never its author.
       return { kind: 'pending' }
-    }
-    if (!excluded && !announced && !awaitingOwnAnnouncement && !this.deps.announcesTasks()) {
-      // Nothing this release runs is ever named, and this reference is not even
-      // a spawn call the transcript shows — a nested sidechain id. There is no
-      // handle to stamp, so the rows read as the session's own, as they do
-      // today. A forwarded spawn call does NOT come here: it reaches this point
-      // only when it can wait no longer, and its own id is a real handle, which
-      // beats claiming the parent wrote the row.
-      return { kind: 'root' }
     }
     // A row names its parent as well as its producer, and it persists only once
     // BOTH are final: a sidechain call's parent is another agent, whose own

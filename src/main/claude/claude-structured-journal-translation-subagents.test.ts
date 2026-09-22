@@ -483,14 +483,22 @@ describe('claude journal translation — which agent produced a row', () => {
     expect(linkageOfProse('unannounced release')).toMatchObject({ agentId: 'toolu_1' })
   })
 
-  it("reads a sidechain id no release will ever name as the session's own", () => {
-    // No spawn call forwarded it, so there is no handle at all: nothing to
-    // stamp, and the row reads as it always did on these releases.
+  it('never reads a row naming a parent as the session\u2019s own, whatever the release', () => {
+    // The hardest case for attribution: a sidechain id no spawn call forwarded,
+    // on a release that has announced nothing, so no announcement is coming and
+    // no correction ever will. There is still a handle — the reference itself —
+    // and the row is stamped with it. Reading it as root would assert the parent
+    // wrote words a child wrote, which is the defect, not a fallback.
     const { translator, linkageOfProse } = harness()
     translator.handle(userTurn('user-1'))
-    translator.handle(childProse('child-1', 'toolu_nested', 'no handle at all'))
+    translator.handle(childProse('child-1', 'toolu_nested', 'no announcement coming'))
 
-    expect(linkageOfProse('no handle at all')).toEqual({})
+    expect(linkageOfProse('no announcement coming')).toMatchObject({
+      agentId: 'toolu_nested',
+      providerParentRef: 'toolu_nested'
+    })
+    // Positively non-root: this is what every parent-scoped reader tests.
+    expect(linkageOfProse('no announcement coming')?.agentId).not.toBeUndefined()
   })
 
   it("attributes a tool result naming its own call to the call's own agent", () => {

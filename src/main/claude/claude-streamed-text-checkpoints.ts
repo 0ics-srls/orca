@@ -89,8 +89,7 @@ export function createClaudeStreamedTextCheckpoints(
     if (scope === null) {
       return {}
     }
-    const verdict = deps.producer.settledLinkageFor(scope)
-    return agentJournalLinkageFields(verdict.kind === 'linked' ? verdict.linkage : undefined)
+    return agentJournalLinkageFields(deps.producer.settledLinkageFor(scope).linkage)
   }
 
   const persist = (key: string, text: string, force: boolean): void => {
