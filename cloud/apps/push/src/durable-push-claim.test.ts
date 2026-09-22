@@ -6,7 +6,9 @@ import {
   PRUNE_BATCH_ROWS,
   PRUNE_MAX_BATCHES
 } from './durable-push-store.js'
+import { PUSH_LIMITS } from '@orca-cloud/push-contract'
 import {
+  CANDIDATE_SQL,
   cleanupDurablePushFixtures,
   DEVICE_HEAD_SQL,
   durablePushTestDatabaseUrl,
@@ -98,6 +100,47 @@ it.skipIf(!durablePushTestDatabaseUrl)(
     expect((await first)?.notification.notificationSeq).toBe(1)
   }
 )
+
+// Only the TTL term keeps the candidate scan off an unpruned backlog; expires_at is not indexed first.
+it('never scans rows due before the notification TTL window', async () => {
+  const { db, store, clock } = await fixture()
+  const stale = clock() - PUSH_LIMITS.notificationTtlSeconds * 1000 - 1
+  const insert = `INSERT INTO push_delivery_batches(batch_id, host_fingerprint, registration_id, kind, payload_json, state, due_at, expires_at, lease_until, attempts, created_at)
+    VALUES (?, 'host', ?, 'alert', ?, 'pending', ?, ?, 0, 0, ?)`
+  // One unpruned backlog row, and one whose expires_at alone would admit it.
+  await db.query(insert, ['backlog', 'phone-a', JSON.stringify(notification(1)), stale, stale, stale])
+  await db.query(insert, ['past-ttl', 'phone-b', JSON.stringify(notification(2)), stale, clock() + 60_000, stale])
+  await store.accept('host', 'phone-c', notification(3))
+  const scanned: unknown[] = []
+  const capture: PushDatabase = {
+    dialect: db.dialect,
+    query: (sql, params) => db.query(sql, params),
+    close: () => db.close(),
+    lockQuotaScope: (key) => db.lockQuotaScope(key),
+    tryLockScope: (key) => db.tryLockScope(key),
+    tryLockSharedScope: (key) => db.tryLockSharedScope(key),
+    transaction: (run) =>
+      db.transaction((tx) =>
+        run({
+          ...tx,
+          dialect: tx.dialect,
+          close: () => tx.close(),
+          transaction: (inner) => tx.transaction(inner),
+          lockQuotaScope: (key) => tx.lockQuotaScope(key),
+          tryLockScope: (key) => tx.tryLockScope(key),
+          tryLockSharedScope: (key) => tx.tryLockSharedScope(key),
+          query: async (sql, params) => {
+            const rows = await tx.query(sql, params)
+            if (sql.startsWith(CANDIDATE_SQL)) scanned.push(...rows.map((row) => row.batch_id))
+            return rows
+          }
+        })
+      )
+  }
+  expect((await new DurablePushStore(capture, clock).claim())?.registrationId).toBe('phone-c')
+  expect(scanned).toHaveLength(1)
+  expect(scanned).not.toContain('past-ttl')
+})
 
 it('keeps claim, exclusion and prune correct without the queue index', async () => {
   const { db, store, clock, advance } = await fixture()

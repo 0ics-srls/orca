@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest'
 import type { PushDatabase } from './push-database.js'
 import { reserveRequestConnection } from './push-background-database.js'
+import { createPushServer } from './push-server.js'
+import { testPushConfig } from './push-server-harness.test-fixture.js'
 
 function concurrencyProbe() {
   let active = 0
@@ -36,4 +38,18 @@ it.each([
     )
   )
   expect(probe.peak()).toBe(cap)
+})
+
+it('caps the server worker at poolMax - 1 connections', async () => {
+  const probe = concurrencyProbe()
+  const server = createPushServer({ ...testPushConfig(), databasePoolMax: 3 }, probe.database, {
+    fcmAccessToken: async () => 'token',
+    fcmTransport: async () => ({ status: 200, body: '{}' })
+  })
+  try {
+    await server.worker.runDue()
+  } finally {
+    await server.worker.stop()
+  }
+  expect(probe.peak()).toBe(2)
 })
