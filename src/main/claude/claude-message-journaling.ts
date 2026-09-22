@@ -79,11 +79,21 @@ export function journalClaudeMessage(
   // own "what am I doing" readers report the child's newest output as their own.
   //
   // Delivering the result of the very call it names as parent is the exception:
-  // that is the caller consuming its own tool output, not a child's row. Only a
+  // that is the CALLER consuming its own tool output, not a child's row. Only a
   // spawn call ever gets a sidechain, so reading the field literally here would
   // park every ordinary tool result against an announcement never coming.
+  //
+  // The caller is not always the session's own agent. A call a child made is
+  // owned by that child, and its result is the child's row too — collapsing it
+  // to root would both misattribute it and make the result's write resolve
+  // through a different reference than the call's, stranding the correction
+  // owed to that row on the body it had before the result landed.
   const producedByCaller = results.some((result) => result.toolUseId === envelope.parentToolUseId)
-  const stamp = ctx.corrections.stampFor(producedByCaller ? null : envelope.parentToolUseId)
+  const producerRef =
+    producedByCaller && envelope.parentToolUseId !== null
+      ? ctx.toolOrigins.childOwnerRef(envelope.parentToolUseId)
+      : envelope.parentToolUseId
+  const stamp = ctx.corrections.stampFor(producerRef)
   const outputEnvelope = claudeOutputEnvelope(envelope)
   const body = claudeMessageBody(outputEnvelope)
   const identity =

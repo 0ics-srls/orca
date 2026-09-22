@@ -586,6 +586,100 @@ describe('claude journal translation — which agent produced a row', () => {
     expect(streamed().at(-1)?.options?.agentId).not.toBeUndefined()
   })
 
+  /** The result of a call a CHILD made, naming its own call as parent. */
+  function childToolResult(uuid: string, toolUseId: string) {
+    return {
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'user',
+        uuid,
+        session_id: 'claude-session',
+        parent_tool_use_id: toolUseId,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: toolUseId, content: 'deeper done' }]
+        }
+      }
+    }
+  }
+
+  const toolRowWrites = (
+    items: readonly {
+      identity: AgentJournalItemIdentity
+      body: AgentJournalItemBody
+      options: StructuredAgentSessionAppendOptions | undefined
+    }[],
+    toolUseId: string
+  ) =>
+    items.filter(
+      (entry) => orcaClientMessageId(entry.identity) === `claude-tool:claude-session:${toolUseId}`
+    )
+
+  it('does not revert a completed nested tool row when its attribution is corrected', () => {
+    const { translator, items } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(childSpawnCall('child-1', 'toolu_1', 'toolu_2'))
+    translator.handle(childToolResult('child-result', 'toolu_2'))
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    const last = toolRowWrites(items, 'toolu_2').at(-1)
+    expect(last?.body).toMatchObject({ kind: 'tool-call', state: 'completed' })
+    expect(last?.options?.agentId).toBe('task-1')
+  })
+
+  it('never lets a correction change a row\u2019s content, only its attribution', () => {
+    // The module's own invariant, pinned directly. A correction re-appends a
+    // row to restamp it; if it carries a body older than the row's newest, it
+    // silently reverts content — which is how a completed tool row went back to
+    // running. Asserted across every row this session writes, not one shape.
+    const { translator, items } = harness()
+    translator.handle(userTurn('user-1'))
+    translator.handle(spawnCall('assistant-1', 'toolu_1'))
+    translator.handle(childProse('child-1', 'toolu_1', 'talking'))
+    translator.handle(childSpawnCall('child-2', 'toolu_1', 'toolu_2'))
+    translator.handle(childToolResult('child-result', 'toolu_2'))
+
+    const idOf = (entry: { identity: AgentJournalItemIdentity }): string =>
+      orcaClientMessageId(entry.identity) ?? JSON.stringify(entry.identity)
+    const bodyBeforeAnnouncement = new Map<string, AgentJournalItemBody>()
+    for (const entry of items) {
+      bodyBeforeAnnouncement.set(idOf(entry), entry.body)
+    }
+    const writesBefore = items.length
+
+    // ONLY the announcement frame, so the window holds re-attributions and not
+    // a turn settling or any other legitimate body revision.
+    translator.handle(announce('task-1', 'toolu_1'))
+
+    const corrections = items.slice(writesBefore)
+    // The announcement DID rewrite rows, or this proves nothing.
+    expect(corrections.length).toBeGreaterThan(0)
+    for (const correction of corrections) {
+      const itemId = idOf(correction)
+      // The roster's own group row is excluded: the announcement re-keys a
+      // provisional child onto its canonical id, so that row's body is SUPPOSED
+      // to change here. Every other rewrite on this frame is a re-attribution.
+      if (itemId.startsWith('claude-subagents:')) {
+        continue
+      }
+      const before = bodyBeforeAnnouncement.get(itemId)
+      if (before === undefined) {
+        continue
+      }
+      // Re-attribution only: the body a correction carries is the body the row
+      // already had. Carrying an older one silently reverts content.
+      expect(correction.body).toEqual(before)
+    }
+
+    const nested = items.findLast(
+      (entry) => orcaClientMessageId(entry.identity) === 'claude-tool:claude-session:toolu_2'
+    )
+    expect(nested?.body).toMatchObject({ kind: 'tool-call', state: 'completed' })
+    expect(nested?.options?.agentId).toBe('task-1')
+  })
+
   it('keeps a long pre-announcement burst on ONE id, with no row left at root', () => {
     // The burst that outruns the announcement. Every row must name the same
     // producer: a row at `{}` is the parent claiming the child's words, and a

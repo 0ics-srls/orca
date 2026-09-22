@@ -38,7 +38,9 @@ export type ClaudeRowStamp = (
   body: AgentJournalItemBody
 ) => StructuredAgentSessionAppendOptions
 
-/** The session's own agent wrote this row: nothing is stamped, nothing is owed. */
+/** The session's own agent wrote this row: nothing is stamped, nothing is owed.
+ *  Only for a site with no ledger to consult; a ledger-backed root write goes
+ *  through `stampFor(null)`, which also supersedes anything owed to the row. */
 export const rootClaudeRowStamp: ClaudeRowStamp = () => ({})
 
 /** Corrections outstanding at once, across every producer. */
@@ -86,13 +88,18 @@ export class ClaudeProvisionalRowCorrections {
    *  session's own agent; anything else is a child of it. */
   stampFor(parentToolUseId: string | null): ClaudeRowStamp {
     if (parentToolUseId === null) {
-      return rootClaudeRowStamp
+      return (identity) => {
+        this.supersede(identity)
+        return {}
+      }
     }
     return (identity, body) => {
       const provisional = this.deps.linkageFor(parentToolUseId).kind === 'pending'
       const options = this.stamp(parentToolUseId)
       if (provisional) {
         this.remember(parentToolUseId, identity, body, options)
+      } else {
+        this.supersede(identity)
       }
       return options
     }
@@ -128,6 +135,20 @@ export class ClaudeProvisionalRowCorrections {
     if (wrote) {
       this.deps.publish()
     }
+  }
+
+  /**
+   * A settled write lands on a row a correction was owed to, so the correction
+   * goes.
+   *
+   * Dropped rather than re-bodied: a settled write already carries a FINAL
+   * verdict, so the correction could only restamp the row from a reference this
+   * write did not use — equal at best, and at worst the older body. One row can
+   * legitimately be written under two references (a call and its result), and
+   * this is what keeps a correction owed to the first from outliving the second.
+   */
+  private supersede(identity: AgentJournalItemIdentity): void {
+    this.outstanding.delete(agentJournalItemKey(identity))
   }
 
   private stamp(parentToolUseId: string): StructuredAgentSessionAppendOptions {
