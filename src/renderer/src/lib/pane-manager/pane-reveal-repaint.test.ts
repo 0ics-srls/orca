@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { ManagedPaneInternal } from './pane-manager-types'
 import { schedulePaneRevealPresent, schedulePaneRevealRepaint } from './pane-reveal-repaint'
@@ -56,16 +57,15 @@ function createPane(options: { webglAddon?: FakeWebglAddon | null } = {}): Manag
 }
 
 function createVisibilityProbeManager(onValues: () => void): PaneManager {
-  const manager = Object.create(PaneManager.prototype) as PaneManager
-  Object.assign(manager as unknown as Record<string, unknown>, {
-    destroyed: false,
-    atlasRecoveryVisible: true,
-    panes: {
-      values: () => {
-        onValues()
-        return []
-      }
-    }
+  const manager = new PaneManager(document.createElement('div'), { linkOpenHint: () => '' })
+  unregisterLivePaneManager(manager)
+  const panes = Reflect.get(manager, 'panes')
+  if (!(panes instanceof Map)) {
+    throw new Error('Expected manager pane registry')
+  }
+  vi.spyOn(panes, 'values').mockImplementation(() => {
+    onValues()
+    return new Map<number, ManagedPaneInternal>().values()
   })
   return manager
 }
