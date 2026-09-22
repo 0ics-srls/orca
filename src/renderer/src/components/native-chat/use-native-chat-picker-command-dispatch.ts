@@ -23,7 +23,9 @@ export function useNativeChatPickerCommandDispatch(args: {
   disabled: boolean
   isDispatchingSessionOption: boolean
   resolveTarget: () => NativeChatResolvedTarget | null
-  onSlashCommand?: (command: string) => void
+  onSlashCommand?: (command: string, output?: string) => void
+  /** The host's own answer to a command the agent must not see, or null to send it. */
+  answerCommandLocally?: (command: string) => string | null
   sessionOptionsSurface: NativeChatPtySessionOptionsSurface | null
   trackPendingSend: NativeChatSendLifecycle['trackPendingSend']
   setHistory: Dispatch<SetStateAction<HistoryState>>
@@ -40,6 +42,7 @@ export function useNativeChatPickerCommandDispatch(args: {
     isDispatchingSessionOption,
     resolveTarget,
     onSlashCommand,
+    answerCommandLocally,
     sessionOptionsSurface,
     trackPendingSend,
     setHistory,
@@ -55,6 +58,21 @@ export function useNativeChatPickerCommandDispatch(args: {
       const text = `/${command.name}`
       const target = resolveTarget()
       if (!target || disabled || isDispatchingSessionOption) {
+        return
+      }
+      const localAnswer = answerCommandLocally?.(text) ?? null
+      if (localAnswer !== null) {
+        // Why: the host answers in place of the PTY, so the composer resets as
+        // after a send but nothing is written to the terminal.
+        emitNativeChatPickerItemAccepted({ agent, itemKind: 'command' })
+        emitNativeChatSendClassified({ agent, outcome: 'command' })
+        onSlashCommand?.(text, localAnswer)
+        setHistory((previous) => pushHistory(previous, text))
+        setDraft('')
+        setCaret(0)
+        setActiveSuggestion(0)
+        clearSkillOrigin()
+        setNotice(null)
         return
       }
       trackPendingSend(
@@ -83,6 +101,7 @@ export function useNativeChatPickerCommandDispatch(args: {
     },
     [
       agent,
+      answerCommandLocally,
       clearImageAttachments,
       clearSkillOrigin,
       disabled,

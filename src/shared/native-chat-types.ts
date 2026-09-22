@@ -183,6 +183,16 @@ export type NativeChatBlock =
   | NativeChatSubagentGroupBlock
   | NativeChatBackgroundTaskBlock
 
+/** The provider's own token accounting on one assistant response. Input plus
+ *  both cache counts is the prompt the model read, so the newest record is the
+ *  live context size; rows the CLI synthesizes carry none. */
+export type NativeChatTokenUsage = {
+  inputTokens: number
+  cacheCreationInputTokens: number
+  cacheReadInputTokens: number
+  outputTokens: number
+}
+
 export type NativeChatMessage = {
   /** Stable across re-reads/appends so the assembler and the renderer list can
    *  dedup and key by it. */
@@ -193,6 +203,10 @@ export type NativeChatMessage = {
    *  supply one (e.g. some scrape segments). Null sorts before any timestamp. */
   timestamp: number | null
   source: NativeChatSource
+  /** Provider model id that produced an assistant response, when recorded. */
+  model?: string
+  /** Present on assistant responses whose record carried API usage. */
+  usage?: NativeChatTokenUsage
   /** Optional explicit turn key. When present, two messages with the same
    *  `turnId` are treated as the same turn for dedup regardless of `id`. */
   turnId?: string

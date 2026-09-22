@@ -21,6 +21,7 @@ describe('getAgentSlashCommands', () => {
     const names = getAgentSlashCommands('claude').map((c) => c.name)
     expect(names).toContain('clear')
     expect(names).toContain('compact')
+    expect(names).toContain('context')
     expect(names).not.toContain('model')
   })
 

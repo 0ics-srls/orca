@@ -51,8 +51,11 @@ export type NativeChatComposerProps = {
   onOptimisticSend?: (text: string, imagePaths?: string[]) => string | undefined
   /** Remove an optimistic echo when its delayed submit is canceled. */
   onOptimisticSendCanceled?: (pendingId: string) => void
-  /** Record a dispatched slash command that does not create a chat turn. */
-  onSlashCommand?: (command: string) => void
+  /** Record a dispatched slash command that does not create a chat turn; `output`
+   *  carries the host's answer when the agent never saw the command. */
+  onSlashCommand?: (command: string, output?: string) => void
+  /** The host's own answer to a command the agent must not see, or null to send it. */
+  answerCommandLocally?: (command: string) => string | null
   /** Picker-only agent commands continue in the hosted TUI after dispatch. */
   onSwitchToTerminal?: () => void
   /** Reads the hosted TUI's current rendered screen when chat is entered. */

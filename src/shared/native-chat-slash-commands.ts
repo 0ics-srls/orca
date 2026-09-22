@@ -29,6 +29,7 @@ const COMMON_COMMANDS: readonly SlashCommandSuggestion[] = [
 const CLAUDE_COMMANDS: readonly SlashCommandSuggestion[] = [
   { name: 'clear', description: 'Clear conversation history' },
   { name: 'compact', description: 'Summarize and compact the conversation' },
+  { name: 'context', description: 'Show context usage' },
   { name: 'init', description: 'Initialize a CLAUDE.md' },
   { name: 'review', description: 'Review the current changes' },
   { name: 'help', description: 'Show available commands' }

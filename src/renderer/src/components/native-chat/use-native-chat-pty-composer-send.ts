@@ -31,7 +31,9 @@ export function useNativeChatPtyComposerSend(args: {
   resolveTarget: () => NativeChatResolvedTarget | null
   classifySend: NativeChatPickerState['classifySend']
   onOptimisticSend?: (text: string, imagePaths?: string[]) => string | undefined
-  onSlashCommand?: (command: string) => void
+  onSlashCommand?: (command: string, output?: string) => void
+  /** The host's own answer to a command the agent must not see, or null to send it. */
+  answerCommandLocally?: (command: string) => string | null
   sessionOptionsSurface: NativeChatPtySessionOptionsSurface | null
   terminalTabId: string
   trackPendingSend: NativeChatSendLifecycle['trackPendingSend']
@@ -57,6 +59,21 @@ export function useNativeChatPtyComposerSend(args: {
       return
     }
     const classification = args.classifySend(text)
+    // Why: a host-answered command never reaches the PTY; its answer is the
+    // marker, and the composer resets exactly as it would after a send.
+    const localAnswer =
+      classification === 'command' && imagePaths.length === 0
+        ? (args.answerCommandLocally?.(text.trim()) ?? null)
+        : null
+    if (localAnswer !== null) {
+      args.onSlashCommand?.(text.trim(), localAnswer)
+      args.setHistory((previous) => pushHistory(previous, text))
+      args.setDraft('')
+      args.setCaret(0)
+      args.clearSkillOrigin()
+      args.setNotice(null)
+      return
+    }
     const { sendOptions } = resolveNativeChatLaunchDraftSend({
       launchDraft: args.launchDraft,
       launchDraftResolved: args.launchDraftResolved,

@@ -808,3 +808,19 @@ describe('scope-cache key counts stay bounded (memory-leak regression)', () => {
     )
   })
 })
+
+describe('commandMarkersAsMessages with a host answer', () => {
+  it('shows the answer in place of the Ran line', () => {
+    const [message] = commandMarkersAsMessages([
+      { id: 'c2', command: '/context', sentAt: 9, output: 'Context: 54.6k / 200k tokens (27%)' }
+    ])
+    expect(message?.role).toBe('system')
+    expect(message?.blocks).toEqual([
+      {
+        type: 'text',
+        text: 'Context: 54.6k / 200k tokens (27%)',
+        presentation: 'command-output'
+      }
+    ])
+  })
+})
