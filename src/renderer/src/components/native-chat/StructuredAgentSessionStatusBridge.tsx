@@ -122,7 +122,9 @@ function projectStatus(
         current.workingMode === desired.workingMode
           ? current.stateStartedAt
           : summary.updatedAt,
-      evidenceObservedAt: summary.updatedAt
+      // Same rule as the host ingest: the journal clock stopped when the lead's turn did, so a
+      // row held open by child work alone is dated by when this client saw it instead.
+      evidenceObservedAt: agentStatus.fromChildWork ? Date.now() : summary.updatedAt
     },
     { tabId: tab.id, worktreeId: tab.worktreeId },
     {

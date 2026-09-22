@@ -422,6 +422,30 @@ describe('StructuredAgentSessionStatusBridge', () => {
     ])
   })
 
+  // Mirrors the host ingest: the journal clock cannot date child work, so a row held open by a
+  // live roster alone must not age into staleness while the work is still running.
+  it('dates a child-work row by when this client saw it, not by the journal clock', async () => {
+    render(<StructuredAgentSessionStatusBridge />)
+    await waitFor(() => expect(mocks.subscribeStatus).toHaveBeenCalledOnce())
+    const before = Date.now()
+
+    act(() =>
+      feed().emit({
+        type: 'snapshot',
+        sessions: [
+          summary({
+            status: 'idle',
+            updatedAt: 1,
+            backgroundTasks: [{ id: 'shell-1', kind: 'command', state: 'working' }]
+          })
+        ]
+      })
+    )
+    const [row] = statuses()
+    expect(row).toMatchObject({ state: 'working', workingMode: 'monitoring' })
+    expect(row?.evidenceObservedAt ?? 0).toBeGreaterThanOrEqual(before)
+  })
+
   it('requires fresh parent evidence as well as a reconfirmed feed after reconnect', async () => {
     render(<StructuredAgentSessionStatusBridge />)
     await waitFor(() => expect(mocks.subscribeStatus).toHaveBeenCalledOnce())
