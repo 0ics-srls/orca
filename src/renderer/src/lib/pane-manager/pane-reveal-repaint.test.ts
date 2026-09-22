@@ -56,17 +56,9 @@ function createPane(options: { webglAddon?: FakeWebglAddon | null } = {}): Manag
   }
 }
 
-function createVisibilityProbeManager(onValues: () => void): PaneManager {
+function createVisibilityProbeManager(): PaneManager {
   const manager = new PaneManager(document.createElement('div'), { linkOpenHint: () => '' })
   unregisterLivePaneManager(manager)
-  const panes = Reflect.get(manager, 'panes')
-  if (!(panes instanceof Map)) {
-    throw new Error('Expected manager pane registry')
-  }
-  vi.spyOn(panes, 'values').mockImplementation(() => {
-    onValues()
-    return new Map<number, ManagedPaneInternal>().values()
-  })
   return manager
 }
 
@@ -232,14 +224,8 @@ describe('schedulePaneRevealRepaint', () => {
   })
 
   it('skips delayed repaint and present when the manager hides before settle', () => {
-    let repaintValuesRead = 0
-    let presentValuesRead = 0
-    const repaintManager = createVisibilityProbeManager(() => {
-      repaintValuesRead += 1
-    })
-    const presentManager = createVisibilityProbeManager(() => {
-      presentValuesRead += 1
-    })
+    const repaintManager = createVisibilityProbeManager()
+    const presentManager = createVisibilityProbeManager()
 
     repaintManager.scheduleRevealRepaint()
     presentManager.scheduleRevealPresent()
@@ -249,8 +235,7 @@ describe('schedulePaneRevealRepaint', () => {
     flushFrame()
     flushFrame()
 
-    expect(repaintValuesRead).toBe(0)
-    expect(presentValuesRead).toBe(0)
+    expect(vi.mocked(globalThis.cancelAnimationFrame)).toHaveBeenCalledTimes(2)
   })
 
   describe('schedulePaneRevealPresent', () => {
