@@ -46,6 +46,7 @@ function target(
   failOn?: number
 ): StructuredAgentSessionEventTarget {
   journalAppendOptions.length = 0
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a double for the handful of journal methods this sink calls; nothing else on it is ever reached.
   const journal = {
     appendItem: vi.fn(
       async (
