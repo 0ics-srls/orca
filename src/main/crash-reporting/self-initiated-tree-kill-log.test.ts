@@ -30,6 +30,7 @@ import { terminateWindowsProcessTree } from '../windows-process-tree-kill'
 import { installMainProcessTreeKillGate } from '../own-chromium-tree-kill-guard'
 import { _resetTracerForTests, setActiveSink } from '../observability/tracer'
 import { setLinuxCgroupMemoryLimitReaderForTest } from './linux-cgroup-memory-limit'
+import { setLinuxMemoryPressureStallReaderForTest } from './linux-memory-pressure-stall'
 
 /** The field shape: renderer, `reason=killed exitCode=1`, win32 (#G2). */
 function killedRendererEvent(): ProcessGoneCrashEvent {
@@ -69,8 +70,9 @@ async function recordKilledRenderer(): Promise<Record<string, unknown>> {
 }
 
 beforeEach(() => {
-  // Keep the comparison independent of host cgroup usage changing between the two crash records.
+  // Keep the comparison independent of host cgroup usage and PSI averages moving between the two crash records.
   setLinuxCgroupMemoryLimitReaderForTest(() => undefined)
+  setLinuxMemoryPressureStallReaderForTest(() => undefined)
   setActiveSink({ push: () => {}, flush: () => {}, close: () => {} })
   clearCrashBreadcrumbsForTest()
   resetProcessGoneSiblingCorrelationForTest()
@@ -79,6 +81,7 @@ beforeEach(() => {
 
 afterEach(() => {
   setLinuxCgroupMemoryLimitReaderForTest(null)
+  setLinuxMemoryPressureStallReaderForTest(null)
   vi.restoreAllMocks()
   _resetTracerForTests()
   clearCrashBreadcrumbsForTest()
@@ -110,6 +113,12 @@ describe('self-initiated tree kill breadcrumb', () => {
     expect(selfKilled.selfInitiatedTreeKillCount).toBe(1)
     expect(externallyKilled.selfInitiatedKills).toBeUndefined()
     expect(externallyKilled.selfInitiatedTreeKillCount).toBeUndefined()
+    // A live Linux runner refreshes PSI every 2 s and cgroup usage constantly; a
+    // leaked reading would make the equality below flake instead of fail here.
+    const liveLinuxMemoryKeys = (details: Record<string, unknown>) =>
+      Object.keys(details).filter((key) => /^systemMemory(Cgroup|Stall)/.test(key))
+    expect(liveLinuxMemoryKeys(selfKilled)).toEqual([])
+    expect(liveLinuxMemoryKeys(externallyKilled)).toEqual([])
     // Every other recorded field is identical — that is why the breadcrumb exists.
     expect({
       ...selfKilled,
