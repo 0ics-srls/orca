@@ -23,6 +23,10 @@ import type {
 import { createGitHandlerOperationSet } from './git-handler-operation-set'
 import { registerGitHandlers } from './git-handler-registration'
 import { resolveGitFetchHeadCommand, runWithGitFetchHeadLock } from '../shared/git-fetch-head-lock'
+import {
+  resolveGitWorktreeAdminCommand,
+  runWithGitWorktreeAdminLock
+} from '../shared/git-worktree-admin-lock'
 import { endSubprocessStdin } from '../shared/subprocess-stdin-write'
 import { MAX_GIT_BUFFER, runGitToTermination } from './git-handler-command-termination'
 
@@ -182,9 +186,11 @@ export class GitHandler {
       return { stdout: String(stdout), stderr: String(stderr) }
     }
     const command = resolveGitFetchHeadCommand(args, expandedCwd)
-    return command.needsLock
-      ? runWithGitFetchHeadLock(command.cwd, opts?.signal, run, command.gitDir)
-      : run()
+    if (command.needsLock) {
+      return runWithGitFetchHeadLock(command.cwd, opts?.signal, run, command.gitDir)
+    }
+    const adminCommand = resolveGitWorktreeAdminCommand(args, expandedCwd)
+    return adminCommand ? runWithGitWorktreeAdminLock(adminCommand, opts?.signal, run) : run()
   }
 
   private async gitBuffer(args: string[], cwd: string): Promise<Buffer> {

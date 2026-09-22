@@ -1,10 +1,7 @@
 import { execFileSync, type SpawnOptions } from 'node:child_process'
 import { withGitSpan } from '../../observability/instrumentation'
 import { recordSubprocessSpawn } from '../../diagnostics/main-thread-churn-probe'
-import {
-  resolveGitFetchHeadCommand,
-  runWithGitFetchHeadLock
-} from '../../../shared/git-fetch-head-lock'
+import { runWithGitExecLocks } from './git-exec-lock-policy'
 import {
   isWslLinkedWorktreeGitRoutingCandidate,
   prepareWslLinkedWorktreeGitRouting
@@ -33,12 +30,16 @@ import { GitCommandTimeoutError, gitCommandTimeoutMs } from './git-command-timeo
  */
 async function gitExecFileAsyncUnlocked(
   args: string[],
-  options: GitExecOptions
+  options: GitExecOptions,
+  lockWaitMs?: number
 ): Promise<{ stdout: string; stderr: string }> {
   // Why: span the user-visible `git <subcommand>` form, not the resolved binary, so dashboards group by intent.
   return withGitSpan(
     { args, ...(options.cwd !== undefined ? { cwd: options.cwd } : {}) },
     async (span) => {
+      if (lockWaitMs !== undefined) {
+        span?.setAttribute('git.worktree_admin_lock_wait_ms', Math.round(lockWaitMs))
+      }
       if (isWslLinkedWorktreeGitRoutingCandidate(options.cwd, options.wslDistro)) {
         await prepareWslLinkedWorktreeGitRouting(options.cwd, options.wslDistro, {
           signal: options.signal
@@ -166,15 +167,9 @@ export function gitExecFileAsync(
   args: string[],
   options: GitExecOptions
 ): Promise<{ stdout: string; stderr: string }> {
-  const command = resolveGitFetchHeadCommand(args, options.cwd)
-  return command.needsLock
-    ? runWithGitFetchHeadLock(
-        command.cwd,
-        options.signal,
-        () => gitExecFileAsyncUnlocked(args, options),
-        command.gitDir
-      )
-    : gitExecFileAsyncUnlocked(args, options)
+  return runWithGitExecLocks(args, options, (lockWaitMs) =>
+    gitExecFileAsyncUnlocked(args, options, lockWaitMs)
+  )
 }
 
 /**
