@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { classifyMobileNativeChatSend } from './mobile-native-chat-send-classification'
+import {
+  classifyMobileNativeChatSend,
+  getMobileNativeChatCommands
+} from './mobile-native-chat-send-classification'
 
 describe('classifyMobileNativeChatSend', () => {
   it('recognizes OMP selectors and context commands without claiming generic help', () => {
@@ -22,6 +25,14 @@ describe('classifyMobileNativeChatSend', () => {
     expect(classifyMobileNativeChatSend('claude', '/model sonnet')).toBe('unknown-token')
     expect(classifyMobileNativeChatSend('claude', '/cost')).toBe('unknown-token')
     expect(classifyMobileNativeChatSend('claude', '/diff')).toBe('unknown-token')
+  })
+
+  it('leaves OpenClaude /context off mobile, whose fold never shows the report', () => {
+    expect(classifyMobileNativeChatSend('openclaude', '/context')).toBe('unknown-token')
+    expect(classifyMobileNativeChatSend('openclaude', '/compact')).toBe('command')
+    expect(getMobileNativeChatCommands('openclaude').map(({ name }) => name)).not.toContain(
+      'context'
+    )
   })
 
   it('keeps prose as chat, including leading-whitespace slash text', () => {

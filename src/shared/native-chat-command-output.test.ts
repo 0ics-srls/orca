@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { surfaceNativeChatCommandOutputs } from './native-chat-command-output'
+import {
+  surfaceNativeChatCommandOutputs,
+  withoutSurfacedOutputCommands
+} from './native-chat-command-output'
+import { getAgentSlashCommands } from './native-chat-slash-commands'
 import { stripNoiseMessages } from './native-chat-noise'
 import type { NativeChatMessage } from './native-chat-types'
 
@@ -73,5 +77,15 @@ describe('surfaceNativeChatCommandOutputs', () => {
     expect(surfaceNativeChatCommandOutputs(messages, 'claude')).toBe(messages)
     const orphan = [userTurn('out', CONTEXT_STDOUT, 50), envelope('context', 'env', 100)]
     expect(surfaceNativeChatCommandOutputs(orphan, 'openclaude')).toBe(orphan)
+  })
+})
+
+describe('withoutSurfacedOutputCommands', () => {
+  it('drops only commands answered by a surfaced reply', () => {
+    const names = (agent: string) =>
+      withoutSurfacedOutputCommands(agent, getAgentSlashCommands(agent)).map(({ name }) => name)
+    expect(names('openclaude')).toEqual(getAgentSlashCommands('claude').map(({ name }) => name))
+    const omp = getAgentSlashCommands('omp')
+    expect(withoutSurfacedOutputCommands('omp', omp)).toBe(omp)
   })
 })

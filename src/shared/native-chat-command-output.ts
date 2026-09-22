@@ -8,6 +8,7 @@ import type { AgentType } from './agent-status-types'
 import { stripAnsiEscapeSequences } from './ansi-escape-sequences'
 import { parseNativeChatCommandEnvelope } from './native-chat-command-envelope'
 import { isTextBlock, type NativeChatMessage } from './native-chat-types'
+import type { SlashCommandSuggestion } from './native-chat-slash-commands'
 
 // Why: opt-in per agent; Claude's TUI writes no reply row for these, OpenClaude does.
 const SURFACED_COMMAND_OUTPUTS: Partial<Record<AgentType, ReadonlySet<string>>> = {
@@ -75,6 +76,16 @@ export function surfaceNativeChatCommandOutputs(
     }
   })
   return changed ? out : messages
+}
+
+/** The catalog for a chat surface that does not run this projection: there, a
+ *  command answered only by the reply it surfaces would appear to do nothing. */
+export function withoutSurfacedOutputCommands(
+  agent: AgentType,
+  commands: readonly SlashCommandSuggestion[]
+): readonly SlashCommandSuggestion[] {
+  const surfaced = SURFACED_COMMAND_OUTPUTS[agent]
+  return surfaced ? commands.filter((command) => !surfaced.has(command.name)) : commands
 }
 
 function answeringCommand(
