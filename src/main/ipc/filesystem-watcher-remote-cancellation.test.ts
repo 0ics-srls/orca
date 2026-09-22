@@ -188,18 +188,22 @@ describe('remote filesystem watcher cancellation', () => {
     )
     getSshFilesystemProviderMock.mockReturnValue({ watch: watchMock })
     const sender = { isDestroyed: () => false, send: vi.fn(), once: vi.fn(), id: 1 }
-    const watch = handlers['fs:watchWorktree'](
-      { sender },
-      { worktreePath: '/home/me/repo', connectionId: 'conn-1' }
-    ) as Promise<unknown>
+    const watch = Promise.resolve(
+      handlers['fs:watchWorktree'](
+        { sender },
+        { worktreePath: '/home/me/repo', connectionId: 'conn-1' }
+      )
+    )
 
-    await Promise.resolve()
-    expect(watchMock).toHaveBeenCalledTimes(1)
-    await closeRemoteWatcherForWorktreePath('conn-1', '/home/me/repo')
-    expect(watchSignal?.aborted).toBe(true)
-
-    resolveWatch?.(lateUnwatch)
-    await watch
+    try {
+      await Promise.resolve()
+      expect(watchMock).toHaveBeenCalledTimes(1)
+      await closeRemoteWatcherForWorktreePath('conn-1', '/home/me/repo')
+      expect(watchSignal?.aborted).toBe(true)
+    } finally {
+      resolveWatch?.(lateUnwatch)
+      await watch
+    }
     expect(lateUnwatch).toHaveBeenCalledTimes(1)
   })
 
