@@ -228,6 +228,22 @@ export type RepoMaintenancePackReport = {
   batchExhausted: boolean
 }
 
+/** What the host is doing right now, split by what each kind of maintenance must yield to. */
+export type RepoMaintenanceActivity = {
+  /** The user or an agent is working with repositories, so ref work must wait. */
+  interactive: boolean
+  /** The machine cannot spare the work at all: shutdown, battery, or a saturated CPU. */
+  constrained: boolean
+}
+
+/**
+ * When a task may run. `idle` waits for the user and every agent to go quiet,
+ * because it takes a lock that ref work needs. `unconstrained` takes no lock
+ * anything waits on, so it yields only to the machine itself -- otherwise a user
+ * who always has an agent running would never get it at all.
+ */
+export type RepoMaintenanceWindow = 'idle' | 'unconstrained'
+
 /**
  * One unit of maintenance on the shared schedule.
  *
@@ -239,6 +255,8 @@ export type RepoMaintenanceTask = {
   readonly id: RepoMaintenanceTaskId
   /** Below this the backlog is cheaper to carry than to pack. */
   readonly threshold: number
+  /** Absent means `idle`: a task has to say it is safe beside live work. */
+  readonly window?: RepoMaintenanceWindow
   /**
    * Bounded backlog count. `undefined` means the repository could not be
    * resolved on this host -- which is not the same as clean, and never packs.
@@ -274,8 +292,8 @@ export type PackedRefsLockReporter = {
 
 export type RepoMaintenanceOptions = {
   now?: () => number
-  /** True while app-wide work this must not race is in flight (create, live agent, battery, quit). */
-  isBusy?: () => boolean
+  /** App-wide activity; absent means nothing is going on. */
+  activity?: () => RepoMaintenanceActivity
   /** Wraps one attempt so a host can trace it; must invoke and await `attempt`. */
   observe?: (attempt: (span: RepoMaintenanceSpan) => Promise<void>) => Promise<void>
   quietPeriodMs?: number

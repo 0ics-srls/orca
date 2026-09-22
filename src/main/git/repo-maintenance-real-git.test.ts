@@ -411,7 +411,7 @@ describe('yielding the repository to work that deletes refs', () => {
     let packing = false
     let releaseLock: (() => void) | undefined
     _resetLocalRepoMaintenanceForTests({ quietPeriodMs: QUIET_MS })
-    setRepoMaintenanceActivityProbe(() => false)
+    setRepoMaintenanceActivityProbe(() => ({ interactive: false, constrained: false }))
     getLocalRepoMaintenance().arm({
       key: `local::${repoPath}`,
       tasks: [
@@ -467,7 +467,7 @@ describe('yielding the repository to work that deletes refs', () => {
     let pruning = false
     let finishPrune: (() => void) | undefined
     _resetLocalRepoMaintenanceForTests({ quietPeriodMs: QUIET_MS })
-    setRepoMaintenanceActivityProbe(() => false)
+    setRepoMaintenanceActivityProbe(() => ({ interactive: false, constrained: false }))
     getLocalRepoMaintenance().arm({
       key: `local::${repoPath}`,
       tasks: [

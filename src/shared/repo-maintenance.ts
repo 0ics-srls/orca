@@ -11,6 +11,7 @@ import {
   REPO_MAINTENANCE_QUIET_PERIOD_MS,
   REPO_MAINTENANCE_REMAINDER_DELAY_MS,
   RepoMaintenanceInterrupted,
+  type RepoMaintenanceActivity,
   type RepoMaintenanceAttemptOutcome,
   type RepoMaintenanceOptions,
   type RepoMaintenanceSpan,
@@ -35,6 +36,9 @@ const MAX_DEFERRAL_BACKOFF_MULTIPLIER = 8
 const MAX_TRACKED_REPOS = 64
 /** Cooldowns are per repo *and* task, so the ceiling has to cover both. */
 const MAX_TRACKED_COOLDOWNS = MAX_TRACKED_REPOS * 8
+
+/** Why a task may not start now; `counted` spends the give-up budget. */
+type RepoMaintenanceBlock = { counted: boolean; retryInMs?: number }
 
 type TrackedRepo = {
   target: RepoMaintenanceTarget
@@ -65,7 +69,7 @@ export class RepoMaintenance {
   private readonly tracked = new Map<string, TrackedRepo>()
   private readonly cooldowns: RepoMaintenanceCooldowns
   private readonly now: () => number
-  private readonly isAppBusy: () => boolean
+  private readonly activity: () => RepoMaintenanceActivity
   private readonly observe: NonNullable<RepoMaintenanceOptions['observe']>
   private readonly quietPeriodMs: number
   private readonly remainderDelayMs: number
@@ -82,12 +86,13 @@ export class RepoMaintenance {
   // (a create's fetch inside a create), and the last one out reopens the window.
   private suspensions = 0
   private lastAttempt: Promise<void> = Promise.resolve()
+  private lastUserActivityAt = Number.NEGATIVE_INFINITY
   private disposed = false
 
   constructor(options: RepoMaintenanceOptions = {}) {
     this.now = options.now ?? Date.now
     this.cooldowns = new RepoMaintenanceCooldowns(this.now, MAX_TRACKED_COOLDOWNS)
-    this.isAppBusy = options.isBusy ?? (() => false)
+    this.activity = options.activity ?? (() => ({ interactive: false, constrained: false }))
     this.observe = options.observe ?? ((attempt) => attempt(noopSpan))
     this.quietPeriodMs = options.quietPeriodMs ?? REPO_MAINTENANCE_QUIET_PERIOD_MS
     this.remainderDelayMs = options.remainderDelayMs ?? REPO_MAINTENANCE_REMAINDER_DELAY_MS
@@ -140,23 +145,14 @@ export class RepoMaintenance {
   }
 
   /**
-   * Push every armed repository's attempt out by a full quiet period.
+   * Record that the user is at the keyboard, which holds every `idle` task off
+   * for a full quiet period from now.
    *
-   * User-initiated ref work is evidence the user is active in the app, not just
-   * in one repo, and it is free -- no key to resolve, no subprocess, nothing at
-   * all when nothing is armed.
+   * A timestamp read at attempt time rather than a reset of every armed timer,
+   * so it is free and holds off only the tasks that must yield to the user.
    */
-  postponeAll(): void {
-    if (this.disposed) {
-      return
-    }
-    for (const [key, tracked] of this.tracked) {
-      if (tracked.timer) {
-        clearTimeout(tracked.timer)
-      }
-      tracked.deferrals = 0
-      this.schedule(key, tracked)
-    }
+  recordUserActivity(): void {
+    this.lastUserActivityAt = this.now()
   }
 
   /**
@@ -195,8 +191,29 @@ export class RepoMaintenance {
     this.cooldowns.clear()
   }
 
-  private isBusy(tracked: TrackedRepo): boolean {
-    return this.isAppBusy() || (tracked.target.isBusy?.() ?? false)
+  /** Null when `task` may start now; otherwise how to wait for it. */
+  private blockFor(task: RepoMaintenanceTask, tracked: TrackedRepo): RepoMaintenanceBlock | null {
+    const activity = this.activity()
+    if (activity.constrained) {
+      return { counted: true }
+    }
+    if (task.window === 'unconstrained') {
+      return null
+    }
+    if (this.suspensions > 0 || activity.interactive || (tracked.target.isBusy?.() ?? false)) {
+      return { counted: true }
+    }
+    const userQuietInMs = this.lastUserActivityAt + this.quietPeriodMs - this.now()
+    // Uncounted: a user who keeps coming back is no reason to give up on the repo.
+    return userQuietInMs > 0 ? { counted: false, retryInMs: userQuietInMs } : null
+  }
+
+  private deferBlocked(key: string, tracked: TrackedRepo, blocks: RepoMaintenanceBlock[]): void {
+    if (blocks.some((block) => block.counted)) {
+      this.defer(key, tracked, true)
+      return
+    }
+    this.defer(key, tracked, false, Math.max(...blocks.map((block) => block.retryInMs ?? 0)))
   }
 
   private schedule(key: string, tracked: TrackedRepo, delayMs = this.quietPeriodMs): void {
@@ -227,7 +244,7 @@ export class RepoMaintenance {
    * `counted` spends the give-up budget. Waiting behind another repository's
    * pack, or yielding to work Orca asked us to yield to, does not: both end on
    * their own, so charging for them would let a busy machine starve a repo
-   * until its next fetch. Only "the app is busy" is charged.
+   * until its next fetch. Only "the app or machine is busy" is charged.
    */
   private defer(key: string, tracked: TrackedRepo, counted: boolean, delayMs?: number): void {
     // A fetch that landed while this attempt was probing already re-armed the
@@ -260,8 +277,13 @@ export class RepoMaintenance {
       this.defer(key, tracked, false)
       return
     }
-    if (this.suspensions > 0 || this.isBusy(tracked)) {
-      this.defer(key, tracked, true)
+    const blocks = due.map((task) => this.blockFor(task, tracked))
+    if (blocks.every((block) => block !== null)) {
+      this.deferBlocked(
+        key,
+        tracked,
+        blocks.filter((block) => block !== null)
+      )
       return
     }
     const abort = new AbortController()
@@ -303,23 +325,31 @@ export class RepoMaintenance {
       return
     }
     let remainder = false
+    const skipped: { id: string; block: RepoMaintenanceBlock }[] = []
     for (const task of due) {
       if (signal.aborted) {
         this.endAborted(key, tracked, span, signal)
         return
       }
-      // The quiet window can close between tasks; re-check before spending a git slot.
-      if (this.suspensions > 0 || this.isBusy(tracked)) {
-        this.recordAttempt(span, 'deferred')
-        this.defer(key, tracked, true)
-        return
+      // Activity can start between tasks; re-check before spending a git slot.
+      const block = this.blockFor(task, tracked)
+      if (block) {
+        skipped.push({ id: task.id, block })
+        continue
       }
       remainder = (await this.runTask(key, task, span, signal)) || remainder
     }
-    this.recordAttempt(span, 'completed')
+    span.setAttribute('repo.maintenance_skipped', skipped.map((entry) => entry.id).join(','))
+    this.recordAttempt(span, skipped.length > 0 ? 'deferred' : 'completed')
     if (remainder && tracked.remainders < REPO_MAINTENANCE_MAX_REMAINDER_ROUNDS) {
       tracked.remainders += 1
       this.defer(key, tracked, false, this.remainderDelayMs)
+    } else if (skipped.length > 0) {
+      this.deferBlocked(
+        key,
+        tracked,
+        skipped.map((entry) => entry.block)
+      )
     }
   }
 

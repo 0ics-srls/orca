@@ -104,11 +104,35 @@ describe('local repo maintenance target', () => {
     readRepoCommonDirFromGitMock.mockResolvedValue('/repo/.git')
     gitExecFileAsyncMock.mockResolvedValue({ stdout: '', stderr: '' })
     _resetLocalRepoMaintenanceForTests({ quietPeriodMs: 1 })
-    setRepoMaintenanceActivityProbe(() => false)
+    setRepoMaintenanceActivityProbe(() => ({ interactive: false, constrained: false }))
     const order: string[] = []
 
     getLocalRepoMaintenance().arm(recordingTarget(order))
     await vi.waitFor(() => expect(order).toEqual(['refs', 'objects']))
+  })
+
+  it('packs objects while agents are working, and leaves refs for a quiet window', async () => {
+    readRepoCommonDirFromGitMock.mockResolvedValue('/repo/.git')
+    gitExecFileAsyncMock.mockRejectedValue(new Error('exit 1'))
+    _resetLocalRepoMaintenanceForTests({ quietPeriodMs: 1 })
+    setRepoMaintenanceActivityProbe(() => ({ interactive: true, constrained: false }))
+    const order: string[] = []
+
+    getLocalRepoMaintenance().arm(recordingTarget(order))
+    await vi.waitFor(() => expect(order).toEqual(['objects']))
+    await getLocalRepoMaintenance().whenAttemptSettled()
+    expect(order).toEqual(['objects'])
+  })
+
+  it('packs nothing at all when the gate cannot be seen', async () => {
+    readRepoCommonDirFromGitMock.mockResolvedValue('/repo/.git')
+    _resetLocalRepoMaintenanceForTests({ quietPeriodMs: 1 })
+    const order: string[] = []
+
+    getLocalRepoMaintenance().arm(recordingTarget(order))
+    await new Promise((resolve) => setTimeout(resolve, 25))
+
+    expect(order).toEqual([])
   })
 
   it('never hands the pack child an abort signal', async () => {
@@ -218,7 +242,7 @@ describe('local repo maintenance scheduling', () => {
   it('holds the window shut for the duration of ref-touching work', async () => {
     readRepoCommonDirFromGitMock.mockResolvedValue('/repo/.git')
     _resetLocalRepoMaintenanceForTests({ quietPeriodMs: 1 })
-    setRepoMaintenanceActivityProbe(() => false)
+    setRepoMaintenanceActivityProbe(() => ({ interactive: false, constrained: false }))
     const maintenance = getLocalRepoMaintenance()
     const pack = vi.fn(async () => ({ batchExhausted: false }))
     maintenance.arm({
@@ -244,7 +268,7 @@ describe('local repo maintenance scheduling', () => {
   it('routes the app activity probe into the shared instance', async () => {
     readRepoCommonDirFromGitMock.mockResolvedValue('/repo/.git')
     let busy = true
-    setRepoMaintenanceActivityProbe(() => busy)
+    setRepoMaintenanceActivityProbe(() => ({ interactive: busy, constrained: busy }))
     const maintenance = getLocalRepoMaintenance()
     const pack = vi.fn(async () => ({ batchExhausted: false }))
 

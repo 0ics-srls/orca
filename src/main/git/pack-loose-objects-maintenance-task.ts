@@ -62,6 +62,10 @@ export function createPackLooseObjectsMaintenanceTask(
   return {
     id: 'objects',
     threshold: args.threshold ?? LOOSE_OBJECT_PACK_THRESHOLD,
+    // Takes no ref lock and only adds a pack beside the ones readers already
+    // use, so live agents and a focused window are no reason to wait -- and a
+    // user who always has an agent running is exactly who builds this backlog.
+    window: 'unconstrained',
     async probeBacklog(
       budget: number,
       signal: AbortSignal

@@ -57,6 +57,7 @@ function fakeTask(
     saturated?: boolean
     /** The repository cannot be resolved on this host. */
     unresolved?: boolean
+    window?: RepoMaintenanceTask['window']
     pack?: (lock: PackedRefsLockReporter, setBacklog: (count: number) => void) => Promise<void>
   } = {}
 ): FakeTask {
@@ -81,6 +82,7 @@ function fakeTask(
     task: {
       id,
       threshold,
+      ...(options.window ? { window: options.window } : {}),
       probeBacklog: async (budget: number): Promise<RepoMaintenanceBacklog | undefined> =>
         options.unresolved
           ? undefined
@@ -177,7 +179,8 @@ async function elapseQuietPeriod(maintenance: RepoMaintenance, periods = 1): Pro
 }
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  // Date too: user activity is a timestamp, so it has to age with the timers.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
 })
 
 afterEach(() => {
@@ -227,7 +230,9 @@ describe('RepoMaintenance gating', () => {
   it('does not run while the app is busy', async () => {
     const refs = fakeTask('refs')
     let busy = true
-    const { maintenance, spans } = createHarness({ isBusy: () => busy })
+    const { maintenance, spans } = createHarness({
+      activity: () => ({ interactive: busy, constrained: false })
+    })
 
     maintenance.arm(target('local::/busy/.git', [refs]))
     await elapseQuietPeriod(maintenance)
@@ -332,6 +337,90 @@ describe('RepoMaintenance gating', () => {
   })
 })
 
+describe('RepoMaintenance task windows', () => {
+  const INTERACTIVE = { interactive: true, constrained: false }
+  const CONSTRAINED = { interactive: false, constrained: true }
+  const IDLE = { interactive: false, constrained: false }
+
+  it('runs an unconstrained task beside live agents while the ref task waits', async () => {
+    let activity = INTERACTIVE
+    const refs = fakeTask('refs')
+    const objects = fakeTask('objects', { window: 'unconstrained' })
+    const { maintenance, spans } = createHarness({ activity: () => activity })
+
+    maintenance.arm(target('local::/agents/.git', [refs, objects]))
+    await elapseQuietPeriod(maintenance)
+
+    expect(objects.pack).toHaveBeenCalledTimes(1)
+    expect(refs.pack).not.toHaveBeenCalled()
+    expect(attributesOf(spans[0])).toMatchObject({
+      'repo.maintenance_skipped': 'refs',
+      'repo.maintenance_outcome': 'deferred'
+    })
+
+    // The skipped ref task is still owed, and runs once the agents go quiet.
+    activity = IDLE
+    await elapseQuietPeriod(maintenance, 2)
+    expect(refs.pack).toHaveBeenCalledTimes(1)
+    expect(objects.pack).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds every task off while the machine itself is constrained', async () => {
+    let activity = CONSTRAINED
+    const refs = fakeTask('refs')
+    const objects = fakeTask('objects', { window: 'unconstrained' })
+    const { maintenance, spans } = createHarness({ activity: () => activity })
+
+    maintenance.arm(target('local::/battery/.git', [refs, objects]))
+    await elapseQuietPeriod(maintenance)
+
+    expect(objects.pack).not.toHaveBeenCalled()
+    expect(refs.pack).not.toHaveBeenCalled()
+    // Nothing admitted, so no attempt and no git subprocess at all.
+    expect(spans).toHaveLength(0)
+
+    activity = IDLE
+    await elapseQuietPeriod(maintenance, 2)
+    expect(objects.pack).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not let a returning user hold off an unconstrained task', async () => {
+    const refs = fakeTask('refs')
+    const objects = fakeTask('objects', { window: 'unconstrained' })
+    const { maintenance } = createHarness()
+
+    maintenance.arm(target('local::/focused/.git', [refs, objects]))
+    await vi.advanceTimersByTimeAsync(QUIET_MS - 1)
+    maintenance.recordUserActivity()
+    // The original countdown fires one tick later, with the user one tick gone.
+    await vi.advanceTimersByTimeAsync(1)
+    await maintenance.whenAttemptSettled()
+
+    expect(objects.pack).toHaveBeenCalledTimes(1)
+    expect(refs.pack).not.toHaveBeenCalled()
+
+    // The user went quiet a full period ago; the ref task gets its window.
+    await elapseQuietPeriod(maintenance)
+    expect(refs.pack).toHaveBeenCalledTimes(1)
+  })
+
+  it('never gives up on a repository just because the user keeps coming back', async () => {
+    const refs = fakeTask('refs')
+    const { maintenance } = createHarness()
+
+    maintenance.arm(target('local::/returning/.git', [refs]))
+    // Far more returns than the deferral budget; each is one quiet period.
+    for (let round = 0; round < 12; round += 1) {
+      await vi.advanceTimersByTimeAsync(QUIET_MS - 1)
+      maintenance.recordUserActivity()
+    }
+    expect(refs.pack).not.toHaveBeenCalled()
+
+    await elapseQuietPeriod(maintenance, 2)
+    expect(refs.pack).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('RepoMaintenance task set', () => {
   it('runs refs before objects inside one attempt', async () => {
     const order: string[] = []
@@ -419,7 +508,9 @@ describe('RepoMaintenance task set', () => {
       }
     })
     const objects = fakeTask('objects')
-    const { maintenance, spans } = createHarness({ isBusy: () => busy })
+    const { maintenance, spans } = createHarness({
+      activity: () => ({ interactive: busy, constrained: false })
+    })
 
     maintenance.arm(target('local::/interrupted/.git', [refs, objects]))
     await elapseQuietPeriod(maintenance)
@@ -550,7 +641,7 @@ describe('RepoMaintenance single-flight and backoff', () => {
     expect(refs.pack).toHaveBeenCalledTimes(1)
   })
 
-  it('restarts every armed countdown when the user does ref work themselves', async () => {
+  it('holds every armed ref task off for a quiet period after the user does ref work', async () => {
     const { maintenance } = createHarness()
     const firstPack = packStartSignal()
     const a = fakeTask('refs', {
@@ -565,7 +656,7 @@ describe('RepoMaintenance single-flight and backoff', () => {
     await vi.advanceTimersByTimeAsync(QUIET_MS - 1)
 
     // A manual fetch says the user is at the keyboard, so nothing may fire yet.
-    maintenance.postponeAll()
+    maintenance.recordUserActivity()
     await vi.advanceTimersByTimeAsync(QUIET_MS - 1)
     expect(a.pack).not.toHaveBeenCalled()
     expect(b.pack).not.toHaveBeenCalled()

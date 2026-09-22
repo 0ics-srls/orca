@@ -1,5 +1,6 @@
 import { RepoMaintenance } from '../../shared/repo-maintenance'
 import type {
+  RepoMaintenanceActivity,
   RepoMaintenanceOptions,
   RepoMaintenanceTarget
 } from '../../shared/repo-maintenance-policy'
@@ -20,7 +21,7 @@ import { readRepoCommonDirFromGit } from './worktree-list-reader'
  * state by execution host is what keeps this path from reaching across.
  */
 
-export type RepoMaintenanceActivityProbe = () => boolean
+export type RepoMaintenanceActivityProbe = () => RepoMaintenanceActivity
 
 const REPO_BUSY_PROBE_MAX = 64
 
@@ -45,9 +46,9 @@ export function setRepoMaintenanceBusyProbe(key: string, probe: () => boolean): 
 }
 
 /**
- * Register the app-wide "do not start maintenance now" signal. Owned by the
- * main entry point because the inputs (live agents, battery, quit) are not
- * visible from the git layer.
+ * Register the app-wide activity signal. Owned by the main entry point because
+ * the inputs (live agents, battery, load, quit) are not visible from the git
+ * layer.
  */
 export function setRepoMaintenanceActivityProbe(probe: RepoMaintenanceActivityProbe | null): void {
   activityProbe = probe
@@ -69,7 +70,7 @@ function localMaintenanceOptions(): RepoMaintenanceOptions {
   return {
     // Fail closed: without the app-level gate installed we cannot see agents,
     // creates, or battery, and running blind is worse than not running.
-    isBusy: () => activityProbe?.() ?? true,
+    activity: () => activityProbe?.() ?? { interactive: true, constrained: true },
     observe: (attempt) =>
       withSpan('repo.maintenance', (span) => attempt(span), {
         attributes: { kind: 'git', 'repo.maintenance_host': 'local' }
@@ -133,14 +134,15 @@ export function awaitPackedRefsLockRelease(): Promise<void> {
 }
 
 /**
- * Count user-initiated ref work as activity and restart every armed countdown.
+ * Record that the user is at the keyboard, holding ref maintenance off for every
+ * repository for a full quiet period.
  *
  * Deliberately not keyed to a repo: resolving one would cost a `rev-parse` on a
  * path the user is waiting on, and a manual fetch or pull says the user is at
  * the keyboard, which is a reason to defer every repository.
  */
 export function postponeRepoMaintenance(): void {
-  shared?.postponeAll()
+  shared?.recordUserActivity()
 }
 
 /** `overrides` preseeds the shared instance so a test can shorten the quiet period. */
