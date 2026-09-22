@@ -42,6 +42,10 @@ describe('structured session cold restoration', () => {
     internal.hasPersistedStructuredAgentSessionStore = () => true
     internal.refreshMobileSessionPtyRecords = refresh
     internal.ensureStructuredAgentSessionHost = ensureHost
+    vi.spyOn(runtime, 'getClientSettings').mockReturnValue(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the startup gate reads only experimentalStructuredNativeChat from client settings.
+      { experimentalStructuredNativeChat: true } as never
+    )
     setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
 
     await runtime.prepareStructuredAgentSessionStartupRestoration()
@@ -53,6 +57,30 @@ describe('structured session cold restoration', () => {
     expect(reconcileRestartLeases.mock.invocationCallOrder[0]).toBeLessThan(
       restoreReadableSessions.mock.invocationCallOrder[0] ?? Infinity
     )
+  })
+
+  it('starts no readable sweep at startup while structured chat is off', async () => {
+    const runtime = new OrcaRuntimeService()
+    const reconcileRestartLeases = vi.fn(async () => undefined)
+    const restoreReadableSessions = vi.fn(async () => undefined)
+    const internal = runtime as unknown as {
+      hasPersistedStructuredAgentSessionStore(): boolean
+      refreshMobileSessionPtyRecords(): Promise<Set<string> | null>
+      ensureStructuredAgentSessionHost(): Promise<void>
+    }
+    internal.hasPersistedStructuredAgentSessionStore = () => true
+    internal.refreshMobileSessionPtyRecords = async () => new Set()
+    internal.ensureStructuredAgentSessionHost = async () => undefined
+    vi.spyOn(runtime, 'getClientSettings').mockReturnValue(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the startup gate reads only experimentalStructuredNativeChat from client settings.
+      { experimentalStructuredNativeChat: false } as never
+    )
+    setStructuredAgentSessionHost({ reconcileRestartLeases, restoreReadableSessions } as never)
+
+    await runtime.prepareStructuredAgentSessionStartupRestoration()
+
+    expect(reconcileRestartLeases).toHaveBeenCalledOnce()
+    expect(restoreReadableSessions).not.toHaveBeenCalled()
   })
 
   it('loads records, inventories PTYs, restores ownership, then projects tabs exactly once', async () => {

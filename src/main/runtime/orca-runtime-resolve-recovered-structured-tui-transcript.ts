@@ -13,6 +13,7 @@ import {
 } from './structured-agent-session-create-adoption'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import { collectSavedStructuredAgentSessionIds } from './saved-structured-agent-session-restoration'
+import { isStructuredNativeChatEnabled } from './rpc/methods/structured-agent-session-policy'
 import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
 import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import type { AgentSessionAttachParams } from '../native-chat/agent-session-wire/structured-agent-session-attach'
@@ -285,28 +286,22 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     // failure — so readability must not wait for the first tab inventory, which itself waits on
     // the client's whole terminal-restoration chain. Journal parsing still stays off the
     // terminal-safety fence this method fences: the sweep runs alongside terminal restoration,
-    // and the tab projection awaits the same latched sweep.
-    void this.restoreReadableStructuredSessions().catch((error: unknown) => {
-      console.warn('[agent-session] startup readable restore failed', error)
-    })
-  }
-
-  /** Once per process: the startup sweep that opens every persisted chat's journal for reading. */
-  protected restoreReadableStructuredSessions(): Promise<void> {
-    this.structuredReadableSessionRestorePromise ??=
-      this.restoreReadableStructuredSessionsOnce().catch((error) => {
-        this.structuredReadableSessionRestorePromise = null
-        throw error
+    // and the tab projection awaits the same sweep. Gated like that projection: with structured
+    // chat off, no surface can read a chat, so startup owes it no sweep.
+    if (isStructuredNativeChatEnabled(this)) {
+      void this.restoreReadableStructuredSessions().catch((error: unknown) => {
+        console.warn('[agent-session] startup readable restore failed', error)
       })
-    return this.structuredReadableSessionRestorePromise
+    }
   }
 
-  private async restoreReadableStructuredSessionsOnce(): Promise<void> {
+  /** The startup sweep that opens every persisted chat's journal for reading. The host latches it
+   *  once per process, so the startup and projection callers share one run. */
+  protected async restoreReadableStructuredSessions(): Promise<void> {
     const host = getStructuredAgentSessionHost()
-    if (!host) {
-      return
+    if (host) {
+      await host.restoreReadableSessions(this.selectStartupReadableStructuredSessionIds(host))
     }
-    await host.restoreReadableSessions(this.selectStartupReadableStructuredSessionIds(host))
   }
 
   /** The persisted visible-tab index when the store keeps one, else every chat the saved
