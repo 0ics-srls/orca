@@ -346,9 +346,9 @@ A worker claims one device's oldest due delivery with a row lock that other clai
 non-blocking per-device lock keeps at most one delivery per phone in flight. The claim scan only
 reads rows due within the notification TTL, so an unpruned backlog does not slow it. Boot adds one
 queue index, a partial index of pending rows per device for the head check; it indexes no lease
-column, so lease and renew writes stay heap-only updates. Worker and cleanup
-traffic may hold at most one fewer connection than the pool size, so request authentication always
-has a connection.
+column, so lease and renew writes stay heap-only updates. Claim, finish and cleanup traffic may
+hold at most one fewer connection than the pool size, so request authentication always has a
+connection. Lease renewals skip that cap so they never queue behind claims.
 
 Logging is aggregate counters only. Never log a token, a title, a body, or a full fingerprint;
 the first four characters of a fingerprint are the most that may appear.

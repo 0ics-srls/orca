@@ -26,7 +26,7 @@ export class DurablePushStore {
   constructor(
     private readonly database: PushDatabase,
     private readonly now = Date.now,
-    // Worker and prune traffic; accept() stays on the request-path database.
+    // Claim, finish and prune traffic; accept() and renew() stay on the request-path database.
     private readonly background = database
   ) {}
 
@@ -165,8 +165,9 @@ export class DurablePushStore {
     }
   }
 
+  // Ungated: a keyed one-row write must not queue behind claims, or a lease can lapse mid-send.
   async renew(delivery: QueuedPushDelivery): Promise<void> {
-    await this.background.query(
+    await this.database.query(
       "UPDATE push_delivery_batches SET lease_until = ? WHERE batch_id = ? AND lease_token = ? AND state = 'pending'",
       [this.now() + DELIVERY_LEASE_MS, delivery.id, delivery.lease]
     )
