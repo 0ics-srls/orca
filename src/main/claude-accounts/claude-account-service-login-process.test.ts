@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { writeFileSync } from 'node:fs'
+import { readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -498,6 +498,103 @@ describe('ClaudeAccountService credential capture', () => {
       expect(settings.claudeManagedAccounts).toEqual([])
     } finally {
       vi.doUnmock('node:child_process')
+    }
+  })
+
+  it('removes the temporary login directory when the initial Keychain read fails', async () => {
+    setPlatform('linux')
+    vi.resetModules()
+    vi.mocked(readActiveClaudeKeychainCredentials).mockRejectedValueOnce(
+      new Error('Keychain unavailable')
+    )
+    const spawnMock = vi.fn()
+    vi.doMock('node:child_process', () => ({ spawn: spawnMock }))
+    const before = new Set(
+      readdirSync(tmpdir()).filter((entry) => entry.startsWith('orca-claude-login-'))
+    )
+
+    try {
+      const { ClaudeAccountService } = await import('./service')
+      const settings = {
+        claudeManagedAccounts: [],
+        activeClaudeManagedAccountId: null,
+        activeClaudeManagedAccountIdsByRuntime: { host: null, wsl: {} }
+      }
+      const store = {
+        getSettings: vi.fn(() => settings),
+        updateSettings: vi.fn()
+      }
+      const rateLimits = {
+        evictInactiveClaudeCache: vi.fn(),
+        refreshForClaudeAccountChange: vi.fn()
+      }
+      const service = new ClaudeAccountService(
+        store as never,
+        rateLimits as never,
+        {
+          clearLastWrittenCredentialsJson: vi.fn(),
+          forceMaterializeCurrentSelectionForRollback: vi.fn(async () => {})
+        } as never
+      )
+
+      await expect(service.addAccount()).rejects.toThrow('Keychain unavailable')
+      const leaked = readdirSync(tmpdir()).filter(
+        (entry) => entry.startsWith('orca-claude-login-') && !before.has(entry)
+      )
+      expect(leaked).toEqual([])
+      expect(spawnMock).not.toHaveBeenCalled()
+    } finally {
+      vi.doUnmock('node:child_process')
+    }
+  })
+
+  it('removes a WSL temporary login directory when mktemp times out', async () => {
+    setPlatform('win32')
+    vi.resetModules()
+    const runWslProcessMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        code: 1,
+        timedOut: true,
+        stdout: '/tmp/orca-claude-login.abcd\n',
+        stderr: '',
+        environmentResolved: true
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        timedOut: false,
+        stdout: '',
+        stderr: '',
+        environmentResolved: true
+      })
+    vi.doMock('../wsl/wsl-runner', () => ({ runWslProcess: runWslProcessMock }))
+
+    try {
+      const { runClaudeLoginSession } = await import('./claude-login-session')
+      await expect(
+        runClaudeLoginSession(
+          {
+            managedAuthPath: '',
+            managedAuthRuntime: 'wsl',
+            wslDistro: 'Ubuntu',
+            wslLinuxAuthPath: null
+          },
+          {
+            runCommand: vi.fn(),
+            capture: vi.fn(),
+            setCancel: vi.fn()
+          }
+        )
+      ).rejects.toThrow('Could not create a temporary WSL Claude login directory.')
+      expect(runWslProcessMock).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          program: 'rm',
+          args: ['-rf', '--', '/tmp/orca-claude-login.abcd']
+        })
+      )
+    } finally {
+      vi.doUnmock('../wsl/wsl-runner')
     }
   })
 
