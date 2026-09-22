@@ -1,10 +1,12 @@
-import type { AgentStatusState } from '../shared/agent-status-types'
+import type { AgentStatusState, AgentWorkingMode } from '../shared/agent-status-types'
 
 export const AGENT_AWAKE_STATUS_STALE_AFTER_MS = 2 * 60 * 60 * 1000
 
 export type AgentAwakeStatus = {
   paneKey: string
   state: AgentStatusState
+  /** Only valid while working; `monitoring` is a watch loop the agent left behind. */
+  workingMode?: AgentWorkingMode
   receivedAt: number
   observedInCurrentRuntime: boolean
 }
@@ -54,6 +56,8 @@ export class AgentAwakeStatusLease {
     return (
       status.observedInCurrentRuntime &&
       status.state === 'working' &&
+      // A watch loop outlives the turn that started it, so it can never release the machine.
+      status.workingMode !== 'monitoring' &&
       Number.isFinite(status.receivedAt) &&
       now - status.receivedAt <= AGENT_AWAKE_STATUS_STALE_AFTER_MS
     )
