@@ -105,7 +105,11 @@ export class RuntimeClientSettingsController {
       defaultTaskViewPreset: settings.defaultTaskViewPreset ?? 'issues',
       visibleTaskProviders: settings.visibleTaskProviders ?? [...TASK_PROVIDERS],
       defaultRepoSelection: settings.defaultRepoSelection ?? null,
-      defaultLinearTeamSelection: settings.defaultLinearTeamSelection ?? null,
+      // Why: a host store can hold a non-array here (0a2b6e7f); a paired client
+      // must never receive a shape the contract does not promise.
+      defaultLinearTeamSelection: Array.isArray(settings.defaultLinearTeamSelection)
+        ? settings.defaultLinearTeamSelection
+        : null,
       githubProjects: settings.githubProjects,
       experimentalNewWorktreeCardStyle: settings.experimentalNewWorktreeCardStyle === true,
       // The three that decide whether a new agent tab -- and so an orchestration worker -- is a
