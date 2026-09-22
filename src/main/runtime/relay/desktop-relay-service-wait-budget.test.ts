@@ -38,7 +38,7 @@ const context: MobilePairingConnectionContext = {
 }
 
 // One transient failure arms a retry; the retry's open succeeds.
-function serviceWithArmedRetry(): DesktopRelayService {
+function relayServiceWithTransientFirstOpen(): DesktopRelayService {
   vi.useFakeTimers()
   // Why pinned: attempt 0's delay is floor(random() * 1001), so real jitter can
   // put the retry at 0ms and fire it inside the "did not wait" assertion.
@@ -91,7 +91,7 @@ describe('DesktopRelayService live-broker wait budget per caller', () => {
     // Why: getEndpoints is the LAN-connected phone's periodic poll. Sitting
     // through the retry would stall a request the local connection already
     // serves, so it must answer "no relay" the moment the open in flight fails.
-    const relayService = serviceWithArmedRetry()
+    const relayService = relayServiceWithTransientFirstOpen()
     try {
       let answer: unknown = null
       const endpoints = relayService.getEndpoints(context, {}).then((value) => {
@@ -109,8 +109,21 @@ describe('DesktopRelayService live-broker wait budget per caller', () => {
     }
   })
 
+  it('names the signed-out session on a pairing request instead of the generic code', async () => {
+    // Why through createPairingRelay: relay-offline-reason.test.ts covers the reason-to-code
+    // table, so what is left to pin is that the service's public entry point throws the mapped
+    // code rather than the generic relay_control_not_active. A null context arms no retry.
+    const relayService = relayServiceWithTransientFirstOpen()
+    fakes.readRelayAuthContext.mockResolvedValue(null)
+    try {
+      await expect(relayService.createPairingRelay('device-1')).rejects.toThrow('relay_signed_out')
+    } finally {
+      relayService.stop()
+    }
+  })
+
   it('still waits through that same armed retry for a pairing request', async () => {
-    const relayService = serviceWithArmedRetry()
+    const relayService = relayServiceWithTransientFirstOpen()
     try {
       let paired = false
       const pairing = relayService.createPairingRelay('device-1').then((value) => {
