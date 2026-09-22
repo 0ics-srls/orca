@@ -177,6 +177,31 @@ describe('createNotificationDeliveryService', () => {
     expect(harness.dispatchMobileNotification).toHaveBeenCalledTimes(2)
   })
 
+  it('still reaches the phone for a completion the burst cooldown turned away', () => {
+    // Two chats in ONE workspace share the coarse cooldown key, so the second chat's completion
+    // loses to the first chat's cooldown. It was never announced, so a later window dispatching it
+    // must still get through: each gate may only spend itself when it actually acts.
+    const harness = makeHarness(makeSettings())
+    const service = createNotificationDeliveryService(harness.deps)
+    const chatB = makeRequest({
+      mobileDedupeKey: 'agent-session:repo::wt1|sess-b|turn-1',
+      notificationId: 'agent:wt1:pane-b:500'
+    })
+
+    service.dispatch(makeRequest({ mobileDedupeKey: 'agent-session:repo::wt1|sess-a|turn-1' }))
+    now += 1_000
+    service.dispatch(chatB)
+    expect(harness.dispatchMobileNotification).toHaveBeenCalledTimes(1)
+
+    now += 5_000
+    service.dispatch(chatB)
+
+    expect(harness.dispatchMobileNotification).toHaveBeenCalledTimes(2)
+    expect(harness.dispatchMobileNotification).toHaveBeenLastCalledWith(
+      expect.objectContaining({ notificationId: 'agent:wt1:pane-b:500' })
+    )
+  })
+
   it('leaves senders with no event identity on the coarse cooldown alone', () => {
     const harness = makeHarness(makeSettings())
     const service = createNotificationDeliveryService(harness.deps)

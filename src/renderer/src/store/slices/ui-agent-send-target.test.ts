@@ -588,6 +588,47 @@ describe('createUISlice acknowledgeAgents notification dismissal', () => {
     ])
   })
 
+  it('retires a banner minted before the row re-projected to its settled turn start', () => {
+    // The completion can reach the notification path before the status feed re-projects the row,
+    // so the banner's id carries the WORKING episode's start. Settling moves that start into
+    // stateHistory and puts the settled start on the row, so an ack that read only the current
+    // field would leave the raised banner on screen for good.
+    const dismiss = vi.fn().mockResolvedValue({ dismissed: 0 })
+    vi.stubGlobal('window', { api: { notifications: { dismiss } } })
+    const store = createUIStore()
+    const settledAfterWorking: Partial<AppState> = {
+      tabsByWorktree: {
+        'wt-live': [makeTerminalTab(tabId, 'wt-live')]
+      },
+      agentStatusByPaneKey: {
+        [livePaneKey]: {
+          ...makeAgentEntry(livePaneKey, 9_000),
+          stateHistory: [{ state: 'working', prompt: 'Review complete', startedAt: 1_000 }]
+        }
+      },
+      retainedAgentsByPaneKey: {}
+    }
+    store.setState(settledAfterWorking)
+
+    store.getState().acknowledgeAgents([livePaneKey])
+
+    const dismissedIds: string[] = dismiss.mock.calls[0]?.[0] ?? []
+    expect(dismissedIds).toContain(
+      buildAgentNotificationId({
+        worktreeId: 'wt-live',
+        paneKey: livePaneKey,
+        stateStartedAt: 1_000
+      })
+    )
+    expect(dismissedIds).toContain(
+      buildAgentNotificationId({
+        worktreeId: 'wt-live',
+        paneKey: livePaneKey,
+        stateStartedAt: 9_000
+      })
+    )
+  })
+
   it('dedupes identical live and retained notification ids for the same pane', () => {
     const dismiss = vi.fn().mockResolvedValue({ dismissed: 0 })
     vi.stubGlobal('window', { api: { notifications: { dismiss } } })

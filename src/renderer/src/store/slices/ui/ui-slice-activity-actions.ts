@@ -1,7 +1,7 @@
 import type { StoredAgentAttentionUnread } from '@/attention/agent-attention-contract'
 import type { UISlice, UISliceGet, UISliceSet } from './ui-slice-contract'
 import {
-  collectAcknowledgedAgentNotificationId,
+  collectAcknowledgedAgentNotificationIds,
   latestAgentTurnTimestamp,
   resolvePaneKeyWorktreeIdFromTabs,
   usableTimestamp
@@ -40,22 +40,22 @@ export function createUiActivityActions(set: UISliceSet, _get: UISliceGet): Acti
           let stamp = now
           const liveEntry = s.agentStatusByPaneKey?.[key]
           if (liveEntry) {
-            collectAcknowledgedAgentNotificationId({
+            collectAcknowledgedAgentNotificationIds({
               ids: notificationIdsToDismiss,
               worktreeId: resolvePaneKeyWorktreeIdFromTabs(s, key) ?? liveEntry.worktreeId,
               paneKey: key,
-              stateStartedAt: liveEntry.stateStartedAt,
+              entry: liveEntry,
               previousAckAt: prev
             })
             stamp = Math.max(stamp, latestAgentTurnTimestamp(liveEntry))
           }
           const retained = s.retainedAgentsByPaneKey?.[key]
           if (retained) {
-            collectAcknowledgedAgentNotificationId({
+            collectAcknowledgedAgentNotificationIds({
               ids: notificationIdsToDismiss,
               worktreeId: retained.worktreeId,
               paneKey: key,
-              stateStartedAt: retained.entry.stateStartedAt,
+              entry: retained.entry,
               previousAckAt: prev
             })
             stamp = Math.max(stamp, latestAgentTurnTimestamp(retained.entry))

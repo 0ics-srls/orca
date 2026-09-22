@@ -15,25 +15,49 @@ export function resolvePaneKeyWorktreeIdFromTabs(state: AppState, paneKey: strin
   return null
 }
 
-export function collectAcknowledgedAgentNotificationId({
+/** An agent row's turn starts: the episode it is in, plus the ones it has already left. */
+type AgentTurnEpisodes = {
+  stateStartedAt?: number
+  stateHistory?: { startedAt?: number }[]
+}
+
+function agentTurnEpisodeStarts(entry: AgentTurnEpisodes): number[] {
+  return [entry.stateStartedAt, ...(entry.stateHistory ?? []).map((history) => history.startedAt)]
+    .map(usableTimestamp)
+    .filter((startedAt) => startedAt > 0)
+}
+
+/**
+ * Every notification id this row can have raised since the last acknowledgement.
+ *
+ * Why history and not just the current field: a banner's id is minted from whatever
+ * `stateStartedAt` the row carried when it was dispatched, and that field is re-projected as the
+ * turn settles — the working episode's start moves into `stateHistory` and the settled start takes
+ * its place. A banner raised in the window before that re-projection carries the working start, so
+ * reading only the current field would leave it on screen forever. These are the same episodes
+ * `latestAgentTurnTimestamp` below already scans for the unread check.
+ */
+export function collectAcknowledgedAgentNotificationIds({
   ids,
   worktreeId,
   paneKey,
-  stateStartedAt,
+  entry,
   previousAckAt
 }: {
   ids: Set<string>
   worktreeId: string | null | undefined
   paneKey: string
-  stateStartedAt: number | null | undefined
+  entry: AgentTurnEpisodes
   previousAckAt: number
 }): void {
-  if (typeof stateStartedAt !== 'number' || previousAckAt >= stateStartedAt) {
-    return
-  }
-  const id = buildAgentNotificationId({ worktreeId, paneKey, stateStartedAt })
-  if (id) {
-    ids.add(id)
+  for (const startedAt of agentTurnEpisodeStarts(entry)) {
+    if (previousAckAt >= startedAt) {
+      continue
+    }
+    const id = buildAgentNotificationId({ worktreeId, paneKey, stateStartedAt: startedAt })
+    if (id) {
+      ids.add(id)
+    }
   }
 }
 
@@ -42,14 +66,11 @@ export function usableTimestamp(value: unknown): number {
 }
 
 /** Newest turn timestamp an unread check can compare against for one agent row. */
-export function latestAgentTurnTimestamp(entry: {
-  stateStartedAt?: number
-  stateHistory?: { startedAt?: number }[]
-}): number {
-  let latest = usableTimestamp(entry.stateStartedAt)
+export function latestAgentTurnTimestamp(entry: AgentTurnEpisodes): number {
+  let latest = 0
   // Why history too: Activity renders one event per stateHistory entry, each with its own unread check.
-  for (const history of entry.stateHistory ?? []) {
-    latest = Math.max(latest, usableTimestamp(history.startedAt))
+  for (const startedAt of agentTurnEpisodeStarts(entry)) {
+    latest = Math.max(latest, startedAt)
   }
   return latest
 }
