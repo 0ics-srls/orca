@@ -7,6 +7,7 @@ import {
   BACKGROUND_STREAM_DROP_ENABLED
 } from './daemon-background-transient-facts'
 import { DaemonClientConnections } from './daemon-client-connections'
+import { createDaemonPtyOwnership, type DaemonPtyOwnership } from './daemon-pty-ownership-lifecycle'
 import { DaemonEndpointLifecycle } from './daemon-endpoint-lifecycle'
 import { createNoopDaemonFileLog, type DaemonFileLog } from './daemon-file-log'
 import { DaemonPtySpawnPreparations } from './daemon-pty-spawn-preparations'
@@ -44,6 +45,7 @@ export class DaemonServer {
   private readonly lifecycle: DaemonServerLifecycle
   private readonly admission: DaemonTerminalAdmission
   private readonly requestRouter: DaemonRequestRouter
+  private readonly ptyOwnership: DaemonPtyOwnership | null
   private stopStreamBacklogProbe: () => void = () => {}
 
   constructor(options: DaemonServerOptions) {
@@ -51,6 +53,9 @@ export class DaemonServer {
     this.host = new TerminalHost({
       spawnSubprocess: options.spawnSubprocess,
       reportReadinessEvent: (event, details) => this.log.log(event, details),
+      // Bound to a field the constructor fills below: the record needs the protocol version and
+      // this daemon's own start time, neither of which is resolved yet at this point.
+      onPtySpawned: (identity) => this.ptyOwnership?.recorder.record(identity),
       onSessionReaped: (sessionId) => {
         this.attachments.release(sessionId)
         this.transientFactRelay.onSessionExit(sessionId)
@@ -214,6 +219,17 @@ export class DaemonServer {
       ptySpawnHealthCheck: options.ptySpawnHealthCheck ?? checkPtySpawnHealth,
       log: this.log
     })
+    this.ptyOwnership = createDaemonPtyOwnership({
+      pidPath: options.pidPath ?? null,
+      protocolVersion,
+      daemonStartedAtMs: startedAtMs,
+      listLiveSessions: () =>
+        this.host.listSessions().map(({ sessionId, incarnationId }) => ({
+          sessionId,
+          incarnationId
+        })),
+      log: (event, details) => this.log.log(event, details)
+    })
     this.stopStreamBacklogProbe = startDaemonStreamBacklogProbe(() => ({
       clients: Array.from(this.connections.values(), (client) => ({
         clientId: client.clientId,
@@ -224,8 +240,9 @@ export class DaemonServer {
     }))
   }
 
-  start(): Promise<void> {
-    return this.lifecycle.start((socket) => this.connections.accept(socket))
+  async start(): Promise<void> {
+    await this.lifecycle.start((socket) => this.connections.accept(socket))
+    this.ptyOwnership?.reconciler.start()
   }
 
   shutdown(): Promise<void> {
@@ -244,6 +261,7 @@ export class DaemonServer {
 
   private async disposeResources(): Promise<void> {
     this.endpoint.stopOwnershipWatch()
+    this.ptyOwnership?.reconciler.stop()
     this.stopStreamBacklogProbe()
     this.transientFactRelay.dispose()
     this.preparations.cancelAll()

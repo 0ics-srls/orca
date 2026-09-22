@@ -1,0 +1,311 @@
+import { spawn, type ChildProcess } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it } from 'vitest'
+import { DaemonOrphanReconciler } from './daemon-orphan-reconciler'
+import { PtyOwnershipRecorder } from './pty-ownership-recorder'
+import { PtyOwnershipRecordStore, getPtyOwnershipRecordPath } from './pty-ownership-record-store'
+import type { PtyOwnershipRecord } from './pty-ownership-record'
+
+// Every correlation this exercises — process group, parentage, `ps` start time — is POSIX. On
+// Windows a PTY's descendants belong to its job object, which teardown already terminates.
+const describePosix = process.platform === 'win32' ? describe.skip : describe
+
+const cleanups: (() => void)[] = []
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return !(
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'ESRCH'
+    )
+  }
+}
+
+async function waitForExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (!isRunning(pid)) {
+      return true
+    }
+    await delay(100)
+  }
+  return !isRunning(pid)
+}
+
+/**
+ * A process that ignores SIGTERM in its own process group with no parent to reap it — the shape
+ * of what a killed daemon leaves behind. `detached` puts it in a fresh session, so its group id
+ * is its own pid and nothing in the test runner's ancestry shares it.
+ *
+ * It ignores SIGTERM on purpose: that is what forces the identity-checked SIGKILL escalation to
+ * be the thing under test rather than the polite first signal.
+ */
+function spawnOrphan(): ChildProcess {
+  const child = spawn('/bin/sh', ['-c', 'trap "" TERM; exec sleep 120'], {
+    detached: true,
+    stdio: 'ignore'
+  })
+  child.unref()
+  cleanups.push(() => {
+    if (child.pid && isRunning(child.pid)) {
+      try {
+        process.kill(child.pid, 'SIGKILL')
+      } catch {
+        // Already gone.
+      }
+    }
+  })
+  return child
+}
+
+function makeStore(): PtyOwnershipRecordStore {
+  const dir = mkdtempSync(join(tmpdir(), 'orca-orphan-reconcile-'))
+  cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+  return new PtyOwnershipRecordStore(getPtyOwnershipRecordPath(dir, 42))
+}
+
+function readRecords(store: PtyOwnershipRecordStore): PtyOwnershipRecord[] {
+  const read = store.read()
+  return read.status === 'readable' ? read.records : []
+}
+
+/** The recorder writes twice: once with what it already holds, then again once `ps` answers. Wait
+ *  for the completed row rather than a fixed sleep, because that probe is a subprocess. */
+async function waitForRecordedRootIdentity(store: PtyOwnershipRecordStore): Promise<void> {
+  const deadline = Date.now() + 15_000
+  while (Date.now() < deadline) {
+    if (readRecords(store)[0]?.root.startedAt) {
+      return
+    }
+    await delay(100)
+  }
+}
+
+/** Age the record past the spawn grace, which is what a record written before a restart is. */
+function backdate(store: PtyOwnershipRecordStore, ageMs: number): PtyOwnershipRecord {
+  const [current] = readRecords(store)
+  const aged = { ...current, recordedAt: Date.now() - ageMs }
+  store.upsert(aged)
+  return aged
+}
+
+afterEach(() => {
+  while (cleanups.length > 0) {
+    cleanups.pop()!()
+  }
+})
+
+describePosix('DaemonOrphanReconciler against real processes', () => {
+  it('reaps a group the daemon lost across a restart, then retires the record', async () => {
+    const store = makeStore()
+    const child = spawnOrphan()
+    const pid = child.pid!
+    // `ps` prints whole seconds and the delayed SIGKILL refuses a pid born in the capture second,
+    // so let the child cross a second boundary before it is ever captured.
+    await delay(1_300)
+
+    const recorder = new PtyOwnershipRecorder({
+      store,
+      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
+    })
+    recorder.record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
+    await waitForRecordedRootIdentity(store)
+
+    const recorded = backdate(store, 10 * 60_000)
+    expect(recorded.root.pid).toBe(pid)
+    expect(recorded.root.startedAt).not.toBeNull()
+    expect(recorded.pgids).toEqual([pid])
+
+    const events: { event: string; details?: Record<string, unknown> }[] = []
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      // The daemon restart: the persisted record survives, the in-memory session map does not.
+      listLiveSessions: () => [],
+      log: (event, details) => events.push({ event, ...(details ? { details } : {}) }),
+      escalationGraceMs: 300
+    })
+
+    // First tick only observes: nothing derived from a live root may be signalled on first sight.
+    await reconciler.runOnce()
+    expect(isRunning(pid)).toBe(true)
+    expect(events.some((entry) => entry.event === 'pty-orphan-reap')).toBe(false)
+
+    await reconciler.runOnce()
+    expect(await waitForExit(pid, 15_000)).toBe(true)
+
+    const reap = events.find((entry) => entry.event === 'pty-orphan-reap')
+    expect(reap?.details).toMatchObject({
+      sessionId: 'session-a',
+      incarnationId: 'inc-1',
+      reason: 'stranded_root',
+      pgids: [pid],
+      processCount: 1
+    })
+
+    // The kill is asynchronous, so the record survives the tick that ordered it and is retired by
+    // the tick that observes the processes are actually gone.
+    expect(readRecords(store)).toHaveLength(1)
+    await reconciler.runOnce()
+    expect(readRecords(store)).toEqual([])
+  }, 45_000)
+
+  it('finds a survivor the root left behind, which is what no parent walk can still reach', async () => {
+    const store = makeStore()
+    const dir = mkdtempSync(join(tmpdir(), 'orca-orphan-child-'))
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }))
+    const childPidFile = join(dir, 'child.pid')
+
+    // A shell that leaves one process behind in its own group, then dies: the reported leak.
+    const root = spawn(
+      '/bin/sh',
+      ['-c', `(trap "" TERM; exec sleep 120) & echo $! > ${childPidFile}; exec sleep 121`],
+      { detached: true, stdio: 'ignore' }
+    )
+    root.unref()
+    const rootPid = root.pid!
+    cleanups.push(() => {
+      try {
+        process.kill(-rootPid, 'SIGKILL')
+      } catch {
+        // Already gone.
+      }
+    })
+    await delay(1_300)
+
+    new PtyOwnershipRecorder({
+      store,
+      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
+    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid: rootPid })
+    await waitForRecordedRootIdentity(store)
+    backdate(store, 10 * 60_000)
+
+    const survivorPid = Number(readFileSync(childPidFile, 'utf8').trim())
+    expect(Number.isSafeInteger(survivorPid) && survivorPid > 0).toBe(true)
+
+    // The root dies without ever tearing anything down — a crash, a force quit, an updater.
+    process.kill(rootPid, 'SIGKILL')
+    expect(await waitForExit(rootPid, 5_000)).toBe(true)
+    expect(isRunning(survivorPid)).toBe(true)
+
+    const events: { event: string; details?: Record<string, unknown> }[] = []
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      listLiveSessions: () => [],
+      log: (event, details) => events.push({ event, ...(details ? { details } : {}) }),
+      escalationGraceMs: 300
+    })
+    await reconciler.runOnce()
+    expect(isRunning(survivorPid)).toBe(true)
+
+    await reconciler.runOnce()
+    expect(await waitForExit(survivorPid, 15_000)).toBe(true)
+    expect(events.find((entry) => entry.event === 'pty-orphan-reap')?.details).toMatchObject({
+      sessionId: 'session-a',
+      reason: 'orphaned_group',
+      pgids: [rootPid]
+    })
+  }, 45_000)
+
+  it('leaves a recorded process alone while its session is still live', async () => {
+    const store = makeStore()
+    const child = spawnOrphan()
+    const pid = child.pid!
+    await delay(1_300)
+
+    new PtyOwnershipRecorder({
+      store,
+      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
+    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
+    await waitForRecordedRootIdentity(store)
+    backdate(store, 10 * 60_000)
+
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      listLiveSessions: () => [{ sessionId: 'session-a', incarnationId: 'inc-1' }],
+      log: () => {},
+      escalationGraceMs: 300
+    })
+    await reconciler.runOnce()
+    await reconciler.runOnce()
+
+    await delay(1_000)
+    expect(isRunning(pid)).toBe(true)
+    // A live record is re-derived rather than retired, and its clock keeps moving.
+    expect(readRecords(store)[0].recordedAt).toBeGreaterThan(Date.now() - 10 * 60_000)
+  }, 45_000)
+
+  it('refuses to signal a process whose recorded root identity no longer matches', async () => {
+    const store = makeStore()
+    const child = spawnOrphan()
+    const pid = child.pid!
+    await delay(1_300)
+
+    new PtyOwnershipRecorder({
+      store,
+      daemon: { pid: process.pid, startedAtMs: Date.now() - 60_000 }
+    }).record({ sessionId: 'session-a', incarnationId: 'inc-1', pid })
+    await waitForRecordedRootIdentity(store)
+
+    // The pid was recycled: same number, a process that started long before ours.
+    const [current] = readRecords(store)
+    store.upsert({
+      ...current,
+      root: { pid, startedAt: 'Mon Jan 1 00:00:00 2001' },
+      recordedAt: Date.now() - 10 * 60_000
+    })
+
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      listLiveSessions: () => [],
+      log: () => {},
+      escalationGraceMs: 300
+    })
+    await reconciler.runOnce()
+    await reconciler.runOnce()
+
+    await delay(1_000)
+    expect(isRunning(pid)).toBe(true)
+  }, 45_000)
+
+  it('does nothing at all on Windows, where the job object already owns the tree', async () => {
+    const store = makeStore()
+    store.upsert({
+      sessionId: 'session-a',
+      incarnationId: 'inc-1',
+      root: { pid: 500, startedAt: 'Mon Sep 21 09:00:00 2026' },
+      pgids: [500],
+      tty: null,
+      daemon: { pid: 400, startedAtMs: 1 },
+      recordedAt: 1
+    })
+    let captures = 0
+    const reconciler = new DaemonOrphanReconciler({
+      store,
+      listLiveSessions: () => [],
+      log: () => {},
+      platform: 'win32',
+      readTable: async () => {
+        captures += 1
+        return { rows: [], capturedAtMs: Date.now() }
+      }
+    })
+
+    reconciler.start()
+    await reconciler.runOnce()
+
+    expect(captures).toBe(0)
+    // A record that ages out on a POSIX host must still be sitting there untouched here.
+    expect(readRecords(store)).toHaveLength(1)
+  })
+})
