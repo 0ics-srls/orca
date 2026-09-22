@@ -1,3 +1,4 @@
+import { requestActiveTerminalPaneClose } from '@/components/terminal-pane/request-active-terminal-pane-close'
 import { useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { isTerminalPaneCloseChord } from '@/components/terminal-pane/terminal-shortcut-policy'
 import { ensureClientCreationActionAllowed } from '@/lib/client-creation-action-error'
@@ -28,7 +29,7 @@ type FloatingTerminalPanelShortcutsInput = Pick<
   FloatingTerminalPanelItems,
   'activeTab' | 'activeTerminalId' | 'activeClosableTab' | 'visibleFloatingTabOrder'
 > &
-  Pick<FloatingTerminalPanelLocalState, 'terminalPaneRegistry' | 'panelRef'> &
+  Pick<FloatingTerminalPanelLocalState, 'panelRef'> &
   Pick<FloatingTerminalCloseActions, 'closeFloatingItemConfirmed'> &
   FloatingTerminalCreateActions &
   FloatingTerminalPanelMaximize & {
@@ -41,7 +42,6 @@ export function useFloatingTerminalPanelShortcuts({
   activeTerminalId,
   activeClosableTab,
   visibleFloatingTabOrder,
-  terminalPaneRegistry,
   panelRef,
   closeFloatingItemConfirmed,
   activateFloatingItem,
@@ -53,17 +53,6 @@ export function useFloatingTerminalPanelShortcuts({
   open,
   onOpenChange
 }: FloatingTerminalPanelShortcutsInput) {
-  const closeActiveFloatingTerminalPane = useCallback(() => {
-    const handle = activeTerminalId ? terminalPaneRegistry.getHandle(activeTerminalId) : null
-    if (handle) {
-      handle.closeActivePane()
-      return
-    }
-    if (activeClosableTab) {
-      closeFloatingItemConfirmed(activeClosableTab.id)
-    }
-  }, [activeClosableTab, activeTerminalId, closeFloatingItemConfirmed, terminalPaneRegistry])
-
   const resolveFloatingPanelShortcut = useCallback(
     (input: FloatingPanelShortcutInput): FloatingPanelShortcutResolution | null => {
       const state = useAppStore.getState()
@@ -141,9 +130,10 @@ export function useFloatingTerminalPanelShortcuts({
       }
       if (resolution.kind === 'close') {
         if (resolution.focusedFloatingTerminal) {
-          if (input.doubleTapModifier) {
+          // Why no fallback: a focused floating terminal input means its pane is mounted to answer.
+          if (input.doubleTapModifier && activeTerminalId) {
             consume()
-            closeActiveFloatingTerminalPane()
+            requestActiveTerminalPaneClose(activeTerminalId)
             return 'handled'
           }
           return 'deferred'
@@ -183,8 +173,8 @@ export function useFloatingTerminalPanelShortcuts({
     [
       activeClosableTab,
       activeTab,
+      activeTerminalId,
       activateFloatingItem,
-      closeActiveFloatingTerminalPane,
       closeFloatingItemConfirmed,
       createFloatingBrowserTab,
       createFloatingMarkdownTab,

@@ -52,13 +52,6 @@ export type LaunchAgentInNewTabArgs = {
   launchPlatform?: NodeJS.Platform
   /** Called after the prompt is actually delivered to the agent input path. */
   onPromptDelivered?: () => void
-  /**
-   * Whether the new terminal tab takes the global selection. The floating workspace passes `false`
-   * and selects within its own group instead, so launching there does not move the main window's
-   * active tab. Terminal surface only — the structured and host-published routes own their own
-   * activation.
-   */
-  activate?: boolean
   /** Keeps a preflighted route authoritative across workspace creation. */
   agentSessionLaunchPlan?: AgentSessionLaunchPlan
   /** Lets a workspace reveal itself before the selected surface opens. */
@@ -114,8 +107,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     launchPlatform,
     onPromptDelivered,
     agentSessionLaunchPlan,
-    beforeSurfaceOpen,
-    activate
+    beforeSurfaceOpen
   } = args
   const store = useAppStore.getState()
   const { worktreeSshConnectionId, resolvedLaunchPlatform, isRemote, queuedShell } =
@@ -246,7 +238,6 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
   const tab = store.createTab(worktreeId, groupId, undefined, {
     launchAgent: agent,
     quickCommandLabel,
-    ...(activate === false ? { activate: false } : {}),
     ...initialViewModeProps
   })
   seedNativeChatAppliedSessionOptions(tab.id, agent, startupPlan.sessionOptions)
@@ -316,10 +307,8 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     onPromptDelivered?.()
   }
 
-  // Why: without setActiveTabType('terminal') an activated launch can stay hidden behind an editor.
-  if (activate !== false) {
-    store.setActiveTabType('terminal')
-  }
+  // Why: without setActiveTabType('terminal') a worktree showing an editor keeps rendering it and the new tab stays hidden.
+  store.setActiveTabType('terminal', worktreeId)
 
   // Why: persist tab-bar order so reconcileTabOrder doesn't fall back to terminals-first and jump the new tab to index 0.
   persistAgentLaunchTabOrder(worktreeId, tab.id)

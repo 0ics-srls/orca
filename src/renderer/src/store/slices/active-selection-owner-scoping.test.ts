@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import { createBrowserMockApi, createTestStore } from './browser-slice-test-harness'
 import { createEditorTabsStore } from './editor-slice-test-harness'
+import { createTestStore as createAppStore, makeWorktree, seedStore } from './store-test-helpers'
 
 vi.mock('@/runtime/web-runtime-session', () => ({
   createWebRuntimeSessionBrowserTab: vi.fn()
@@ -29,6 +30,29 @@ function openMarkdown(store: ReturnType<typeof createEditorTabsStore>, worktreeI
 // The global selection fields project the active workspace. Selecting in another workspace — the
 // floating panel is the one that is always on screen beside the active one — must not move them.
 describe('selection in a workspace other than the active one', () => {
+  it('selects a created tab in its own workspace without moving the global tab', () => {
+    const store = createAppStore()
+    seedStore(store, {
+      activeWorktreeId: 'repo1::/path/wt1',
+      worktreesByRepo: {
+        repo1: [makeWorktree({ id: 'repo1::/path/wt1', repoId: 'repo1', path: '/path/wt1' })]
+      }
+    })
+    const mainTab = store.getState().createTab('repo1::/path/wt1')
+
+    const floatingTab = store.getState().createTab(FLOATING_TERMINAL_WORKTREE_ID)
+
+    const state = store.getState()
+    expect(state.activeTabId).toBe(mainTab.id)
+    expect(state.activeTabIdByWorktree[FLOATING_TERMINAL_WORKTREE_ID]).toBe(floatingTab.id)
+    const floatingGroup = state.groupsByWorktree[FLOATING_TERMINAL_WORKTREE_ID]?.[0]
+    expect(
+      state.unifiedTabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID]?.find(
+        (tab) => tab.id === floatingGroup?.activeTabId
+      )?.entityId
+    ).toBe(floatingTab.id)
+  })
+
   it('records a file selection in its own workspace without moving the global file', () => {
     const store = createEditorTabsStore()
     const mainFileId = openMarkdown(store, 'wt-1')
