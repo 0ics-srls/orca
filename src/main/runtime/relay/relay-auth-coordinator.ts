@@ -17,12 +17,7 @@ import type {
   RelayAuthIdentity
 } from './relay-auth-coordinator-contract'
 
-export type {
-  CoordinatedRelayBroker,
-  LiveBrokerWaitResult,
-  RelayAuthContext,
-  RelayAuthIdentity
-} from './relay-auth-coordinator-contract'
+export type { RelayAuthContext } from './relay-auth-coordinator-contract'
 
 type BrokerOwnership = {
   identityKey: string

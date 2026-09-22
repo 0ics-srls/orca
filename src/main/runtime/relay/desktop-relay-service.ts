@@ -22,8 +22,6 @@ import { RelayDemandLedger } from './relay-demand-ledger'
 import { createRelayRegionPreferenceReader } from './relay-region-preference-reader'
 import { pairingAuthorizationForContext } from './relay-pairing-authorization'
 
-export { pairingAuthorizationForContext } from './relay-pairing-authorization'
-
 type DesktopRelayServiceOptions = {
   authConfig: OrcaCloudAuthConfig
   userDataPath: string
