@@ -8,6 +8,20 @@ import {
 import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 import { subscribeStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 
+/** A stream delivers its failure as the raw RPC error payload, whose `String()` is `[object Object]`. */
+function describeReadFailure(error: unknown): string {
+  if (error instanceof Error) {
+    return String(error)
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const { message } = error
+    if (typeof message === 'string' && message.length > 0) {
+      return message
+    }
+  }
+  return String(error)
+}
+
 function createReconnectScheduler(args: { shouldStop: () => boolean; reconnect: () => void }) {
   let timer: ReturnType<typeof setTimeout> | null = null
   return {
@@ -79,13 +93,13 @@ export function startStructuredAgentSessionReadTransport(args: {
   const reportReadFailure = (error: unknown): void => {
     if (!isUnattachedAgentSessionReadRefusal(error)) {
       clearUnattachedReadGrace()
-      args.applyError(String(error))
+      args.applyError(describeReadFailure(error))
       return
     }
     const now = Date.now()
     unattachedSince ??= now
     if (now - unattachedSince >= AGENT_SESSION_UNATTACHED_READ_GRACE_MS) {
-      args.applyError(String(error))
+      args.applyError(describeReadFailure(error))
     }
   }
   const captureHistoryReadGuard = (): (() => boolean) => {

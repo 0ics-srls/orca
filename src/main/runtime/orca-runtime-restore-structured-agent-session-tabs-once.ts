@@ -4,8 +4,6 @@ import { OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript } from './orca-r
 import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
 import { replaceConversationInSnapshot } from './structured-conversation-tab-replacement'
 import type { ConversationReplacement } from '../native-chat/agent-session-wire/structured-conversation-command'
-import { collectSavedStructuredAgentSessionIds } from './saved-structured-agent-session-restoration'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import type {
   RuntimeMobileSessionAgentTab,
   RuntimeMobileSessionTabsSnapshot,
@@ -49,17 +47,9 @@ export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRu
 
   protected async restoreStructuredAgentSessionTabsOnce(): Promise<void> {
     await this.prepareStructuredAgentSessionStartupRestoration()
+    // The sweep startup restoration began; projection needs every persisted chat readable first.
+    await this.restoreReadableStructuredSessions()
     const host = getStructuredAgentSessionHost()
-    const persistedVisibleIndex =
-      typeof host?.getPersistedVisibleSessionTabIndex === 'function'
-        ? host.getPersistedVisibleSessionTabIndex()
-        : { present: false, sessionIds: [] }
-    const profileIds = collectSavedStructuredAgentSessionIds(
-      this.store?.getWorkspaceSession?.(LOCAL_EXECUTION_HOST_ID) ?? null
-    )
-    await host?.restoreReadableSessions(
-      persistedVisibleIndex.present ? persistedVisibleIndex.sessionIds : profileIds
-    )
     for (const worktreeId of this.getKnownWorkspaceSessionWorktreeIds()) {
       this.hydrateHeadlessMobileSessionTabsFromWorkspaceSession(worktreeId, {
         allowAttachedWindow: true,

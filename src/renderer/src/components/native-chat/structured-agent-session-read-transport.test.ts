@@ -248,6 +248,20 @@ describe('structured agent-session read transport unattached refusals', () => {
     }
   })
 
+  it('reports a stream failure payload by its message, not as [object Object]', async () => {
+    vi.useFakeTimers()
+    try {
+      const applyError = vi.fn()
+      const transport = startWithHydration(async () => undefined, applyError)
+      await flushPromises()
+      attempts.at(-1)?.onError({ code: 'runtime_error', message: 'journal unreadable' })
+      expect(applyError).toHaveBeenCalledWith('journal unreadable')
+      transport.dispose()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('surfaces an unattached refusal that outlives the grace window', async () => {
     vi.useFakeTimers()
     try {

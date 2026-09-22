@@ -27,12 +27,13 @@ describe('structured session cold restoration', () => {
     expect(reconcileRestartLeases).not.toHaveBeenCalled()
   })
 
-  it('keeps historical journal parsing outside the terminal-safety fence', async () => {
+  it('starts the readable sweep at startup but keeps journal parsing off the terminal-safety fence', async () => {
     const runtime = new OrcaRuntimeService()
     const refresh = vi.fn(async () => new Set<string>())
     const ensureHost = vi.fn(async () => undefined)
     const reconcileRestartLeases = vi.fn(async () => undefined)
-    const restoreReadableSessions = vi.fn(async () => undefined)
+    // Never settles: the fence must open without waiting on a single journal.
+    const restoreReadableSessions = vi.fn(() => new Promise<void>(() => undefined))
     const internal = runtime as unknown as {
       hasPersistedStructuredAgentSessionStore(): boolean
       refreshMobileSessionPtyRecords(): Promise<Set<string> | null>
@@ -48,7 +49,10 @@ describe('structured session cold restoration', () => {
     expect(ensureHost).toHaveBeenCalledOnce()
     expect(refresh).toHaveBeenCalledOnce()
     expect(reconcileRestartLeases).toHaveBeenCalledOnce()
-    expect(restoreReadableSessions).not.toHaveBeenCalled()
+    expect(restoreReadableSessions).toHaveBeenCalledOnce()
+    expect(reconcileRestartLeases.mock.invocationCallOrder[0]).toBeLessThan(
+      restoreReadableSessions.mock.invocationCallOrder[0] ?? Infinity
+    )
   })
 
   it('loads records, inventories PTYs, restores ownership, then projects tabs exactly once', async () => {

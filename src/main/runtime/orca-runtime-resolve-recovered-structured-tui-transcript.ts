@@ -12,6 +12,7 @@ import {
   resolveStructuredAgentSessionAdoptionForCreate
 } from './structured-agent-session-create-adoption'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
+import { collectSavedStructuredAgentSessionIds } from './saved-structured-agent-session-restoration'
 import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
 import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import type { AgentSessionAttachParams } from '../native-chat/agent-session-wire/structured-agent-session-attach'
@@ -279,6 +280,49 @@ export class OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript extends Orca
     await this.ensureStructuredAgentSessionHost()
     await this.refreshMobileSessionPtyRecords()
     await getStructuredAgentSessionHost()?.reconcileRestartLeases()
+    // Why started here, and why not awaited: a restored chat pane subscribes as soon as its tab
+    // model hydrates, and a read refused for want of a readable session is what it paints as a
+    // failure — so readability must not wait for the first tab inventory, which itself waits on
+    // the client's whole terminal-restoration chain. Journal parsing still stays off the
+    // terminal-safety fence this method fences: the sweep runs alongside terminal restoration,
+    // and the tab projection awaits the same latched sweep.
+    void this.restoreReadableStructuredSessions().catch((error: unknown) => {
+      console.warn('[agent-session] startup readable restore failed', error)
+    })
+  }
+
+  /** Once per process: the startup sweep that opens every persisted chat's journal for reading. */
+  protected restoreReadableStructuredSessions(): Promise<void> {
+    this.structuredReadableSessionRestorePromise ??=
+      this.restoreReadableStructuredSessionsOnce().catch((error) => {
+        this.structuredReadableSessionRestorePromise = null
+        throw error
+      })
+    return this.structuredReadableSessionRestorePromise
+  }
+
+  private async restoreReadableStructuredSessionsOnce(): Promise<void> {
+    const host = getStructuredAgentSessionHost()
+    if (!host) {
+      return
+    }
+    await host.restoreReadableSessions(this.selectStartupReadableStructuredSessionIds(host))
+  }
+
+  /** The persisted visible-tab index when the store keeps one, else every chat the saved
+   *  workspace session still shows a tab for. */
+  private selectStartupReadableStructuredSessionIds(
+    host: NonNullable<ReturnType<typeof getStructuredAgentSessionHost>>
+  ): readonly string[] {
+    const persistedVisibleIndex =
+      typeof host.getPersistedVisibleSessionTabIndex === 'function'
+        ? host.getPersistedVisibleSessionTabIndex()
+        : { present: false, sessionIds: [] }
+    return persistedVisibleIndex.present
+      ? persistedVisibleIndex.sessionIds
+      : collectSavedStructuredAgentSessionIds(
+          this.store?.getWorkspaceSession?.(LOCAL_EXECUTION_HOST_ID) ?? null
+        )
   }
 
   protected hasPersistedStructuredAgentSessionStore(): boolean {
