@@ -170,7 +170,9 @@ The production Asia set is C27-C30. C27-C29 launched as one wave; C30 is an addi
 own at the same shape. Its plan names C30's template, MIG, and backend plus the shared URL map, and
 the URL map pulls every existing cell's backend, MIG, and template into the plan. Committed images
 lag what same-cap rolls serve, so the workflow first reads each non-target cell's served image out
-of its live template in state and plans that cell at it. The validator then rejects any change to a
+of its live template in state and plans that cell at it. It reads the committed cell map from a
+no-refresh, unlocked plan over the same targets, not `terraform console`: console evaluates every
+output against state and fails while C30 has no MIG. The validator then rejects any change to a
 cell outside the wave, so the plan must read as C30's three creations plus the URL map update.
 Before the apply dispatch, run the plan mode and read its `Plan:` line; any other drift, such as a
 cell whose startup script changed since its last roll, fails the plan and must be rolled first.

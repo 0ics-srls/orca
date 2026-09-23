@@ -62,12 +62,18 @@ function argumentsFrom(argv) {
   return values
 }
 
+function readJsonFile(path, label) {
+  const text = readFileSync(path, 'utf8')
+  if (!text.trim()) throw new Error(`${label} is empty`)
+  return JSON.parse(text)
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const values = argumentsFrom(process.argv.slice(2))
-  const committedCells = JSON.parse(readFileSync(values['cells-json'], 'utf8'))
+  const committedCells = readJsonFile(values['cells-json'], 'committed Relay cells')
   const overlay = overlayRelayLiveCellImages({
     committedCells,
-    liveTemplates: JSON.parse(readFileSync(values['live-templates-json'], 'utf8')),
+    liveTemplates: readJsonFile(values['live-templates-json'], 'live Relay templates'),
     targetCellIds: values['cell-ids'].split(',').map((value) => value.trim()).filter(Boolean)
   })
   writeFileSync(values.output, `${JSON.stringify(overlay)}\n`)

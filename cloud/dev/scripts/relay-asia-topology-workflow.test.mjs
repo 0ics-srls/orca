@@ -66,11 +66,8 @@ test('plans only additive Asia topology and applies the saved plan', () => {
     workflow,
     /\.variables\.relay_gce_additional_region_subnetwork_cidrs\.value/
   )
-  // Console only reads the committed map for the live-image overlay; plan variables stay the input.
-  assert.deepEqual(
-    [...workflow.matchAll(/terraform -chdir=infra\/terraform console[^\n]*\n[^\n]*/g)].map((match) => match[0].trim()),
-    [`terraform -chdir=infra/terraform console -var-file="\${TF_VARS}" \\\n            <<< 'jsonencode(var.relay_gce_cells)' | jq -er '.' > "\${cells}"`]
-  )
+  // Console evaluates every output against state and fails while a declared cell has no MIG.
+  assert.doesNotMatch(workflow, /terraform[^\n]*console/)
   assert.equal(
     (workflow.match(/-var-file="\$\{TF_VARS\}" -var-file="\$\{\{ steps\.live-images\.outputs\.file \}\}"/g) ?? []).length,
     2
@@ -153,5 +150,14 @@ test('plans every non-target cell at its served image, read from state templates
   assert.match(step, /\{ index, metadata_startup_script: \.values\.metadata_startup_script \}/)
   assert.match(step, /relay-live-cell-image-overlay\.mjs/)
   assert.match(step, /--cell-ids "\$\{TARGET_CELL_IDS\}"/)
-  assert.ok(workflow.indexOf('- id: live-images') < workflow.indexOf('terraform -chdir=infra/terraform plan'))
+  // The committed map comes from a read-only plan over the same targets, never from console.
+  assert.match(step, /mapfile -t targets < "\$\{\{ steps\.targets\.outputs\.file \}\}"/)
+  assert.match(
+    step,
+    /terraform -chdir=infra\/terraform plan -input=false -refresh=false -lock=false \\\n\s+-var-file="\$\{TF_VARS\}" "\$\{targets\[@\]\}" -out="\$\{committed_plan\}" > \/dev\/null/
+  )
+  assert.match(step, /show -json "\$\{committed_plan\}" \\\n\s+\| jq -ce '\.variables\.relay_gce_cells\.value \| objects' > "\$\{cells\}"/)
+  assert.equal((step.match(/terraform -chdir=infra\/terraform (?:plan|apply)/g) ?? []).length, 1)
+  assert.ok(workflow.indexOf('- id: targets') < workflow.indexOf('- id: live-images'))
+  assert.ok(workflow.indexOf('- id: live-images') < workflow.indexOf('- name: Create and validate the saved topology plan'))
 })

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { overlayRelayLiveCellImages } from './relay-live-cell-image-overlay.mjs'
 
 const repository = 'us-central1-docker.pkg.dev/onorca-cloud/orca-cloud/relay'
@@ -30,7 +34,7 @@ const live = [
   { index: 'production-gce-c27', metadata_startup_script: startupScript(served) }
 ]
 
-test('plans every non-target cell at the image its live template serves', () => {
+test('plans every non-target cell at its served image while the target has no template yet', () => {
   const overlay = overlayRelayLiveCellImages({
     committedCells, liveTemplates: live, targetCellIds: ['production-gce-c30']
   })
@@ -82,4 +86,34 @@ test('refuses duplicate live templates and an undeclared target', () => {
   assert.throws(() => overlayRelayLiveCellImages({
     committedCells, liveTemplates: live, targetCellIds: ['production-gce-c31']
   }), /production-gce-c31 is not a committed Relay cell/)
+})
+
+test('builds the overlay from plan variables when the target cell has no template in state yet', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'relay-live-cell-image-overlay-'))
+  try {
+    const cells = join(dir, 'cells.json')
+    const templates = join(dir, 'templates.json')
+    const output = join(dir, 'overlay.tfvars.json')
+    // Plan variables carry the map as written: optional attributes the tfvars omit stay absent.
+    const { connection_hard_cap: _omitted, ...c30 } = cell(committed)
+    writeFileSync(cells, JSON.stringify({ ...committedCells, 'production-gce-c30': c30 }))
+    writeFileSync(templates, JSON.stringify(live))
+    assert.ok(!live.some(({ index }) => index === 'production-gce-c30'))
+    const run = (cellsPath) => spawnSync(process.execPath, [
+      fileURLToPath(new URL('./relay-live-cell-image-overlay.mjs', import.meta.url)),
+      '--cells-json', cellsPath, '--live-templates-json', templates,
+      '--cell-ids', 'production-gce-c30', '--output', output
+    ], { encoding: 'utf8' })
+    const result = run(cells)
+    assert.equal(result.status, 0, result.stderr)
+    assert.deepEqual(JSON.parse(result.stdout), { cells: 3, drifted: ['production-gce-c27'] })
+    assert.deepEqual(JSON.parse(readFileSync(output, 'utf8')).relay_gce_cells['production-gce-c30'], c30)
+    const empty = join(dir, 'empty.json')
+    writeFileSync(empty, '')
+    const failed = run(empty)
+    assert.notEqual(failed.status, 0)
+    assert.match(failed.stderr, /committed Relay cells is empty/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
