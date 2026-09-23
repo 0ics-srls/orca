@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import type { ClaudeStructuredSessionAdapterDeps } from './claude-structured-session-adapter'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type {
+  ClaudeStructuredSessionAdapterDeps,
+  ClaudeStructuredSessionEvent
+} from './claude-structured-session-adapter'
 import {
   proveClaudeTranscriptBranchFromJsonl,
   replayClaudeTranscriptBranchAncestryFromJsonl
@@ -100,6 +103,10 @@ async function resumeAt(
   return { adapter, claude, acquisition }
 }
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
 describe('Claude transcript leaf is a message', () => {
   it('never records a hook summary or attachment as the leaf', () => {
     const firstDay = jsonl(FIRST_DAY)
@@ -189,6 +196,7 @@ describe('Claude plain resume re-derives its point from the transcript', () => {
   })
 
   it('resumes by session id alone when the transcript cannot vouch for any point', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const unreadable = async (): Promise<string | null> => {
       throw new Error('transcript unreadable')
     }
@@ -196,6 +204,11 @@ describe('Claude plain resume re-derives its point from the transcript', () => {
     try {
       expect(claude.connections[0]!.launch.options).not.toHaveProperty('resumeSessionAt')
       expect(acquisition.link.handle).toMatchObject({ leafUuid: null })
+      // The fallback leaves a trail: a silent one hides which chats stopped resuming at a point.
+      expect(warn).toHaveBeenCalledWith(
+        '[claude-resume-point] transcript cannot vouch for a point; resuming by id:',
+        expect.objectContaining({ storedLeafUuid: 's1', reason: expect.any(Error) })
+      )
     } finally {
       await adapter.closeAll()
     }
@@ -315,6 +328,37 @@ describe('Claude resume point is persisted on every exit path', () => {
     const { adapter } = await liveSessionAfterTwoTurns(persisted)
     await expect(adapter.releaseAcquisition({ sessionId: 'session-1' })).resolves.toBe(true)
     expect(persisted).toEqual([expect.objectContaining(persistedLeaf)])
+  })
+
+  it('on an unexpected exit whose durable write fails, still ends the session and logs', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const events: ClaudeStructuredSessionEvent[] = []
+    const claude = fakeClaude()
+    const adapter = adapterFor(
+      claude,
+      { resumed: true, resumeLeafUuid: 'a3', options: { resumeSessionAt: 'a3' } },
+      events,
+      [],
+      undefined,
+      transcriptReader(() => TRANSCRIPT),
+      async () => {
+        throw new Error('record write failed')
+      }
+    )
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-7',
+      events: recordingJournalSink()
+    })
+    claude.connections[0]!.handlers.onExit?.(new Error('claude crashed'))
+    await adapter.drainObservedExits()
+    await tick()
+    expect(events.at(-1)).toMatchObject({ type: 'ended', cause: 'unexpected-exit' })
+    expect(warn).toHaveBeenCalledWith(
+      '[claude-resume-point] exit cursor was not persisted:',
+      expect.objectContaining({ sessionId: 'session-1', error: expect.any(Error) })
+    )
   })
 
   it('falls back to the last live message, never a live hook summary', async () => {

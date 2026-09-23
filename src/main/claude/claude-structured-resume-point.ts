@@ -20,6 +20,7 @@ export async function rederiveClaudeResumePoint(
   }
   let derived: string | null = null
   if (deps.readTranscriptLeaf) {
+    let reason: unknown = 'transcript not found'
     try {
       derived = await readClaudeTranscriptLeafWithReproof({
         readTranscriptLeaf: deps.readTranscriptLeaf,
@@ -27,8 +28,15 @@ export async function rederiveClaudeResumePoint(
         previousLeafUuid: launch.resumeLeafUuid,
         claudeConfigDir: launch.claudeConfigDir
       })
-    } catch {
-      derived = null
+    } catch (error) {
+      reason = error
+    }
+    if (derived === null) {
+      console.warn('[claude-resume-point] transcript cannot vouch for a point; resuming by id:', {
+        providerSessionId: launch.providerSessionId,
+        storedLeafUuid: launch.resumeLeafUuid,
+        reason
+      })
     }
   }
   const options = { ...launch.options }
@@ -59,7 +67,7 @@ export function persistClaudeTurnResumePoint(
     return
   }
   const previous = session.resumePointWrite?.settled ?? Promise.resolve()
-  session.resumePointWrite = {
+  const write: NonNullable<ClaudeSession['resumePointWrite']> = {
     leafUuid,
     settled: previous
       .then(() =>
@@ -76,6 +84,11 @@ export function persistClaudeTurnResumePoint(
           leafUuid,
           error
         })
+        // Forget the failed leaf so the next turn end retries it even when the leaf has not moved.
+        if (session.resumePointWrite === write) {
+          session.resumePointWrite = undefined
+        }
       })
   }
+  session.resumePointWrite = write
 }

@@ -106,7 +106,7 @@ async function liveOwner(
     frame({ type: 'result', subtype: 'success', uuid: `${assistantUuid}-result` })
     await tick()
   }
-  return { adapter, store, events, persistedHandles, frame, turn }
+  return { adapter, claude, store, events, persistedHandles, frame, turn }
 }
 
 afterEach(() => {
@@ -185,6 +185,45 @@ describe('Claude durable resume point at turn end', () => {
       expect.objectContaining({ leafUuid: 'a2' })
     )
     await expect(adapter.closeSession('session-1')).resolves.toBe(true)
+    expect(persistedHandles).toEqual([expect.objectContaining({ leafUuid: 'a2' })])
+  })
+
+  it('retries a failed write at the next turn end even when the leaf has not moved', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let failing = true
+    const persist = vi.fn(async () => {
+      if (failing) {
+        throw new Error('record write failed')
+      }
+    })
+    const { adapter, frame, turn } = await liveOwner(persist)
+    try {
+      await turn('u1', 'a1')
+      expect(persist).toHaveBeenCalledTimes(1)
+      failing = false
+      // A turn that ends without a new message, such as an interrupted one, keeps the same leaf.
+      frame({ type: 'result', subtype: 'error_during_execution', uuid: 'a1-result-2' })
+      await tick()
+      expect(persist).toHaveBeenCalledTimes(2)
+      expect(persist).toHaveBeenLastCalledWith(expect.objectContaining({ leafUuid: 'a1' }))
+    } finally {
+      await adapter.closeAll()
+    }
+  })
+
+  it('ignores a result that trails the child exit', async () => {
+    const persist = vi.fn(async () => {})
+    const { adapter, claude, frame, persistedHandles, turn } = await liveOwner(persist)
+    await turn('u1', 'a1')
+    expect(persist).toHaveBeenCalledTimes(1)
+    claude.connections[0]!.handlers.onExit?.(new Error('claude crashed'))
+    frame({ type: 'user', uuid: 'u2' })
+    frame({ type: 'assistant', uuid: 'a2' })
+    frame({ type: 'result', subtype: 'success', uuid: 'a2-result' })
+    await adapter.drainObservedExits()
+    await tick()
+    // Only the exit path writes now; a late turn-end write could land behind it.
+    expect(persist).toHaveBeenCalledTimes(1)
     expect(persistedHandles).toEqual([expect.objectContaining({ leafUuid: 'a2' })])
   })
 })

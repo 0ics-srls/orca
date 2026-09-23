@@ -135,7 +135,12 @@ export class ClaudeStructuredSessionAdapter implements StructuredAgentSessionAda
       }
       // Persist the transcript-derived cursor before publishing the lifecycle
       // event that lets the host release and reacquire this exact child.
-      await persistClaudeSessionHandle(sessionId, exit.session, this.deps).catch(() => undefined)
+      await persistClaudeSessionHandle(sessionId, exit.session, this.deps).catch(
+        (error: unknown) => {
+          // Recovery still publishes: the record keeps its last durable point, and the loss is logged.
+          console.warn('[claude-resume-point] exit cursor was not persisted:', { sessionId, error })
+        }
+      )
       if (this.exits.get(sessionId) !== exit) {
         settleClaudeExitedSession(exit.session)
         return

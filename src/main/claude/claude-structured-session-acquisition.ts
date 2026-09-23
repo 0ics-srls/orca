@@ -123,7 +123,9 @@ export async function acquireClaudeSession({
     if (liveSession) {
       liveSession.leafUuid = observedLeafUuid
       observeClaudeFastModeFacts(liveSession, message)
-      if (message.type === 'result') {
+      // A result that trails the child's exit must not move the durable point behind the exit
+      // path's own transcript-derived write.
+      if (message.type === 'result' && sessions.get(sessionId) === liveSession) {
         persistClaudeTurnResumePoint(sessionId, liveSession, deps)
       }
     }
