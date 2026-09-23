@@ -143,6 +143,20 @@ describe('composer goal mode', () => {
     expect(withoutGoals.hook.result.current.goalMode.active).toBe(false)
   })
 
+  it('keeps a bare /goal typed inside goal mode as the entrance, not the objective', () => {
+    const setObjective = vi.fn(async () => true)
+    const { hook, calls } = harness({ draft: '/go', threadGoal: { setObjective } })
+    act(() => hook.result.current.goalMode.interceptPick(vi.fn())(GOAL_ITEM))
+    calls.setDraft.mockClear()
+    hook.rerender({ draft: '/goal', caret: 5 })
+
+    act(() => hook.result.current.send())
+
+    expect(setObjective).not.toHaveBeenCalled()
+    expect(calls.setDraft).toHaveBeenCalledWith('')
+    expect(hook.result.current.goalMode.active).toBe(true)
+  })
+
   it('sends an ordinary message outside goal mode', () => {
     const { hook, calls } = harness({ draft: 'hello', threadGoal: { setObjective: vi.fn() } })
     act(() => hook.result.current.send())

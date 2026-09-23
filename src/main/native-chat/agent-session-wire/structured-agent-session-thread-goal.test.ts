@@ -147,6 +147,41 @@ describe('performThreadGoalChange', () => {
     expect(journal.snapshot().items).toEqual([])
   })
 
+  it('puts the objective back, once, when a withdrawn set runs again', async () => {
+    const journal = await openJournal()
+    const attempts: (() => Promise<{ ok: true }>)[] = [
+      async () => {
+        throw new Error('request timed out')
+      },
+      async () => ({ ok: true as const })
+    ]
+    const ctx = context(journal, {
+      changeThreadGoal: () => attempts.shift()!(),
+      supportsThreadGoal: () => true
+    })
+    const input = {
+      clientOperationId: 'op-9',
+      change: { kind: 'set' as const, objective: 'Ship the parser' }
+    }
+
+    await expect(performThreadGoalChange(ctx, input)).rejects.toThrow('request timed out')
+    expect(journal.snapshot().items).toEqual([])
+
+    // The ledger reruns the same operation id; its tombstoned row revives, not doubles.
+    await expect(performThreadGoalChange(ctx, input)).resolves.toEqual({
+      ok: true,
+      value: { change: 'set' }
+    })
+    expect(journal.snapshot().items.map((item) => item.body)).toEqual([
+      {
+        kind: 'message',
+        role: 'user',
+        blocks: [{ type: 'text', text: 'Ship the parser' }],
+        sentAs: 'goal'
+      }
+    ])
+  })
+
   it('journals nothing for a status change or clear', async () => {
     const journal = await openJournal()
     const changeThreadGoal = vi.fn(async () => ({ ok: true as const }))

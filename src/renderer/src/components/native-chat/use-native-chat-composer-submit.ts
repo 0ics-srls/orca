@@ -97,17 +97,18 @@ export function useNativeChatComposerSubmit(args: {
     if (imageAttachments.some((attachment) => attachment.pending)) {
       return
     }
-    if (active) {
+    if (threadGoal && structuredTransport && isBareStructuredAgentSessionGoalCommand(draft)) {
+      // Same entrance as picking `/goal`: the token becomes the chip. Typed inside
+      // goal mode it is still the entrance, never an objective.
+      setDraft('')
+      setCaret(0)
+      setEntered(true)
+    } else if (active) {
       if (!disabled) {
         setGoal()
       }
     } else if (!structuredTransport) {
       sendPty()
-    } else if (threadGoal && isBareStructuredAgentSessionGoalCommand(draft)) {
-      // Same entrance as picking `/goal`: the token becomes the chip.
-      setDraft('')
-      setCaret(0)
-      setEntered(true)
     } else if ((draft.trim() !== '' || imageAttachments.length > 0) && !disabled) {
       sendStructured(draft, imageAttachments)
     }

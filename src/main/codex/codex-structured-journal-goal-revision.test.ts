@@ -1,13 +1,17 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AgentSessionJournalIdentity } from '../../shared/agent-session-journal-types'
+import { afterEach, describe, expect, it } from 'vitest'
+import type {
+  AgentJournalCursor,
+  AgentSessionJournalIdentity
+} from '../../shared/agent-session-journal-types'
 import { currentAgentSessionThreadGoal } from '../../shared/agent-session-thread-goal'
+import type { AgentSessionHistoryPage } from '../../shared/agent-session-wire'
 import type { AgentSessionJournal } from '../native-chat/agent-session-journal/journal-store'
 import { createTrackedJournalOpener } from '../native-chat/agent-session-journal/journal-store-test-open'
 import { readAgentSessionHistory } from '../native-chat/agent-session-wire/agent-session-history-page'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import { createDeferredStructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { CodexJournalGoals } from './codex-structured-journal-goals'
 
 const THREAD = '01a08cc2-f96e-76d0-bb74-88b9bc0b03fc'
@@ -48,23 +52,38 @@ function goalFrame(goal: Record<string, unknown> = {}) {
   }
 }
 
-/** Drives the real journal through the lifecycle-transition path the host sink provides. */
+/** The host's own sink bound to a real journal. Its publish is what a subscriber
+ *  receives: the page after the cursor it had caught up to. */
 function journalSink(journal: AgentSessionJournal) {
-  const writes: Promise<unknown>[] = []
-  const sink: StructuredAgentSessionEventSink = {
-    appendItem: vi.fn(),
-    appendTombstone: vi.fn(),
-    publish: vi.fn(),
-    journalEpoch: () => journal.epoch,
-    tryAppendLifecycleTransition: (_bound, body, resolveIdentity) => {
-      const identity = resolveIdentity(journal)
-      if (identity) {
-        writes.push(journal.appendItem(identity, body, { fence: 1 }))
+  const deferred = createDeferredStructuredAgentSessionEventSink()
+  const published: AgentSessionHistoryPage[] = []
+  let subscriberCursor: AgentJournalCursor | null = null
+  deferred.bind({
+    journal,
+    fence: 1,
+    publish: () => {
+      if (subscriberCursor === null) {
+        return
       }
-      return { accepted: true }
+      const result = readAgentSessionHistory(journal, {
+        sessionId: IDENTITY.sessionId,
+        direction: 'after',
+        cursor: subscriberCursor
+      })
+      if (result.ok) {
+        published.push(result.page)
+      }
     }
+  })
+  return {
+    sink: deferred.sink,
+    drained: () => deferred.drained(),
+    /** A subscriber caught up to the journal's head from here on. */
+    subscribe: () => {
+      subscriberCursor = journal.cursor()
+    },
+    published
   }
-  return { sink, drained: () => Promise.all(writes.splice(0)) }
 }
 
 describe('codex goal accounting revisions', () => {
@@ -76,7 +95,7 @@ describe('codex goal accounting revisions', () => {
       { kind: 'status', text: 'Context compacted' },
       { fence: 1 }
     )
-    const { sink, drained } = journalSink(journal)
+    const { sink, drained, subscribe, published } = journalSink(journal)
     const goals = new CodexJournalGoals(sink)
 
     goals.handle({ threadId: THREAD, method: 'thread/goal/updated', params: goalFrame() })
@@ -87,8 +106,9 @@ describe('codex goal accounting revisions', () => {
       { kind: 'status', text: 'Something after the goal' },
       { fence: 1 }
     )
+    subscribe()
 
-    // A tick inside the revision interval is not worth a persisted row.
+    // A tick inside the revision interval is not worth a persisted row, or a publish.
     goals.handle({
       threadId: THREAD,
       method: 'thread/goal/updated',
@@ -96,8 +116,8 @@ describe('codex goal accounting revisions', () => {
     })
     await drained()
     expect(journal.snapshot().items[1]?.revision).toBe(created?.revision)
+    expect(published).toEqual([])
 
-    const subscriberCursor = journal.cursor()
     goals.handle({
       threadId: THREAD,
       method: 'thread/goal/updated',
@@ -119,21 +139,20 @@ describe('codex goal accounting revisions', () => {
       timeUsedSeconds: 45,
       updatedAt: 1789068033_000
     })
-    // The live page a caught-up subscriber is sent after the write carries the
+    // The write reaches a caught-up subscriber as one live page carrying the
     // revised row under its original sequence, not a second goal row.
-    const page = readAgentSessionHistory(journal, {
-      sessionId: IDENTITY.sessionId,
-      direction: 'after',
-      cursor: subscriberCursor
-    })
-    expect(page.ok && page.page.items).toEqual([
+    expect(published).toEqual([
       expect.objectContaining({
-        itemId: created?.itemId,
-        sequence: created?.sequence,
-        revision: (created?.revision ?? 0) + 1
+        items: [
+          expect.objectContaining({
+            itemId: created?.itemId,
+            sequence: created?.sequence,
+            revision: (created?.revision ?? 0) + 1
+          })
+        ],
+        removedItemIds: []
       })
     ])
-    expect(page.ok && page.page.removedItemIds).toEqual([])
     goals.dispose()
   })
 
