@@ -37,6 +37,8 @@ export type CodexSettingsBaselineSnapshotOptions = {
    * mirrored would read a source config that never had them as a removal.
    */
   mirroredRegistrations?: boolean
+  /** Names copied from the canonical source in this mirror pass. */
+  mirroredMcpServers?: ReadonlySet<string>
 }
 
 /**
@@ -71,7 +73,8 @@ export function snapshotCodexRuntimeSettingsBaseline(
       conflicts,
       registrations: options.mirroredRegistrations
         ? readCodexRegistrationBaseline(runtimeConfig)
-        : new Map()
+        : new Map(),
+      mcpServers: options.mirroredMcpServers ?? new Set()
     })
   } catch (error) {
     console.warn('[codex-settings-promotion] failed to snapshot settings baseline', error)
@@ -88,6 +91,8 @@ export type CodexSettingsPromotionHomes = {
 export type CodexSettingsPromotionPlan = {
   conflicts: ReadonlyMap<string, CodexSettingsConflict>
   runtimeValuesToPreserve: ReadonlyMap<string, string | null>
+  /** MCP names the previous mirror copied from the canonical source. */
+  mirroredMcpServers: ReadonlySet<string>
 }
 
 function getHostPromotionHomes(): CodexSettingsPromotionHomes {
@@ -142,6 +147,7 @@ function promoteCodexRuntimeSettingsToSystemUnsafe(
     throw new Error('Codex settings baseline could not be read')
   }
   const baseline = baselineObservation.kind === 'present' ? baselineObservation.baseline : null
+  const mirroredMcpServers = baseline?.mcpServers ?? new Set<string>()
   const updates = new Map<string, string>()
   const conflicts = new Map<string, CodexSettingsConflict>()
   const runtimeValuesToPreserve = new Map<string, string | null>()
@@ -160,7 +166,7 @@ function promoteCodexRuntimeSettingsToSystemUnsafe(
   // canonical is an addition, never a removal it must honor. Scalars still need a
   // real baseline, so they stay gated above.
   if (updates.size === 0 && !hasCodexRegistrationEntries(runtimeTomlObservation.value)) {
-    return { conflicts, runtimeValuesToPreserve }
+    return { conflicts, runtimeValuesToPreserve, mirroredMcpServers }
   }
   // Why: a fresh host has no ~/.codex; create it owner-only (holds auth.json) or the atomic write ENOENTs and the mirror wipes it.
   mkdirSync(systemHomePath, { recursive: true, mode: 0o700 })
@@ -202,17 +208,17 @@ function promoteCodexRuntimeSettingsToSystemUnsafe(
     )
   )
   if (nextContent === systemContent) {
-    return { conflicts, runtimeValuesToPreserve }
+    return { conflicts, runtimeValuesToPreserve, mirroredMcpServers }
   }
   if (targetExists && parseWslUncPath(writeTarget.path)) {
     // Why: \\wsl$ 9P symlink metadata is unreliable; write through the existing file to preserve the WSL-side inode.
     writeFileSync(writeTarget.path, nextContent, 'utf-8')
-    return { conflicts, runtimeValuesToPreserve }
+    return { conflicts, runtimeValuesToPreserve, mirroredMcpServers }
   }
   writeFileAtomically(writeTarget.path, nextContent, {
     mode: writeTarget.mode
   })
-  return { conflicts, runtimeValuesToPreserve }
+  return { conflicts, runtimeValuesToPreserve, mirroredMcpServers }
 }
 
 type PromotionCollectionContext = {
@@ -264,7 +270,7 @@ function getComparableRaw(value: TopLevelSettingValue | undefined): string | nul
 }
 
 function emptyPromotionPlan(): CodexSettingsPromotionPlan {
-  return { conflicts: new Map(), runtimeValuesToPreserve: new Map() }
+  return { conflicts: new Map(), runtimeValuesToPreserve: new Map(), mirroredMcpServers: new Set() }
 }
 
 // Why: follow an existing dotfile-manager symlink and carry its mode forward so an atomic write can't widen a 0600 config.
