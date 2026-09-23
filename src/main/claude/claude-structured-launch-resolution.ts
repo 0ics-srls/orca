@@ -75,6 +75,24 @@ function cloneDefinedEnv(env: NodeJS.ProcessEnv | Record<string, string>): Recor
 }
 
 /**
+ * The record owns the Claude home and the acquisition pin (claudeConfigDirEnvPatch) is its sole
+ * emitter: a shell-exported CLAUDE_CONFIG_DIR left in the base would flip that pin's comparison
+ * and force an explicit pin to the CLI default, which moves the CLI off its default Keychain item.
+ */
+function withoutInheritedClaudeConfigDir(
+  env: Record<string, string>,
+  platform: NodeJS.Platform
+): Record<string, string> {
+  const next = { ...env }
+  for (const key of Object.keys(next)) {
+    if ((platform === 'win32' ? key.toUpperCase() : key) === 'CLAUDE_CONFIG_DIR') {
+      delete next[key]
+    }
+  }
+  return next
+}
+
+/**
  * Agent Permissions as query-start options.
  *
  * The owned CLI flag preserves the user-installed binary contract. The SDK's typed bypass option
@@ -224,7 +242,7 @@ export function createClaudeStructuredLaunchResolver(
       // PATH; an ordinary chat session's env passes through untouched.
       structuredWorkerChildIdentityEnv(record.sessionId, {
         ...applyClaudeEnvPatch(
-          { ...inheritedEnv },
+          withoutInheritedClaudeConfigDir(inheritedEnv, process.platform),
           {},
           {
             stripAuthEnv: auth.stripAuthEnv,
