@@ -332,8 +332,10 @@ cell templates/MIGs/backends, and exact shared URL-map host additions. It
 rejects deletes, replacements, loss of an existing host route, US-resource
 changes, and unrelated drift. Do not add production C27-C29 until the
 compatible image has been published and each entry can pin its immutable
-digest. A later cell, such as C30, is its own reviewed wave: its plan targets
-only that cell and leaves the live Asia cells unplanned.
+digest. A later cell, such as C30, is its own reviewed wave. The shared URL map
+pulls every live cell into its plan, so the workflow plans each live cell at the
+image its state template already serves, and the validator rejects any change
+to a cell outside the wave.
 
 Topology creation intentionally does not apply the director resource. Once all
 MIGs and backends are healthy, register every new cell atomically as

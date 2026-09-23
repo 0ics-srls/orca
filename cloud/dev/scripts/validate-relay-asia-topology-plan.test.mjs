@@ -144,8 +144,32 @@ test('accepts the additive production C30 wave at the 16-connection Asia pool', 
   liveCellTouched.push(create('google_compute_instance_template.relay_gce_cell["production-gce-c27"]'))
   assert.throws(
     () => validateRelayAsiaTopologyPlan({ resource_changes: liveCellTouched }, productionConfig),
-    /unreviewed topology action/
+    /outside the planned wave/
   )
+})
+
+// The URL map pulls every cell's backend, MIG and template into a targeted plan.
+const liveCellResources = ['instance_template', 'instance_group_manager', 'backend_service']
+  .flatMap((kind) => ['production-gce-c1', 'production-gce-c27', 'production-gce-c28', 'production-gce-c29']
+    .map((cellId) => `google_compute_${kind}.relay_gce_cell["${cellId}"]`))
+
+test('accepts live cells the URL map pulls in only while they stay unchanged', () => {
+  const plan = productionC30Plan()
+  for (const address of liveCellResources) plan.push({ address, change: { actions: ['no-op'] } })
+  assert.equal(
+    validateRelayAsiaTopologyPlan({ resource_changes: plan }, productionConfig).changes,
+    4
+  )
+  for (const address of liveCellResources) {
+    for (const action of [['update'], ['delete'], ['create', 'delete'], ['delete', 'create']]) {
+      const drifted = productionC30Plan()
+      drifted.push({ address, change: { actions: action } })
+      assert.throws(
+        () => validateRelayAsiaTopologyPlan({ resource_changes: drifted }, productionConfig),
+        new RegExp(`${address.replaceAll(/[.[\]]/g, '\\$&')} changes a live cell outside the planned wave`)
+      )
+    }
+  }
 })
 
 test('accepts only a reviewed Asia topology wave', () => {

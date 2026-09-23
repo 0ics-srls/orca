@@ -66,8 +66,16 @@ test('plans only additive Asia topology and applies the saved plan', () => {
     workflow,
     /\.variables\.relay_gce_additional_region_subnetwork_cidrs\.value/
   )
-  assert.doesNotMatch(workflow, /terraform -chdir=infra\/terraform console/)
-  assert.equal((workflow.match(/-var-file="\$\{TF_VARS\}"/g) ?? []).length, 2)
+  // Console only reads the committed map for the live-image overlay; plan variables stay the input.
+  assert.deepEqual(
+    [...workflow.matchAll(/terraform -chdir=infra\/terraform console[^\n]*\n[^\n]*/g)].map((match) => match[0].trim()),
+    [`terraform -chdir=infra/terraform console -var-file="\${TF_VARS}" \\\n            <<< 'jsonencode(var.relay_gce_cells)' | jq -er '.' > "\${cells}"`]
+  )
+  assert.equal(
+    (workflow.match(/-var-file="\$\{TF_VARS\}" -var-file="\$\{\{ steps\.live-images\.outputs\.file \}\}"/g) ?? []).length,
+    2
+  )
+  assert.equal((workflow.match(/-var-file=/g) ?? []).length, 5)
   assert.doesNotMatch(workflow, /terraform[^\n]*apply[^\n]*-target/)
   assert.doesNotMatch(workflow, /google_(?:sql|cloudflare|dns|certificate_manager)/)
 })
@@ -135,4 +143,15 @@ test('the custom role cannot delete topology or mutate SQL and DNS', () => {
     iam,
     /resource "google_storage_bucket_iam_member" "github_relay_asia_topology_state_list"[\s\S]*?role\s+= google_project_iam_custom_role\.github_relay_asia_topology_state_list\[0\]\.id/
   )
+})
+
+test('plans every non-target cell at its served image, read from state templates only', () => {
+  const step = /- id: live-images\n[\s\S]*?\n\n/.exec(workflow)?.[0]
+  assert.ok(step)
+  assert.match(step, /terraform -chdir=infra\/terraform show -json \| jq -ce '\[/)
+  assert.match(step, /\.type == "google_compute_instance_template" and \.name == "relay_gce_cell"/)
+  assert.match(step, /\{ index, metadata_startup_script: \.values\.metadata_startup_script \}/)
+  assert.match(step, /relay-live-cell-image-overlay\.mjs/)
+  assert.match(step, /--cell-ids "\$\{TARGET_CELL_IDS\}"/)
+  assert.ok(workflow.indexOf('- id: live-images') < workflow.indexOf('terraform -chdir=infra/terraform plan'))
 })

@@ -146,6 +146,33 @@ jobs:
       - name: Initialize the exact environment state
         run: terraform -chdir=infra/terraform init -reconfigure -input=false -backend-config="${TF_BACKEND}"
 
+      - id: live-images
+        name: Plan every non-target cell at the image it serves
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The URL map target pulls every cell's template into the plan, and same-cap rolls
+          # leave committed images behind the served ones; read only templates out of state.
+          cells="${RUNNER_TEMP}/relay-committed-cells.json"
+          live="${RUNNER_TEMP}/relay-live-cell-templates.json"
+          overlay="${RUNNER_TEMP}/relay-asia-live-images.tfvars.json"
+          terraform -chdir=infra/terraform console -var-file="${TF_VARS}" \
+            <<< 'jsonencode(var.relay_gce_cells)' | jq -er '.' > "${cells}"
+          terraform -chdir=infra/terraform show -json | jq -ce '[
+            .values.root_module.resources[]?
+            | select(.mode == "managed" and
+                .type == "google_compute_instance_template" and .name == "relay_gce_cell")
+            | { index, metadata_startup_script: .values.metadata_startup_script }
+          ]' > "${live}"
+          summary="$(node dev/scripts/relay-live-cell-image-overlay.mjs \
+            --cells-json "${cells}" --live-templates-json "${live}" \
+            --cell-ids "${TARGET_CELL_IDS}" --output "${overlay}")"
+          echo "file=${overlay}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Live images held for non-target cells"
+            echo "- Cells whose committed image differs from the served one: $(jq -r '.drifted | join(", ")' <<< "${summary}")"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - id: targets
         name: Build the exact additive target set
         shell: bash
@@ -176,7 +203,7 @@ jobs:
           plan_json="${RUNNER_TEMP}/relay-asia-topology.json"
           mapfile -t targets < "${{ steps.targets.outputs.file }}"
           terraform -chdir=infra/terraform plan -input=false -lock-timeout=30s \
-            -var-file="${TF_VARS}" \
+            -var-file="${TF_VARS}" -var-file="${{ steps.live-images.outputs.file }}" \
             "${targets[@]}" -out="${plan}"
           terraform -chdir=infra/terraform show -json "${plan}" > "${plan_json}"
           committed="${RUNNER_TEMP}/relay-committed-asia-topology.json"
@@ -222,7 +249,7 @@ jobs:
           plan="${RUNNER_TEMP}/relay-asia-topology-readback.tfplan"
           plan_json="${RUNNER_TEMP}/relay-asia-topology-readback.json"
           terraform -chdir=infra/terraform plan -input=false -lock-timeout=30s \
-            -var-file="${TF_VARS}" \
+            -var-file="${TF_VARS}" -var-file="${{ steps.live-images.outputs.file }}" \
             "${targets[@]}" -out="${plan}"
           terraform -chdir=infra/terraform show -json "${plan}" > "${plan_json}"
           result="$(node dev/scripts/validate-relay-asia-topology-plan.mjs \

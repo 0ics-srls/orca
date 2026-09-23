@@ -269,8 +269,7 @@ function productionLikeEntries() {
     },
     ...metricSamples({ cellId: 'production-gce-c28', from: '2026-09-20T20:20:00Z', count: 20 }),
     ...metricSamples({ cellId: 'production-gce-c27', from: '2026-09-20T20:20:00Z', count: 20 }),
-    ...metricSamples({ cellId: 'production-gce-c29', from: '2026-09-20T20:20:00Z', count: 20 }),
-    ...metricSamples({ cellId: 'production-gce-c30', from: '2026-09-20T20:20:00Z', count: 20 })
+    ...metricSamples({ cellId: 'production-gce-c29', from: '2026-09-20T20:20:00Z', count: 20 })
   ]
 }
 
@@ -323,8 +322,7 @@ test('a healthy roll reads as PASS and names the instance it proved serving', as
     'cloudSqlFatal',
     'director503',
     'fleetPool:production-gce-c27',
-    'fleetPool:production-gce-c29',
-    'fleetPool:production-gce-c30'
+    'fleetPool:production-gce-c29'
   ])
   // Every read carries explicit bounds: --freshness does not bind on these logs.
   for (const { filter } of seam.calls) {

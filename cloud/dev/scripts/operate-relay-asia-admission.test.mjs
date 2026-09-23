@@ -538,7 +538,11 @@ test('accepts only reviewed Asia admission waves', () => {
     ['promote', 'production-gce-c28,production-gce-c29'],
     ['promote', 'production-gce-c30'],
     ['recover-promotion', 'production-gce-c30'],
-    ['rollback', 'production-gce-c30']
+    ['rollback', 'production-gce-c27'],
+    ['rollback', 'production-gce-c28,production-gce-c29'],
+    ['rollback', 'production-gce-c30'],
+    ['rollback', 'production-gce-c27,production-gce-c28,production-gce-c29'],
+    ['rollback', 'production-gce-c27,production-gce-c28,production-gce-c29,production-gce-c30']
   ]
   for (const [mode, cellIds] of accepted) {
     assert.deepEqual(
@@ -557,6 +561,9 @@ test('accepts only reviewed Asia admission waves', () => {
     ['promote', 'production-gce-c27,production-gce-c30'],
     ['promote', 'production-gce-c28,production-gce-c29,production-gce-c30'],
     ['promote', 'production-gce-c31'],
+    ['rollback', 'production-gce-c27,production-gce-c30'],
+    ['rollback', 'production-gce-c28,production-gce-c29,production-gce-c30'],
+    ['rollback', 'production-gce-c29'],
     ['register', 'staging-gce-c4']
   ]
   for (const [mode, cellIds] of rejected) {
@@ -610,6 +617,10 @@ test('requires the C27 canary to be general before promoting C30', async () => {
   await assert.rejects(
     operateRelayAsiaAdmission(config, harness(selector(['production-gce-c28', 'production-gce-c29']))),
     /C27 canary/
+  )
+  await assert.rejects(
+    operateRelayAsiaAdmission(config, harness(selector(['production-gce-c27', 'production-gce-c29']))),
+    /every launch cell to be general/
   )
   const subject = harness(selector([...launchCells]))
   const result = await operateRelayAsiaAdmission(config, subject)

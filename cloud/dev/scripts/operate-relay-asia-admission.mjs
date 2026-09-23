@@ -80,7 +80,9 @@ export function parseRelayAsiaAdmissionArguments(argv) {
     (values.mode === 'initialize' && !exact(launchWave)) ||
     (['register', 'registered'].includes(values.mode) && !shape.registrationWaves.some(exact)) ||
     (['promote', 'recover-promotion'].includes(values.mode) && !shape.promotionWaves.some(exact)) ||
-    (values.mode === 'rollback' && cells.length === 0)
+    // Rollback takes any reviewed wave or the whole set, never a mixed partial set.
+    (values.mode === 'rollback' && !exact(shape.allCells) &&
+      ![...shape.registrationWaves, ...shape.promotionWaves].some(exact))
   ) throw new Error('--cell-ids do not match the reviewed admission wave')
   const attemptId = values['attempt-id']
   if (!['inspect', 'verify', 'registered'].includes(values.mode) &&
@@ -438,6 +440,14 @@ export async function operateRelayAsiaAdmission(config, dependencies = {}) {
     selectorCellState(current.selector, PRODUCTION_CANARY_CELL) !== 'general'
   ) {
     throw new Error('Asia expansion requires the C27 canary to be general')
+  }
+  const [launchWave] = shape.registrationWaves
+  if (
+    config.mode === 'promote' &&
+    !config.cells.some((cellId) => launchWave.includes(cellId)) &&
+    launchWave.some((cellId) => selectorCellState(current.selector, cellId) !== 'general')
+  ) {
+    throw new Error('a later Asia cell requires every launch cell to be general')
   }
   const result = await applyExactAdmissionSelector(
     selectorPost,

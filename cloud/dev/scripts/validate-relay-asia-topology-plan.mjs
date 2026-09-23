@@ -300,6 +300,12 @@ export function validateRelayAsiaTopologyPlan(plan, config) {
     (action) => action === 'no-op' || action === 'read'
   ))
   for (const change of changes) {
+    const cellId = /^google_compute_(?:instance_template|instance_group_manager|backend_service)\.relay_gce_cell\["([^"]+)"\]$/
+      .exec(change.address)?.[1]
+    // Usually a stale committed image; the workflow overlays live images so this stays empty.
+    if (cellId && !config.cells.includes(cellId)) {
+      throw new Error(`${change.address} changes a live cell outside the planned wave`)
+    }
     const allowedActions = required.get(change.address)
     if (!allowedActions || !allowedActions.some((expected) => sameActions(change, expected))) {
       throw new Error(`${change.address} has an unreviewed topology action`)

@@ -81,6 +81,33 @@ test('excludes fenced cell pools and reads per-cell pool overrides', () => {
   assert.equal(report.budgetedTotal, 47)
 })
 
+test('refuses an Asia cell whose pool differs from its siblings', () => {
+  const budget = (c30PoolMax) => readRelayCloudSqlConnectionBudget({
+    appConsumers: { authInstances: 1, authPoolMax: 10, apiInstances: 1, apiPoolMax: 5, maxConnections: 500 },
+    sources: {
+      productionTfvars: `
+        relay_max_instances = 1
+        relay_gce_fenced_cells = []
+        relay_gce_cells = {
+${['c27', 'c28', 'c29', 'c30'].map((hostname) => `          "production-gce-${hostname}" = {
+            region = "asia-east2"
+            database_pool_max = ${hostname === 'c30' ? c30PoolMax : 16}
+          }`).join('\n')}
+        }
+      `,
+      terraformVariables: [
+        'variable "relay_director_database_pool_max" { default = 3 }',
+        'variable "push_max_instances" { default = 1 }',
+        'variable "push_database_pool_max" { default = 2 }'
+      ].join('\n'),
+      relayConfig: 'export const RELAY_DATABASE_POOL_MAX = 10'
+    },
+    maxConnections: 500
+  })
+  assert.deepEqual(budget(16).asia, { cells: 4, poolMax: 16 })
+  assert.throws(() => budget(10), /Asia Relay cells must use one checked pool maximum/)
+})
+
 test('dedicated push scaling does not consume shared capacity', () => {
   const report = readRelayCloudSqlConnectionBudget({
     proposedAsiaCellCount: 1,
