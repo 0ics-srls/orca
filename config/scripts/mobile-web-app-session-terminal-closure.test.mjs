@@ -419,7 +419,8 @@ const MERMAID_PACKAGE = 'node_modules/mermaid/'
  *   modules        4214 -> 4215   (+1)
  *   local modules  1028 -> 1029   (+1)
  */
-const SESSION_ROUTE_MODULES = 4215
+// Re-measured at b864a1c: upstream structured-agent-session-tool-call-block adds one module.
+const SESSION_ROUTE_MODULES = 4216
 
 /** What the page enters this route through once the route is a switch with a `.web.tsx` sibling. */
 const ROUTE_ENTRY = [
