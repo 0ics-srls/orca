@@ -9,6 +9,7 @@ import {
 } from '../../shared/cli-app-status-projection'
 import { RuntimeClientError, RuntimeRpcFailureError, type RuntimeRpcSuccess } from './types'
 import { RUNTIME_ACCESS_DENIED_CODE } from './runtime-access-denied'
+import { isProcessRunning } from './runtime-pid-liveness'
 
 export { projectRemoteAppStatus, resolveDesktopWindowStatus }
 
@@ -101,19 +102,5 @@ function buildCliStatusResponse(result: CliStatusResult): RuntimeRpcSuccess<CliS
     _meta: {
       runtimeId: result.runtime.runtimeId ?? 'none'
     }
-  }
-}
-
-function isProcessRunning(pid: number | null | undefined): boolean {
-  if (!pid || pid <= 0) {
-    return false
-  }
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch (error) {
-    // Why: only ESRCH proves the pid is gone. EPERM means it exists under another uid, and
-    // reporting that as `stale_bootstrap` calls a live Orca dead.
-    return !(error instanceof Error && 'code' in error && error.code === 'ESRCH')
   }
 }

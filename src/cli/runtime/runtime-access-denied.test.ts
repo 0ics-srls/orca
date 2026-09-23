@@ -41,6 +41,7 @@ beforeEach(() => {
   socket = new TestSocket()
   connect.mockReturnValue(socket)
   tryReadMetadata.mockReturnValue(metadata)
+  mockKill()
 })
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -52,6 +53,15 @@ afterEach(() => {
 function failConnect(code: string): void {
   socket.emit('error', Object.assign(new Error(`connect ${code} /private-runtime.sock`), { code }))
   socket.emit('close')
+}
+
+function mockKill(code?: string): void {
+  vi.spyOn(process, 'kill').mockImplementation(() => {
+    if (code) {
+      throw Object.assign(new Error(`kill ${code}`), { code })
+    }
+    return true
+  })
 }
 
 async function deniedRequest(code: string): Promise<unknown> {
@@ -88,13 +98,29 @@ describe('runtime access denied', () => {
     expect(await deniedRequest('ECONNREFUSED')).toMatchObject({ code: 'runtime_unavailable' })
   })
 
-  it('fails status instead of probing the pid and guessing a state', async () => {
-    const kill = vi.spyOn(process, 'kill')
+  it.each([undefined, 'EPERM'])(
+    'fails status instead of guessing a state (kill %s)',
+    async (killCode) => {
+      mockKill(killCode)
+      const pending = getCliStatus('/test')
+      failConnect('EPERM')
+
+      await expect(pending).rejects.toMatchObject({ code: 'runtime_access_denied' })
+    }
+  )
+
+  // Why: a dead Orca leaves its socket behind, and the sandbox denies it before ECONNREFUSED.
+  it('gives not-running advice when the denied endpoint belongs to a dead pid', async () => {
+    mockKill('ESRCH')
+    const human = formatCliError(await deniedRequest('EPERM'))
+
+    expect(human).toContain("Orca is not running. Run 'orca open' first.")
+    expect(human).not.toContain('Do not restart')
     const pending = getCliStatus('/test')
     failConnect('EPERM')
-
-    await expect(pending).rejects.toMatchObject({ code: 'runtime_access_denied' })
-    expect(kill).not.toHaveBeenCalled()
+    await expect(pending).resolves.toMatchObject({
+      result: { app: { running: false }, runtime: { state: 'stale_bootstrap' } }
+    })
   })
 
   it('does not launch or poll Orca when the initial status is denied', async () => {

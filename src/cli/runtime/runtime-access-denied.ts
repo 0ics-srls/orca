@@ -1,14 +1,19 @@
 import { RuntimeClientError } from './types'
+import { isProcessRunning } from './runtime-pid-liveness'
 
 export const RUNTIME_ACCESS_DENIED_CODE = 'runtime_access_denied'
 
 // Why: the errno decides the classification; CODEX_SANDBOX only picks the wording.
-export function runtimeAccessDeniedError(socketError: unknown): RuntimeClientError | null {
+export function runtimeAccessDeniedError(
+  socketError: unknown,
+  pid: number
+): RuntimeClientError | null {
   const systemCode =
     socketError !== null && typeof socketError === 'object' && 'code' in socketError
       ? socketError.code
       : null
-  if (systemCode !== 'EPERM' && systemCode !== 'EACCES') {
+  // Why: a sandbox still sees ESRCH, so a dead Orca's leftover socket gets not-running advice.
+  if ((systemCode !== 'EPERM' && systemCode !== 'EACCES') || !isProcessRunning(pid)) {
     return null
   }
   const codexSandbox = Boolean(process.env.CODEX_SANDBOX)
