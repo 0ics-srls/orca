@@ -6,7 +6,7 @@
 
 import type { AgentType } from './agent-status-types'
 import { stripAnsiEscapeSequences } from './ansi-escape-sequences'
-import { getNativeChatCommandReply } from './native-chat-agent-profiles'
+import { getVerifiedNativeChatCommands } from './native-chat-agent-profiles'
 import { parseNativeChatCommandEnvelope } from './native-chat-command-envelope'
 import { isTextBlock, type NativeChatMessage } from './native-chat-types'
 
@@ -35,6 +35,15 @@ export function surfaceNativeChatCommandOutputs(
   messages: NativeChatMessage[],
   agent: AgentType
 ): NativeChatMessage[] {
+  const transcriptReplies = new Set(
+    getVerifiedNativeChatCommands(agent)
+      .filter((command) => command.reply === 'transcript')
+      .map((command) => command.name)
+  )
+  // Why: this runs on every transcript update; agents declaring no such reply skip the scan.
+  if (transcriptReplies.size === 0) {
+    return messages
+  }
   let rowsById: Map<string, NativeChatMessage> | null = null
   let changed = false
   const out = messages.map((message) => {
@@ -48,7 +57,7 @@ export function surfaceNativeChatCommandOutputs(
     rowsById ??= new Map(messages.map((row) => [row.id, row]))
     const parent = rowsById.get(message.parentId)
     const command = parent ? envelopeCommand(parent) : null
-    if (command === null || getNativeChatCommandReply(agent, command) !== 'transcript') {
+    if (command === null || !transcriptReplies.has(command)) {
       return message
     }
     const text = stripAnsiEscapeSequences(stdout).trim()
