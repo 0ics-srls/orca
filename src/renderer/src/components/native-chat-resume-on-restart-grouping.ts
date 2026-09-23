@@ -25,15 +25,24 @@ export type ResumeCandidate = {
   model?: string
 }
 
-export type ResumeWorkspaceGroup = {
-  workspaceId: string
-  candidates: ResumeCandidate[]
+/** An offer that was acted on and did not end with the agent carrying on. The host keeps it until
+ *  the user opens the chat and sends, retries successfully, dismisses it, or it expires. */
+export type ResumeFailure = ResumeCandidate & {
+  failedAt: number
+  outcome: 'refused' | 'unconfirmed'
+  /** The host's or provider's refusal code, verbatim. */
+  reason: string
 }
 
-export type ResumeRepoGroup = {
+export type ResumeWorkspaceGroup<T extends ResumeCandidate = ResumeCandidate> = {
+  workspaceId: string
+  candidates: T[]
+}
+
+export type ResumeRepoGroup<T extends ResumeCandidate = ResumeCandidate> = {
   /** The repo these workspaces belong to, or null for workspaces with no repo (folder workspaces). */
   repoId: string | null
-  workspaces: ResumeWorkspaceGroup[]
+  workspaces: ResumeWorkspaceGroup<T>[]
 }
 
 /**
@@ -58,10 +67,10 @@ export function resumeWorkspaceKind(candidate: ResumeCandidate): AgentSessionWor
 }
 
 /** Groups by workspace, preserving the order the host offered them so the list is stable. */
-export function groupResumeCandidates(
-  candidates: readonly ResumeCandidate[]
-): ResumeWorkspaceGroup[] {
-  const groups = new Map<string, ResumeCandidate[]>()
+export function groupResumeCandidates<T extends ResumeCandidate>(
+  candidates: readonly T[]
+): ResumeWorkspaceGroup<T>[] {
+  const groups = new Map<string, T[]>()
   for (const candidate of candidates) {
     const existing = groups.get(candidate.workspaceId)
     if (existing) {
@@ -79,11 +88,11 @@ export function groupResumeCandidates(
  * `repoIdFor` comes from the store; workspaces it cannot place collapse into a single `null` group
  * rather than each inventing a header of its own.
  */
-export function groupResumeWorkspacesByRepo(
-  workspaces: readonly ResumeWorkspaceGroup[],
+export function groupResumeWorkspacesByRepo<T extends ResumeCandidate>(
+  workspaces: readonly ResumeWorkspaceGroup<T>[],
   repoIdFor: (workspaceId: string) => string | null
-): ResumeRepoGroup[] {
-  const groups = new Map<string, ResumeRepoGroup>()
+): ResumeRepoGroup<T>[] {
+  const groups = new Map<string, ResumeRepoGroup<T>>()
   for (const workspace of workspaces) {
     const repoId = repoIdFor(workspace.workspaceId)
     const key = repoId ?? '\0none'

@@ -1,10 +1,8 @@
 import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { z } from 'zod'
 import {
   AGENT_SESSION_RESUME_MARKER_TTL_MS,
   isExpiredAgentSessionResumeMarker,
-  parseAgentSessionResumeMarker,
   type AgentSessionResumeMarker
 } from '../../shared/agent-session-resume-marker'
 import { readNodeFileWithinLimit } from '../../shared/node-bounded-file-reader'
@@ -16,128 +14,24 @@ import {
   writeTempFileDurable
 } from '../durable-file-write'
 import { withFileTransactionLock } from '../file-transaction-lock'
+import {
+  MAX_FAILURE_FIELD_LENGTH,
+  normalizeEntries,
+  parseState,
+  shouldReplaceMarker,
+  type AgentSessionResumeFailureInput,
+  type AgentSessionResumeFailureRecord,
+  type RecoveryCapsuleState,
+  type RecoveryEntry
+} from './agent-session-recovery-capsule-entries'
+
+export type {
+  AgentSessionResumeFailureInput,
+  AgentSessionResumeFailureRecord
+} from './agent-session-recovery-capsule-entries'
 
 export const AGENT_SESSION_RECOVERY_CAPSULE_FILE = 'agent-session-recovery.json'
 const MAX_CAPSULE_BYTES = 4 * 1024 * 1024
-const RESUME_ACTION_LEASE_TTL_MS = 10 * 60 * 1000
-
-const legacyCapsuleSchema = z.object({ version: z.literal(1), markers: z.array(z.unknown()) })
-const entrySchema = z.object({
-  state: z.enum(['pending', 'in-progress']),
-  operationId: z.string().min(1).optional(),
-  startedAt: z.number().int().nonnegative().optional(),
-  marker: z.unknown(),
-  replacement: z.unknown().optional()
-})
-const capsuleSchema = z.object({
-  version: z.literal(2),
-  entries: z.array(z.unknown()),
-  dismissedAt: z.number().int().nonnegative().optional()
-})
-
-type RecoveryEntry = {
-  state: 'pending' | 'in-progress'
-  operationId?: string
-  startedAt?: number
-  marker: AgentSessionResumeMarker
-  replacement?: AgentSessionResumeMarker
-}
-
-type RecoveryCapsuleState = {
-  entries: RecoveryEntry[]
-  dismissedAt?: number
-}
-
-function parseMarker(value: unknown): AgentSessionResumeMarker {
-  const marker = parseAgentSessionResumeMarker(value)
-  if (!marker) {
-    throw new Error('agent_session_recovery_capsule_invalid')
-  }
-  return marker
-}
-
-function parseState(raw: string): RecoveryCapsuleState {
-  const value: unknown = JSON.parse(raw)
-  const legacy = legacyCapsuleSchema.safeParse(value)
-  if (legacy.success) {
-    return {
-      entries: legacy.data.markers.map((marker) => ({
-        state: 'pending',
-        marker: parseMarker(marker)
-      }))
-    }
-  }
-  const capsule = capsuleSchema.parse(value)
-  const entries = capsule.entries.map((entry) => {
-    const parsed = entrySchema.parse(entry)
-    const marker = parseMarker(parsed.marker)
-    const replacement =
-      parsed.replacement === undefined ? undefined : parseMarker(parsed.replacement)
-    if (replacement && replacement.sessionId !== marker.sessionId) {
-      throw new Error('agent_session_recovery_capsule_invalid')
-    }
-    if (parsed.state === 'pending') {
-      return { state: 'pending' as const, marker, ...(replacement ? { replacement } : {}) }
-    }
-    if (parsed.operationId === undefined || parsed.startedAt === undefined) {
-      throw new Error('agent_session_recovery_capsule_invalid')
-    }
-    return {
-      state: 'in-progress' as const,
-      operationId: parsed.operationId,
-      startedAt: parsed.startedAt,
-      marker,
-      ...(replacement ? { replacement } : {})
-    }
-  })
-  return {
-    entries,
-    ...(capsule.dismissedAt === undefined ? {} : { dismissedAt: capsule.dismissedAt })
-  }
-}
-
-function normalizeEntries(entries: readonly RecoveryEntry[], now: number): RecoveryEntry[] {
-  const bySession = new Map<string, RecoveryEntry>()
-  for (const entry of entries) {
-    const replacement =
-      entry.replacement && !isExpiredAgentSessionResumeMarker(entry.replacement, now)
-        ? entry.replacement
-        : undefined
-    if (isExpiredAgentSessionResumeMarker(entry.marker, now) && replacement === undefined) {
-      continue
-    }
-    if (bySession.has(entry.marker.sessionId)) {
-      throw new Error('agent_session_recovery_capsule_duplicate_session')
-    }
-    const reclaimed =
-      entry.state === 'in-progress' &&
-      entry.startedAt !== undefined &&
-      now - entry.startedAt > RESUME_ACTION_LEASE_TTL_MS
-    const normalized: RecoveryEntry =
-      entry.state === 'in-progress' && reclaimed
-        ? { state: 'pending', marker: replacement ?? entry.marker }
-        : entry.state === 'pending' && replacement
-          ? { state: 'pending', marker: replacement }
-          : replacement
-            ? { ...entry, replacement }
-            : entry
-    bySession.set(normalized.marker.sessionId, normalized)
-  }
-  return [...bySession.values()]
-}
-
-function shouldReplaceMarker(
-  current: AgentSessionResumeMarker,
-  incoming: AgentSessionResumeMarker
-): boolean {
-  if (incoming.recordedAt !== current.recordedAt) {
-    return incoming.recordedAt > current.recordedAt
-  }
-  // A single teardown may publish the same witness more than once. Different teardown IDs at the
-  // same clock value have no ordering signal, so keep the first one rather than let a late writer
-  // regress a newer witness from another host.
-  return incoming.teardownId === current.teardownId
-}
 
 /** Durable, per-session restart offers. Listing never spends an offer. */
 export class AgentSessionRecoveryCapsule {
@@ -151,6 +45,26 @@ export class AgentSessionRecoveryCapsule {
     return withFileTransactionLock(this.filePath, async () => {
       const entries = normalizeEntries((await this.readState()).entries, now)
       return entries.filter((entry) => entry.state === 'pending').map((entry) => entry.marker)
+    })
+  }
+
+  /** Offers that were acted on and did not end with the agent carrying on. Read-only, like `list`. */
+  listFailed(now: number): Promise<AgentSessionResumeFailureRecord[]> {
+    return withFileTransactionLock(this.filePath, async () => {
+      const entries = normalizeEntries((await this.readState()).entries, now)
+      return entries.flatMap((entry) =>
+        entry.state === 'failed'
+          ? [
+              {
+                marker: entry.marker,
+                failedAt: entry.failedAt,
+                outcome: entry.outcome,
+                reason: entry.reason,
+                latestPrompt: entry.latestPrompt
+              }
+            ]
+          : []
+      )
     })
   }
 
@@ -190,7 +104,9 @@ export class AgentSessionRecoveryCapsule {
     })
   }
 
-  /** Reserves only the selected pending sessions for one explicit user action. */
+  /** Reserves only the selected pending sessions for one explicit user action. A recorded failure
+   *  is reserved too when the action names it — that is a retry — but never by an unselective
+   *  action, which must not re-run what already failed. */
   beginResume(
     sessionIds: readonly string[] | undefined,
     operationId: string,
@@ -202,10 +118,12 @@ export class AgentSessionRecoveryCapsule {
       const requested = sessionIds === undefined ? null : new Set(sessionIds)
       const selected: AgentSessionResumeMarker[] = []
       const next = entries.map((entry) => {
-        if (
-          entry.state !== 'pending' ||
-          (requested !== null && !requested.has(entry.marker.sessionId))
-        ) {
+        const named = requested !== null && requested.has(entry.marker.sessionId)
+        const eligible =
+          entry.state === 'pending'
+            ? requested === null || named
+            : entry.state === 'failed' && named
+        if (!eligible) {
           return entry
         }
         selected.push(entry.marker)
@@ -231,6 +149,53 @@ export class AgentSessionRecoveryCapsule {
         return entry.replacement ? [{ state: 'pending' as const, marker: entry.replacement }] : []
       })
       await this.publish(entries, state.dismissedAt)
+    })
+  }
+
+  /** Records how a reserved session's action ended when the agent did not carry on. Only rows this
+   *  operation owns move, so a competing owner's reservation cannot be settled by proxy. */
+  failResume(
+    operationId: string,
+    failures: readonly AgentSessionResumeFailureInput[],
+    now: number
+  ): Promise<void> {
+    return withFileTransactionLock(this.filePath, async () => {
+      const bySession = new Map(failures.map((failure) => [failure.sessionId, failure]))
+      const state = await this.readState()
+      const entries = normalizeEntries(state.entries, now).map((entry): RecoveryEntry => {
+        const failure =
+          entry.state === 'in-progress' && entry.operationId === operationId
+            ? bySession.get(entry.marker.sessionId)
+            : undefined
+        if (!failure) {
+          return entry
+        }
+        return {
+          state: 'failed',
+          marker: entry.marker,
+          failedAt: failure.failedAt,
+          outcome: failure.outcome,
+          reason: failure.reason.slice(0, MAX_FAILURE_FIELD_LENGTH),
+          latestPrompt: failure.latestPrompt.slice(0, MAX_FAILURE_FIELD_LENGTH),
+          ...(entry.replacement ? { replacement: entry.replacement } : {})
+        }
+      })
+      await this.publish(entries, state.dismissedAt)
+    })
+  }
+
+  /** Forgets the named sessions whatever their state. Unlike `clearAll`, this is not a fence: a
+   *  later teardown of the same chat may record a fresh offer. */
+  dismiss(sessionIds: readonly string[], now: number): Promise<number> {
+    return withFileTransactionLock(this.filePath, async () => {
+      const named = new Set(sessionIds)
+      const state = await this.readState()
+      const entries = normalizeEntries(state.entries, now)
+      const kept = entries.filter((entry) => !named.has(entry.marker.sessionId))
+      if (kept.length !== entries.length) {
+        await this.publish(kept, state.dismissedAt)
+      }
+      return entries.length - kept.length
     })
   }
 

@@ -20,6 +20,7 @@ import {
 } from '../../../shared/agent-session-provider-handle'
 import {
   isExpiredAgentSessionResumeMarker,
+  type AgentSessionResumeFailureOutcome,
   type AgentSessionResumeMarker,
   type AgentSessionResumeTrigger,
   type AgentSessionResumeWork
@@ -44,6 +45,15 @@ export type StructuredAgentSessionResumeCandidate = {
   /** Model in force, read from the record's acknowledged options exactly as the status feed does.
    *  Absent until the host has read them. */
   model?: string
+}
+
+/** An offer that was acted on and did not end with the agent carrying on. Same row shape as the
+ *  candidate so one surface renders both, plus what went wrong and when. */
+export type StructuredAgentSessionResumeFailure = StructuredAgentSessionResumeCandidate & {
+  failedAt: number
+  outcome: AgentSessionResumeFailureOutcome
+  /** The host's or provider's refusal code, verbatim, so it can be quoted in a report. */
+  reason: string
 }
 
 export type StructuredAgentSessionResumeSetInput = {

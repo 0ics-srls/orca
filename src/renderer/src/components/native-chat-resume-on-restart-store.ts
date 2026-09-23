@@ -5,9 +5,14 @@ import {
   announceRestartDismissUnconfirmed,
   announceRestartResults,
   announceRestartUnconfirmed,
+  restartChatsNotContinued,
   type RestartContinuationOutcome
 } from './native-chat-restart-action-notifications'
-import { allResumeSessionIds, type ResumeCandidate } from './native-chat-resume-on-restart-grouping'
+import {
+  allResumeSessionIds,
+  type ResumeCandidate,
+  type ResumeFailure
+} from './native-chat-resume-on-restart-grouping'
 import { requestNativeChatResumeOnRestartDialog } from './native-chat-resume-on-restart-dialog'
 
 /**
@@ -27,12 +32,17 @@ const LOCAL = { kind: 'local' } as const
 
 export type NativeChatRestartOffer = Readonly<{
   candidates: readonly ResumeCandidate[]
+  /** Acted-on offers whose agent did not carry on, as the host still records them. */
+  failed: readonly ResumeFailure[]
+  /** Chats the LAST action in this window carried on. Shown once beside any failures so the user
+   *  sees the whole outcome; the next host read clears them, since nothing durable backs them. */
+  settled: readonly ResumeCandidate[]
   /** Stamped when the list arrived. Row ages read against this rather than a render-time
    *  `Date.now()`, so they stay stable across re-renders and the render stays pure. */
   listedAt: number
 }>
 
-const EMPTY: NativeChatRestartOffer = { candidates: [], listedAt: 0 }
+const EMPTY: NativeChatRestartOffer = { candidates: [], failed: [], settled: [], listedAt: 0 }
 let offer: NativeChatRestartOffer = EMPTY
 let launch: Promise<void> | undefined
 const listeners = new Set<() => void>()
@@ -66,31 +76,55 @@ function subscribe(listener: () => void): () => void {
  */
 type HostOfferRead = {
   candidates: readonly ResumeCandidate[]
+  failed: readonly ResumeFailure[]
   available: boolean
+}
+
+/** The host's answer as this side understands it. `failed` is optional on the wire: an older host
+ *  never sends it, and its absence means nothing to show, not an invalid answer. */
+type HostOfferPayload = { sessions?: unknown; failed?: unknown }
+
+function failedFrom(payload: HostOfferPayload): ResumeFailure[] {
+  // SAFETY: the host is the single writer of this shape; a malformed row is a host bug, not input.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: see above.
+  return Array.isArray(payload.failed) ? (payload.failed as ResumeFailure[]) : []
 }
 
 async function readNativeChatRestartOffer(): Promise<HostOfferRead> {
   try {
-    const offered = await callStructuredAgentSession<{ sessions: ResumeCandidate[] }>(
+    const offered = await callStructuredAgentSession<HostOfferPayload>(
       LOCAL,
       'agentSession.restartResumable'
     )
     if (!Array.isArray(offered.sessions)) {
       throw new Error('agent_session_restart_offer_invalid')
     }
-    publish({ candidates: offered.sessions, listedAt: Date.now() })
-    return { candidates: offered.sessions, available: true }
+    const failed = failedFrom(offered)
+    publish({ candidates: offered.sessions, failed, settled: [], listedAt: Date.now() })
+    return { candidates: offered.sessions, failed, available: true }
   } catch {
     // A failed read is not an answer. Hide the last snapshot so a modal can never present a
     // candidate the host has not confirmed; the durable record remains and a later refresh can
     // restore it.
-    publish({ candidates: [], listedAt: Date.now() })
-    return { candidates: [], available: false }
+    publish({ ...EMPTY, listedAt: Date.now() })
+    return { candidates: [], failed: [], available: false }
   }
 }
 
-export async function refreshNativeChatRestartOffer(): Promise<readonly ResumeCandidate[]> {
-  return (await readNativeChatRestartOffer()).candidates
+export async function refreshNativeChatRestartOffer(): Promise<
+  Pick<HostOfferRead, 'candidates' | 'failed'>
+> {
+  const read = await readNativeChatRestartOffer()
+  return { candidates: read.candidates, failed: read.failed }
+}
+
+/** What the failure toast can do. The dialog request is external state the toast may raise after
+ *  the dialog that started the action has closed. */
+const failureToastActions = {
+  show: () => requestNativeChatResumeOnRestartDialog(),
+  dismiss: (sessionIds: readonly string[]) => {
+    void dismissNativeChatRestartOffer([...sessionIds])
+  }
 }
 
 /**
@@ -109,16 +143,27 @@ export async function continueNativeChatRestartOffer(
   sessionIds: readonly string[] | undefined,
   reported: readonly string[] = sessionIds ?? []
 ): Promise<void> {
+  const shown = [...offer.candidates, ...offer.failed]
   try {
-    const result = await callStructuredAgentSession<{
-      /** Which chats the host reattached. */
-      resumed?: { sessionId: string }[]
-      continued: RestartContinuationOutcome[]
-      sessions?: ResumeCandidate[]
-    }>(LOCAL, 'agentSession.restartContinue', sessionIds ? { sessionIds } : {})
-    announceRestartResults(reported, result.continued)
+    const result = await callStructuredAgentSession<
+      HostOfferPayload & {
+        /** Which chats the host reattached. */
+        resumed?: { sessionId: string }[]
+        continued: RestartContinuationOutcome[]
+      }
+    >(LOCAL, 'agentSession.restartContinue', sessionIds ? { sessionIds } : {})
+    announceRestartResults(reported, result.continued, failureToastActions)
     if (Array.isArray(result.sessions)) {
-      publish({ candidates: result.sessions, listedAt: Date.now() })
+      const notContinued = new Set(restartChatsNotContinued(reported, result.continued))
+      publish({
+        candidates: result.sessions,
+        failed: failedFrom(result),
+        settled: shown.filter(
+          (candidate) =>
+            reported.includes(candidate.sessionId) && !notContinued.has(candidate.sessionId)
+        ),
+        listedAt: Date.now()
+      })
     } else {
       await refreshNativeChatRestartOffer()
     }
@@ -134,15 +179,22 @@ export async function continueNativeChatRestartOffer(
  * A failed write or unreachable host leaves the durable record untouched; a later read can restore
  * the offer after the host is available again.
  */
-export async function dismissNativeChatRestartOffer(): Promise<void> {
+export async function dismissNativeChatRestartOffer(sessionIds?: readonly string[]): Promise<void> {
   try {
-    const result = await callStructuredAgentSession<{ sessions?: ResumeCandidate[] }>(
+    const result = await callStructuredAgentSession<HostOfferPayload>(
       LOCAL,
       'agentSession.restartResumableDismiss',
-      {}
+      // Named only for rows the host itself listed as failures, which an older host never does,
+      // so it is never asked to understand the key.
+      sessionIds ? { sessionIds: [...sessionIds] } : {}
     )
     if (Array.isArray(result.sessions)) {
-      publish({ candidates: result.sessions, listedAt: Date.now() })
+      publish({
+        candidates: result.sessions,
+        failed: failedFrom(result),
+        settled: offer.settled,
+        listedAt: Date.now()
+      })
     } else {
       await refreshNativeChatRestartOffer()
     }
@@ -176,6 +228,7 @@ async function loadLaunchOffer(): Promise<void> {
     read = await readNativeChatRestartOffer()
   }
   const offered = read.candidates
+  // Failures left from an earlier launch are the status bar's to show; only a fresh offer asks.
   if (offered.length === 0) {
     return
   }

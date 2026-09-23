@@ -89,6 +89,146 @@ describe('durable restart offers', () => {
     expect(await capsule.list(NOW)).toEqual([marker({ sessionId: 'second' })])
   })
 
+  it('files an acted-on session whose agent did not carry on as a durable failure', async () => {
+    await capsule.record([marker(), marker({ sessionId: 'second' })], NOW)
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+
+    await capsule.failResume(
+      'operation-a',
+      [
+        {
+          sessionId: SESSION,
+          failedAt: NOW + 5,
+          outcome: 'refused',
+          reason: 'agent_session_restart_work_superseded',
+          latestPrompt: 'fix the auth bug'
+        }
+      ],
+      NOW + 5
+    )
+
+    // No longer an offer, but still on record with what went wrong.
+    expect(await capsule.list(NOW + 5)).toEqual([marker({ sessionId: 'second' })])
+    expect(await capsule.listFailed(NOW + 5)).toEqual([
+      {
+        marker: marker(),
+        failedAt: NOW + 5,
+        outcome: 'refused',
+        reason: 'agent_session_restart_work_superseded',
+        latestPrompt: 'fix the auth bug'
+      }
+    ])
+    // Still there after the operation's own rollback: a failure is settled, not reopened.
+    await capsule.rollbackResume('operation-a', NOW + 5)
+    expect(await capsule.list(NOW + 5)).toEqual([marker({ sessionId: 'second' })])
+    expect(await capsule.listFailed(NOW + 5)).toHaveLength(1)
+  })
+
+  it('only files failures for the operation that owns the reservation', async () => {
+    await capsule.record([marker()], NOW)
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+    const failure = {
+      sessionId: SESSION,
+      failedAt: NOW,
+      outcome: 'refused' as const,
+      reason: 'agent_session_conflict',
+      latestPrompt: ''
+    }
+    await capsule.failResume('operation-b', [failure], NOW)
+    expect(await capsule.listFailed(NOW)).toEqual([])
+    await capsule.rollbackResume('operation-a', NOW)
+    expect(await capsule.list(NOW)).toEqual([marker()])
+  })
+
+  it('retries a failure only when the action names it', async () => {
+    await capsule.record([marker(), marker({ sessionId: 'second' })], NOW)
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+    await capsule.failResume(
+      'operation-a',
+      [
+        {
+          sessionId: SESSION,
+          failedAt: NOW,
+          outcome: 'refused',
+          reason: 'agent_session_conflict',
+          latestPrompt: ''
+        }
+      ],
+      NOW
+    )
+
+    // Resume-all must not silently re-run what already failed.
+    expect(await capsule.beginResume(undefined, 'operation-b', NOW)).toEqual([
+      marker({ sessionId: 'second' })
+    ])
+    await capsule.rollbackResume('operation-b', NOW)
+    // Naming it is a retry: the same marker is reserved again and a success removes the failure.
+    expect(await capsule.beginResume([SESSION], 'operation-c', NOW)).toEqual([marker()])
+    expect(await capsule.listFailed(NOW)).toEqual([])
+    await capsule.completeResume('operation-c', [SESSION], NOW)
+    expect(await capsule.listFailed(NOW)).toEqual([])
+    expect(await capsule.list(NOW)).toEqual([marker({ sessionId: 'second' })])
+  })
+
+  it('lets a newer teardown of the same chat supersede its recorded failure', async () => {
+    await capsule.record([marker()], NOW)
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+    await capsule.failResume(
+      'operation-a',
+      [
+        {
+          sessionId: SESSION,
+          failedAt: NOW,
+          outcome: 'unconfirmed',
+          reason: 'pending',
+          latestPrompt: ''
+        }
+      ],
+      NOW
+    )
+    const newer = marker({ recordedAt: NOW + 1, teardownId: 'teardown-new' })
+    await capsule.record([newer], NOW + 1)
+
+    expect(await capsule.list(NOW + 1)).toEqual([newer])
+    expect(await capsule.listFailed(NOW + 1)).toEqual([])
+  })
+
+  it('forgets named records of any state and reports how many went', async () => {
+    await capsule.record(
+      [marker(), marker({ sessionId: 'second' }), marker({ sessionId: 'third' })],
+      NOW
+    )
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+    await capsule.failResume(
+      'operation-a',
+      [{ sessionId: SESSION, failedAt: NOW, outcome: 'refused', reason: 'x', latestPrompt: '' }],
+      NOW
+    )
+    const before = await readFile(filePath)
+
+    expect(await capsule.dismiss([SESSION, 'second', 'missing'], NOW)).toBe(2)
+    expect(await capsule.list(NOW)).toEqual([marker({ sessionId: 'third' })])
+    expect(await capsule.listFailed(NOW)).toEqual([])
+    // Nothing named, nothing rewritten.
+    expect(await capsule.dismiss(['missing'], NOW)).toBe(0)
+    expect(await readFile(filePath)).not.toEqual(before)
+    // Not a fence: the same chat may be offered again by a later teardown.
+    await capsule.record([marker()], NOW)
+    expect(await capsule.list(NOW)).toEqual([marker({ sessionId: 'third' }), marker()])
+  })
+
+  it('expires a recorded failure with its marker', async () => {
+    await capsule.record([marker()], NOW)
+    await capsule.beginResume([SESSION], 'operation-a', NOW)
+    await capsule.failResume(
+      'operation-a',
+      [{ sessionId: SESSION, failedAt: NOW, outcome: 'refused', reason: 'x', latestPrompt: '' }],
+      NOW
+    )
+    expect(await capsule.listFailed(NOW + AGENT_SESSION_RESUME_MARKER_TTL_MS)).toHaveLength(1)
+    expect(await capsule.listFailed(NOW + AGENT_SESSION_RESUME_MARKER_TTL_MS + 1)).toEqual([])
+  })
+
   it('rolls a failed acquisition back to a pending offer', async () => {
     await capsule.record([marker()], NOW)
     await capsule.beginResume([SESSION], 'operation-a', NOW)

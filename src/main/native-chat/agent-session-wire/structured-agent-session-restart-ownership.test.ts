@@ -322,10 +322,15 @@ it.each([
     expect(host.journalSnapshot(SESSION).submissions[1]?.dispatchState).toBe('rejected')
     host.release(SESSION, 'pane')
     expect(host.isHeld(SESSION)).toBe(false)
-    expect(await host.restartResume.continueAfterRestart([SESSION], 'retry')).toEqual({
+    // The offer is spent, but the refusal is kept as a durable failure: a retry finds it, and the
+    // superseded chat is still not eligible, so nothing runs and the record stays for the user.
+    expect(await host.restartResume.continueAfterRestart([SESSION], 'retry')).toMatchObject({
       resumed: [],
       continued: [],
-      sessions: []
+      sessions: [],
+      failed: [
+        { sessionId: SESSION, outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
+      ]
     })
     expect(dispatch).not.toHaveBeenCalled()
     if (settlementFails) {
@@ -630,7 +635,8 @@ it('fails closed on corrupt recovery storage while ordinary hold and send still 
   expect(await host.restartResume.continueAfterRestart([SESSION], 'modal')).toEqual({
     resumed: [],
     continued: [],
-    sessions: []
+    sessions: [],
+    failed: []
   })
   await host.hold(SESSION, 'pane')
   const body = hostTestMessage('A fresh ordinary request')
@@ -638,8 +644,96 @@ it('fails closed on corrupt recovery storage while ordinary hold and send still 
     await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
   ).toMatchObject({ ok: true })
   expect(dispatch).toHaveBeenCalledTimes(1)
-  expect(warning).toHaveBeenCalledTimes(3)
+  // list; the action's read of offers and of failures; the post-action refresh of both.
+  expect(warning).toHaveBeenCalledTimes(5)
   warning.mockRestore()
+  host.release(SESSION, 'pane')
+})
+
+/** A reattach that succeeds and a continuation the host refuses: the provider finished the turn
+ *  while the continuation was being recorded, as the superseded-evidence cases above set up. */
+async function supersededRefusal() {
+  const { host, acquire, dispatch, root } = await interruptedRestart()
+  await host.restartResume.list()
+  await host.hold(SESSION, 'pane')
+  const events = acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing resumed provider event sink')
+  }
+  const append = AgentSessionJournal.prototype.appendSubmission
+  const writing = vi.spyOn(AgentSessionJournal.prototype, 'appendSubmission')
+  writing.mockImplementationOnce(async function (this: AgentSessionJournal, input) {
+    const cursor = await append.call(this, input)
+    events.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'interrupted-turn', ordinal: 1 },
+      { kind: 'turn', turnId: 'interrupted-turn', state: 'completed' },
+      { lifecycle: true }
+    )
+    return cursor
+  })
+  try {
+    const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+    expect(result.continued).toMatchObject([{ outcome: 'refused' }])
+    expect(dispatch).not.toHaveBeenCalled()
+    return { host, root, result }
+  } finally {
+    writing.mockRestore()
+  }
+}
+
+// The toast is gone in seconds and the offer is spent by the reattach, so without this record
+// nothing on any surface would still name the chat the user has to continue by hand.
+it('keeps a refused continuation as a durable failure that names the chat and the reason', async () => {
+  const { host, root, result } = await supersededRefusal()
+  const failure = {
+    sessionId: SESSION,
+    outcome: 'refused',
+    reason: 'agent_session_restart_work_superseded',
+    latestPrompt: expect.any(String),
+    agent: 'codex'
+  }
+  expect(result).toMatchObject({ sessions: [], failed: [failure] })
+  expect(await host.restartResume.list()).toEqual([])
+  expect(await host.restartResume.listFailures()).toMatchObject([failure])
+  // Durable: a fresh reader of the same file sees it too.
+  expect(await new AgentSessionRecoveryCapsule(root).listFailed(NOW)).toMatchObject([
+    { marker: { sessionId: SESSION }, outcome: 'refused' }
+  ])
+  host.release(SESSION, 'pane')
+})
+
+// The failure asked the user to continue the chat themselves; their own message is that
+// continuation, so the record must not outlive it.
+it("releases a recorded failure on the user's own send in that chat", async () => {
+  const { host } = await supersededRefusal()
+  const body = hostTestMessage('Carry on from where you stopped')
+  await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
+  await vi.waitFor(async () => {
+    expect(await host.restartResume.listFailures()).toEqual([])
+  })
+  host.release(SESSION, 'pane')
+})
+
+it('dismisses one failure by name and leaves the rest of the durable records alone', async () => {
+  const { host, root } = await supersededRefusal()
+  const capsule = new AgentSessionRecoveryCapsule(root)
+  const other = parseAgentSessionResumeMarker({
+    sessionId: 'session-other',
+    work: { kind: 'turn', id: 'turn-other' },
+    latestUserItemId: null,
+    recordedAt: NOW,
+    trigger: 'quit',
+    providerHandleRoot: 'codex:"thread-other"',
+    teardownId: 'teardown-other'
+  })
+  if (!other) {
+    throw new Error('fixture marker did not parse')
+  }
+  await capsule.record([other], NOW)
+
+  expect(await host.restartResume.dismiss([SESSION])).toBe(1)
+  expect(await host.restartResume.listFailures()).toEqual([])
+  expect(await capsule.list(NOW)).toEqual([other])
   host.release(SESSION, 'pane')
 })
 

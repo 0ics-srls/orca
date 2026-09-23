@@ -46,6 +46,43 @@ export function announceRestartUnconfirmed(count: number): void {
   )
 }
 
+/** What the failure toast can do: open the modal that lists the chats, or forget them. Passed in
+ *  because the offer store owns both and this module must not import it back. */
+export type RestartFailureActions = {
+  show: () => void
+  dismiss: (sessionIds: readonly string[]) => void
+}
+
+/** The chats an action did not carry on. No names here: the modal has the list, and the count is
+ *  the same shape whether it is one chat or ten. */
+function announceNotContinued(sessionIds: readonly string[], actions: RestartFailureActions): void {
+  if (sessionIds.length === 0) {
+    return
+  }
+  toast(
+    sessionIds.length === 1
+      ? translate(
+          'auto.components.NativeChatResumeOnRestartModal.notContinuedOne',
+          '1 chat couldn’t be resumed'
+        )
+      : translate(
+          'auto.components.NativeChatResumeOnRestartModal.notContinuedMany',
+          '{{value0}} chats couldn’t be resumed',
+          { value0: sessionIds.length }
+        ),
+    {
+      action: {
+        label: translate('auto.components.NativeChatResumeOnRestartModal.show', 'Show'),
+        onClick: actions.show
+      },
+      cancel: {
+        label: translate('auto.components.NativeChatResumeOnRestartModal.dismiss', 'Dismiss'),
+        onClick: () => actions.dismiss(sessionIds)
+      }
+    }
+  )
+}
+
 /** A dismissal Orca could not confirm. The offer belongs to the host, so say it may still be there. */
 export function announceRestartDismissUnconfirmed(): void {
   toast(
@@ -56,34 +93,22 @@ export function announceRestartDismissUnconfirmed(): void {
   )
 }
 
-export function announceRestartResults(
+/** Which of the requested chats the host did not carry on: refused, unconfirmed, or — since
+ *  eligibility can change after listing — omitted from the answer altogether. */
+export function restartChatsNotContinued(
   requested: readonly string[],
   results: readonly RestartContinuationOutcome[]
-): void {
+): string[] {
   const bySession = new Map(results.map((result) => [result.sessionId, result.outcome]))
-  let succeeded = 0
-  let unconfirmed = 0
-  let refused = 0
-  for (const sessionId of new Set(requested)) {
-    const outcome = bySession.get(sessionId)
-    if (outcome === 'continued') {
-      succeeded += 1
-    } else if (outcome === 'pending' || outcome === 'unknown') {
-      unconfirmed += 1
-    } else {
-      // Eligibility can change after listing, so an omitted row was not acted on either.
-      refused += 1
-    }
-  }
-  announceContinued(succeeded)
-  if (refused > 0) {
-    toast(
-      translate(
-        'auto.components.NativeChatResumeOnRestartModal.continueRefused',
-        '{{value0}} chats could not be continued. Open them to continue manually.',
-        { value0: refused, count: refused }
-      )
-    )
-  }
-  announceRestartUnconfirmed(unconfirmed)
+  return [...new Set(requested)].filter((sessionId) => bySession.get(sessionId) !== 'continued')
+}
+
+export function announceRestartResults(
+  requested: readonly string[],
+  results: readonly RestartContinuationOutcome[],
+  actions: RestartFailureActions
+): void {
+  const notContinued = restartChatsNotContinued(requested, results)
+  announceContinued(new Set(requested).size - notContinued.length)
+  announceNotContinued(notContinued, actions)
 }

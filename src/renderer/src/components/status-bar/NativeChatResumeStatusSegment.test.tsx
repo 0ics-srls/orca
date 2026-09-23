@@ -85,6 +85,32 @@ describe('NativeChatResumeStatusSegment', () => {
     expect(getNativeChatResumeOnRestartDialogRequest()).toBe(true)
   })
 
+  // The offer is spent once acted on, so without this entry a failed resume would leave the bar
+  // empty seconds after the toast went. The two are different facts and stay two entries.
+  it('keeps a failed resume as its own entry beside any remaining offer', async () => {
+    const failed = {
+      ...candidates[0]!,
+      failedAt: 60_000,
+      outcome: 'refused',
+      reason: 'agent_session_restart_work_superseded'
+    }
+    rpc.mockResolvedValue({ sessions: candidates.slice(1), failed: [failed] })
+    await mount()
+
+    expect(screen.getByText('1 chat to resume')).toBeTruthy()
+    const entry = screen.getByRole('button', {
+      name: '1 chat failed to resume. Click for details.'
+    })
+    expect(entry.textContent).toBe('1 chat failed to resume')
+
+    rpc.mockResolvedValue({ sessions: [], failed: [failed] })
+    await act(async () => entry.click())
+    expect(getNativeChatResumeOnRestartDialogRequest()).toBe(true)
+    // With the offer gone, only the failure entry is left — and it stays.
+    expect(screen.queryByText('1 chat to resume')).toBeNull()
+    expect(screen.getByText('1 chat failed to resume')).toBeTruthy()
+  })
+
   it('names a single chat in the singular', async () => {
     rpc.mockResolvedValue({ sessions: candidates.slice(0, 1) })
     await mount()

@@ -281,8 +281,11 @@ export class StructuredAgentSessionHost {
     }
   }
 
-  send = (...args: Parameters<StructuredConversationCommandController['send']>) =>
-    this.conversationCommands.send(...args)
+  send = (...args: Parameters<StructuredConversationCommandController['send']>) => {
+    // The user's own message is the manual continuation a failed restart resume asked for.
+    this.restartResume.releaseFailureOnUserSend(...args)
+    return this.conversationCommands.send(...args)
+  }
 
   waitForSendSettlement = this.clientDelivery.waitForSendSettlement
 

@@ -6,7 +6,12 @@
 // agent to verify its last action before repeating it, and the launch toast reports what happened.
 
 import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
-import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
+import type {
+  AgentSessionMutationEnvelope,
+  AgentSessionMutationResult,
+  AgentSessionSendResult
+} from '../../../shared/agent-session-wire'
+import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
 import {
   AGENT_SESSION_RESTART_CONTINUATION_MESSAGE,
@@ -35,6 +40,61 @@ export type StructuredAgentSessionContinuationOutcome = {
 }
 
 /** Only this pre-dispatch failure proves a thrown send did not deliver. */
+/** The slice of the host one continuation needs. Structural so this module never imports the host. */
+export type StructuredAgentSessionContinuationHost = {
+  sessions: ReadonlyMap<string, { journal: AgentSessionJournal; fence: number }>
+  send: (input: {
+    envelope: AgentSessionMutationEnvelope
+    body: AgentJournalMessageItem
+    beforeRun?: () => void
+  }) => Promise<AgentSessionMutationResult<AgentSessionSendResult>>
+  awaitSendSettlement: (
+    sessionId: string,
+    clientMessageId: string
+  ) => Promise<{ value: AgentSessionSendResult } | undefined>
+  onNoteFailed: (sessionId: string, error: unknown) => void
+  publish: (sessionId: string, journal: AgentSessionJournal) => void
+  now: () => number
+  /** Whether the marker still describes resumable work, with the continuation's own submission
+   *  set aside. Re-asked right before dispatch, so newer user work refuses the send. */
+  stillResumable: (marker: AgentSessionResumeMarker, pendingContinuationId: string) => boolean
+}
+
+/** Binds one continuation to the host: the superseded check before dispatch, the settlement
+ *  waiter for the verdict, and the journal note that attributes the send to Orca. */
+export function restartContinuationDeps(
+  host: StructuredAgentSessionContinuationHost,
+  marker: AgentSessionResumeMarker
+): StructuredAgentSessionContinuationDeps {
+  return {
+    currentFence: (sessionId) => host.sessions.get(sessionId)?.fence ?? null,
+    send: (input) =>
+      host.send({
+        ...input,
+        beforeRun: () => {
+          if (!host.stillResumable(marker, input.envelope.clientOperationId)) {
+            throw new RestartContinuationSupersededError()
+          }
+        }
+      }),
+    awaitSettlement: async (sessionId, clientMessageId) =>
+      (await host.awaitSendSettlement(sessionId, clientMessageId))?.value.submission,
+    onNoteFailed: host.onNoteFailed,
+    note: async (sessionId, text) => {
+      const session = host.sessions.get(sessionId)
+      if (!session) {
+        return
+      }
+      await session.journal.appendItem(
+        { provider: 'orca', clientMessageId: `restart-continuation:${sessionId}:${host.now()}` },
+        { kind: 'status', text },
+        { fence: session.fence }
+      )
+      host.publish(sessionId, session.journal)
+    }
+  }
+}
+
 export class RestartContinuationSupersededError extends AgentSessionPreDispatchError {
   constructor() {
     super('agent_session_restart_work_superseded')
