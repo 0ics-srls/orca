@@ -5,12 +5,11 @@ import type { Worktree } from '../../../shared/worktree/types'
 import { isWindowsAbsolutePathLike } from '../../../shared/cross-platform-path'
 import { createBrowserUuid } from '@/lib/browser-uuid'
 import { isQuickOpenRemoteQueryTooLarge } from '@/components/quick-open-search'
-import { QUICK_OPEN_LISTING_MAX_RESULTS } from '../../../shared/quick-open-listing-limits'
+import { cancelRuntimeFileList } from '@/runtime/runtime-file-client'
 import {
-  cancelRuntimeFileList,
-  listRuntimeFiles,
-  searchRuntimeFilePaths
-} from '@/runtime/runtime-file-client'
+  requestQuickOpenFileListing,
+  usesRuntimeQuickOpenPathSearch
+} from '@/components/quick-open-file-listing-request'
 import { debounceRuntimeFileRequest } from '@/runtime/runtime-file-request-debounce'
 import { splitFileNameFilterTokens } from '../../../shared/file-name-filter-tokens'
 import {
@@ -180,7 +179,13 @@ export function useRuntimeFileListForWorktree({
     activeTargetStatus === 'deploying-relay' ||
     activeTargetStatus === 'reconnecting'
   const usesRuntimePathSearch =
-    (runtimeEnvironmentId !== null || connectionId !== undefined) && query !== undefined
+    query !== undefined &&
+    usesRuntimeQuickOpenPathSearch({
+      settings: { activeRuntimeEnvironmentId: runtimeEnvironmentId },
+      worktreeId,
+      worktreePath,
+      connectionId
+    })
   const remoteQuery = usesRuntimePathSearch ? query.trim() : ''
   const remoteQueryTooLarge = usesRuntimePathSearch && isQuickOpenRemoteQueryTooLarge(remoteQuery)
   const listingKey = `${worktreePath ?? ''}\n${operationOwnerKey}\n${excludeRequest.key}\n${activeTargetStatus ?? ''}`
@@ -246,27 +251,18 @@ export function useRuntimeFileListForWorktree({
     }
 
     const listFiles = (nameFilter?: string) =>
-      listRuntimeFiles(requestContext, {
-        rootPath: worktreePath,
+      requestQuickOpenFileListing(requestContext, {
         excludePaths,
         requestToken,
-        maxResults: QUICK_OPEN_LISTING_MAX_RESULTS,
         ...(nameFilter ? { nameFilter } : {}),
         signal: requestAbortController.signal
-      }).then((files) => ({
-        // #12547: naming the cap is what makes a full page readable as "there is more". Reporting
-        // false unconditionally is what made the truncation silent — the host bounds the scan to
-        // the cap it is given, so a full page means there are more paths behind it.
-        files,
-        truncated: files.length >= QUICK_OPEN_LISTING_MAX_RESULTS
-      }))
+      })
     const request = usesRuntimePathSearch
       ? debounceRuntimeFileRequest(120, requestAbortController.signal, () =>
-          searchRuntimeFilePaths(requestContext, {
+          requestQuickOpenFileListing(requestContext, {
             query: remoteQuery,
-            limit: 32,
             excludePaths,
-            ...(connectionId ? { requestToken } : {}),
+            requestToken,
             signal: requestAbortController.signal
           })
         )
