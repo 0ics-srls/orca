@@ -10,10 +10,9 @@ export function prepareNativeChatLiveMessages(
   agent: AgentType
 ): NativeChatMessage[] {
   const commandNames = new Set(getVerifiedNativeChatCommands(agent).map((command) => command.name))
-  // Why: outputs pair against raw envelopes; skill surfacing rewrites non-catalog ones.
-  const surfaced = surfaceSkillInvocationUserTurns(
-    surfaceNativeChatCommandOutputs(messages, agent),
-    commandNames
+  const surfaced = surfaceNativeChatCommandOutputs(
+    surfaceSkillInvocationUserTurns(messages, commandNames),
+    agent
   )
   const normalized = normalizeImageTranscriptMessages(surfaced)
   if (!hasMixedSources(normalized)) {

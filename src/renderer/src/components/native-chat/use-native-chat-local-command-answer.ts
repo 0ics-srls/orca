@@ -1,13 +1,15 @@
-import { useCallback } from 'react'
+import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { AgentType } from '../../../../shared/agent-status-types'
+import { getNativeChatCommandReply } from '../../../../shared/native-chat-agent-profiles'
 import { deriveNativeChatContextUsage } from '../../../../shared/native-chat-context-usage'
-import { nativeChatLocalCommand } from '../../../../shared/native-chat-local-commands'
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
 import { ompModelSelector } from '../../../../shared/omp-model-list-probe'
+import { pushHistory, type HistoryState } from './native-chat-composer-state'
 import {
   formatNativeChatContextUsageAnswer,
   formatNativeChatContextUsageUnreported
 } from './native-chat-context-usage-answer'
+import type { NativeChatPtySessionOptionsSurface } from './native-chat-pty-session-options'
 
 /** The context window the host's model listing states for a model id, or null. */
 export type NativeChatModelContextWindow = (modelId: string) => number | null
@@ -20,14 +22,15 @@ export type NativeChatLocalCommandAnswer = (
 
 /** OMP's `/context` paints a panel the chat never sees, so the host replies from the
  *  prompt size the last response reported, against the window of the model that
- *  served it. */
+ *  served it. Null for any command whose catalog row is not composer-answered. */
 export function answerNativeChatLocalCommand(args: {
   agent: AgentType
   command: string
   messages: readonly NativeChatMessage[]
   contextWindowTokens: NativeChatModelContextWindow
 }): string | null {
-  if (nativeChatLocalCommand(args.agent, args.command) !== 'context') {
+  const name = /^\/(\S+)/.exec(args.command)?.[1]
+  if (name !== 'context' || getNativeChatCommandReply(args.agent, name) !== 'composer') {
     return null
   }
   if (!sessionReportsUsage(args.messages)) {
@@ -66,4 +69,36 @@ export function useNativeChatLocalCommandAnswer(
       answerNativeChatLocalCommand({ agent, command, messages, contextWindowTokens }),
     [agent, messages]
   )
+}
+
+/** The send paths' shared intercept: a composer-answered command is answered in
+ *  place of reaching the PTY. Attachments stay armed for the next prompt. Returns
+ *  false when the command must be sent. */
+export function answerNativeChatCommandInComposer(args: {
+  draft: string
+  answerCommandLocally?: NativeChatLocalCommandAnswer
+  sessionOptionsSurface: NativeChatPtySessionOptionsSurface | null
+  onSlashCommand?: (command: string, output?: string) => void
+  setHistory: Dispatch<SetStateAction<HistoryState>>
+  setDraft: (value: string) => void
+  setCaret: Dispatch<SetStateAction<number>>
+  clearSkillOrigin: () => void
+  setNotice: Dispatch<SetStateAction<string | null>>
+}): boolean {
+  const command = args.draft.trim()
+  const answer =
+    args.answerCommandLocally?.(
+      command,
+      (modelId) => args.sessionOptionsSurface?.contextWindowTokens(modelId) ?? null
+    ) ?? null
+  if (answer === null) {
+    return false
+  }
+  args.onSlashCommand?.(command, answer)
+  args.setHistory((previous) => pushHistory(previous, args.draft))
+  args.setDraft('')
+  args.setCaret(0)
+  args.clearSkillOrigin()
+  args.setNotice(null)
+  return true
 }

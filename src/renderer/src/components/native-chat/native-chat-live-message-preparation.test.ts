@@ -13,7 +13,13 @@ const row = (id: string, text: string, source: NativeChatMessage['source'] = 'tr
 
 const CONTEXT_ROWS: NativeChatMessage[] = [
   row('b-envelope', '<command-name>/context</command-name>\n<command-args></command-args>'),
-  row('a-stdout', '<local-command-stdout> \u001b[1mContext Usage\u001b[22m</local-command-stdout>')
+  {
+    ...row(
+      'a-stdout',
+      '<local-command-stdout> \u001b[1mContext Usage\u001b[22m</local-command-stdout>'
+    ),
+    parentId: 'b-envelope'
+  }
 ]
 
 function visibleText(agent: 'openclaude' | 'claude', messages: NativeChatMessage[]): string[] {
@@ -36,10 +42,12 @@ describe('prepareNativeChatLiveMessages command output', () => {
       { ...row('d-envelope', '<command-name>/model</command-name>'), timestamp: 300 },
       {
         ...row('c-stdout', '<local-command-stdout>Set model to gpt-4o</local-command-stdout>'),
-        timestamp: 300
+        timestamp: 300,
+        parentId: 'd-envelope'
       }
     ]
-    // `/model` is outside the catalog, so its envelope surfaces as the typed turn.
+    // `/model` is outside the catalog, so its envelope surfaces as the typed turn
+    // and its linked reply stays hidden.
     expect(visibleText('openclaude', [...CONTEXT_ROWS, ...modelRows])).toEqual([
       'Context Usage',
       '/model'

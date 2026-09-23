@@ -167,7 +167,10 @@ describe('answerNativeChatLocalCommand', () => {
   })
 
   it('leaves every other command, and other agents, to the agent', () => {
+    expect(answer({ messages: [], command: '/context all' })).not.toBeNull()
     expect(answer({ messages: [], command: '/compact' })).toBeNull()
+    expect(answer({ messages: [], command: '/contextual' })).toBeNull()
+    expect(answer({ messages: [], command: 'what is my /context' })).toBeNull()
     expect(
       answerNativeChatLocalCommand({
         agent: 'openclaude',

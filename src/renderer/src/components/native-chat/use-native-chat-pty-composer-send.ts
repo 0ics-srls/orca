@@ -18,7 +18,10 @@ import { isSlashCommandDraft } from '../../../../shared/native-chat-slash-comman
 import type { NativeChatPickerState } from './use-native-chat-picker-state'
 import type { NativeChatSendLifecycle } from './use-native-chat-send-lifecycle'
 import type { NativeChatPtySessionOptionsSurface } from './native-chat-pty-session-options'
-import type { NativeChatLocalCommandAnswer } from './use-native-chat-local-command-answer'
+import {
+  answerNativeChatCommandInComposer,
+  type NativeChatLocalCommandAnswer
+} from './use-native-chat-local-command-answer'
 
 export function useNativeChatPtyComposerSend(args: {
   agent: AgentType
@@ -59,22 +62,7 @@ export function useNativeChatPtyComposerSend(args: {
       return
     }
     const classification = args.classifySend(text)
-    // Why: a host-answered command never reaches the PTY; its answer is the
-    // marker. Attachments stay armed for the next prompt rather than being dropped.
-    const localAnswer =
-      classification === 'command'
-        ? (args.answerCommandLocally?.(
-            text.trim(),
-            (modelId) => args.sessionOptionsSurface?.contextWindowTokens(modelId) ?? null
-          ) ?? null)
-        : null
-    if (localAnswer !== null) {
-      args.onSlashCommand?.(text.trim(), localAnswer)
-      args.setHistory((previous) => pushHistory(previous, text))
-      args.setDraft('')
-      args.setCaret(0)
-      args.clearSkillOrigin()
-      args.setNotice(null)
+    if (classification === 'command' && answerNativeChatCommandInComposer(args)) {
       return
     }
     const { sendOptions } = resolveNativeChatLaunchDraftSend({

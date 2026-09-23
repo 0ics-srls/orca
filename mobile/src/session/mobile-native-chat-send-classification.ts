@@ -5,10 +5,9 @@
 // the optimistic echo would never reconcile.
 
 import {
-  getNativeChatAgentProfile,
-  getVerifiedNativeChatCommands
+  getAgentAnsweredNativeChatCommands,
+  getNativeChatAgentProfile
 } from '../../../src/shared/native-chat-agent-profiles'
-import { withoutSurfacedOutputCommands } from '../../../src/shared/native-chat-command-output'
 import {
   classifyNativeChatSend,
   type NativeChatSendClassification,
@@ -17,11 +16,10 @@ import {
 
 export type { NativeChatSendClassification }
 
-/** The curated catalog mobile offers over a terminal session. Why: mobile's
- *  transcript fold does not surface command replies, so a command answered only
- *  by one would do nothing here. */
+/** The curated catalog mobile offers over a terminal session. Why: mobile has
+ *  neither the desktop composer's answers nor its transcript reply rows. */
 export function getMobileNativeChatCommands(agent: string): readonly SlashCommandSuggestion[] {
-  return withoutSurfacedOutputCommands(agent, getVerifiedNativeChatCommands(agent))
+  return getAgentAnsweredNativeChatCommands(agent)
 }
 
 /** Classify a mobile chat send for the tab's agent. Mobile has no skill picker,

@@ -1,19 +1,14 @@
 // Claude-family harnesses record a local command's reply as a
-// `<local-command-stdout>` user turn next to the command's envelope. The noise
-// filter hides those rows, which is right for commands whose effect is the
+// `<local-command-stdout>` user turn linked to the command's envelope row. The
+// noise filter hides those rows, which is right for commands whose effect is the
 // feedback (`/model`, `/compact`). For a command that exists to report
 // something, the reply is the answer, so the chat surfaces it.
 
 import type { AgentType } from './agent-status-types'
 import { stripAnsiEscapeSequences } from './ansi-escape-sequences'
+import { getNativeChatCommandReply } from './native-chat-agent-profiles'
 import { parseNativeChatCommandEnvelope } from './native-chat-command-envelope'
 import { isTextBlock, type NativeChatMessage } from './native-chat-types'
-import type { SlashCommandSuggestion } from './native-chat-slash-commands'
-
-// Why: opt-in per agent; Claude's TUI writes no reply row for these, OpenClaude does.
-const SURFACED_COMMAND_OUTPUTS: Partial<Record<AgentType, ReadonlySet<string>>> = {
-  openclaude: new Set(['context'])
-}
 
 const LOCAL_COMMAND_STDOUT = /^\s*<local-command-stdout>([\s\S]*?)<\/local-command-stdout>\s*$/
 
@@ -31,37 +26,29 @@ function envelopeCommand(message: NativeChatMessage): string | null {
 }
 
 /**
- * Replace the stdout row answering an opted-in command with its plain text as
- * command output. A reply pairs with the newest envelope written at or before
- * it: the harness writes both in one batch, often with the same timestamp, and
- * the transcript order breaks such ties by id rather than by write order.
+ * Replace the stdout row answering a command whose catalog row declares a
+ * transcript reply with its plain text as command output. A reply answers the
+ * row it is linked to; without that link (an older host, or the command row
+ * outside the loaded window) it stays hidden.
  */
 export function surfaceNativeChatCommandOutputs(
   messages: NativeChatMessage[],
   agent: AgentType
 ): NativeChatMessage[] {
-  const surfaced = SURFACED_COMMAND_OUTPUTS[agent]
-  if (!surfaced) {
-    return messages
-  }
-  const envelopes: { command: string; timestamp: number }[] = []
-  for (const message of messages) {
-    const command = envelopeCommand(message)
-    if (command !== null && message.timestamp !== null) {
-      envelopes.push({ command, timestamp: message.timestamp })
-    }
-  }
-  if (envelopes.length === 0) {
-    return messages
-  }
+  let rowsById: Map<string, NativeChatMessage> | null = null
   let changed = false
   const out = messages.map((message) => {
-    const stdout = LOCAL_COMMAND_STDOUT.exec(userText(message) ?? '')?.[1]
-    if (stdout === undefined || message.timestamp === null) {
+    if (message.parentId === undefined) {
       return message
     }
-    const answering = answeringCommand(envelopes, message.timestamp)
-    if (answering === null || !surfaced.has(answering)) {
+    const stdout = LOCAL_COMMAND_STDOUT.exec(userText(message) ?? '')?.[1]
+    if (stdout === undefined) {
+      return message
+    }
+    rowsById ??= new Map(messages.map((row) => [row.id, row]))
+    const parent = rowsById.get(message.parentId)
+    const command = parent ? envelopeCommand(parent) : null
+    if (command === null || getNativeChatCommandReply(agent, command) !== 'transcript') {
       return message
     }
     const text = stripAnsiEscapeSequences(stdout).trim()
@@ -76,27 +63,4 @@ export function surfaceNativeChatCommandOutputs(
     }
   })
   return changed ? out : messages
-}
-
-/** The catalog for a chat surface that does not run this projection: there, a
- *  command answered only by the reply it surfaces would appear to do nothing. */
-export function withoutSurfacedOutputCommands(
-  agent: AgentType,
-  commands: readonly SlashCommandSuggestion[]
-): readonly SlashCommandSuggestion[] {
-  const surfaced = SURFACED_COMMAND_OUTPUTS[agent]
-  return surfaced ? commands.filter((command) => !surfaced.has(command.name)) : commands
-}
-
-function answeringCommand(
-  envelopes: readonly { command: string; timestamp: number }[],
-  timestamp: number
-): string | null {
-  let best: { command: string; timestamp: number } | null = null
-  for (const envelope of envelopes) {
-    if (envelope.timestamp <= timestamp && (best === null || envelope.timestamp > best.timestamp)) {
-      best = envelope
-    }
-  }
-  return best?.command ?? null
 }

@@ -17,7 +17,10 @@ import {
 } from './native-chat-composer-state'
 import type { NativeChatSendLifecycle } from './use-native-chat-send-lifecycle'
 import type { NativeChatPtySessionOptionsSurface } from './native-chat-pty-session-options'
-import type { NativeChatLocalCommandAnswer } from './use-native-chat-local-command-answer'
+import {
+  answerNativeChatCommandInComposer,
+  type NativeChatLocalCommandAnswer
+} from './use-native-chat-local-command-answer'
 
 export function useNativeChatPickerCommandDispatch(args: {
   agent: AgentType
@@ -60,23 +63,22 @@ export function useNativeChatPickerCommandDispatch(args: {
       if (!target || disabled || isDispatchingSessionOption) {
         return
       }
-      const localAnswer =
-        answerCommandLocally?.(
-          text,
-          (modelId) => sessionOptionsSurface?.contextWindowTokens(modelId) ?? null
-        ) ?? null
-      if (localAnswer !== null) {
-        // Why: the host answers in place of the PTY, so nothing is written to the
-        // terminal and attachments stay armed, matching the typed path.
+      if (
+        answerNativeChatCommandInComposer({
+          draft: text,
+          answerCommandLocally,
+          sessionOptionsSurface,
+          onSlashCommand,
+          setHistory,
+          setDraft,
+          setCaret,
+          clearSkillOrigin,
+          setNotice
+        })
+      ) {
         emitNativeChatPickerItemAccepted({ agent, itemKind: 'command' })
         emitNativeChatSendClassified({ agent, outcome: 'command' })
-        onSlashCommand?.(text, localAnswer)
-        setHistory((previous) => pushHistory(previous, text))
-        setDraft('')
-        setCaret(0)
         setActiveSuggestion(0)
-        clearSkillOrigin()
-        setNotice(null)
         return
       }
       trackPendingSend(

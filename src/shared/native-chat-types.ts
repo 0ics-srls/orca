@@ -212,6 +212,9 @@ export type NativeChatMessage = {
   /** Optional explicit turn key. When present, two messages with the same
    *  `turnId` are treated as the same turn for dedup regardless of `id`. */
   turnId?: string
+  /** `id` of the transcript row this one follows in the agent's own conversation
+   *  tree, where the decoder carries the agent's link. Absent from older hosts. */
+  parentId?: string
 }
 
 export const NATIVE_CHAT_TURN_LIFECYCLE_STATES = ['working', 'completed', 'interrupted'] as const

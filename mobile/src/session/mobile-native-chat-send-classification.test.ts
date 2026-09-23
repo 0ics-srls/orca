@@ -27,12 +27,13 @@ describe('classifyMobileNativeChatSend', () => {
     expect(classifyMobileNativeChatSend('claude', '/diff')).toBe('unknown-token')
   })
 
-  it('leaves OpenClaude /context off mobile, whose fold never shows the report', () => {
-    expect(classifyMobileNativeChatSend('openclaude', '/context')).toBe('unknown-token')
-    expect(classifyMobileNativeChatSend('openclaude', '/compact')).toBe('command')
-    expect(getMobileNativeChatCommands('openclaude').map(({ name }) => name)).not.toContain(
-      'context'
-    )
+  it('leaves /context off mobile, which has no way to show its answer', () => {
+    // OpenClaude's report is a transcript row; OMP's is answered by the desktop composer.
+    for (const agent of ['openclaude', 'omp']) {
+      expect(classifyMobileNativeChatSend(agent, '/context')).toBe('unknown-token')
+      expect(classifyMobileNativeChatSend(agent, '/compact')).toBe('command')
+      expect(getMobileNativeChatCommands(agent).map(({ name }) => name)).not.toContain('context')
+    }
   })
 
   it('keeps prose as chat, including leading-whitespace slash text', () => {
