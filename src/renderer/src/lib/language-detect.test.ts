@@ -2,6 +2,28 @@ import { describe, expect, it } from 'vitest'
 import { detectLanguage } from './language-detect'
 
 describe('detectLanguage', () => {
+  it.each([
+    'force-app/main/default/classes/Foo.cls',
+    'force-app/main/default/triggers/Account.trigger',
+    '/Users/alice/Salesforce Project/classes/Foo.CLS',
+    '/home/alice/project/triggers/Account.TRIGGER',
+    'C:\\repo\\classes\\Foo.CLS',
+    'C:\\repo\\triggers\\Account.TRIGGER',
+    '\\\\server\\project\\classes\\Foo.cls',
+    '\\\\server\\project\\triggers\\Account.trigger'
+  ])('maps Apex source %s to the bundled apex language', (filePath) => {
+    expect(detectLanguage(filePath)).toBe('apex')
+  })
+
+  it.each([
+    ['classes/Foo.cls-meta.xml', 'xml'],
+    ['triggers/Account.trigger-meta.xml', 'xml'],
+    ['archive.cls/notes.txt', 'plaintext'],
+    ['archive.trigger/README', 'plaintext']
+  ])('preserves the language of Apex-adjacent file %s', (filePath, language) => {
+    expect(detectLanguage(filePath)).toBe(language)
+  })
+
   it('maps .vue files to the custom vue language id', () => {
     expect(detectLanguage('src/components/App.vue')).toBe('vue')
   })

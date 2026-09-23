@@ -48,6 +48,8 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
   '.rs': 'rust',
   '.go': 'go',
   '.java': 'java',
+  '.cls': 'apex',
+  '.trigger': 'apex',
   '.kt': 'kotlin',
   '.kts': 'kotlin',
   '.c': 'c',
