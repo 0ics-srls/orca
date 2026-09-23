@@ -58,7 +58,7 @@ export const mainThreadHangDetectedSchema = z
   .strict()
 
 // Where the daemon came from; `code_identity` is #21826's unlinked-executable theory under measurement.
-const daemonOriginShape = {
+const daemonOriginProps = {
   app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
   spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
   code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
@@ -68,7 +68,7 @@ const daemonOriginShape = {
 // `daemon_lifecycle` (nothing is replaced). Once per macOS launch that adopts; enum-only.
 export const daemonAdoptedSchema = z
   .object({
-    ...daemonOriginShape,
+    ...daemonOriginProps,
     tcc_attribution: z.enum(DAEMON_TCC_ATTRIBUTION_VALUES),
     live_session_count_bucket: z.enum(DAEMON_LIFECYCLE_SESSION_BUCKETS)
   })
@@ -77,7 +77,7 @@ export const daemonAdoptedSchema = z
 // Why: `daemon_pty_cwd_denied` is the #17696 symptom — the daemon cannot read a cwd the app can,
 // on proven divergence only. `daemon_pty_cwd_readable` is its control, on TCC-gated folders only.
 export const daemonPtyCwdVerdictSchema = z
-  .object({ cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES), ...daemonOriginShape })
+  .object({ cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES), ...daemonOriginProps })
   .strict()
 
 // Why: STA-7948 — `daemon_pty_cwd_denied` counts the failure; this counts how often a user is
