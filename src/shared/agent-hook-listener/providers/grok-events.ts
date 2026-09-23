@@ -12,7 +12,7 @@ import { isGrokEvent } from '../provider-event-names'
 import { classifyClaudeBackgroundTaskKind } from '../../claude-background-task-kind'
 import {
   agentChildWorkLivenessFromEvidence,
-  isAgentChildWorkKind,
+  isWatchOnlyChildWorkKind,
   type AgentChildWorkLivenessEvidence
 } from '../../agent-status-child-work-liveness'
 import {
@@ -96,7 +96,7 @@ function grokTurnEndApplies(
   )
 }
 
-/** Grok's inventory names only these two; the shared table decides which is agent work. */
+/** Grok's inventory names only these two; the shared watch-only rule decides which is agent work. */
 function isGrokFiniteTaskType(taskType: unknown): boolean {
   return taskType === 'shell' || taskType === 'subagent'
 }
@@ -113,9 +113,9 @@ function grokFiniteTaskEvidence(
     if (!isRecord(task) || !isGrokFiniteTaskType(task.type)) {
       continue
     }
-    const isAgent = isAgentChildWorkKind(classifyClaudeBackgroundTaskKind(task.type))
-    evidence.hasLiveAgentWork ||= isAgent
-    evidence.hasLiveNonAgentWork ||= !isAgent
+    const watchOnly = isWatchOnlyChildWorkKind(classifyClaudeBackgroundTaskKind(task.type))
+    evidence.hasLiveAgentWork ||= !watchOnly
+    evidence.hasLiveNonAgentWork ||= watchOnly
   }
   return evidence
 }
