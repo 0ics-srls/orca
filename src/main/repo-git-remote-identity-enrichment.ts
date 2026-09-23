@@ -5,6 +5,9 @@ import {
   type ExecutionHostId
 } from '../shared/execution-host'
 import type { Repo } from '../shared/repo-types'
+import { githubAvatarIcon, type RepoIcon } from '../shared/repo-icon'
+import { isUnresolvedSshHostAlias } from '../shared/git-remote-host-alias'
+import { getProjectProviderIdentity } from '../shared/project-host-setup-projection'
 import { probeGitRemoteIdentity } from './repo-git-remote-identity'
 
 const NO_IDENTITY_RETRY_TTL_MS = 5 * 60 * 1000
@@ -21,8 +24,12 @@ const MAX_IDENTITY_REFRESHES_PER_SWEEP = 4
 
 type RepoIdentityStore = {
   getRepos(): Repo[]
-  getRepo?(id: string): Repo | undefined
-  updateRepo(id: string, updates: Pick<Partial<Repo>, 'gitRemoteIdentity'>): Repo | null
+  getRepo?(id: string, hostId?: ExecutionHostId): Repo | undefined
+  updateRepo(
+    id: string,
+    updates: Pick<Partial<Repo>, 'gitRemoteIdentity' | 'repoIcon'>,
+    hostId?: ExecutionHostId
+  ): Repo | null
 }
 
 type EnrichmentOptions = {
@@ -61,8 +68,14 @@ function getRepoProbeHostId(repo: Repo): ExecutionHostId {
   return getSshTargetIdForExecutionHost(hostId) ? hostId : LOCAL_EXECUTION_HOST_ID
 }
 
-function getCurrentRepo(store: RepoIdentityStore, id: string): Repo | undefined {
-  return store.getRepo?.(id) ?? store.getRepos().find((repo) => repo.id === id)
+function getCurrentRepo(store: RepoIdentityStore, snapshot: Repo): Repo | undefined {
+  const hostId = getRepoExecutionHostId(snapshot)
+  const found = store.getRepo?.(snapshot.id, hostId)
+  return found && getRepoExecutionHostId(found) === hostId
+    ? found
+    : store
+        .getRepos()
+        .find((repo) => repo.id === snapshot.id && getRepoExecutionHostId(repo) === hostId)
 }
 
 function isSameProbedRepo(snapshot: Repo, current: Repo | undefined): current is Repo {
@@ -87,19 +100,59 @@ function shouldWriteProbedIdentity(current: Repo, probed: Repo['gitRemoteIdentit
   return !!probed && probed.canonicalKey !== existing.canonicalKey
 }
 
+function getAutomaticGitHubIconRefresh(
+  current: Repo,
+  probed: NonNullable<Repo['gitRemoteIdentity']>
+): RepoIcon | undefined {
+  // A peer's repo metadata must never be repaired from a client-local probe.
+  const hostId = getRepoExecutionHostId(current)
+  if (
+    (hostId !== LOCAL_EXECUTION_HOST_ID && !getSshTargetIdForExecutionHost(hostId)) ||
+    (current.upstream?.owner && current.upstream.repo) ||
+    current.repoIcon?.type !== 'image' ||
+    current.repoIcon.source !== 'github'
+  ) {
+    return undefined
+  }
+  const identity = getProjectProviderIdentity({
+    upstream: null,
+    repoIcon: undefined,
+    gitRemoteIdentity: probed
+  })
+  if (!identity || (identity.host && isUnresolvedSshHostAlias(identity.host))) {
+    return undefined
+  }
+  const icon = githubAvatarIcon(identity)
+  return icon.type === 'image' &&
+    current.repoIcon.src === icon.src &&
+    current.repoIcon.label === icon.label
+    ? undefined
+    : icon
+}
+
 function writeIdentity(
   store: RepoIdentityStore,
   snapshot: Repo,
   gitRemoteIdentity: Repo['gitRemoteIdentity']
 ): boolean {
-  const current = getCurrentRepo(store, snapshot.id)
-  if (
-    !isSameProbedRepo(snapshot, current) ||
-    !shouldWriteProbedIdentity(current, gitRemoteIdentity)
-  ) {
+  const current = getCurrentRepo(store, snapshot)
+  if (!isSameProbedRepo(snapshot, current)) {
     return false
   }
-  return !!store.updateRepo(snapshot.id, { gitRemoteIdentity })
+  const writeRemote = shouldWriteProbedIdentity(current, gitRemoteIdentity)
+  const icon = gitRemoteIdentity
+    ? getAutomaticGitHubIconRefresh(current, gitRemoteIdentity)
+    : undefined
+  const update = (updates: Pick<Partial<Repo>, 'gitRemoteIdentity' | 'repoIcon'>): Repo | null => {
+    const hostId = getRepoExecutionHostId(snapshot)
+    return hostId === LOCAL_EXECUTION_HOST_ID
+      ? store.updateRepo(snapshot.id, updates)
+      : store.updateRepo(snapshot.id, updates, hostId)
+  }
+  if (icon) {
+    return !!update({ ...(writeRemote ? { gitRemoteIdentity } : {}), repoIcon: icon })
+  }
+  return writeRemote && !!update({ gitRemoteIdentity })
 }
 
 async function enrichRepoGitRemoteIdentity(store: RepoIdentityStore, repo: Repo): Promise<boolean> {
