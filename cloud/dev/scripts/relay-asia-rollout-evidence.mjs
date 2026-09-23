@@ -300,7 +300,8 @@ export function buildProductionCanaryEvidence(input) {
   }
   const load = object(input.loadReport, `${canary.label} load report`)
   assertCanaryLoad(load, input.cellId)
-  const metrics = runtimeMetrics(input.logs, start, end, input.cellId)
+  // Directors log a steady baseline of relay_cells lock refusals unrelated to the canary cell.
+  const metrics = runtimeMetrics(input.logs, start, end, input.cellId, { gateDirectorSqlFailures: false })
   assertPassingRuntimeMetrics(metrics, `${canary.label} canary`)
   metrics.cloudSqlBackendsMax = cloudSqlMaximum(input.cloudSql, start, end)
   assertPassingCanary(metrics, input.cellId)
@@ -343,7 +344,7 @@ function assertCanaryLoad(report, cellId) {
   ) throw new Error(`${label} load cleanup is incomplete`)
 }
 
-function runtimeMetrics(logs, start, end, targetCellId) {
+function runtimeMetrics(logs, start, end, targetCellId, { gateDirectorSqlFailures = true } = {}) {
   const entries = logs.map((entry) => object(entry, 'runtime metric entry'))
   const directorEntries = entries.filter((entry) => entry.jsonPayload?.role === 'director')
   const cellEntries = entries.filter((entry) =>
@@ -363,6 +364,11 @@ function runtimeMetrics(logs, start, end, targetCellId) {
   const directorPayloads = directorEntries.map((entry) => entry.jsonPayload)
   const cellPayloads = cellEntries.map((entry) => entry.jsonPayload)
   const payloads = [...directorPayloads, ...cellPayloads]
+  const sqlFailures = (list) => list.reduce(
+    (total, payload) => total + number(payload.sqlFailuresDelta, 'Relay SQL failures'), 0
+  )
+  const directorSqlFailures = sqlFailures(directorPayloads)
+  const cellSqlFailures = sqlFailures(cellPayloads)
   return {
     asiaSelections: directorPayloads.reduce(
       (total, payload) => total + number(payload.selectedRegionsDelta?.['asia-east2'] ?? 0, 'Asia selections'), 0
@@ -379,9 +385,10 @@ function runtimeMetrics(logs, start, end, targetCellId) {
     unavailableRegions: directorPayloads.reduce(
       (total, payload) => total + sumMap(payload.unavailableRegionsDelta, 'unavailable regions'), 0
     ),
-    relaySqlFailures: payloads.reduce(
-      (total, payload) => total + number(payload.sqlFailuresDelta, 'Relay SQL failures'), 0
-    ),
+    // Ungated director failures stay reported so the artifact still shows them.
+    ...(gateDirectorSqlFailures
+      ? { relaySqlFailures: directorSqlFailures + cellSqlFailures }
+      : { relaySqlFailures: cellSqlFailures, directorSqlFailures }),
     databasePoolWaitingMax: Math.max(...payloads.map(
       (payload) => number(payload.databasePoolWaiting, 'database pool waiting')
     )),
