@@ -42,5 +42,6 @@ describe('machine name setting', () => {
       'Build server'
     )
     expect(normalizeLegacyProfile({ machineName: undefined }).machineName).toBe('')
+    expect(normalizeLegacyProfile({ machineName: 'x'.repeat(300) }).machineName).toHaveLength(255)
   })
 })

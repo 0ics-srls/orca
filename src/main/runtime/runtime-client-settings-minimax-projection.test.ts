@@ -20,7 +20,8 @@ describe('RuntimeClientSettingsController MiniMax projection', () => {
     }
     const controller = new RuntimeClientSettingsController(store)
     expect(controller.get().machineName).toBe('desk')
-    await controller.update({ machineName: 'build-server' })
+    await controller.update({ machineName: '  build-server  ' })
+    expect(settings.machineName).toBe('build-server')
     expect(controller.get().machineName).toBe('build-server')
   })
 

@@ -18,6 +18,7 @@ import type { TerminalQuickCommand } from '../../shared/terminal-quick-command-t
 import { recordManagedHookInstallFailure } from '../agent-hooks/install-telemetry'
 import { applyAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
 import type { RuntimeStore } from './runtime-store-contract'
+import { normalizeMachineName } from '../../shared/machine-name'
 
 export type RuntimeClientSettings = Pick<
   GlobalSettings,
@@ -123,7 +124,7 @@ export class RuntimeClientSettingsController {
       artifactSharingEnabled: isArtifactSharingEnabled(settings),
       worktreeVisibilityDefaults: settings.worktreeVisibilityDefaults ?? { external: 'hide' },
       agentSkillSharingEnabled: isAgentSkillSharingEnabled(settings),
-      machineName: settings.machineName ?? '',
+      machineName: normalizeMachineName(settings.machineName),
       hostSettingOverrides: Object.fromEntries(
         [
           ...getHostDisplayLabelOverrides({ hostSettingOverrides: settings.hostSettingOverrides })
@@ -138,7 +139,12 @@ export class RuntimeClientSettingsController {
     }
     const beforeSettings = this.store.getSettings()
     const before = beforeSettings.agentStatusHooksEnabled !== false
-    this.store.updateSettings(updates, { notifyListeners: true })
+    this.store.updateSettings(
+      'machineName' in updates
+        ? { ...updates, machineName: normalizeMachineName(updates.machineName) }
+        : updates,
+      { notifyListeners: true }
+    )
     const settings = this.store.getSettings()
     if (updates.worktreeVisibilityDefaults !== undefined) {
       this.notifyReposChanged?.()
