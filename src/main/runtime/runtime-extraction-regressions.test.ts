@@ -73,5 +73,7 @@ describe('runtime extraction regressions', () => {
     settings.machineName = 'Renamed desk'
     expect(transport.hostLabel).toBe(runtime.getStatus().machineName)
     expect(transport.hostLabel).toBe('Renamed desk')
+    // The remote-workspace client identity reads this same accessor at send time.
+    expect(runtime.readMachineName()).toBe('Renamed desk')
   })
 })
