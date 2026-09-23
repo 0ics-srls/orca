@@ -140,8 +140,6 @@ export function useRuntimeFileListForWorktree({
   const [loadingRequest, setLoadingRequest] = useState({ requestKey: '', loading: false })
   const [loadError, setLoadError] = useState<string | null>(null)
   const [cappedLocalListing, setCappedLocalListing] = useState<CappedLocalListing | null>(null)
-  const cappedLocalListingRef = useRef(cappedLocalListing)
-  cappedLocalListingRef.current = cappedLocalListing
   const [listedOperationOwner, setListedOperationOwner] = useState<FileExplorerOperationOwner>({
     kind: 'unresolved'
   })
@@ -284,16 +282,16 @@ export function useRuntimeFileListForWorktree({
           setListing({ requestKey, ...result })
           setListedOperationOwner(requestOperationOwner)
           if (!usesRuntimePathSearch && !hostNameFilter) {
-            setCappedLocalListing((current) => nextCappedLocalListing(current, listingKey, result))
+            setCappedLocalListing((current) =>
+              nextCappedLocalListing(current, listingKey, result.truncated)
+            )
           }
         }
       })
       .catch((error) => {
-        const capped = cappedLocalListingRef.current
-        if (!cancelled && hostNameFilter && capped) {
-          // Why: a failed host scan must not hide the capped listing that was already working.
-          setCappedLocalListing({ ...capped, hostFilterFailed: true })
-          setListing({ requestKey: listingKey, files: capped.files, truncated: true })
+        if (!cancelled && hostNameFilter) {
+          // Why: a failed host scan falls back to filtering the capped listing, not an error.
+          setCappedLocalListing((current) => current && { ...current, hostFilterFailed: true })
         } else if (!cancelled) {
           setListing(NO_LISTING)
           setLoadError(cleanRuntimeFileListError(error))

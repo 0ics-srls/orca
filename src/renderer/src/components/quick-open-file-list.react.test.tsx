@@ -99,16 +99,14 @@ function HookProbe({
   enabled,
   onState,
   query,
-  hostFilterWhenCapped,
   worktreeId
 }: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
-  hostFilterWhenCapped?: boolean
   worktreeId: string | null
 }): null {
-  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query, hostFilterWhenCapped }))
+  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query }))
   return null
 }
 
@@ -133,7 +131,6 @@ async function renderProbe(args: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
-  hostFilterWhenCapped?: boolean
   worktreeId: string | null
 }): Promise<Root> {
   const container = document.createElement('div')
@@ -683,115 +680,5 @@ describe('useRuntimeFileListForWorktree', () => {
       files: ['packages/app/package.json'],
       loading: false
     })
-  })
-  it('re-lists a capped local workspace with the name filter applied on the host', async () => {
-    vi.useFakeTimers()
-    useAppStore.setState({
-      folderWorkspaces: [makeFolderWorkspace()],
-      projectGroups: [makeProjectGroup()],
-      repos: [],
-      worktreesByRepo: {}
-    })
-    listRuntimeFilesMock
-      .mockResolvedValueOnce(
-        Array.from({ length: QUICK_OPEN_LISTING_MAX_RESULTS }, (_, i) => `src/file-${i}.ts`)
-      )
-      .mockResolvedValueOnce(['ios/AppDelegate.swift'])
-    const states: RuntimeFileListState[] = []
-
-    try {
-      await renderProbe({
-        enabled: true,
-        onState: (state) => states.push(state),
-        query: 'AppDelegate',
-        hostFilterWhenCapped: true,
-        worktreeId: folderWorkspaceKey('folder-workspace-1')
-      })
-      await flushEffects()
-      await act(async () => vi.advanceTimersByTimeAsync(120))
-      await flushEffects()
-
-      expect(listRuntimeFilesMock).toHaveBeenCalledTimes(2)
-      expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
-      expect(listRuntimeFilesMock.mock.calls[1][1]).toMatchObject({ nameFilter: 'appdelegate' })
-      expect(states.at(-1)).toMatchObject({
-        files: ['ios/AppDelegate.swift'],
-        loading: false,
-        truncated: false
-      })
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('filters an uncapped local listing in the renderer without a host re-list', async () => {
-    useAppStore.setState({
-      folderWorkspaces: [makeFolderWorkspace()],
-      projectGroups: [makeProjectGroup()],
-      repos: [],
-      worktreesByRepo: {}
-    })
-
-    await renderProbe({
-      enabled: true,
-      onState: () => {},
-      query: 'package',
-      hostFilterWhenCapped: true,
-      worktreeId: folderWorkspaceKey('folder-workspace-1')
-    })
-    await waitForListRuntimeFilesCall()
-    await flushEffects()
-
-    expect(listRuntimeFilesMock).toHaveBeenCalledTimes(1)
-    expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
-  })
-  it('falls back to the capped listing and stops re-listing after a host filter failure', async () => {
-    vi.useFakeTimers()
-    useAppStore.setState({
-      folderWorkspaces: [makeFolderWorkspace()],
-      projectGroups: [makeProjectGroup()],
-      repos: [],
-      worktreesByRepo: {}
-    })
-    const capped = Array.from({ length: QUICK_OPEN_LISTING_MAX_RESULTS }, (_, i) => `f-${i}.ts`)
-    listRuntimeFilesMock.mockImplementation(async (_context, args: { nameFilter?: string }) => {
-      if (args.nameFilter) {
-        throw new Error('rg list timed out')
-      }
-      return capped
-    })
-    const states: RuntimeFileListState[] = []
-    const workspaceKey = folderWorkspaceKey('folder-workspace-1')
-
-    try {
-      const root = await renderProbe({
-        enabled: true,
-        onState: (state) => states.push(state),
-        query: 'f-1',
-        hostFilterWhenCapped: true,
-        worktreeId: workspaceKey
-      })
-      await act(async () => vi.advanceTimersByTimeAsync(120))
-      await flushEffects()
-      await act(async () => {
-        root.render(
-          createElement(HookProbe, {
-            enabled: true,
-            onState: (state: RuntimeFileListState) => states.push(state),
-            query: 'f-2',
-            hostFilterWhenCapped: true,
-            worktreeId: workspaceKey
-          })
-        )
-      })
-      await act(async () => vi.advanceTimersByTimeAsync(120))
-      await flushEffects()
-
-      const nameFilters = listRuntimeFilesMock.mock.calls.map((call) => call[1].nameFilter)
-      expect(nameFilters.filter(Boolean)).toEqual(['f-1'])
-      expect(states.at(-1)).toMatchObject({ files: capped, loadError: null, truncated: true })
-    } finally {
-      vi.useRealTimers()
-    }
   })
 })
