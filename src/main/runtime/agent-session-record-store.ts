@@ -9,6 +9,7 @@ import type {
   AgentSessionOperationOutcome,
   AgentSessionOperationRow
 } from '../../shared/agent-session-operation-ledger'
+import { agentSessionOperationKey } from '../../shared/agent-session-operation-ledger'
 import {
   admitAgentSessionGlobalOperationInto,
   admitAgentSessionMutationOperation,
@@ -162,6 +163,9 @@ export class AgentSessionRecordStore {
   }
 
   listOperationRows = (): AgentSessionOperationRow[] => [...this.state.operations.values()]
+
+  getOperationRow = (callerKey: string, operationId: string): AgentSessionOperationRow | null =>
+    this.state.operations.get(agentSessionOperationKey(callerKey, operationId)) ?? null
 
   isClaimKeyVerifiable = (keyId: string, now: number): boolean =>
     isAgentSessionClaimKeyVerifiable(this.state, keyId, now)

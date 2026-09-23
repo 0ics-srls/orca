@@ -1,6 +1,5 @@
 import { settlePostAcquisitionAttachFailure } from './structured-agent-session-attach-failure'
 import { rewindRefusal } from './structured-rewind-refusal'
-import { failedCreateRefusal } from './structured-agent-session-failed-create-refusal'
 import {
   AgentSessionRewindRefusal,
   AgentSessionAcquisitionExitUnprovenError,
@@ -151,7 +150,7 @@ export async function performAttach(
         reconstruct: () => null
       })
       if (replay.decision === 'refuse') {
-        return failedCreateRefusal(replay.refusal, reserved.operationRow.outcome.status, record)
+        return { ok: false, refusal: replay.refusal }
       }
     }
     // Sample provider history before a new child is acquired. Once acquireOwner
@@ -173,7 +172,6 @@ export async function performAttach(
       acquiredOwner = true
     }
   } catch (error) {
-    let settled: AgentSessionRecord | null = null
     const spawnToken = reservedRecord?.lease.reservedSpawnToken
     if (reservedRecord && spawnToken && !unsupportedReservationSettlementAttempted) {
       // Settle processless proof and failed operation atomically.
@@ -203,7 +201,7 @@ export async function performAttach(
                 message: error instanceof Error ? error.message : String(error)
               }
       try {
-        settled = await store.settleFailedAcquisition({
+        await store.settleFailedAcquisition({
           sessionId,
           fence: reservedRecord.lease.runtimeFence,
           spawnToken,
@@ -221,11 +219,18 @@ export async function performAttach(
       }
     }
     if (error instanceof AgentSessionRewindRefusal) {
-      return failedCreateRefusal(rewindRefusal(error.rewindReason).refusal, 'failed', settled)
+      return rewindRefusal(error.rewindReason)
     }
     if (error instanceof AgentSessionAcquisitionRefusal) {
-      const refusal = { code: error.code, message: error.message }
-      return failedCreateRefusal(refusal, 'failed', settled)
+      return { ok: false, refusal: { code: error.code, message: error.message } }
+    }
+    // A first-hand root exit is a settled fact, answered once as a refusal rather than thrown
+    // now and refused only on replay; its message is the provider's own diagnostic.
+    if (error instanceof AgentSessionAcquisitionRootExitObservedError) {
+      return {
+        ok: false,
+        refusal: { code: 'agent_session_operation_invalid', message: error.message }
+      }
     }
     return {
       ok: false,

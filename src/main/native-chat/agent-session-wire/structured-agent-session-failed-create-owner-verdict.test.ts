@@ -9,6 +9,7 @@ import { AgentSessionRecordStore } from '../../runtime/agent-session-record-stor
 import {
   AgentSessionAcquisitionExitUnprovenError,
   AgentSessionAcquisitionRefusal,
+  AgentSessionAcquisitionRootExitObservedError,
   type StructuredAgentSessionAdapter
 } from './structured-agent-session-adapter'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
@@ -85,6 +86,27 @@ describe('failed create owner verdict', () => {
     await expect(host.attach(CALLER, retry)).resolves.toMatchObject({ ok: true })
     expect(acquire).toHaveBeenCalledTimes(2)
     expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('live')
+  })
+
+  it('answers a first-hand root exit as exited on the first call, in the shape its replay takes', async () => {
+    acquire.mockRejectedValueOnce(
+      new AgentSessionAcquisitionRootExitObservedError(new Error(EXIT_REASON))
+    )
+    const first = hostTestAttachParams(null)
+    const refusal = {
+      code: 'agent_session_operation_invalid',
+      message: EXIT_REASON,
+      ownerVerdict: 'exited'
+    }
+
+    await expect(host.attach(CALLER, first)).resolves.toEqual({ ok: false, refusal })
+    await expect(host.attach(CALLER, first)).resolves.toEqual({ ok: false, refusal })
+    expect(acquire).toHaveBeenCalledOnce()
+
+    await expect(host.attach(CALLER, hostTestAttachParams(null))).resolves.toMatchObject({
+      ok: true
+    })
+    expect(acquire).toHaveBeenCalledTimes(2)
   })
 
   it('answers an acquisition refusal with its verdict directly', async () => {

@@ -59,6 +59,8 @@ const EXIT_REASON = 'claude stream-json exited (code 1): stderr tail'
 
 /** The verdict the host puts on the failed operation's replay; undefined models an older host. */
 let replayVerdict: AgentSessionOwnerVerdict | undefined
+/** A host that answers the proven exit on the first call, not only on replay. */
+let refuseFirstCall = false
 let failedOperation: string | null = null
 let publishedSessionId: string | null = null
 const createdOperations: string[] = []
@@ -72,7 +74,7 @@ function hostCreate(envelope: AgentSessionMutationEnvelope): unknown {
     publishedSessionId = envelope.sessionId
     return { ok: true, replayed: false, value: { sessionId: envelope.sessionId, fence: 3 } }
   }
-  if (createdOperations.length === 1) {
+  if (createdOperations.length === 1 && !refuseFirstCall) {
     throw new Error(EXIT_REASON)
   }
   const refusal: AgentSessionWireRefusal = {
@@ -102,6 +104,7 @@ beforeEach(() => {
   resetStructuredAgentLaunchPersistenceForTests()
   resetStructuredAgentLaunchRegistryForTests()
   replayVerdict = 'exited'
+  refuseFirstCall = false
   failedOperation = null
   publishedSessionId = null
   createdOperations.length = 0
@@ -137,6 +140,19 @@ describe('structured launch after a host-failed create', () => {
     expect(publishedSessionId).toBe(sessionId)
     // A published launch retires its client state; failed or unknown would linger.
     expect(getStructuredAgentSessionLaunchLifecycle(WORKTREE, sessionId)).toBeNull()
+  })
+
+  it('fails on the first answer when the host already refuses with the proven exit', async () => {
+    refuseFirstCall = true
+    const sessionId = launch()
+    await settle(sessionId)
+    expect(getStructuredAgentSessionLaunchLifecycle(WORKTREE, sessionId)).toBe('failed')
+    expect(getStructuredAgentSessionLaunchFailureReason(WORKTREE, sessionId)).toBe(EXIT_REASON)
+    expect(createdOperations).toEqual([failedOperation])
+    expect(retryStructuredAgentSessionLaunch(WORKTREE, sessionId)).toBe(true)
+    await settle(sessionId)
+    expect(createdOperations.at(-1)).not.toBe(failedOperation)
+    expect(publishedSessionId).toBe(sessionId)
   })
 
   it.each([
