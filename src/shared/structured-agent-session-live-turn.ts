@@ -123,28 +123,27 @@ export function isStructuredAgentSessionThinking(
 }
 
 /** The tool the status row names for the SESSION'S OWN agent: the running turn's newest running
- *  call, else its newest call if that completed (a failed one names nothing, as Claude's hook lane
- *  clears it). Nothing is named unless the scan reaches a RUNNING turn record, so an ended turn's
- *  calls never surface; a mid-turn send's user row is not a boundary. */
+ *  call, else its newest call whatever it settled to, so the line never blanks mid-turn. Nothing
+ *  is named unless the scan reaches a RUNNING turn record, so an ended turn's calls never surface;
+ *  a mid-turn send's user row is not a boundary. */
 export function statusStructuredAgentSessionToolCall(
   items: readonly AgentJournalRenderItem[]
 ): AgentJournalToolCallItem | null {
+  let newest: AgentJournalToolCallItem | null = null
   let running: AgentJournalToolCallItem | null = null
-  let newestSettled: AgentJournalToolCallItem | null | undefined
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index]
     const body = item?.body
     const turn = readAgentJournalTurn(body)
     if (turn) {
-      return turn.state === 'running' ? (running ?? newestSettled ?? null) : null
+      return turn.state === 'running' ? (running ?? newest) : null
     }
     if (running || body?.kind !== 'tool-call' || !isRootAgentJournalItem(item)) {
       continue
     }
+    newest ??= body
     if (body.state === 'running') {
       running = body
-    } else if (newestSettled === undefined) {
-      newestSettled = body.state === 'completed' ? body : null
     }
   }
   return null

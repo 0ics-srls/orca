@@ -350,7 +350,7 @@ describe('structured agent session status projection', () => {
         state
       })
 
-    it('keeps naming the finished tool while the agent thinks, as the hook lane does', () => {
+    it('keeps naming the finished tool while the agent thinks', () => {
       const summary = projectStructuredAgentSessionStatusSummary([
         ask,
         running,
@@ -359,15 +359,15 @@ describe('structured agent session status projection', () => {
       expect(summary).toMatchObject({ toolName: 'Read', toolInput: '/repo/Read.ts' })
     })
 
-    it("names no tool after a failed call, as Claude's hook lane does", () => {
+    // Codex marks any nonzero exit failed (a no-match search, a red test), so clearing would blank the line.
+    it('keeps naming a failed call until the next tool starts', () => {
       const summary = projectStructuredAgentSessionStatusSummary([
         ask,
         running,
         call('read', 3, 'Read', 'completed'),
         call('edit', 4, 'Edit', 'failed')
       ])
-      expect(summary.toolName).toBeUndefined()
-      expect(summary.toolInput).toBeUndefined()
+      expect(summary).toMatchObject({ toolName: 'Edit', toolInput: '/repo/Edit.ts' })
     })
 
     it('prefers a running call over a newer finished one', () => {
@@ -678,6 +678,25 @@ describe("producer linkage — a subagent's output never speaks for the parent",
     // The row does not go blank while a child runs: the spawn call is still the
     // parent's own live work.
     expect(summary.toolInput).toBeTruthy()
+  })
+
+  it("names the parent's own settled call, not a child's newer settled one", () => {
+    const parentRead = item('root-read', 4, {
+      kind: 'tool-call',
+      name: 'Read',
+      input: { file_path: '/repo/a.ts' },
+      state: 'completed'
+    })
+    const childFailed = childItem('child-grep', 6, {
+      kind: 'tool-call',
+      name: 'Grep',
+      input: { pattern: 'x' },
+      state: 'failed'
+    })
+    expect(
+      projectStructuredAgentSessionStatusSummary([userAsk, turnRunning, parentRead, childFailed])
+        .toolName
+    ).toBe('Read')
   })
 
   it("still renders the child's output in the transcript", () => {
