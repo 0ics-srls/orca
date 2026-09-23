@@ -27,7 +27,7 @@ const BASE = {
  * not merely that the input type has no name for it.
  */
 function fingerprintOfWirePayload(
-  params: AgentLaunchFingerprintInput & { launchSource?: string }
+  params: AgentLaunchFingerprintInput & { launchSource?: string; paneKey?: string }
 ): string {
   return computeAgentLaunchFingerprint(params)
 }
@@ -55,6 +55,17 @@ describe('fields the launch fingerprint covers', () => {
 })
 
 describe('fields the launch fingerprint deliberately ignores', () => {
+  it('does not separate two launches that differ only in the pane the caller reserved', () => {
+    // A retry after a lost reply may carry a fresh reservation; it must replay, and the caller
+    // reconciles against the recorded `paneKey` rather than the host refusing a conflict.
+    expect(
+      fingerprintOfWirePayload({
+        ...BASE,
+        paneKey: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d:3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+      })
+    ).toBe(fingerprintOfWirePayload(BASE))
+  })
+
   it('does not separate two launches that differ only in launchSource', () => {
     // Telemetry. Two buttons producing the same launch are one operation, and a retry that got
     // re-attributed must replay rather than be refused as a conflict.

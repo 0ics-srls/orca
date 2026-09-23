@@ -77,6 +77,8 @@ export type AgentLaunchSurfaceFactory = {
     cwd?: string
     /** The one member of the `agent_started` triple the host cannot derive for itself. */
     launchSource?: string
+    /** The caller-minted pane to create; the returned `paneKey` is what the runtime actually used. */
+    paneKey?: string
     /** `paneKey` names the pane this create minted, for a caller that presents its own tabs; a
      *  factory whose runtime does not report one omits it rather than inventing a key. */
   }): Promise<{ handle: string; paneKey?: string; warning?: string }>
@@ -139,6 +141,7 @@ export type AgentLaunchWorkspaceFactory = {
     agentArgs?: string | null
     cwd?: string
     launchSource?: string
+    paneKey?: string
   }): Promise<{
     worktreeId: string
     startupTerminalHandle: string | undefined
@@ -304,7 +307,8 @@ async function resolveWorkspace(
       : {
           ...(intent.agentArgs !== undefined ? { agentArgs: intent.agentArgs } : {}),
           ...(intent.cwd ? { cwd: intent.cwd } : {}),
-          ...(intent.launchSource ? { launchSource: intent.launchSource } : {})
+          ...(intent.launchSource ? { launchSource: intent.launchSource } : {}),
+          ...(intent.paneKey ? { paneKey: intent.paneKey } : {})
         })
   })
   // Only when a startup terminal actually came back: a create that produced none ran no command,
@@ -386,7 +390,8 @@ async function createTerminalSurface(
     // `null` is a value the caller meant, so this tests for absence rather than falsiness.
     ...(intent.agentArgs !== undefined ? { agentArgs: intent.agentArgs } : {}),
     ...(intent.cwd ? { cwd: intent.cwd } : {}),
-    ...(intent.launchSource ? { launchSource: intent.launchSource } : {})
+    ...(intent.launchSource ? { launchSource: intent.launchSource } : {}),
+    ...(intent.paneKey ? { paneKey: intent.paneKey } : {})
   })
   return {
     outcome: {

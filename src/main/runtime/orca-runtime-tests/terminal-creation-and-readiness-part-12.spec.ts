@@ -1,6 +1,42 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from '../orca-runtime-test-mocks.spec'
-import { store, syncSinglePty } from '../orca-runtime-test-fixtures.spec'
+import {
+  TEST_WORKTREE_ID,
+  TEST_WORKTREE_PATH,
+  store,
+  syncSinglePty
+} from '../orca-runtime-test-fixtures.spec'
+
+const RESERVED_TAB_ID = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
+const RESERVED_LEAF_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+
+function runtimeWithDesktopWindow() {
+  const revealTerminalSession = vi.fn().mockResolvedValue({ tabId: RESERVED_TAB_ID })
+  const runtime = new OrcaRuntimeService(store)
+  runtime.setPtyController({
+    spawn: vi.fn().mockResolvedValue({ id: 'pty-launch' }),
+    write: () => true,
+    kill: () => true,
+    getForegroundProcess: async () => null
+  })
+  runtime.setNotifier({
+    worktreesChanged: vi.fn(),
+    reposChanged: vi.fn(),
+    activateWorktree: vi.fn(),
+    createTerminal: vi.fn(),
+    revealTerminalSession,
+    splitTerminal: vi.fn(),
+    renameTerminal: vi.fn(),
+    focusTerminal: vi.fn(),
+    closeTerminal: vi.fn(),
+    sleepWorktree: vi.fn(),
+    terminalFitOverrideChanged: vi.fn(),
+    terminalDriverChanged: vi.fn()
+  })
+  runtime.attachWindow(1)
+  runtime.syncWindowGraph(1, { tabs: [], leaves: [] })
+  return { runtime, revealTerminalSession }
+}
 
 describe('OrcaRuntimeService', () => {
   it('bounds retained work for many newline-separated huge ANSI cursor movements', async () => {
@@ -73,5 +109,39 @@ describe('OrcaRuntimeService', () => {
     expect(retained).toContain('BeforeAfter')
     expect(retained).not.toContain('Gi=31337')
     expect(retained).not.toContain('AAAA')
+  })
+
+  // agent.launch's reserved pane lands here: the host reveal stays the only tab creator, and it
+  // must create the tab under the caller's id so the caller's placement lookup can find it.
+  it('reveals an agent terminal under the pane the caller reserved', async () => {
+    const { runtime, revealTerminalSession } = runtimeWithDesktopWindow()
+
+    const created = await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+      startupAgent: 'claude',
+      tabId: RESERVED_TAB_ID,
+      leafId: RESERVED_LEAF_ID
+    })
+
+    expect(revealTerminalSession).toHaveBeenCalledTimes(1)
+    expect(revealTerminalSession).toHaveBeenCalledWith(
+      TEST_WORKTREE_ID,
+      expect.objectContaining({ tabId: RESERVED_TAB_ID, leafId: RESERVED_LEAF_ID })
+    )
+    expect(created.paneKey).toBe(`${RESERVED_TAB_ID}:${RESERVED_LEAF_ID}`)
+  })
+
+  it('mints its own pane when the reserved leaf is malformed, and reports the one it used', async () => {
+    const { runtime, revealTerminalSession } = runtimeWithDesktopWindow()
+
+    const created = await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+      startupAgent: 'claude',
+      tabId: RESERVED_TAB_ID,
+      leafId: 'not-a-uuid'
+    })
+
+    // Still exactly one tab — the caller's reservation lost, and the reported pane says so.
+    expect(revealTerminalSession).toHaveBeenCalledTimes(1)
+    expect(created.tabId).not.toBe(RESERVED_TAB_ID)
+    expect(created.paneKey?.startsWith(`${created.tabId}:`)).toBe(true)
   })
 })
