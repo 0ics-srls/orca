@@ -6,14 +6,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { NetworkInterfacePicker } from '../mobile/NetworkInterfacePicker'
-import { DebouncedSettingsTextInput } from './DebouncedSettingsTextInput'
 import type { MobileNetworkInterface } from './mobile-network-interface-selection'
 import type { MobilePairingConnectionMode } from '../../../../shared/mobile-pairing-connection-mode'
 
 type MobilePairingSetupSectionProps = {
-  machineName: string
-  publishedMachineName: string | null
-  onMachineNameChange: (name: string) => void
   connectionMode: MobilePairingConnectionMode
   /** False when Anywhere is selected but Relay cannot be committed yet. */
   canGenerate?: boolean
@@ -36,9 +32,6 @@ type MobilePairingSetupSectionProps = {
 }
 
 export function MobilePairingSetupSection({
-  machineName,
-  publishedMachineName,
-  onMachineNameChange,
   connectionMode,
   canGenerate = true,
   addressDisclosureForcedOpen = false,
@@ -136,41 +129,6 @@ export function MobilePairingSetupSection({
             'auto.components.settings.MobilePairingSetupSection.overview',
             'Generate a QR code, then scan it in Orca Mobile under Pair Desktop.'
           )}
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="mobile-machine-name" className="text-xs font-medium text-foreground">
-          {translate(
-            'auto.components.settings.MobilePairingSetupSection.machineNameLabel',
-            'Machine name'
-          )}
-        </label>
-        <DebouncedSettingsTextInput
-          id="mobile-machine-name"
-          value={machineName}
-          commit={onMachineNameChange}
-          maxLength={255}
-          placeholder={
-            publishedMachineName ??
-            translate(
-              'auto.components.settings.MobilePairingSetupSection.machineNamePlaceholder',
-              'Detected automatically'
-            )
-          }
-          aria-describedby="mobile-machine-name-description"
-        />
-        <p id="mobile-machine-name-description" className="text-xs text-muted-foreground">
-          {publishedMachineName
-            ? translate(
-                'auto.components.settings.MobilePairingSetupSection.machineNameDescription',
-                'Paired devices see “{{name}}”. Leave this blank to use the computer’s own name.',
-                { name: publishedMachineName }
-              )
-            : translate(
-                'auto.components.settings.MobilePairingSetupSection.machineNamePending',
-                'Paired devices see this name. Leave it blank to use the detected computer name.'
-              )}
         </p>
       </div>
 

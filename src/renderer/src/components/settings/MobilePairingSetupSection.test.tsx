@@ -23,11 +23,7 @@ function renderSection(
   const onCustomAddressRemove = vi.fn()
   const onRefreshNetworkInterfaces = vi.fn()
   const onGenerateQr = vi.fn()
-  const onMachineNameChange = vi.fn()
   const props: React.ComponentProps<typeof MobilePairingSetupSection> = {
-    machineName: '',
-    publishedMachineName: 'test-machine',
-    onMachineNameChange,
     connectionMode: 'local-only',
     connectionPathControl: <div data-testid="path-control">path</div>,
     networkInterfaces: [LAN, TAILNET],
@@ -57,8 +53,7 @@ function renderSection(
     onSelectedAddressChange,
     onCustomAddressSelect,
     onCustomAddressRemove,
-    onGenerateQr,
-    onMachineNameChange
+    onGenerateQr
   }
 }
 
@@ -81,28 +76,6 @@ describe('MobilePairingSetupSection', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent('100.64.1.20 (tailscale0)')
     expect(screen.getByRole('button', { name: 'Generate QR code' })).toBeVisible()
     expect(screen.getByText(/must be able to reach this address/i)).toBeVisible()
-  })
-
-  it('shows the detected machine name and lets the user set an override', async () => {
-    const { user, onMachineNameChange } = renderSection({
-      machineName: '',
-      publishedMachineName: 'm4airs-Air'
-    })
-    expect(screen.getByText('Machine name')).toBeVisible()
-    expect(screen.getByPlaceholderText('m4airs-Air')).toBeVisible()
-    const input = screen.getByRole('textbox', { name: 'Machine name' })
-    await user.type(input, 'build-server')
-    await user.tab()
-    expect(onMachineNameChange).toHaveBeenCalledWith('build-server')
-  })
-
-  it('captions the name paired devices currently receive', () => {
-    renderSection({ machineName: 'QA Override Desk', publishedMachineName: 'QA Override Desk' })
-    expect(
-      screen.getByText(
-        'Paired devices see “QA Override Desk”. Leave this blank to use the computer’s own name.'
-      )
-    ).toBeVisible()
   })
 
   it('demotes this computer’s address to a disclosure when Orca Relay is selected', async () => {

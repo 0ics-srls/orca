@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react'
+import { normalizeMachineName } from '../../../../shared/machine-name'
 
 /**
- * The name this computer publishes to paired devices: the saved override, or the detected
- * computer name when that is blank. Read from the runtime rather than recomputed here, and re-read
- * whenever the saved override changes so the caption never names what devices used to see.
+ * The name this computer publishes to paired devices: the saved override when there is one, else
+ * the detected computer name.
+ *
+ * Why the override is not read back from the runtime: the store only holds a saved value after the
+ * main process has written it, so it already is what devices see. The runtime is asked only for
+ * the detected name, which nothing in the renderer can compute.
  */
 export function usePublishedMachineName(savedOverride: string): string | null {
-  const [machineName, setMachineName] = useState<string | null>(null)
+  const override = normalizeMachineName(savedOverride)
+  const [detectedName, setDetectedName] = useState<string | null>(null)
 
   useEffect(() => {
+    if (override) {
+      return
+    }
     let cancelled = false
     const getRuntimeStatus = window.api.runtime?.getStatus
     if (!getRuntimeStatus) {
-      return () => {
-        cancelled = true
-      }
+      return
     }
-    // Why: settings writes reach the main process before the store publishes them, so a read
-    // triggered by the saved value changing already sees the new name.
     void getRuntimeStatus()
       .then((status) => {
-        if (!cancelled && typeof status.machineName === 'string' && status.machineName.trim()) {
-          setMachineName(status.machineName.trim())
+        const detected = normalizeMachineName(status.machineName)
+        if (!cancelled && detected) {
+          setDetectedName(detected)
         }
       })
       .catch(() => {
@@ -30,7 +35,7 @@ export function usePublishedMachineName(savedOverride: string): string | null {
     return () => {
       cancelled = true
     }
-  }, [savedOverride])
+  }, [override])
 
-  return machineName
+  return override || detectedName
 }

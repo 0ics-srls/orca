@@ -4,15 +4,19 @@ import { useAppStore } from '../../store'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import {
   getPairedMobileDevicesSnapshot,
-  replacePairedMobileDevices,
   usePairedMobileDevices
 } from '../mobile/paired-mobile-devices'
 import { useMobilePairingDevicePolling } from './mobile-pairing-device-polling'
+import { useMobilePairedDeviceRevocation } from './use-mobile-paired-device-revocation'
 import type { MobileNetworkInterface } from './mobile-network-interface-selection'
-import { MobilePanePairingOutput } from './MobilePanePairingOutput'
+import { MobileMachineNameField } from './MobileMachineNameField'
+import { MobilePairingQrSection } from './MobilePairingQrSection'
+import { MobilePairedDevicesSection } from './MobilePairedDevicesSection'
+import { MobileAutoRestoreFitSection } from './MobileAutoRestoreFitSection'
 import { MobilePairingConnectionOptions } from './MobilePairingConnectionOptions'
 import { MobilePairingSetupSection } from './MobilePairingSetupSection'
 import { MobileRelayMintFailureNotice } from '../mobile/mobile-relay-mint-failure-notice'
+import { WindowsFirewallNotice } from '../mobile/WindowsFirewallNotice'
 import { translate } from '@/i18n/i18n'
 import {
   canMintMobilePairingOffer,
@@ -22,14 +26,11 @@ import type { MobileRelayMintFailure } from '../../../../shared/mobile-relay-min
 import { useMobilePairingConnectionMode } from '../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../mobile/use-mobile-pairing-address-preference'
 import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
-import { usePublishedMachineName } from './use-published-machine-name'
 export { getMobilePaneSearchEntries } from './mobile-pane-search'
 
 export function MobilePane(): React.JSX.Element {
   const autoRestoreFitMs = useAppStore((s) => s.settings?.mobileAutoRestoreFitMs ?? null)
-  const machineName = useAppStore((s) => s.settings?.machineName ?? '')
   const updateSettings = useAppStore((s) => s.updateSettings)
-  const publishedMachineName = usePublishedMachineName(machineName)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [qrSize, setQrSize] = useState<number | null>(null)
   const [pairingUrl, setPairingUrl] = useState<string | null>(null)
@@ -48,7 +49,6 @@ export function MobilePane(): React.JSX.Element {
   const [rotateNextQr, setRotateNextQr] = useState(false)
   const codeCopiedResetTimerRef = useRef<number | null>(null)
   const wasSignedInRef = useRef(signedIn)
-
   // Why: monotonically bumped per pairing request so a late getPairingQR
   // response cannot paint a stale QR after sign-out, a mode switch, or an
   // address change invalidated the request that produced it.
@@ -66,6 +66,7 @@ export function MobilePane(): React.JSX.Element {
     loaded: devicesLoaded,
     refresh: refreshDevices
   } = usePairedMobileDevices({ refreshOnMount: false })
+  const revokeDevice = useMobilePairedDeviceRevocation(refreshDevices)
 
   useEffect(() => {
     qrDisplayedRef.current = qrDataUrl != null
@@ -362,41 +363,11 @@ export function MobilePane(): React.JSX.Element {
     loadDevices
   })
 
-  async function revokeDevice(deviceId: string) {
-    try {
-      const { revoked } = await window.api.mobile.revokeDevice({ deviceId })
-      // Why: the backend can resolve revoked=false without removing the device;
-      // surface that as an error instead of a false "Device revoked".
-      if (!revoked) {
-        throw new Error('mobile.revokeDevice returned revoked=false')
-      }
-      try {
-        // Why: the backend may have learned about another phone while Settings
-        // was open, so refresh from source-of-truth after mutating it.
-        await refreshDevices({ force: true })
-      } catch (err) {
-        console.error('mobile.listDevices failed after revoke', err)
-        const nextDevices = getPairedMobileDevicesSnapshot().filter((d) => d.deviceId !== deviceId)
-        replacePairedMobileDevices(nextDevices)
-      }
-      if (mountedRef.current) {
-        toast.success(translate('auto.components.settings.MobilePane.2e3dd0bc29', 'Device revoked'))
-      }
-    } catch {
-      if (mountedRef.current) {
-        toast.error(
-          translate('auto.components.settings.MobilePane.870e1b5ca5', 'Failed to revoke device')
-        )
-      }
-    }
-  }
-
   return (
     <div className="space-y-6">
+      <MobileMachineNameField />
+
       <MobilePairingSetupSection
-        machineName={machineName}
-        publishedMachineName={publishedMachineName}
-        onMachineNameChange={(name) => void updateSettings({ machineName: name })}
         connectionMode={connectionMode}
         canGenerate={canMintMobilePairingOffer({ connectionMode, signedIn })}
         addressDisclosureForcedOpen={shouldOpenMobilePairingAddress(settingsSearchQuery)}
@@ -441,7 +412,7 @@ export function MobilePane(): React.JSX.Element {
           : ''}
       </span>
 
-      <MobilePanePairingOutput
+      <MobilePairingQrSection
         qrDataUrl={qrDataUrl}
         qrSize={qrSize}
         qrError={qrError}
@@ -452,10 +423,21 @@ export function MobilePane(): React.JSX.Element {
         onQrEnlargedChange={setQrEnlarged}
         onCodeCopiedChange={setCodeCopied}
         onClearCodeCopiedTimer={clearCodeCopiedResetTimer}
-        connectionMode={connectionMode}
-        selectedAddress={selectedAddress}
+      />
+
+      <WindowsFirewallNotice
+        pairingReady={pairingUrl != null}
+        address={selectedAddress}
+        usingRelay={connectionMode === 'automatic'}
+      />
+
+      <MobilePairedDevicesSection
         devices={devices}
+        hasQrCode={qrDataUrl != null}
         onRevokeDevice={(deviceId) => void revokeDevice(deviceId)}
+      />
+
+      <MobileAutoRestoreFitSection
         autoRestoreFitMs={autoRestoreFitMs}
         onAutoRestoreFitChange={(ms) => void updateSettings({ mobileAutoRestoreFitMs: ms })}
       />
