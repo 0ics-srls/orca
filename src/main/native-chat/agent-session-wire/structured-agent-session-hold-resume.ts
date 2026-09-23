@@ -11,6 +11,7 @@ import type {
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionAttachParams } from './structured-agent-session-attach'
 import type { StructuredAgentSessionHostDeps } from './structured-agent-session-host-types'
+import type { StructuredAgentSessionResumed } from './structured-agent-session-holds'
 import { adapterSupportsRecord } from './structured-agent-session-provider-support'
 import {
   structuredAgentSessionResumeOperationId,
@@ -24,7 +25,7 @@ export async function resumeHeldStructuredAgentSession(input: {
   attach: (
     params: AgentSessionAttachParams
   ) => Promise<AgentSessionMutationResult<AgentSessionAttachResult>>
-}): Promise<void> {
+}): Promise<StructuredAgentSessionResumed> {
   const record = input.deps.store.getRecord(input.sessionId)
   if (!record) {
     throw new Error('agent_session_identity_required')
@@ -49,4 +50,5 @@ export async function resumeHeldStructuredAgentSession(input: {
   if (!attached.ok) {
     throw new Error(attached.refusal.code)
   }
+  return { fromFence: record.lease.runtimeFence }
 }

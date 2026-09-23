@@ -170,6 +170,7 @@ describe('holds', () => {
     let child = false
     const resume = vi.fn(async () => {
       child = true
+      return { fromFence: 1 }
     })
     const holds = new StructuredAgentSessionHolds({
       resume,
@@ -191,10 +192,41 @@ describe('holds', () => {
     holds.dispose()
   })
 
+  it('runs one resume for a hold and a writer that ask in the same gap', async () => {
+    const gate = Promise.withResolvers<void>()
+    let child = false
+    const resume = vi.fn(async () => {
+      await gate.promise
+      child = true
+      return { fromFence: 7 }
+    })
+    const holds = new StructuredAgentSessionHolds({
+      resume,
+      hasProviderChild: () => child,
+      isTurnActive: () => false,
+      evict: async () => {},
+      graceMs: 1
+    })
+
+    const writer = holds.resumeUnheld('session-1')
+    expect(holds.isResuming('session-1')).toBe(true)
+    const hold = holds.hold('session-1', 'chat-1')
+    gate.resolve()
+
+    await expect(writer).resolves.toEqual({ fromFence: 7 })
+    await hold
+    expect(resume).toHaveBeenCalledOnce()
+    expect(holds.isResuming('session-1')).toBe(false)
+    // The surface arrived while the writer's resume ran, so the child it got is held, not idle.
+    expect(holds.isHeld('session-1')).toBe(true)
+    expect(holds.isReleasePending('session-1')).toBe(false)
+    holds.dispose()
+  })
+
   it('never arms the clock for a session with nothing to stop', async () => {
     const evict = vi.fn(async () => {})
     const holds = new StructuredAgentSessionHolds({
-      resume: async () => {},
+      resume: async () => ({ fromFence: 1 }),
       hasProviderChild: () => false,
       isTurnActive: () => false,
       evict,
@@ -212,7 +244,7 @@ describe('holds', () => {
 
   it('fails a write-capable hold when resume proves no provider child', async () => {
     const holds = new StructuredAgentSessionHolds({
-      resume: async () => {},
+      resume: async () => ({ fromFence: 1 }),
       hasProviderChild: () => false,
       isTurnActive: () => false,
       evict: async () => {},

@@ -9,6 +9,11 @@
 // process exist. The last hold leaving starts the idle release clock. Transport close is the BACKSTOP,
 // not the mechanism: a client that vanishes mid-flight never sends its release, so the caller
 // registers one against the connection and the holder set absorbs the duplicate.
+//
+// A send to a childless session resumes it too, through the same single-flight: whoever asks first
+// starts the one resume, and everyone who asks while it runs shares its outcome. Two resumes for
+// one session would each attach against the same released fence, and the loser's stale fence
+// refuses it — a hold that lost dropped its holder, a send that lost was refused.
 
 import {
   StructuredAgentSessionReleaseClock,
@@ -16,9 +21,12 @@ import {
 } from './structured-agent-session-release-clock'
 import { StructuredAgentSessionHolders } from './structured-agent-session-holders'
 
+/** A resume moves the fence; a writer that was current as of the lost owner rebases from here. */
+export type StructuredAgentSessionResumed = { fromFence: number }
+
 export type StructuredAgentSessionHoldsDeps = {
-  /** Acquires a provider child for a session that has none. A no-op when one is already live. */
-  resume: (sessionId: string) => Promise<void>
+  /** Acquires a provider child for a session that has none. Throws the refusal code when it cannot. */
+  resume: (sessionId: string) => Promise<StructuredAgentSessionResumed>
   /** Whether evicting this session would actually free anything. */
   hasProviderChild: (sessionId: string) => boolean
   isTurnActive: (sessionId: string) => boolean
@@ -36,6 +44,7 @@ export type StructuredAgentSessionHoldOptions = {
 export class StructuredAgentSessionHolds {
   private readonly holders = new StructuredAgentSessionHolders()
   private readonly clock: StructuredAgentSessionReleaseClock
+  private readonly resumes = new Map<string, Promise<StructuredAgentSessionResumed>>()
   private disposed = false
 
   constructor(private readonly deps: StructuredAgentSessionHoldsDeps) {
@@ -75,10 +84,24 @@ export class StructuredAgentSessionHolds {
     }
   }
 
-  /** Resumes a childless session for a writer; with no surface holding it, the child is released
-   *  on the same clock a departed surface would start. */
-  async resumeUnheld(sessionId: string): Promise<void> {
-    await this.deps.resume(sessionId)
+  /** Resumes a childless session, or joins the resume already running for it. With no surface
+   *  holding it afterwards, the child is released on the same clock a departed surface would start. */
+  resumeUnheld(sessionId: string): Promise<StructuredAgentSessionResumed> {
+    const inFlight = this.resumes.get(sessionId)
+    if (inFlight) {
+      return inFlight
+    }
+    const resume = this.resumeOnce(sessionId).finally(() => this.resumes.delete(sessionId))
+    this.resumes.set(sessionId, resume)
+    return resume
+  }
+
+  isResuming(sessionId: string): boolean {
+    return this.resumes.has(sessionId)
+  }
+
+  private async resumeOnce(sessionId: string): Promise<StructuredAgentSessionResumed> {
+    const resumed = await this.deps.resume(sessionId)
     if (!this.deps.hasProviderChild(sessionId)) {
       throw new Error('agent_session_ownership_unknown')
     }
@@ -86,6 +109,7 @@ export class StructuredAgentSessionHolds {
     if (!this.disposed && !this.holders.isHeld(sessionId)) {
       this.clock.arm(sessionId)
     }
+    return resumed
   }
 
   /** Journal activity; only an unheld session's pending release notices. */

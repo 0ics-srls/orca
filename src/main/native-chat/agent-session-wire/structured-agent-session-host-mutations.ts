@@ -21,6 +21,7 @@ import type {
   AgentSessionWireRefusal
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
+import type { StructuredAgentSessionHolds } from './structured-agent-session-holds'
 import { admitAndRunAgentSessionMutation } from './structured-agent-session-mutation-admission'
 import {
   cancelPlan,
@@ -43,8 +44,9 @@ export type StructuredAgentSessionMutationContext = {
   hasPendingStreamedEvents?: (sessionId: string) => boolean
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
-  /** Gives a childless session a provider child; throws the refusal code when it cannot. */
-  resumeUnheld: (sessionId: string) => Promise<void>
+  /** The one resume a session may have running: a send restarts a lost owner through it, and joins
+   *  one a surface hold already started. */
+  resumes: Pick<StructuredAgentSessionHolds, 'resumeUnheld' | 'isResuming'>
   now: () => number
 }
 

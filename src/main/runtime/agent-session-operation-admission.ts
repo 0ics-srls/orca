@@ -5,6 +5,7 @@ import {
   agentSessionOperationKey,
   claimAgentSessionOperation,
   evaluateAgentSessionOperation,
+  findAgentSessionGlobalOperationRow,
   pruneAgentSessionOperationRows,
   settleAgentSessionOperation,
   type AgentSessionOperationClaim,
@@ -61,13 +62,7 @@ export function admitAgentSessionGlobalOperationRow(
   rows: OperationRows,
   args: AgentSessionOperationAdmission
 ): { rows: OperationRows; decision: AgentSessionOperationDecision } {
-  let existing: AgentSessionOperationRow | undefined
-  for (const row of rows.values()) {
-    if (row.expiresAt > args.now && row.operationId === args.operationId) {
-      existing = row
-      break
-    }
-  }
+  const existing = findAgentSessionGlobalOperationRow(rows, args.operationId, args.now)
   if (!existing) {
     return admitAgentSessionOperationRow(rows, args)
   }

@@ -16,12 +16,13 @@ export class StructuredConversationCommandController {
   ) {}
   private readonly recovery = new StructuredAgentSessionSendRecovery({
     getRecord: (sessionId) => this.context().deps.store.getRecord(sessionId),
-    hasJournaledSend: (sessionId, clientMessageId) =>
-      this.context()
-        .sessions.get(sessionId)
-        ?.journal.submissions()
-        .some((submission) => submission.clientMessageId === clientMessageId) ?? false,
-    resume: (sessionId) => this.context().resumeUnheld(sessionId),
+    isAttached: (sessionId) => this.context().sessions.has(sessionId),
+    hasLedgerRow: (clientOperationId) => {
+      const { deps, now } = this.context()
+      return deps.store.findGlobalOperationRow(clientOperationId, now()) !== undefined
+    },
+    isResuming: (sessionId) => this.context().resumes.isResuming(sessionId),
+    resume: (sessionId) => this.context().resumes.resumeUnheld(sessionId),
     onError: (input) => this.context().deps.onEventSinkError?.(input)
   })
 

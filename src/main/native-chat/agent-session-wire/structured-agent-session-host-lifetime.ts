@@ -12,7 +12,10 @@ import {
   type StructuredAgentSessionEvictionContext
 } from './structured-agent-session-eviction'
 import { withStructuredAgentSessionEvictionDeadline } from './structured-agent-session-eviction-deadline'
-import { StructuredAgentSessionHolds } from './structured-agent-session-holds'
+import {
+  StructuredAgentSessionHolds,
+  type StructuredAgentSessionResumed
+} from './structured-agent-session-holds'
 import type { StructuredAgentSessionHostRuntimeState } from './structured-agent-session-host-runtime-state'
 import type {
   StructuredAgentSessionHostDeps,
@@ -172,13 +175,13 @@ export async function resumeStructuredAgentSessionForHold(
   },
   sessionId: string,
   attach: Parameters<typeof resumeHeldStructuredAgentSession>[0]['attach']
-): Promise<void> {
+): Promise<StructuredAgentSessionResumed> {
   const unreconciled = await context.reconcileLeases(sessionId)
   if (unreconciled) {
     throw new Error(unreconciled.code)
   }
   await context.runtimeState.resolveRecovery(sessionId)
-  await resumeHeldStructuredAgentSession({
+  return resumeHeldStructuredAgentSession({
     sessionId,
     deps: context.deps,
     now: context.now,

@@ -3,11 +3,12 @@ import { commitConversationCommandRecord } from './agent-session-conversation-co
 import { setAgentSessionRecordConversationName } from './agent-session-record-conversation-name'
 /** Durable single-writer session records and their operation ledger. */
 
-import type {
-  AgentSessionOperationClaim,
-  AgentSessionOperationDecision,
-  AgentSessionOperationOutcome,
-  AgentSessionOperationRow
+import {
+  findAgentSessionGlobalOperationRow,
+  type AgentSessionOperationClaim,
+  type AgentSessionOperationDecision,
+  type AgentSessionOperationOutcome,
+  type AgentSessionOperationRow
 } from '../../shared/agent-session-operation-ledger'
 import {
   admitAgentSessionGlobalOperationInto,
@@ -162,6 +163,13 @@ export class AgentSessionRecordStore {
   }
 
   listOperationRows = (): AgentSessionOperationRow[] => [...this.state.operations.values()]
+
+  /** The row a globally scoped id (a send) already holds, under whichever caller admitted it. */
+  findGlobalOperationRow = (
+    operationId: string,
+    now: number
+  ): AgentSessionOperationRow | undefined =>
+    findAgentSessionGlobalOperationRow(this.state.operations, operationId, now)
 
   isClaimKeyVerifiable = (keyId: string, now: number): boolean =>
     isAgentSessionClaimKeyVerifiable(this.state, keyId, now)

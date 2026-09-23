@@ -128,9 +128,12 @@ describe('a send with no live owner', () => {
     const order: string[] = []
     const recovery = new StructuredAgentSessionSendRecovery({
       getRecord: (sessionId) => store.getRecord(sessionId),
-      hasJournaledSend: () => false,
+      isAttached: () => true,
+      hasLedgerRow: () => false,
+      isResuming: () => false,
       resume: async () => {
         order.push('resume')
+        return { fromFence: 1 }
       }
     })
 
@@ -248,6 +251,58 @@ describe('a send with no live owner', () => {
     expect(acquire).not.toHaveBeenCalled()
     expect(dispatch).toHaveBeenCalledOnce()
     expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+
+    // Retry rotates the id: a genuinely new send restarts the owner once.
+    await expect(host.send(CALLER, sendParams('sent once'))).resolves.toMatchObject({
+      ok: true,
+      replayed: false
+    })
+    expect(acquire).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledTimes(2)
+  })
+
+  it('restarts nothing for a send the ledger holds but the journal never saw', async () => {
+    const params = sendParams('claimed, then the host died')
+    // The row was claimed and the host went down before the journal write: on replay, admission
+    // reconstructs an unknown-outcome submission and never needs an owner.
+    await store.admitMutationOperation({
+      callerKey: CALLER.callerKey,
+      envelope: params.envelope,
+      hostFingerprint: params.envelope.payloadFingerprint,
+      now: NOW,
+      operationIdScope: 'global'
+    })
+    await store.recordOperationOutcome({
+      callerKey: CALLER.callerKey,
+      operationId: params.envelope.clientOperationId,
+      outcome: { status: 'unknown' }
+    })
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: SESSION,
+      reason: 'provider exited',
+      cause: 'unexpected-exit',
+      fence: params.envelope.expectedRuntimeFence ?? 0,
+      acquisitionGeneration: 'generation-1'
+    })
+    expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+    acquire.mockClear()
+
+    const result = await host.send(CALLER, {
+      ...params,
+      envelope: {
+        ...params.envelope,
+        expectedRuntimeFence: store.getRecord(SESSION)?.lease.runtimeFence ?? 0
+      }
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      replayed: true,
+      value: { submission: { dispatchState: 'unknown', recovered: true } }
+    })
+    expect(acquire).not.toHaveBeenCalled()
+    expect(dispatch).not.toHaveBeenCalled()
   })
 
   it('rebases a send that arrives after the restart has already claimed the lease', async () => {
@@ -290,6 +345,22 @@ describe('a send with no live owner', () => {
     expect(results.map((result) => result.ok)).toEqual([true, true, true])
     expect(acquire).toHaveBeenCalledOnce()
     expect(dispatch).toHaveBeenCalledTimes(3)
+  })
+
+  it('shares one restart between a hold and a send that arrive in the same gap', async () => {
+    await loseOwner()
+
+    const [held, sent] = await Promise.allSettled([
+      host.hold(SESSION, 'desktop-chat:1'),
+      host.send(CALLER, sendParams('while the chat opens'))
+    ])
+
+    expect(held).toMatchObject({ status: 'fulfilled' })
+    expect(sent).toMatchObject({ status: 'fulfilled', value: { ok: true } })
+    expect(acquire).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledOnce()
+    expect(host['holds'].isHeld(SESSION)).toBe(true)
+    expect(host['holds'].isReleasePending(SESSION)).toBe(false)
   })
 
   it('reopens a closed session once for a replay, and never runs the send again', async () => {

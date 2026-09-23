@@ -531,7 +531,7 @@ describe('useStructuredAgentSessionOutbox', () => {
 
   it('stops on a host that could not restart the agent and shows its message', async () => {
     const message =
-      "This chat's agent stopped and could not be restarted. Start a new chat to continue."
+      "This chat's agent stopped and could not be restarted. Retry, or start a new chat."
     mocks.call.mockResolvedValue({
       ok: false,
       refusal: { code: 'agent_session_owner_unrecoverable', message }
