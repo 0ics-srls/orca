@@ -79,11 +79,23 @@ describe('MobileHostCard', () => {
     expect(await renderCard(loaded)).toContain('12 worktrees · 2 active')
   })
 
-  it('renders the host platform beneath its personal label', async () => {
+  it('names the OS the host reported beside its personal label, on screen and to a screen reader', async () => {
     const lines = await renderCard(undefined, { hostPlatform: 'darwin' })
 
-    expect(lines).toContain('Studio')
-    expect(lines).toContain('macOS')
+    expect(lines.slice(0, 2)).toEqual(['Studio', 'macOS'])
+    expect(renderer!.root.findAllByType('Pressable')[0]?.props.accessibilityLabel).toBe(
+      'Open Studio, macOS, Connected, Direct via LAN'
+    )
+  })
+
+  it('adds nothing for a host that never reported an OS', async () => {
+    const lines = await renderCard(undefined, { hostPlatform: null })
+
+    expect(lines).not.toContain('macOS')
+    expect(lines[0]).toBe('Studio')
+    expect(renderer!.root.findAllByType('Pressable')[0]?.props.accessibilityLabel).toBe(
+      'Open Studio, Connected, Direct via LAN'
+    )
   })
 
   it('keeps rendering the last proven counts after a failed refresh', async () => {

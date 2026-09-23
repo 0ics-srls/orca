@@ -7,7 +7,6 @@ import { selectHomeAutoConnectHostIds } from '../transport/home-host-auto-connec
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, HostCatalogEntry, HostProfile } from '../transport/types'
 import { useAllHostClients } from '../transport/use-all-host-clients'
-import { hostStatusProbe, readHostStatusGates } from '../transport/host-status-probe-operations'
 import {
   fetchHomeHostWorktreeInfo,
   type HostWorktreeInfoSetter
@@ -17,6 +16,7 @@ import {
   readMobileHomeReconnectAttempts,
   reconcileMobileHomeHostStates
 } from './mobile-home-connection-state'
+import { fetchMobileHomeHostPlatform } from './mobile-home-host-platform-fetch'
 import {
   fetchMobileHomeStats,
   fetchMobileHomeTaskProviders,
@@ -32,45 +32,13 @@ type Setters = {
   setTaskProviders: HomeTaskProvidersSetter
 }
 
-export type HomeHostStatus = {
-  hostPlatform: NodeJS.Platform | null
-}
-
-async function fetchHomeHostStatus(
-  entry: { hostId: string; client: RpcClient },
-  setHostStatus: (
-    updater: (previous: Record<string, HomeHostStatus>) => Record<string, HomeHostStatus>
-  ) => void,
-  isActive: () => boolean
-): Promise<void> {
-  try {
-    const reply = await hostStatusProbe.request(entry.client)
-    if (!isActive()) {
-      return
-    }
-    const status = readHostStatusGates(reply)
-    if (!status) {
-      return
-    }
-    setHostStatus((previous) => ({
-      ...previous,
-      [entry.hostId]: { hostPlatform: status.hostPlatform ?? null }
-    }))
-  } catch {
-    // Keep the last readable platform when a reconnect status read fails.
-  }
-}
-
 function wireMobileHomeHostSubscriptions(
   entry: { hostId: string; client: RpcClient; state: ConnectionState },
-  setters: Setters,
-  setHostStatus: (
-    updater: (previous: Record<string, HomeHostStatus>) => Record<string, HomeHostStatus>
-  ) => void
+  setters: Setters
 ): () => void {
   let unsubscribeNotifications: (() => void) | null = null
   let unsubscribeAccounts: (() => void) | null = null
-  let active = true
+  let disposed = false
   const refetchGate = createHostConnectRefetchGate()
   const wireState = (state: ConnectionState): void => {
     const reconnected = refetchGate.observe(state)
@@ -92,7 +60,7 @@ function wireMobileHomeHostSubscriptions(
         }
       })
       if (reconnected) {
-        void fetchHomeHostStatus(entry, setHostStatus, () => active)
+        fetchMobileHomeHostPlatform(entry.client, entry.hostId, () => disposed)
         fetchMobileHomeStats(entry.client, entry.hostId, setters.setStats, () => false)
         void fetchHomeHostWorktreeInfo(
           entry.client,
@@ -117,7 +85,7 @@ function wireMobileHomeHostSubscriptions(
   wireState(entry.state)
   const unsubscribeState = entry.client.onStateChange(wireState)
   return () => {
-    active = false
+    disposed = true
     unsubscribeState()
     unsubscribeNotifications?.()
     unsubscribeAccounts?.()
@@ -132,7 +100,6 @@ export function useMobileHomeHostConnections(
   const [hostStates, setHostStates] = useState<Record<string, ConnectionState>>({})
   const [hostAttempts, setHostAttempts] = useState<Record<string, number>>({})
   const [hostLastConnected, setHostLastConnected] = useState<Record<string, number | null>>({})
-  const [hostStatusByHostId, setHostStatusByHostId] = useState<Record<string, HomeHostStatus>>({})
   const hostIds = useMemo(() => hosts.map((host) => host.id), [hosts])
   const autoConnectHostIds = useMemo(() => selectHomeAutoConnectHostIds(hosts), [hosts])
   const allClients = useAllHostClients(hostIds, {
@@ -163,21 +130,16 @@ export function useMobileHomeHostConnections(
         subscriptionsRef.current.delete(hostId)
       }
     }
-    const activeSetters = {
-      setAccounts,
-      setStats,
-      setTaskProviders,
-      setWorktreeInfo
-    }
+    const activeSetters = { setAccounts, setStats, setTaskProviders, setWorktreeInfo }
     for (const entry of allClients) {
       if (!subscriptionsRef.current.has(entry.hostId)) {
         subscriptionsRef.current.set(entry.hostId, {
           client: entry.client,
-          cleanup: wireMobileHomeHostSubscriptions(entry, activeSetters, setHostStatusByHostId)
+          cleanup: wireMobileHomeHostSubscriptions(entry, activeSetters)
         })
       }
     }
-  }, [allClients, setAccounts, setHostStatusByHostId, setStats, setTaskProviders, setWorktreeInfo])
+  }, [allClients, setAccounts, setStats, setTaskProviders, setWorktreeInfo])
 
   useEffect(() => {
     const subscriptions = subscriptionsRef.current
@@ -194,7 +156,6 @@ export function useMobileHomeHostConnections(
     autoConnectHostIds,
     hostAttempts,
     hostLastConnected,
-    hostStatusByHostId,
     hostStates
   }
 }

@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RpcClient } from './rpc-client'
 import { useHostStatusGates, type HostStatusGates } from './host-status-gates'
 
@@ -10,7 +10,17 @@ vi.mock('./host-app-version-store', () => ({
   recordHostAppVersion: (...args: unknown[]) => recordHostAppVersionMock(...args)
 }))
 
+const recordHostPlatformMock = vi.hoisted(() => vi.fn())
+
+vi.mock('./host-platform-store', () => ({
+  recordHostPlatform: (...args: unknown[]) => recordHostPlatformMock(...args)
+}))
+
 describe('useHostStatusGates', () => {
+  beforeEach(() => {
+    recordHostPlatformMock.mockClear()
+  })
+
   it('clears every prior-host gate and ignores its late response while the client is replaced', async () => {
     let resolveOldStatus: ((response: unknown) => void) | null = null
     const pendingOldStatus = new Promise((resolve) => {
@@ -22,7 +32,8 @@ describe('useHostStatusGates', () => {
       ok: true,
       result: {
         capabilities: ['terminal.quick-commands.v1'],
-        floatingWorkspaceEnabled: true
+        floatingWorkspaceEnabled: true,
+        hostPlatform: 'darwin'
       }
     })
     const newClient = { sendRequest: newSendRequest } as unknown as RpcClient
@@ -62,7 +73,8 @@ describe('useHostStatusGates', () => {
           ok: true,
           result: {
             capabilities: ['browser.screencast.v1'],
-            floatingWorkspaceEnabled: true
+            floatingWorkspaceEnabled: true,
+            hostPlatform: 'win32'
           }
         })
         await pendingOldStatus
@@ -73,6 +85,8 @@ describe('useHostStatusGates', () => {
       })
       expect(oldSendRequest).toHaveBeenCalledOnce()
       expect(newSendRequest).toHaveBeenCalledOnce()
+      // The replaced client's late answer must not name either host's machine.
+      expect(recordHostPlatformMock.mock.calls).toEqual([['host-2', 'darwin']])
     } finally {
       renderer?.unmount()
     }
@@ -85,7 +99,7 @@ describe('useHostStatusGates', () => {
         appVersion: '1.4.191',
         capabilities: ['browser.screencast.v1'],
         floatingWorkspaceEnabled: true,
-        hostPlatform: 'darwin'
+        hostPlatform: 'linux'
       }
     })
     const client = { sendRequest } as unknown as RpcClient
@@ -105,12 +119,12 @@ describe('useHostStatusGates', () => {
       expect(gates).toMatchObject({
         desktopAppVersion: '1.4.191',
         hostCapabilities: ['browser.screencast.v1'],
-        floatingWorkspaceEnabled: true,
-        hostPlatform: 'darwin'
+        floatingWorkspaceEnabled: true
       })
 
       expect(sendRequest).toHaveBeenCalledOnce()
       expect(recordHostAppVersionMock).toHaveBeenCalledWith('host-1', '1.4.191')
+      expect(recordHostPlatformMock.mock.calls).toEqual([['host-1', 'linux']])
     } finally {
       renderer?.unmount()
     }
@@ -209,6 +223,38 @@ describe('useHostStatusGates', () => {
         renderer?.update(createElement(Probe, { client: secondClient }))
       })
       expect(gates).toMatchObject({ hostCapabilities: [], statusPending: true })
+    } finally {
+      renderer?.unmount()
+    }
+  })
+
+  it('records a readable status without a platform as none, and leaves the record alone otherwise', async () => {
+    const sendRequest = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, result: { capabilities: [] } })
+      .mockResolvedValueOnce({ ok: false, error: { code: 'refused', message: 'refused' } })
+      .mockRejectedValueOnce(new Error('socket closed'))
+    const client = { sendRequest } as unknown as RpcClient
+    let renderer: ReactTestRenderer | null = null
+
+    function Probe({ hostId }: { hostId: string }): null {
+      useHostStatusGates({ hostId, client, connState: 'connected' })
+      return null
+    }
+
+    try {
+      for (const hostId of ['host-old', 'host-refused', 'host-failed']) {
+        await act(async () => {
+          if (renderer) {
+            renderer.update(createElement(Probe, { hostId }))
+          } else {
+            renderer = create(createElement(Probe, { hostId }))
+          }
+          await Promise.resolve()
+        })
+      }
+      expect(sendRequest).toHaveBeenCalledTimes(3)
+      expect(recordHostPlatformMock.mock.calls).toEqual([['host-old', null]])
     } finally {
       renderer?.unmount()
     }

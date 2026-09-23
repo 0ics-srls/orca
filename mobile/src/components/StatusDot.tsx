@@ -3,6 +3,11 @@ import { colors } from '../theme/mobile-theme'
 import type { ConnectionState } from '../transport/types'
 import type { ConnectionVerdict } from '../transport/connection-health'
 
+const DOT_SIZE = 8
+const DOT_LABEL_GAP = 8
+/** Where the dot's label starts, for a second line that aligns under that label. */
+export const STATUS_DOT_LABEL_INSET = DOT_SIZE + DOT_LABEL_GAP
+
 const stateColors: Record<ConnectionState, string> = {
   connected: colors.statusGreen,
   connecting: colors.statusAmber,
@@ -40,9 +45,9 @@ export function StatusDot({
 
 const styles = StyleSheet.create({
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    marginRight: DOT_LABEL_GAP
   }
 })

@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native'
+import { STATUS_DOT_LABEL_INSET } from '../components/StatusDot'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 
 export const hostScreenPrimaryStyles = StyleSheet.create({
@@ -52,7 +53,7 @@ export const hostScreenPrimaryStyles = StyleSheet.create({
     color: colors.textPrimary
   },
   hostPlatformText: {
-    marginLeft: spacing.lg + spacing.xs,
+    marginLeft: STATUS_DOT_LABEL_INSET,
     fontSize: typography.metaSize,
     color: colors.textSecondary
   },

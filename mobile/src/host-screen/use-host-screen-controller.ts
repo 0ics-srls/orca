@@ -9,6 +9,7 @@ import { useActiveWorktreeScroll } from '../hooks/use-active-worktree-scroll'
 import { useNow } from '../hooks/use-now'
 import { useResponsiveLayout } from '../layout/responsive-layout'
 import { useForgetHostClient, useForceReconnect, useHostClient } from '../transport/client-context'
+import { useHostPlatform } from '../transport/host-platform-store'
 import {
   useLastConnectedAt,
   useReconnectAttempt,
@@ -62,7 +63,8 @@ export function useHostScreenController({
   const forceReconnectHost = useForceReconnect()
   // One tick drives every visible agent row's relative timestamp.
   const now = useNow(30_000)
-  const { hostCapabilities, floatingWorkspaceEnabled, hostPlatform } = useHostProtocolGates()
+  const { hostCapabilities, floatingWorkspaceEnabled } = useHostProtocolGates()
+  const hostPlatform = useHostPlatform(hostId)
   const state = useHostScreenState(hostId, action)
   const settings = useHostViewSettings({ client, connState, hostId, state })
 

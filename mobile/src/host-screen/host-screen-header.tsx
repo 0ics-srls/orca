@@ -60,6 +60,7 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
             hostName: state.hostName,
             ...relayRecovery
           })
+          const platformLabel = hostPlatformLabel(hostPlatform)
           return (
             <>
               <View style={styles.hostIdentity}>
@@ -69,9 +70,9 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
                     {state.hostName || 'Host'}
                   </Text>
                 </View>
-                {hostPlatformLabel(hostPlatform) ? (
+                {platformLabel ? (
                   <Text style={styles.hostPlatformText} numberOfLines={1}>
-                    {hostPlatformLabel(hostPlatform)}
+                    {platformLabel}
                   </Text>
                 ) : null}
               </View>

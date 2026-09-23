@@ -145,7 +145,6 @@ export function MobileHomeScreen() {
           hostConnections={data.hostConnections}
           hosts={data.sortedHostCatalog}
           hostStates={data.hostStates}
-          hostStatusByHostId={data.hostStatusByHostId}
           isWideLayout={isWideLayout}
           stats={data.stats}
           worktreeInfo={data.worktreeInfo}
