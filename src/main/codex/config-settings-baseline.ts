@@ -23,6 +23,7 @@ export type CodexSettingsBaseline = {
   registrations: ReadonlyMap<string, ReadonlyMap<string, string>>
   /** MCP server names the last mirror copied from the canonical source. */
   mcpServers: ReadonlySet<string>
+  mcpServerRoot: boolean
 }
 
 type StoredSettingsBaseline = {
@@ -31,6 +32,7 @@ type StoredSettingsBaseline = {
   conflicts?: Record<string, CodexSettingsConflict>
   registrations?: Record<string, Record<string, string>>
   mcpServers?: string[]
+  mcpServerRoot?: boolean
 }
 
 /**
@@ -88,7 +90,8 @@ function readParsedCodexSettingsBaseline(
       settings,
       conflicts,
       registrations: readStoredRegistrations(parsed.registrations),
-      mcpServers: readStoredMcpServers(parsed.mcpServers)
+      mcpServers: readStoredMcpServers(parsed.mcpServers),
+      mcpServerRoot: parsed.mcpServerRoot === true
     }
   } catch (error) {
     // Why: invalid baseline state is still `null` — resetting it is the intent,
@@ -148,6 +151,9 @@ export function writeCodexSettingsBaseline(
   }
   if (baseline.mcpServers.size > 0) {
     file.mcpServers = [...baseline.mcpServers]
+  }
+  if (baseline.mcpServerRoot) {
+    file.mcpServerRoot = true
   }
   const baselinePath = getCodexSettingsBaselinePath(runtimeHomePath)
   const serialized = `${JSON.stringify(file, null, 2)}\n`
