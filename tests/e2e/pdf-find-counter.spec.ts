@@ -28,6 +28,9 @@ test('PDF counter follows navigation, new queries, and reopening', async ({
     })
   }, filePath)
   await expect(orcaPage.locator('.pdfViewer .page')).toHaveCount(3)
+  await expect(orcaPage.locator('.pdfViewer .page').first().locator('.textLayer')).toContainText(
+    'needle result 1'
+  )
   await pressShortcut(orcaPage, 'f')
   const input = orcaPage.getByPlaceholder('Find in page...')
   const bar = input.locator('..')
