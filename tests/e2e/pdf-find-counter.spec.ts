@@ -148,15 +148,18 @@ test.describe('PDF in a folder workspace', () => {
       { folderPath, filePath }
     )
     await expect(orcaPage.locator('.pdfViewer .page')).toHaveCount(3)
+    await expect(orcaPage.locator('.pdfViewer .page').first().locator('.textLayer')).toContainText(
+      'needle result 1'
+    )
     await pressShortcut(orcaPage, 'f')
     const input = orcaPage.getByPlaceholder('Find in page...')
     await input.fill('needle')
     await expect(input.locator('..')).toContainText('1 of 6')
+    const selected = orcaPage.locator('.pdfViewer .highlight.selected').locator('..')
+    await expect(selected).toHaveText('needle result 1')
     await input.press('Enter')
     await expect(input.locator('..')).toContainText('2 of 6')
-    await expect(orcaPage.locator('.highlight.selected').locator('..')).toHaveText(
-      'needle result 2'
-    )
+    await expect(selected).toHaveText('needle result 2')
     await orcaPage.screenshot({ path: testInfo.outputPath('folder-next.png') })
   })
 })
