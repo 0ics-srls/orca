@@ -8,16 +8,21 @@ import { useNativeChatFileLinkClick } from './use-native-chat-file-link-click'
 const mocks = vi.hoisted(() => ({
   openDetectedFilePath: vi.fn(),
   showNotFound: vi.fn(),
+  showUnverifiable: vi.fn(),
+  showUnresolved: vi.fn(),
   openFileLinkBySearch: vi.fn()
 }))
 
 vi.mock('@/components/terminal-pane/terminal-file-open-routing', () => ({
   openDetectedFilePath: mocks.openDetectedFilePath
 }))
-vi.mock('./native-chat-file-link-search', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  openFileLinkBySearch: mocks.openFileLinkBySearch,
-  showFileLinkNotFoundToast: mocks.showNotFound
+vi.mock('./native-chat-file-link-search', () => ({
+  openFileLinkBySearch: mocks.openFileLinkBySearch
+}))
+vi.mock('./native-chat-file-link-toasts', () => ({
+  showFileLinkNotFoundToast: mocks.showNotFound,
+  showFileLinkUnverifiableToast: mocks.showUnverifiable,
+  showFileLinkUnresolvedToast: mocks.showUnresolved
 }))
 vi.mock('@/store', () => ({
   useAppStore: Object.assign(
@@ -52,6 +57,15 @@ function clickLink(name: string): void {
   fireEvent.click(screen.getByRole('link', { name }))
 }
 
+function failLastOpen(
+  verdict: 'missing' | 'unverifiable',
+  error: unknown = new Error('x')
+): AbortSignal {
+  const signal = new AbortController().signal
+  mocks.openDetectedFilePath.mock.calls.at(-1)?.[3].onOpenFailure({ verdict, error }, signal)
+  return signal
+}
+
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
@@ -67,13 +81,25 @@ describe('useNativeChatFileLinkClick', () => {
       '/repo/deck.md',
       null,
       null,
-      expect.objectContaining({ worktreeId: 'wt-1', onMissingPath: expect.any(Function) })
+      expect.objectContaining({ worktreeId: 'wt-1', onOpenFailure: expect.any(Function) })
     )
-    const isCurrent = (): boolean => true
-    mocks.openDetectedFilePath.mock.calls[0][3].onMissingPath(isCurrent)
+    const signal = failLastOpen('missing')
     expect(mocks.openFileLinkBySearch).toHaveBeenCalledWith(
-      expect.objectContaining({ searchPath: 'deck.md', context, isCurrent })
+      expect.objectContaining({ searchPath: 'deck.md', context, signal })
     )
+    expect(mocks.showNotFound).not.toHaveBeenCalled()
+  })
+
+  it('reports a host that could not answer instead of searching or claiming absence', () => {
+    render(<Transcript markdown="I updated `deck.md`." />)
+
+    clickLink('deck.md')
+    const error = new Error('SSH connection closed')
+    failLastOpen('unverifiable', error)
+
+    expect(mocks.showUnverifiable).toHaveBeenCalledWith('/repo/deck.md', error)
+    expect(mocks.openFileLinkBySearch).not.toHaveBeenCalled()
+    expect(mocks.showNotFound).not.toHaveBeenCalled()
   })
 
   it('reports a missing absolute path instead of searching for it', () => {
@@ -87,7 +113,7 @@ describe('useNativeChatFileLinkClick', () => {
       null,
       expect.anything()
     )
-    mocks.openDetectedFilePath.mock.calls[0][3].onMissingPath(() => true)
+    failLastOpen('missing')
     expect(mocks.showNotFound).toHaveBeenCalledWith('/repo/src/app.ts')
     expect(mocks.openFileLinkBySearch).not.toHaveBeenCalled()
   })
@@ -140,7 +166,7 @@ describe('useNativeChatFileLinkClick', () => {
     )
   })
 
-  it('reports a link it cannot resolve instead of ignoring the click', () => {
+  it('reports a link it cannot resolve without claiming the file is missing', () => {
     render(
       <Transcript
         markdown="Plan: `~/.claude/plans/plan.md`"
@@ -151,6 +177,7 @@ describe('useNativeChatFileLinkClick', () => {
     clickLink('~/.claude/plans/plan.md')
 
     expect(mocks.openDetectedFilePath).not.toHaveBeenCalled()
-    expect(mocks.showNotFound).toHaveBeenCalledWith('~/.claude/plans/plan.md')
+    expect(mocks.showUnresolved).toHaveBeenCalledWith('~/.claude/plans/plan.md')
+    expect(mocks.showNotFound).not.toHaveBeenCalled()
   })
 })

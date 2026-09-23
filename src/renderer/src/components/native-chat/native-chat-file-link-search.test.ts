@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  findFileLinkSearchMatches,
-  openFileLinkBySearch,
-  toFileLinkSearchPath
-} from './native-chat-file-link-search'
+import { findFileLinkSearchMatches, openFileLinkBySearch } from './native-chat-file-link-search'
 
 type MockState = {
   activeWorktreeId: string | null
@@ -22,8 +18,10 @@ const mocks = vi.hoisted(() => {
   }
   return {
     requestListing: vi.fn(),
+    cancelListing: vi.fn(),
     openDetectedFilePath: vi.fn(),
     showNotFound: vi.fn(),
+    showUnverifiable: vi.fn(),
     activate: vi.fn(),
     openModal,
     state
@@ -33,24 +31,31 @@ const mocks = vi.hoisted(() => {
 vi.mock('@/components/quick-open-file-listing-request', () => ({
   requestQuickOpenFileListing: mocks.requestListing
 }))
+vi.mock('@/runtime/runtime-file-client', () => ({
+  cancelRuntimeFileList: mocks.cancelListing
+}))
 vi.mock('@/components/terminal-pane/terminal-file-open-routing', () => ({
   getTerminalFileContext: () => ({ settings: null, worktreeId: 'wt-1', worktreePath: '/repo' }),
   openDetectedFilePath: mocks.openDetectedFilePath
 }))
-vi.mock('sonner', () => ({ toast: { error: mocks.showNotFound } }))
+vi.mock('./native-chat-file-link-toasts', () => ({
+  showFileLinkNotFoundToast: mocks.showNotFound,
+  showFileLinkUnverifiableToast: mocks.showUnverifiable
+}))
+vi.mock('@/lib/browser-uuid', () => ({ createBrowserUuid: () => 'token-1' }))
 vi.mock('@/lib/worktree-activation', () => ({ activateAndRevealWorkspace: mocks.activate }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => mocks.state } }))
 
 const context = { worktreeId: 'wt-1', worktreePath: '/repo', runtimeEnvironmentId: null }
 
-function search(searchPath: string, isCurrent = () => true): Promise<void> {
+function search(searchPath: string, signal = new AbortController().signal): Promise<void> {
   return openFileLinkBySearch({
     searchPath,
     line: 12,
     column: null,
     context,
     openWithSystemDefault: false,
-    isCurrent
+    signal
   })
 }
 
@@ -58,17 +63,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.state.activeWorktreeId = 'wt-1'
   mocks.state.worktreesByRepo = {}
-})
-
-describe('toFileLinkSearchPath', () => {
-  it('normalizes unrooted link text and skips rooted paths', () => {
-    expect(toFileLinkSearchPath('notes.md')).toBe('notes.md')
-    expect(toFileLinkSearchPath('./docs\\notes.md')).toBe('docs/notes.md')
-    expect(toFileLinkSearchPath('../../docs/notes.md')).toBe('docs/notes.md')
-    expect(toFileLinkSearchPath('/abs/notes.md')).toBeNull()
-    expect(toFileLinkSearchPath('~/notes.md')).toBeNull()
-    expect(toFileLinkSearchPath('C:\\notes.md')).toBeNull()
-  })
 })
 
 describe('findFileLinkSearchMatches', () => {
@@ -89,12 +83,13 @@ describe('openFileLinkBySearch', () => {
       files: ['marketing/events/deck/deck.md', 'marketing/events/deck/notes.md'],
       truncated: false
     })
+    const signal = new AbortController().signal
 
-    await search('deck.md')
+    await search('deck.md', signal)
 
     expect(mocks.requestListing).toHaveBeenCalledWith(
       expect.objectContaining({ worktreePath: '/repo' }),
-      { query: 'deck.md', nameFilter: 'deck.md' }
+      { query: 'deck.md', nameFilter: 'deck.md', requestToken: 'token-1', signal }
     )
     expect(mocks.openDetectedFilePath).toHaveBeenCalledWith(
       '/repo/marketing/events/deck/deck.md',
@@ -103,15 +98,20 @@ describe('openFileLinkBySearch', () => {
       expect.objectContaining({ worktreeId: 'wt-1', openWithSystemDefault: false })
     )
     expect(mocks.openModal).not.toHaveBeenCalled()
+    expect(mocks.cancelListing).not.toHaveBeenCalled()
   })
 
-  it('does not search again when the matched file vanished', async () => {
-    mocks.requestListing.mockResolvedValueOnce({ files: ['a/deck.md'], truncated: false })
+  it('reports the matched file without searching again when it cannot be opened', async () => {
+    mocks.requestListing.mockResolvedValue({ files: ['a/deck.md'], truncated: false })
 
     await search('deck.md')
-    mocks.openDetectedFilePath.mock.calls[0][3].onMissingPath(() => true)
+    const { onOpenFailure } = mocks.openDetectedFilePath.mock.calls[0][3]
+    onOpenFailure({ verdict: 'missing', error: new Error('ENOENT') })
+    const unreachable = new Error('offline')
+    onOpenFailure({ verdict: 'unverifiable', error: unreachable })
 
-    expect(mocks.showNotFound).toHaveBeenCalledWith('File not found: /repo/a/deck.md')
+    expect(mocks.showNotFound).toHaveBeenCalledWith('/repo/a/deck.md')
+    expect(mocks.showUnverifiable).toHaveBeenCalledWith('/repo/a/deck.md', unreachable)
     expect(mocks.requestListing).toHaveBeenCalledTimes(1)
   })
 
@@ -149,19 +149,39 @@ describe('openFileLinkBySearch', () => {
 
     await search('deck.md')
 
-    expect(mocks.requestListing).toHaveBeenCalledWith(expect.anything(), {
-      query: 'deck.md',
-      nameFilter: 'deck.md',
-      excludePaths: ['/repo/.worktrees/feature']
-    })
+    expect(mocks.requestListing).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ excludePaths: ['/repo/.worktrees/feature'] })
+    )
   })
 
-  it('does nothing once a later click superseded this one', async () => {
-    mocks.requestListing.mockResolvedValueOnce({ files: ['a/deck.md'], truncated: false })
+  it('cancels the host scan and does nothing once a later click superseded this one', async () => {
+    const controller = new AbortController()
+    mocks.requestListing.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          controller.abort()
+          resolve({ files: ['a/deck.md'], truncated: false })
+        })
+    )
 
-    await search('deck.md', () => false)
+    await search('deck.md', controller.signal)
 
+    expect(mocks.cancelListing).toHaveBeenCalledWith(
+      expect.objectContaining({ worktreeId: 'wt-1' }),
+      'token-1'
+    )
     expect(mocks.openDetectedFilePath).not.toHaveBeenCalled()
     expect(mocks.openModal).not.toHaveBeenCalled()
+  })
+
+  it('does not cancel a scan that already settled', async () => {
+    const controller = new AbortController()
+    mocks.requestListing.mockResolvedValueOnce({ files: ['a/deck.md'], truncated: false })
+
+    await search('deck.md', controller.signal)
+    controller.abort()
+
+    expect(mocks.cancelListing).not.toHaveBeenCalled()
   })
 })

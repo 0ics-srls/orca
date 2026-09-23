@@ -8,7 +8,11 @@ import {
   buildWorkspaceFileContext,
   canClientOsOpenWorkspaceFile
 } from '@/lib/workspace-file-host-routing'
-import { statRuntimePath, type RuntimeFileOperationArgs } from '@/runtime/runtime-file-client'
+import {
+  isMissingRuntimePathError,
+  statRuntimePath,
+  type RuntimeFileOperationArgs
+} from '@/runtime/runtime-file-client'
 import { useAppStore } from '@/store'
 import { activateAndRevealWorkspace, activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { resolveKnownWorktreeRootPathLink } from './terminal-worktree-path-link'
@@ -20,14 +24,20 @@ import {
   type ExecutionHostId
 } from '../../../../shared/execution-host'
 
+export type FileOpenFailure = {
+  /** `missing` is a verified absence; `unverifiable` means the host could not answer (dropped SSH, timeout, denied path). */
+  verdict: 'missing' | 'unverifiable'
+  error: unknown
+}
+
 type TerminalFileOpenDeps = {
   worktreeId: string
   worktreePath: string
   runtimeEnvironmentId?: string | null
   wslDistro?: string | null
   openWithSystemDefault?: boolean
-  /** Called when the path cannot be stat'ed; `isCurrent` turns false once a later click supersedes it. */
-  onMissingPath?: (isCurrent: () => boolean) => void
+  /** Reports a path that could not be verified before opening; `signal` aborts once a later open supersedes this one. */
+  onOpenFailure?: (failure: FileOpenFailure, signal: AbortSignal) => void
 }
 
 export function isHtmlFilePath(filePath: string): boolean {
@@ -97,6 +107,7 @@ export function shouldOpenTerminalFileWithSystemDefault(
 }
 
 let latestOpenDetectedFilePathRequestId = 0
+let latestOpenFailureController: AbortController | null = null
 let pendingEditorRevealFrameIds: number[] = []
 
 function cancelPendingEditorRevealFrames(): void {
@@ -138,6 +149,8 @@ export function openDetectedFilePath(
     terminalLinkWslDistro(deps.wslDistro, runtimeEnvironmentId)
   )
   const requestId = ++latestOpenDetectedFilePathRequestId
+  latestOpenFailureController?.abort()
+  latestOpenFailureController = null
   cancelPendingEditorRevealFrames()
 
   void (async () => {
@@ -168,9 +181,15 @@ export function openDetectedFilePath(
         await window.api.fs.authorizeExternalPath({ targetPath: mappedFilePath })
       }
       statResult = await statRuntimePath(fileContext, mappedFilePath)
-    } catch {
-      if (requestId === latestOpenDetectedFilePathRequestId) {
-        deps.onMissingPath?.(() => requestId === latestOpenDetectedFilePathRequestId)
+    } catch (error) {
+      if (requestId === latestOpenDetectedFilePathRequestId && deps.onOpenFailure) {
+        const controller = new AbortController()
+        latestOpenFailureController = controller
+        // Why: loss of contact with the host is not evidence the file is gone.
+        deps.onOpenFailure(
+          { verdict: isMissingRuntimePathError(error) ? 'missing' : 'unverifiable', error },
+          controller.signal
+        )
       }
       return
     }

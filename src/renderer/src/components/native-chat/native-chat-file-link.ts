@@ -7,7 +7,6 @@ import {
 import { getRuntimeEnvironmentIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
-import { toFileLinkSearchPath } from './native-chat-file-link-search'
 
 export type NativeChatFileLinkContext = {
   worktreeId: string
@@ -21,6 +20,20 @@ export type NativeChatResolvedFileLink = {
   column: number | null
   /** Unrooted link text, searched in the workspace when the root-relative path is missing. */
   searchPath: string | null
+}
+
+const ROOTED_PATH_PATTERN = /^(?:~[\\/]|[\\/]|[A-Za-z]:[\\/])/
+
+/** Worktree-relative text to search for when an unrooted link misses at the root; null when rooted. */
+export function toFileLinkSearchPath(pathText: string): string | null {
+  if (ROOTED_PATH_PATTERN.test(pathText)) {
+    return null
+  }
+  const normalized = pathText
+    .replace(/\\/g, '/')
+    .replace(/^(?:\.{1,2}\/)+/, '')
+    .replace(/\/+$/, '')
+  return normalized || null
 }
 
 type NativeChatFileLinkState = Pick<

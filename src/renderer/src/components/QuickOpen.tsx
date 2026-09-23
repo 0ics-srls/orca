@@ -76,12 +76,14 @@ function QuickOpenContent({ visible }: { visible: boolean }): React.JSX.Element 
   // unfocused. This returns focus to the surface that was active on open.
   const { captureReturnFocus, skipReturnFocus } = useModalReturnFocus(visible)
 
-  // Why: reset input only on open. Keeping this out of the file-load effect
-  // prevents unrelated store updates (which can produce a new excludePaths
-  // array reference) from wiping a query the user is currently typing.
+  // Why: reset input only on open or when a caller seeds a new query into an open palette.
+  // Keeping this out of the file-load effect prevents unrelated store updates (which can
+  // produce a new excludePaths array reference) from wiping a query the user is typing.
   const [previousVisible, setPreviousVisible] = useState(visible)
-  if (visible !== previousVisible) {
+  const [previousInitialQuery, setPreviousInitialQuery] = useState(initialQuery)
+  if (visible !== previousVisible || initialQuery !== previousInitialQuery) {
     setPreviousVisible(visible)
+    setPreviousInitialQuery(initialQuery)
     if (visible && query !== initialQuery) {
       setQuery(initialQuery)
     }

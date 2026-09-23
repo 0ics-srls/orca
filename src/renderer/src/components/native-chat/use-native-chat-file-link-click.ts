@@ -3,7 +3,12 @@ import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/Comme
 import { openDetectedFilePath } from '@/components/terminal-pane/terminal-file-open-routing'
 import { routeNativeChatHref } from '../../../../shared/native-chat-href-routing'
 import { resolveNativeChatFileLink, type NativeChatFileLinkContext } from './native-chat-file-link'
-import { openFileLinkBySearch, showFileLinkNotFoundToast } from './native-chat-file-link-search'
+import { openFileLinkBySearch } from './native-chat-file-link-search'
+import {
+  showFileLinkNotFoundToast,
+  showFileLinkUnresolvedToast,
+  showFileLinkUnverifiableToast
+} from './native-chat-file-link-toasts'
 
 export function useNativeChatFileLinkClick(
   context: NativeChatFileLinkContext | null
@@ -19,7 +24,7 @@ export function useNativeChatFileLinkClick(
         if (route.kind === 'file') {
           // Why: e.g. `~/x` when the home folder cannot be inferred; never a dead click.
           event.preventDefault()
-          showFileLinkNotFoundToast(route.pathText)
+          showFileLinkUnresolvedToast(route.pathText)
         }
         return
       }
@@ -31,18 +36,25 @@ export function useNativeChatFileLinkClick(
         worktreePath: context.worktreePath,
         runtimeEnvironmentId: context.runtimeEnvironmentId,
         openWithSystemDefault: event.shiftKey,
-        // Why: agents name files relative to their own cwd, or by basename alone.
-        onMissingPath: searchPath
-          ? (isCurrent) =>
-              void openFileLinkBySearch({
-                searchPath,
-                line: target.line,
-                column: target.column,
-                context,
-                openWithSystemDefault: event.shiftKey,
-                isCurrent
-              })
-          : () => showFileLinkNotFoundToast(target.absolutePath)
+        onOpenFailure: (failure, signal) => {
+          if (failure.verdict === 'unverifiable') {
+            showFileLinkUnverifiableToast(target.absolutePath, failure.error)
+            return
+          }
+          if (!searchPath) {
+            showFileLinkNotFoundToast(target.absolutePath)
+            return
+          }
+          // Why: agents name files relative to their own cwd, or by basename alone.
+          void openFileLinkBySearch({
+            searchPath,
+            line: target.line,
+            column: target.column,
+            context,
+            openWithSystemDefault: event.shiftKey,
+            signal
+          })
+        }
       })
     },
     [context]

@@ -1,37 +1,20 @@
 import { requestQuickOpenFileListing } from '@/components/quick-open-file-listing-request'
 import { getNestedWorktreeExcludePaths } from '@/components/quick-open-file-list'
-import { toast } from 'sonner'
 import {
   getTerminalFileContext,
-  openDetectedFilePath
+  openDetectedFilePath,
+  type FileOpenFailure
 } from '@/components/terminal-pane/terminal-file-open-routing'
-import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 import { basename, joinPath } from '@/lib/path'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { cancelRuntimeFileList } from '@/runtime/runtime-file-client'
 import { useAppStore } from '@/store'
 import type { NativeChatFileLinkContext } from './native-chat-file-link'
-
-const ROOTED_PATH_PATTERN = /^(?:~[\\/]|[\\/]|[A-Za-z]:[\\/])/
-
-export function showFileLinkNotFoundToast(filePath: string): void {
-  toast.error(
-    translate('components.native-chat.fileLinks.notFound', 'File not found: {{value0}}', {
-      value0: filePath
-    })
-  )
-}
-
-/** Worktree-relative text to search for when an unrooted link misses at the root; null when rooted. */
-export function toFileLinkSearchPath(pathText: string): string | null {
-  if (ROOTED_PATH_PATTERN.test(pathText)) {
-    return null
-  }
-  const normalized = pathText
-    .replace(/\\/g, '/')
-    .replace(/^(?:\.{1,2}\/)+/, '')
-    .replace(/\/+$/, '')
-  return normalized || null
-}
+import {
+  showFileLinkNotFoundToast,
+  showFileLinkUnverifiableToast
+} from './native-chat-file-link-toasts'
 
 export function findFileLinkSearchMatches(files: readonly string[], searchPath: string): string[] {
   return files.filter((file) => {
@@ -42,7 +25,8 @@ export function findFileLinkSearchMatches(files: readonly string[], searchPath: 
 
 async function listWorkspaceFiles(
   context: NativeChatFileLinkContext,
-  searchPath: string
+  searchPath: string,
+  signal: AbortSignal
 ): Promise<string[]> {
   const state = useAppStore.getState()
   const repoId = state.getKnownWorktreeById(context.worktreeId)?.repoId
@@ -51,23 +35,40 @@ async function listWorkspaceFiles(
     context.worktreePath,
     (repoId ? state.worktreesByRepo[repoId] : undefined) ?? []
   )
-  const listing = await requestQuickOpenFileListing(
-    {
-      ...getTerminalFileContext(
-        context.worktreeId,
-        context.worktreePath,
-        context.runtimeEnvironmentId
-      ),
-      worktreePath: context.worktreePath
-    },
-    {
+  const requestContext = {
+    ...getTerminalFileContext(
+      context.worktreeId,
+      context.worktreePath,
+      context.runtimeEnvironmentId
+    ),
+    worktreePath: context.worktreePath
+  }
+  const requestToken = createBrowserUuid()
+  // Why: a superseded click must stop the host-side scan too, not only drop its result.
+  const cancel = (): void => cancelRuntimeFileList(requestContext, requestToken)
+  signal.addEventListener('abort', cancel, { once: true })
+  try {
+    const listing = await requestQuickOpenFileListing(requestContext, {
       query: basename(searchPath),
       // Why: a large local workspace caps its listing; filtering by name keeps the match in it.
       nameFilter: basename(searchPath),
+      requestToken,
+      signal,
       ...(excludePaths.length > 0 ? { excludePaths } : {})
-    }
-  )
-  return listing.files
+    })
+    return listing.files
+  } finally {
+    signal.removeEventListener('abort', cancel)
+  }
+}
+
+function reportMatchedFileFailure(absolutePath: string, failure: FileOpenFailure): void {
+  // Why: the listing can be stale; never fall back into another search.
+  if (failure.verdict === 'missing') {
+    showFileLinkNotFoundToast(absolutePath)
+    return
+  }
+  showFileLinkUnverifiableToast(absolutePath, failure.error)
 }
 
 /**
@@ -80,16 +81,20 @@ export async function openFileLinkBySearch(args: {
   column: number | null
   context: NativeChatFileLinkContext
   openWithSystemDefault: boolean
-  isCurrent: () => boolean
+  /** Aborts once a later click supersedes this one. */
+  signal: AbortSignal
 }): Promise<void> {
-  const { context, searchPath } = args
+  const { context, searchPath, signal } = args
   let matches: string[] = []
   try {
-    matches = findFileLinkSearchMatches(await listWorkspaceFiles(context, searchPath), searchPath)
+    matches = findFileLinkSearchMatches(
+      await listWorkspaceFiles(context, searchPath, signal),
+      searchPath
+    )
   } catch {
     // Quick Open below reports its own listing error.
   }
-  if (!args.isCurrent()) {
+  if (signal.aborted) {
     return
   }
   if (matches.length === 1) {
@@ -99,8 +104,7 @@ export async function openFileLinkBySearch(args: {
       worktreePath: context.worktreePath,
       runtimeEnvironmentId: context.runtimeEnvironmentId,
       openWithSystemDefault: args.openWithSystemDefault,
-      // Why: the listing can be stale; never fall back into another search.
-      onMissingPath: () => showFileLinkNotFoundToast(absolutePath)
+      onOpenFailure: (failure) => reportMatchedFileFailure(absolutePath, failure)
     })
     return
   }

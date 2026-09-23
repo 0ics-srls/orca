@@ -6,6 +6,7 @@ import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
 import {
   resolveNativeChatFileLink,
   resolveNativeChatFileLinkContext,
+  toFileLinkSearchPath,
   type NativeChatFileLinkContext
 } from './native-chat-file-link'
 
@@ -132,6 +133,18 @@ describe('resolveNativeChatFileLinkContext', () => {
       worktreePath: '/workspace/platform',
       runtimeEnvironmentId: null
     })
+  })
+})
+
+describe('toFileLinkSearchPath', () => {
+  it('normalizes unrooted link text and skips rooted paths', () => {
+    expect(toFileLinkSearchPath('notes.md')).toBe('notes.md')
+    expect(toFileLinkSearchPath('./docs\\notes.md')).toBe('docs/notes.md')
+    expect(toFileLinkSearchPath('../../docs/notes.md')).toBe('docs/notes.md')
+    expect(toFileLinkSearchPath('docs/')).toBe('docs')
+    expect(toFileLinkSearchPath('/abs/notes.md')).toBeNull()
+    expect(toFileLinkSearchPath('~/notes.md')).toBeNull()
+    expect(toFileLinkSearchPath('C:\\notes.md')).toBeNull()
   })
 })
 
