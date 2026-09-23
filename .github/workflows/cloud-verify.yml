@@ -34,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Scan Cloud history at the checked-out revision with Gitleaks
+      - name: Scan Cloud history reachable from HEAD with Gitleaks
         run: >-
           docker run --rm
           --volume "${GITHUB_WORKSPACE}:/repo:ro"
