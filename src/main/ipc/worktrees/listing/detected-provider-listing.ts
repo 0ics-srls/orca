@@ -36,37 +36,7 @@ import {
 } from './worktree-listing-diagnostics'
 import { readAllWorktreeMetaForRepo } from '../../../persistence/host-qualified-worktree-meta'
 import { classifyWorktreeScanFailure } from '../../../../shared/worktree-scan-failure'
-
-// Why two: one covers the create/delete overlap the scan is re-run for; a second mutation landing
-// inside that re-run is the churn case, and a third pass would only chase it.
-const SUPERSEDED_SCAN_RESCANS = 2
-
-/**
- * Runs the scan again while a worktree mutation overtook it. A listing speaks for the catalog as of
- * when its scan began, so a scan that a create or delete landed under describes a catalog that no
- * longer exists; published as authoritative, it tells every client that a worktree created during
- * the scan was deleted, and the client retires it. Re-running through the same thunk keeps the
- * guard chain (cache, joiners, side-effect tokens) intact for the second pass.
- *
- * Why null past the bound rather than a non-authoritative answer: non-authoritative rows still
- * replace the client's rows for this host, so a worktree the last overtaking mutation created
- * would vanish from the sidebar until the next listing. Null becomes a stale rejection, which
- * leaves client state untouched; the overtaking mutation's own change event, sent after its
- * generation bump and therefore ahead of this reply, is what brings the listing that reflects it.
- */
-async function scanUntilNotOvertaken<T extends { superseded: boolean }>(
-  scanOnce: () => Promise<T>,
-  mayRescan: () => boolean
-): Promise<T | null> {
-  let scan = await scanOnce()
-  for (let rescans = 0; scan.superseded; rescans += 1) {
-    if (rescans >= SUPERSEDED_SCAN_RESCANS || !mayRescan()) {
-      return null
-    }
-    scan = await scanOnce()
-  }
-  return scan
-}
+import { scanUntilNotOvertaken } from './overtaken-scan-rerun'
 
 // Why here: an SSH listing bypasses the scan cache, so nothing else witnesses a mutation overtaking
 // it. The generation is the one the cache compares, bumped by every worktree change invalidator.
@@ -152,7 +122,12 @@ export async function listDetectedWorktreesForCapturedRepo(
         : () => listDetectedGitWorktrees(store, repo),
       () => isCurrent() && !providerAbort?.signal.aborted
     )
-    if (!scan) {
+    // Why stale past the bound rather than a non-authoritative answer: non-authoritative rows still
+    // replace the client's rows for this host, so a worktree the last overtaking mutation created
+    // would vanish from the sidebar until the next listing. A stale rejection leaves client state
+    // untouched; the overtaking mutation's own change event, sent after its generation bump and
+    // therefore ahead of this reply, is what brings the listing that reflects it.
+    if (scan.superseded) {
       return abortedResult() ?? null
     }
     const { gitWorktrees, fresh: freshScan, sideEffectToken, metadataPrune, hygieneDue } = scan
