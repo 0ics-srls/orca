@@ -11,12 +11,13 @@ function resumeHarness() {
   const evict = vi.fn(async () => {
     child = false
   })
+  const resume = vi.fn(async () => {
+    await resumeGate.promise
+    child = true
+    return { fromFence: 1 }
+  })
   const holds = new StructuredAgentSessionHolds({
-    resume: async () => {
-      await resumeGate.promise
-      child = true
-      return { fromFence: 1 }
-    },
+    resume,
     hasProviderChild: () => child,
     isTurnActive: () => turnActive,
     evict,
@@ -25,6 +26,7 @@ function resumeHarness() {
   pendingHolds.push(holds)
   return {
     holds,
+    resume,
     resumeGate,
     evict,
     hasChild: () => child,
@@ -167,13 +169,14 @@ describe('a surface leaving while its structured session resumes', () => {
   })
 
   it('joins a pending resume for a holder that left and came back, and a failure releases it', async () => {
-    const { holds, resumeGate, evict } = resumeHarness()
+    const { holds, resume, resumeGate, evict } = resumeHarness()
     const first = holds.hold('session-1', 'same-holder')
     const firstRejected = expect(first).rejects.toThrow('acquisition failed')
     holds.release('session-1', 'same-holder')
     const replacement = holds.hold('session-1', 'same-holder')
     const replacementRejected = expect(replacement).rejects.toThrow('acquisition failed')
     expect(holds.isHeld('session-1')).toBe(true)
+    expect(resume).toHaveBeenCalledOnce()
 
     resumeGate.reject(new Error('acquisition failed'))
     await Promise.all([firstRejected, replacementRejected])
