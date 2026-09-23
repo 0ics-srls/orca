@@ -31,6 +31,21 @@ describe('prepareNativeChatLiveMessages command output', () => {
     ).toEqual(['Context Usage', 'next prompt'])
   })
 
+  it('keeps a later /model reply hidden after a /context report', () => {
+    const modelRows = [
+      { ...row('d-envelope', '<command-name>/model</command-name>'), timestamp: 300 },
+      {
+        ...row('c-stdout', '<local-command-stdout>Set model to gpt-4o</local-command-stdout>'),
+        timestamp: 300
+      }
+    ]
+    // `/model` is outside the catalog, so its envelope surfaces as the typed turn.
+    expect(visibleText('openclaude', [...CONTEXT_ROWS, ...modelRows])).toEqual([
+      'Context Usage',
+      '/model'
+    ])
+  })
+
   it('keeps the reply row hidden for Claude', () => {
     // Outside Claude's catalog the envelope reads as the typed turn, as on main.
     expect(visibleText('claude', CONTEXT_ROWS)).toEqual(['/context'])
