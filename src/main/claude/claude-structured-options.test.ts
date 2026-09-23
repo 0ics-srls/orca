@@ -6,6 +6,7 @@ import {
 import type { ClaudeSession } from './claude-structured-session-state'
 import { ClaudeBackgroundTaskTracker } from './claude-background-task-tracker'
 import { ClaudeSlashCommandCatalog } from './claude-slash-command-catalog'
+import { createClaudeSessionStartupGate } from './claude-structured-session-startup-gate'
 import {
   observeClaudeFastModeFacts,
   readClaudeStructuredSessionOptions
@@ -39,7 +40,8 @@ function sessionFor(setModel: ClaudeSession['connection']['setModel']): ClaudeSe
     restoreSkippedOptions: new Set(),
     capabilities: [],
     events: undefined,
-    translator: null
+    translator: null,
+    startup: { ...createClaudeSessionStartupGate(), state: 'proven' }
   }
 }
 

@@ -202,10 +202,14 @@ export async function readClaudeStructuredSessionOptions(
   timeoutMs: number | undefined
 ): Promise<AgentSessionOptionsResult> {
   const readMutationSequence = session.optionMutationSequence
-  const [catalog, settings] = await Promise.all([
-    session.connection.supportedModels({ timeoutMs }).catch(() => null),
-    session.connection.getSettings({ timeoutMs }).catch(() => null)
-  ])
+  // Before startup both requests would wait on initialize; answer from the saved options.
+  const [catalog, settings] =
+    session.startup.state === 'proven'
+      ? await Promise.all([
+          session.connection.supportedModels({ timeoutMs }).catch(() => null),
+          session.connection.getSettings({ timeoutMs }).catch(() => null)
+        ])
+      : [null, null]
   if (settings !== null && readMutationSequence === session.optionMutationSequence) {
     const effort = readClaudeSettingsEffort(settings)
     const fastMode = readClaudeSettingsFastMode(settings)

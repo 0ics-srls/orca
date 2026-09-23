@@ -1,5 +1,6 @@
 import { settlePostAcquisitionAttachFailure } from './structured-agent-session-attach-failure'
 import { rewindRefusal } from './structured-rewind-refusal'
+import { failedCreateRefusal } from './structured-agent-session-failed-create-refusal'
 import {
   AgentSessionRewindRefusal,
   AgentSessionAcquisitionExitUnprovenError,
@@ -147,7 +148,7 @@ export async function performAttach(
         reconstruct: () => null
       })
       if (replay.decision === 'refuse') {
-        return { ok: false, refusal: replay.refusal }
+        return failedCreateRefusal(replay.refusal, reserved.operationRow.outcome.status, record)
       }
     }
     // Sample provider history before a new child is acquired. Once acquireOwner
@@ -168,6 +169,7 @@ export async function performAttach(
       acquiredOwner = true
     }
   } catch (error) {
+    let settled: AgentSessionRecord | null = null
     const spawnToken = reservedRecord?.lease.reservedSpawnToken
     if (reservedRecord && spawnToken && !unsupportedReservationSettlementAttempted) {
       // Settle processless proof and failed operation atomically.
@@ -197,7 +199,7 @@ export async function performAttach(
                 message: error instanceof Error ? error.message : String(error)
               }
       try {
-        await store.settleFailedAcquisition({
+        settled = await store.settleFailedAcquisition({
           sessionId,
           fence: reservedRecord.lease.runtimeFence,
           spawnToken,
@@ -215,10 +217,11 @@ export async function performAttach(
       }
     }
     if (error instanceof AgentSessionRewindRefusal) {
-      return rewindRefusal(error.rewindReason)
+      return failedCreateRefusal(rewindRefusal(error.rewindReason).refusal, 'failed', settled)
     }
     if (error instanceof AgentSessionAcquisitionRefusal) {
-      return { ok: false, refusal: { code: error.code, message: error.message } }
+      const refusal = { code: error.code, message: error.message }
+      return failedCreateRefusal(refusal, 'failed', settled)
     }
     return {
       ok: false,

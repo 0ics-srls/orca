@@ -26,13 +26,25 @@ export const MAX_UNEXPECTED_EXIT_REASON_CHARS = 512
 /** The cause is the only thing separating an auth failure from an OOM kill, so it is carried
  *  into the copy rather than left in the durable record nothing renders. */
 export function unexpectedProviderExitOutcome(reason?: string): string {
-  const detail = reason
-    ?.slice(0, MAX_UNEXPECTED_EXIT_REASON_CHARS)
-    .trim()
-    .replace(/[.\s]+$/, '')
+  const detail = exitReasonDetail(reason)
   return detail
     ? `The provider stopped while this response was in progress: ${detail}. You can continue in this conversation.`
     : UNEXPECTED_PROVIDER_EXIT_OUTCOME
+}
+
+/** A start that never finished has no response to interrupt; its cause is the whole story. */
+export function providerStartupFailureOutcome(reason?: string): string {
+  const detail = exitReasonDetail(reason)
+  return detail
+    ? `The provider stopped before it finished starting: ${detail}.`
+    : 'The provider stopped before it finished starting.'
+}
+
+function exitReasonDetail(reason: string | undefined): string | undefined {
+  return reason
+    ?.slice(0, MAX_UNEXPECTED_EXIT_REASON_CHARS)
+    .trim()
+    .replace(/[.\s]+$/, '')
 }
 
 type DeadGenerationSubmission = Pick<
@@ -106,6 +118,8 @@ export async function settleStructuredAgentSessionDeadGeneration(input: {
   showUnexpectedExitOutcome?: boolean
   /** Why the provider stopped, when the host has it. Rendered with the outcome copy. */
   unexpectedExitReason?: string
+  /** The provider never finished starting; the outcome says so instead of naming a response. */
+  exitedDuringStartup?: boolean
   onError?: (sessionId: string, error: unknown) => void
 }): Promise<boolean> {
   try {
@@ -123,7 +137,11 @@ export async function settleStructuredAgentSessionDeadGeneration(input: {
         identity: { provider: 'orca', clientMessageId: input.settlementId },
         body: {
           kind: 'status',
-          text: boundJournalStatusText(unexpectedProviderExitOutcome(input.unexpectedExitReason))
+          text: boundJournalStatusText(
+            input.exitedDuringStartup
+              ? providerStartupFailureOutcome(input.unexpectedExitReason)
+              : unexpectedProviderExitOutcome(input.unexpectedExitReason)
+          )
         }
       })
     }

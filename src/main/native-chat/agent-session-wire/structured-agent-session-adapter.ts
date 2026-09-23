@@ -124,6 +124,8 @@ export type StructuredAgentSessionLifecycleEvent = {
   observedAt?: number
   /** Translator could not admit terminal rows; host recovery must append its bounded fallback. */
   settlementRetryRequired?: boolean
+  /** The provider ended before it finished starting, so resuming it would repeat the failure. */
+  startupUnproven?: true
 }
 
 export type StructuredAgentSessionAcquireInput = {

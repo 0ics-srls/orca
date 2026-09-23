@@ -458,24 +458,22 @@ describe('a structured Claude session over agentSession.*', () => {
     expect(claude.connections).toHaveLength(0)
   })
 
-  it('durably returns actionable sign-in guidance when initialization has no credentials', async () => {
+  it('publishes, then ends the session with sign-in guidance when initialization has no credentials', async () => {
     claude.setInitializeAccount({ apiProvider: 'firstParty', tokenSource: 'none' })
-    const params = createIntentParams()
 
-    const first = await call('agentSession.create', params)
-    const retry = await call('agentSession.create', params)
+    // The create answers once the child is spawned; the missing credentials arrive after.
+    await ok<{ fence: number }>('agentSession.create', createIntentParams())
+    await waitForStructuredAgentSessionRecovery()
 
-    expect(first).toMatchObject({
-      ok: true,
-      result: {
-        ok: false,
-        refusal: {
-          code: 'agent_session_operation_invalid',
-          message: expect.stringMatching(/not signed in.*Claude CLI.*CLAUDE_CONFIG_DIR/s)
-        }
-      }
+    const guidance = itemsOf(await subscribe()).find((item) => item.body?.kind === 'status')
+    expect(guidance?.body).toMatchObject({
+      kind: 'status',
+      text: expect.stringMatching(
+        /stopped before it finished starting: .*not signed in.*Claude CLI.*CLAUDE_CONFIG_DIR/s
+      )
     })
-    expect((retry as { result: unknown }).result).toEqual((first as { result: unknown }).result)
+    expect(leaseOf(SESSION)).toMatchObject({ claimStatus: 'released', handoffStage: null })
+    // A failed start is not auto-resumed into the same failure.
     expect(claude.connections).toHaveLength(1)
   })
 

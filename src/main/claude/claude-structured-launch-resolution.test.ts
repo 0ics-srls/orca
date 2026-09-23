@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AgentSessionRecord } from '../../shared/agent-session-record'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import type { AgentSessionRecordStore } from '../runtime/agent-session-record-store'
@@ -58,7 +58,8 @@ function resolverFor(
   resolveEnv?: () => Record<string, string>,
   stripAuthEnv = false,
   // Manual by default so a test that is not about permissions is not silently about them.
-  agentDefaultArgs: Record<string, string> = { claude: '' }
+  agentDefaultArgs: Record<string, string> = { claude: '' },
+  hasTranscript: () => Promise<boolean> = async () => true
 ) {
   return createClaudeStructuredLaunchResolver({
     store: { getRecord: () => value } as unknown as AgentSessionRecordStore,
@@ -66,6 +67,7 @@ function resolverFor(
     resolveCommand: () => '/usr/local/bin/claude',
     resolveAuthPolicy: () => ({ stripAuthEnv }),
     resolvePermissionMode: () => claudeStructuredPermissionModeForSettings({ agentDefaultArgs }),
+    hasTranscript,
     ...(resolveEnv ? { resolveEnv } : {})
   })
 }
@@ -201,6 +203,35 @@ describe('claude structured launch resolution', () => {
 
     expect(launch.options.resume).toBe('provider-current')
     expect(launch.options.resumeSessionAt).toBeUndefined()
+  })
+
+  it('launches a leafless head fresh under its own id when Claude never wrote its transcript', async () => {
+    // A start that failed before its first turn: `--resume` would exit "No conversation found".
+    const hasTranscript = vi.fn(async () => false)
+    const launch = await resolverFor(
+      record({
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the resolver reads only each link's handle.
+        providerHandleChain: [
+          { handle: { provider: 'claude', sessionId: 'provider-current', leafUuid: null } }
+        ] as AgentSessionRecord['providerHandleChain']
+      }),
+      undefined,
+      false,
+      { claude: '' },
+      hasTranscript
+    )({ identity: identityAt(null) })
+
+    expect(hasTranscript).toHaveBeenCalledWith({
+      providerSessionId: 'provider-current',
+      claudeConfigDir: expect.any(String)
+    })
+    expect(launch.options.resume).toBeUndefined()
+    expect(launch.options.sessionId).toBe('provider-current')
+    expect(launch).toMatchObject({
+      providerSessionId: 'provider-current',
+      resumeLeafUuid: null,
+      resumed: false
+    })
   })
 
   // Agent Permissions is stored as the bypass flag inside the launch arguments, so presence of

@@ -1,7 +1,7 @@
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeStreamJsonConnection } from './claude-stream-json-connection'
 import type { ClaudeJournalTranslator } from './claude-structured-journal-translation'
-import type { createClaudeInitDeadline } from './claude-structured-init-deadline'
+import type { ClaudeInitProof } from './claude-structured-session-startup'
 import type {
   ClaudeAcquisitionAttempt,
   ClaudeAcquireCallbacks
@@ -9,13 +9,13 @@ import type {
 
 export function createClaudeJournalFailureHandler(input: {
   attempt: ClaudeAcquisitionAttempt
-  initDeadline: ReturnType<typeof createClaudeInitDeadline>
+  initProof: ClaudeInitProof
   callbacks: ClaudeAcquireCallbacks
   sessionId: string
 }): (error: Error) => void {
   return (error) => {
     if (!input.attempt.published) {
-      input.initDeadline.reject(error)
+      input.initProof.reject(error)
       return
     }
     const connection = input.attempt.connection

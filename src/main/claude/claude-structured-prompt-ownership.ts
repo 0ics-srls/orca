@@ -11,8 +11,10 @@ import {
 } from './claude-structured-control-actions'
 import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
+import { rejectClaudeStartupWrites } from './claude-structured-session-startup-gate'
+import { DISPATCH_REJECTED_CANCELLED } from '../../shared/structured-agent-session-dispatch-rejection'
 
-/** Conservative user-facing window: below the 10s init and 30s control deadlines, trading
+/** Conservative user-facing window: below the 30s control deadline, trading
  * residual slow-pump risk for ensuring delivery bookkeeping cannot block Stop indefinitely. */
 export const CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS = 3_000
 const CLAUDE_DISPATCH_ADMISSION_POLL_MS = 50
@@ -98,6 +100,10 @@ export async function cancelClaudeStructuredTurn(input: {
   const session = requireSession(sessions, request.sessionId)
   const acquisitionGeneration = session.acquisitionGeneration
   const prompt = request.prompt
+  // Nothing held before startup was written, so Stop withdraws it without an interrupt.
+  if (!prompt && session.startup.state === 'pending' && session.fence === request.fence) {
+    return { cancelled: rejectClaudeStartupWrites(session, DISPATCH_REJECTED_CANCELLED) }
+  }
   if (prompt && session.fence !== request.fence) {
     return { cancelled: false }
   }

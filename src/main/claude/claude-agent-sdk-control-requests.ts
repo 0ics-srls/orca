@@ -46,33 +46,34 @@ export type ClaudeControlOptions = { timeoutMs?: number }
 /**
  * Run one native Query control method under Orca's deadline and error classification.
  *
- * The SDK owns correlation but applies no deadline, so the timeout stays here — and its
- * message is load-bearing: the init proof matches on `claude initialize request timed out`.
+ * The SDK owns correlation but applies no deadline, so the timeout stays here. `null` means
+ * none: the request then settles only on the CLI's answer or on the query closing under it.
  * A closed query is a transport failure, not the CLI rejecting the request, so only the
  * latter is re-thrown as a `ClaudeControlRequestError` a caller may surface as a rejection.
  */
 export function runClaudeControl<T>(
   subtype: string,
   run: () => Promise<T>,
-  timeoutMs: number = CLAUDE_DEFAULT_REQUEST_TIMEOUT_MS
+  timeoutMs: number | null = CLAUDE_DEFAULT_REQUEST_TIMEOUT_MS
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null
+  const request = Promise.resolve()
+    .then(run)
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error)
+      if (error instanceof ClaudeControlRequestError || message === QUERY_CLOSED_MESSAGE) {
+        throw error
+      }
+      throw new ClaudeControlRequestError(subtype, message)
+    })
+  if (timeoutMs === null) {
+    return request
+  }
   const deadline = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => reject(new Error(`claude ${subtype} request timed out`)), timeoutMs)
     timer.unref?.()
   })
-  return Promise.race([
-    Promise.resolve()
-      .then(run)
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error)
-        if (error instanceof ClaudeControlRequestError || message === QUERY_CLOSED_MESSAGE) {
-          throw error
-        }
-        throw new ClaudeControlRequestError(subtype, message)
-      }),
-    deadline
-  ]).finally(() => {
+  return Promise.race([request, deadline]).finally(() => {
     if (timer) {
       clearTimeout(timer)
     }
@@ -93,7 +94,8 @@ export type ClaudeControlSurface = {
   ) => Promise<void>
   stopTask: (taskId: string, options?: ClaudeControlOptions) => Promise<void>
   supportedModels: (options?: ClaudeControlOptions) => Promise<unknown[]>
-  initializationResult: (options?: ClaudeControlOptions) => Promise<unknown>
+  /** Untimed: a slow start is still a start, and the child's exit closes the query under it. */
+  initializationResult: () => Promise<unknown>
   getSettings: (options?: ClaudeControlOptions) => Promise<unknown>
 }
 
@@ -142,8 +144,8 @@ export function createClaudeControlSurface(query: Query): ClaudeControlSurface {
       ),
     supportedModels: (options) =>
       runClaudeControl('list_models', () => query.supportedModels(), options?.timeoutMs),
-    initializationResult: (options) =>
-      runClaudeControl('initialize', () => query.initializationResult(), options?.timeoutMs),
+    initializationResult: () =>
+      runClaudeControl('initialize', () => query.initializationResult(), null),
     getSettings: (options) => {
       const read = claudeQuerySettingsReader(query)
       return read

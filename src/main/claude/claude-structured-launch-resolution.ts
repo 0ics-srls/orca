@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { join } from 'node:path'
 import type {
   Options as ClaudeAgentSdkOptions,
   PermissionMode
@@ -25,6 +26,7 @@ import {
   type ClaudeManagedAccountGateSettings
 } from '../native-chat/claude-structured-managed-account-support'
 import { resolveClaudeCommand } from '../codex-cli/command'
+import { resolveSessionFilePath } from '../native-chat/session-file-resolver'
 import type { AgentSessionRecordStore } from '../runtime/agent-session-record-store'
 
 export const CLAUDE_DEFAULT_SETTING_SOURCES = ['user', 'project', 'local'] as const
@@ -119,6 +121,21 @@ export type ClaudeStructuredLaunchResolverDeps = {
   authSwitchSettleTimeoutMs?: number
   /** Account state for the managed-account gate; null when it cannot be read, which refuses. */
   readManagedAccountGate?: () => ClaudeManagedAccountGateSettings | null
+  /** Whether Claude wrote a transcript for this id; defaults to the transcript resolver. */
+  hasTranscript?: (input: {
+    providerSessionId: string
+    claudeConfigDir: string
+  }) => Promise<boolean>
+}
+
+async function claudeTranscriptExists(input: {
+  providerSessionId: string
+  claudeConfigDir: string
+}): Promise<boolean> {
+  const path = await resolveSessionFilePath('claude', input.providerSessionId, {
+    claudeProjectsDir: join(input.claudeConfigDir, 'projects')
+  })
+  return path !== null
 }
 
 /**
@@ -192,6 +209,15 @@ export function createClaudeStructuredLaunchResolver(
       head?.handle.provider === 'claude'
         ? head.handle.sessionId
         : claudeSessionIdForOrcaSession(identity.sessionId)
+    // A start that failed before its first turn wrote no transcript, and `--resume` of an absent
+    // one exits; launch that id fresh instead. With a transcript, `--session-id` would collide.
+    const resumed =
+      head?.handle.provider === 'claude' &&
+      (head.handle.leafUuid !== null ||
+        (await (deps.hasTranscript ?? claudeTranscriptExists)({
+          providerSessionId,
+          claudeConfigDir: record.accountHome.path
+        })))
     // `record.launchArgs` is deliberately not read: the configured CLI arguments are a terminal
     // concern, and the permission mode they used to smuggle in is an owned provider option now.
     const permission = claudeStructuredPermissionOptions(
@@ -238,7 +264,7 @@ export function createClaudeStructuredLaunchResolver(
         ...CLAUDE_STRUCTURED_BASE_OPTIONS,
         ...permission,
         extraArgs: { ...CLAUDE_STRUCTURED_BASE_OPTIONS.extraArgs, ...permission.extraArgs },
-        ...(head?.handle.provider === 'claude'
+        ...(resumed && head?.handle.provider === 'claude'
           ? {
               resume: providerSessionId,
               ...(head.handle.leafUuid === null ? {} : { resumeSessionAt: head.handle.leafUuid })
@@ -249,8 +275,8 @@ export function createClaudeStructuredLaunchResolver(
       env,
       claudeConfigDir: record.accountHome.path,
       providerSessionId,
-      resumeLeafUuid: head?.handle.provider === 'claude' ? head.handle.leafUuid : null,
-      resumed: head?.handle.provider === 'claude'
+      resumeLeafUuid: resumed && head?.handle.provider === 'claude' ? head.handle.leafUuid : null,
+      resumed
     }
   }
 }

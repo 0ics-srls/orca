@@ -96,11 +96,14 @@ export async function settleUnexpectedStructuredAgentSessionExit<
         session,
         stableSettlementId,
         verdict: { state: 'interrupted', completedAt: observedAt },
-        showUnexpectedExitOutcome: unfinishedStructuredAgentSessionWorkWasInterrupted(
-          unfinishedWork,
-          session.journal,
-          observedAt
-        )
+        // A failed start always says why: no response was running to carry the reason.
+        showUnexpectedExitOutcome:
+          unexpectedEvent.startupUnproven === true ||
+          unfinishedStructuredAgentSessionWorkWasInterrupted(
+            unfinishedWork,
+            session.journal,
+            observedAt
+          )
       }))
     } finally {
       // Provider exit was positively observed, so release the owner even when
@@ -138,7 +141,11 @@ export async function settleUnexpectedStructuredAgentSessionExit<
     if (settlementFailed || !released) {
       return null
     }
-    if (!context.hasResumeCapableHolder(unexpectedEvent.sessionId)) {
+    // Resuming a start that failed would respawn into the same failure; the next send retries.
+    if (
+      unexpectedEvent.startupUnproven ||
+      !context.hasResumeCapableHolder(unexpectedEvent.sessionId)
+    ) {
       return null
     }
     return {
@@ -194,6 +201,7 @@ async function retryUnexpectedExitSettlement(input: {
     pendingSubmissionReason: 'provider_exited_before_acknowledgement',
     showUnexpectedExitOutcome: input.showUnexpectedExitOutcome,
     unexpectedExitReason: input.event.reason,
+    exitedDuringStartup: input.event.startupUnproven === true,
     onError: input.context.onBarrierError
   })
 }

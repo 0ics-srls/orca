@@ -116,7 +116,8 @@ export function createStructuredClaudeRuntimeAdapter(
           acquisitionGeneration: event.acquisitionGeneration,
           ...(event.settlementRetryRequired
             ? { settlementRetryRequired: event.settlementRetryRequired }
-            : {})
+            : {}),
+          ...(event.startupUnproven ? { startupUnproven: event.startupUnproven } : {})
         })
       }
     },

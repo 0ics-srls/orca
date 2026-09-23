@@ -1,16 +1,16 @@
 import type { AgentSessionAcquisition } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
-import type { ClaudeInitObservation } from './claude-structured-init-proof'
 import { claudeProviderHandleLink } from './claude-structured-owner-identity'
 import type { ClaudePromptRegistry } from './claude-structured-prompt-replies'
 import type { ClaudeJournalTranslator } from './claude-structured-journal-translation'
 import type { ClaudeSession } from './claude-structured-session-state'
 import { ClaudeBackgroundTaskTracker } from './claude-background-task-tracker'
 import { ClaudeSlashCommandCatalog } from './claude-slash-command-catalog'
+import { createClaudeSessionStartupGate } from './claude-structured-session-startup-gate'
 
+/** The session as published at spawn: nothing the CLI reports at init is assumed yet. */
 export function createClaudeSessionPublication(input: {
   connection: ClaudeSession['connection']
-  init: ClaudeInitObservation
-  initialization?: unknown
+  providerSessionId: string
   claudeConfigDir: string
   leafUuid: string | null
   fence: number
@@ -24,22 +24,12 @@ export function createClaudeSessionPublication(input: {
   linkId?: string
   observedAt: number
   options?: ReadonlyMap<string, string>
-  capabilities: readonly string[]
-  /** Read from `get_settings`; `system/init` never reports an effort. */
-  effort: string | null
-  fastMode: boolean | null
-  fastModePerSessionOptIn: boolean | null
-  fastModeState?: ClaudeSession['fastModeState']
-  fastModeDisabledReason?: string
 }): { acquisition: AgentSessionAcquisition; session: ClaudeSession } {
-  const model = input.init.model
-  const effort = input.effort
-  const fastMode = input.fastMode
   return {
     acquisition: {
       process: input.process,
       link: claudeProviderHandleLink({
-        sessionId: input.init.providerSessionId,
+        sessionId: input.providerSessionId,
         leafUuid: input.leafUuid,
         resumed: input.resumed,
         fence: input.fence,
@@ -50,7 +40,7 @@ export function createClaudeSessionPublication(input: {
     },
     session: {
       connection: input.connection,
-      providerSessionId: input.init.providerSessionId,
+      providerSessionId: input.providerSessionId,
       claudeConfigDir: input.claudeConfigDir,
       leafUuid: input.leafUuid,
       fence: input.fence,
@@ -60,32 +50,20 @@ export function createClaudeSessionPublication(input: {
       retiredDispatchWaiters: [],
       replayContentFallbackBlocked: false,
       backgroundTasks: new ClaudeBackgroundTaskTracker(),
-      commands: new ClaudeSlashCommandCatalog(input.init.message, input.initialization),
+      // Undefined until init: an unread catalog is unavailable, not empty.
+      commands: new ClaudeSlashCommandCatalog(),
       dispatchSequence: 0,
       optionMutationSequence: 0,
       options: new Map(input.options),
-      capabilities: input.capabilities,
-      reportedOptions: {
-        ...(model ? { model } : {}),
-        ...(effort ? { effort } : {}),
-        ...(fastMode !== null ? { fastMode } : {})
-      },
-      ...(input.fastModeState ? { fastModeState: input.fastModeState } : {}),
-      ...(input.fastModeDisabledReason
-        ? { fastModeDisabledReason: input.fastModeDisabledReason }
-        : {}),
-      ...(input.fastModePerSessionOptIn !== null
-        ? { fastModePerSessionOptIn: input.fastModePerSessionOptIn }
-        : {}),
+      capabilities: [],
+      reportedOptions: {},
       reportedModelMutation: 0,
-      confirmedOptions: new Set([
-        ...(effort ? ['effort'] : []),
-        ...(fastMode !== null ? ['fastMode'] : [])
-      ]),
+      confirmedOptions: new Set(),
       restoreSkippedOptions: new Set(),
       translator: input.translator,
       events: input.events,
-      ...(input.unbindReadingControl ? { unbindReadingControl: input.unbindReadingControl } : {})
+      ...(input.unbindReadingControl ? { unbindReadingControl: input.unbindReadingControl } : {}),
+      startup: createClaudeSessionStartupGate()
     }
   }
 }

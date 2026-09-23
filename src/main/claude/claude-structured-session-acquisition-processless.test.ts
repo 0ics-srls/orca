@@ -24,12 +24,13 @@ describe('Claude structured processless acquisition', () => {
       _launch,
       handlers = {}
     ) => {
+      // A failed spawn reports its error on a later tick, as child_process does.
+      setTimeout(() => handlers.onFault?.(fault), 0)
       const connection: ClaudeStreamJsonConnection = {
         pid: undefined,
         closed: true,
         exitVerdict: { root: 'processless', tree: 'exited' },
         initializationResult: async () => {
-          handlers.onFault?.(fault)
           throw fault
         },
         getSettings: async () => ({}),

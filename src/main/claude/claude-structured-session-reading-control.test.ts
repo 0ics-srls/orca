@@ -89,8 +89,16 @@ describe('Claude structured reading control', () => {
   })
 
   it('unbinds when acquisition fails after the connection opens', async () => {
-    const claude = fakeClaude({ initProof: 'none' })
-    const adapter = adapterFor(claude, {}, [], [], 1)
+    // A rewind proves startup before publish, so it is the acquisition that can still fail.
+    const claude = fakeClaude({ exitBeforeInit: 'claude stream-json exited (code 1)' })
+    const adapter = adapterFor(
+      claude,
+      { resumed: true, resumeLeafUuid: 'tip' },
+      [],
+      [],
+      undefined,
+      async () => 'kept'
+    )
     const events = controlledSink()
 
     await expect(
@@ -98,9 +106,15 @@ describe('Claude structured reading control', () => {
         identity: identityFor(),
         fence: 7,
         spawnToken: 'spawn-9',
-        events: events.sink
+        events: events.sink,
+        rewind: {
+          targetUuid: 'kept',
+          previousLeafUuid: 'tip',
+          dropsTurn: 'drop',
+          onProved: async () => {}
+        }
       })
-    ).rejects.toThrow('did not finish starting')
+    ).rejects.toThrow('exited (code 1)')
     expect(events.unbind).toHaveBeenCalledOnce()
   })
 

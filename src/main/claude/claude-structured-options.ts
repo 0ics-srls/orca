@@ -37,6 +37,21 @@ export function restoredClaudeStructuredSessionOptions(
   )
 }
 
+/** A client's write; the startup restore writes through `setClaudeStructuredOption` directly. */
+export function setClaudeStructuredSessionOption(
+  session: ClaudeSession,
+  input: { key: string; value: string },
+  timeoutMs: number | undefined
+): Promise<Readonly<Record<string, string>>> {
+  // Each write is a control request the CLI answers only after initialize.
+  if (session.startup.state !== 'proven') {
+    return Promise.reject(
+      new AgentSessionOptionRejectedError('Claude is still starting. Try again in a moment.')
+    )
+  }
+  return setClaudeStructuredOption(session, input, timeoutMs)
+}
+
 export async function setClaudeStructuredOption(
   session: ClaudeSession,
   input: { key: string; value: string },

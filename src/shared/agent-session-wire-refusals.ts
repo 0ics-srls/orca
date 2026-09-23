@@ -33,6 +33,9 @@ export function isAgentSessionWireRefusalCode(
   )
 }
 
+/** What the host last proved about a session's provider process; see the SSH execution boundary. */
+export type AgentSessionOwnerVerdict = 'live' | 'unverifiable' | 'exited'
+
 export type AgentSessionWireRefusal = {
   rewindReason?: AgentSessionRewindReason
   code: AgentSessionWireRefusalCode
@@ -43,4 +46,7 @@ export type AgentSessionWireRefusal = {
   resolution?: AgentJournalResolution
   /** On a lost compare-and-set: the revision the host actually holds. */
   currentRevision?: number
+  /** On a durably failed create: `exited` proves nothing runs for the session, so a new
+   *  operation cannot collide with this one. Absent (older hosts) reads as unverifiable. */
+  ownerVerdict?: AgentSessionOwnerVerdict
 }

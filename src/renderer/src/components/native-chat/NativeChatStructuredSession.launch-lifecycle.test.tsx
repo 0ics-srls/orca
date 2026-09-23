@@ -68,6 +68,22 @@ describe('NativeChatStructuredSession launch lifecycle', () => {
     expect(mocks.retryLaunch).toHaveBeenCalledWith('wt-1', 'session-1')
   })
 
+  it('shows why a failed launch failed beside Retry', () => {
+    mocks.launchLifecycle = 'failed'
+    mocks.launchFailureReason = 'claude is not signed in'
+    render(sessionView())
+
+    expect(screen.getByText('Chat could not be started. claude is not signed in')).toBeTruthy()
+  })
+
+  it('keeps a stale reason off a launch that is no longer failed', () => {
+    mocks.launchLifecycle = 'visibility-unknown'
+    mocks.launchFailureReason = 'claude is not signed in'
+    render(sessionView())
+
+    expect(screen.getByText('Chat connection could not be confirmed.')).toBeTruthy()
+  })
+
   it('keeps the durable outbox parked until publication, then dispatches it once', async () => {
     mocks.mode = 'outbox'
     mocks.launchLifecycle = 'visibility-unknown'

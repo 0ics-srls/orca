@@ -18,6 +18,7 @@ import type {
 } from '../../shared/agent-session-wire'
 import type { ClaudeBackgroundTaskTracker } from './claude-background-task-tracker'
 import type { ClaudeSlashCommandCatalog } from './claude-slash-command-catalog'
+import type { ClaudeSessionStartupGate } from './claude-structured-session-startup-gate'
 
 export type ClaudeAuthDiagnostic = {
   apiKeySourceConfigured: boolean
@@ -63,6 +64,8 @@ export type ClaudeStructuredSessionEvent =
       settlementRetryRequired?: boolean
       /** Host clock when the end was observed. */
       observedAt?: number
+      /** The child ended before proving startup, so reacquiring would repeat the same start. */
+      startupUnproven?: true
     }
 
 export type ClaudeLateDispatchOutcome =
@@ -89,7 +92,6 @@ export type ClaudeStructuredSessionAdapterDeps = {
   mintAcquisitionGeneration?: () => string
   now?: () => number
   requestTimeoutMs?: number
-  initTimeoutMs?: number
   persistHandle?: (input: {
     sessionId: string
     providerSessionId: string
@@ -171,6 +173,8 @@ export type ClaudeSession = {
   translator: ClaudeJournalTranslator | null
   events: StructuredAgentSessionEventSink | undefined
   unbindReadingControl?: () => void
+  /** Published at spawn; init facts, option restore and queued prompts land when startup does. */
+  startup: ClaudeSessionStartupGate
 }
 
 export function mintClaudeAcquisitionGeneration(deps: ClaudeStructuredSessionAdapterDeps): string {
