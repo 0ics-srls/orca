@@ -16,6 +16,11 @@ export class StructuredConversationCommandController {
   ) {}
   private readonly recovery = new StructuredAgentSessionSendRecovery({
     getRecord: (sessionId) => this.context().deps.store.getRecord(sessionId),
+    hasJournaledSend: (sessionId, clientMessageId) =>
+      this.context()
+        .sessions.get(sessionId)
+        ?.journal.submissions()
+        .some((submission) => submission.clientMessageId === clientMessageId) ?? false,
     resume: (sessionId) => this.context().resumeUnheld(sessionId),
     onError: (input) => this.context().deps.onEventSinkError?.(input)
   })

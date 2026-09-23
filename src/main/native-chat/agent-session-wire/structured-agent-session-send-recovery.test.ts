@@ -128,6 +128,7 @@ describe('a send with no live owner', () => {
     const order: string[] = []
     const recovery = new StructuredAgentSessionSendRecovery({
       getRecord: (sessionId) => store.getRecord(sessionId),
+      hasJournaledSend: () => false,
       resume: async () => {
         order.push('resume')
       }
@@ -218,6 +219,65 @@ describe('a send with no live owner', () => {
     expect(acquire).toHaveBeenCalledOnce()
   })
 
+  it('restarts nothing for a resend the journal already answers', async () => {
+    const params = sendParams('sent once')
+    await expect(host.send(CALLER, params)).resolves.toMatchObject({ ok: true, replayed: false })
+    // The child died during startup: the lease is handed back, the fence moves, and the session
+    // stays readable. The client resends against the new fence.
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: SESSION,
+      reason: 'startup deadline',
+      cause: 'unexpected-exit',
+      fence: params.envelope.expectedRuntimeFence ?? 0,
+      acquisitionGeneration: 'generation-1',
+      startupUnproven: true
+    })
+    expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+    acquire.mockClear()
+    const resent = {
+      ...params,
+      envelope: {
+        ...params.envelope,
+        expectedRuntimeFence: store.getRecord(SESSION)?.lease.runtimeFence ?? 0
+      }
+    }
+
+    await expect(host.send(CALLER, resent)).resolves.toMatchObject({ ok: true, replayed: true })
+
+    expect(acquire).not.toHaveBeenCalled()
+    expect(dispatch).toHaveBeenCalledOnce()
+    expect(store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+  })
+
+  it('rebases a send that arrives after the restart has already claimed the lease', async () => {
+    await loseOwner()
+    const lostFence = store.getRecord(SESSION)?.lease.runtimeFence ?? 0
+    let claimed = () => {}
+    let release = () => {}
+    const claim = new Promise<void>((resolve) => (claimed = resolve))
+    const spawn = new Promise<void>((resolve) => (release = resolve))
+    const spawnChild = acquire.getMockImplementation()
+    acquire.mockImplementationOnce(async (input) => {
+      claimed()
+      await spawn
+      return spawnChild!(input)
+    })
+
+    const first = host.send(CALLER, sendParams('first'))
+    await claim
+    expect(store.getRecord(SESSION)?.lease.runtimeFence).toBe(lostFence + 1)
+    const late = sendParams('second')
+    late.envelope.expectedRuntimeFence = lostFence
+    const second = host.send(CALLER, late)
+    release()
+
+    expect(await first).toMatchObject({ ok: true })
+    expect(await second).toMatchObject({ ok: true })
+    expect(acquire).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledTimes(2)
+  })
+
   it('shares one restart between concurrent sends', async () => {
     await loseOwner()
 
@@ -232,7 +292,7 @@ describe('a send with no live owner', () => {
     expect(dispatch).toHaveBeenCalledTimes(3)
   })
 
-  it('replays a resent operation instead of running or restarting it again', async () => {
+  it('reopens a closed session once for a replay, and never runs the send again', async () => {
     const params = sendParams('sent once')
     await expect(host.send(CALLER, params)).resolves.toMatchObject({ ok: true, replayed: false })
     await loseOwner()
