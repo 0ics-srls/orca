@@ -8,7 +8,8 @@ import {
   AgentSessionAcquisitionRefusal,
   isAgentSessionPreSpawnError,
   type StructuredAgentSessionAcquireInput,
-  type StructuredAgentSessionAdapter
+  type StructuredAgentSessionAdapter,
+  type StructuredAgentSessionProviderChildPhase
 } from './structured-agent-session-adapter'
 // The host supplies owner authority; this flow reserves, proves, and publishes the session.
 
@@ -61,7 +62,8 @@ export type AttachFlowInput = {
   onAttached: (
     attached: AttachedJournal,
     acquisitionGeneration: string | null,
-    acquiredOwner: boolean
+    acquiredOwner: boolean,
+    providerChildPhase: StructuredAgentSessionProviderChildPhase
   ) => Promise<void> | void
   /** Host-owned provider sink, bound to the journal inside `onAttached`. */
   eventSink?: StructuredAgentSessionEventSink
@@ -97,6 +99,7 @@ export async function performAttach(
   let record: AgentSessionRecord
   let acquisitionGeneration: string | null = null
   let acquiredOwner = false
+  let providerChildPhase: StructuredAgentSessionProviderChildPhase = 'ready'
   let reservedRecord: AgentSessionRecord | null = null
   let unsupportedReservationSettlementAttempted = false
   let replayed = false
@@ -166,6 +169,7 @@ export async function performAttach(
       )
       record = acquired.record
       acquisitionGeneration = acquired.acquisitionGeneration
+      providerChildPhase = acquired.providerChildPhase
       acquiredOwner = true
     }
   } catch (error) {
@@ -244,7 +248,7 @@ export async function performAttach(
       providerHistoryWindow
     })
     await importAdoptedTranscript(params, attached, record, preparedTranscript.items)
-    await input.onAttached(attached, acquisitionGeneration, acquiredOwner)
+    await input.onAttached(attached, acquisitionGeneration, acquiredOwner, providerChildPhase)
     await store.recordOperationOutcome({
       callerKey: input.callerKey,
       operationId: params.envelope.clientOperationId,

@@ -138,6 +138,7 @@ async function workingSession(): Promise<{
         },
         fence: 1,
         hasProviderChild: true,
+        providerChildPhase: 'ready',
         acquisitionGeneration: null
       }
     ]

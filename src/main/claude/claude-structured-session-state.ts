@@ -53,6 +53,8 @@ export type ClaudeStructuredSessionEvent =
       fence: number
     }
   | { type: 'auth-diagnostic'; sessionId: string; diagnostic: ClaudeAuthDiagnostic }
+  /** Startup facts applied and saved options restored; held prompts are about to be written. */
+  | { type: 'started'; sessionId: string; fence: number; acquisitionGeneration: string }
   | {
       type: 'ended'
       sessionId: string

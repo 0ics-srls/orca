@@ -1,4 +1,4 @@
-import type { StructuredAgentSessionLifecycleEvent } from './structured-agent-session-adapter'
+import type { StructuredAgentSessionEndedEvent } from './structured-agent-session-adapter'
 import type { StructuredAgentSessionHostSession } from './structured-agent-session-host-types'
 import {
   releaseStoredStructuredAgentSessionOwnerAfterUnexpectedExit,
@@ -14,7 +14,7 @@ import {
 } from './structured-agent-session-dead-generation-settlement'
 import type { StructuredAgentSessionTurnVerdict } from './structured-agent-session-stale-turn-verdict'
 
-type UnexpectedExitLifecycleEvent = StructuredAgentSessionLifecycleEvent & {
+type UnexpectedExitLifecycleEvent = StructuredAgentSessionEndedEvent & {
   cause: 'unexpected-exit'
 }
 
@@ -50,7 +50,7 @@ export async function settleUnexpectedStructuredAgentSessionExit<
   TSession extends StructuredAgentSessionUnexpectedExitSession
 >(
   context: StructuredAgentSessionUnexpectedExitContext<TSession>,
-  event: StructuredAgentSessionLifecycleEvent
+  event: StructuredAgentSessionEndedEvent
 ): Promise<StructuredAgentSessionRecoveryTicket | null> {
   if (event.cause !== 'unexpected-exit') {
     return null

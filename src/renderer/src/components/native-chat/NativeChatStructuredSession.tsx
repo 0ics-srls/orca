@@ -23,6 +23,8 @@ import { useNativeChatLaunchDraftSignal } from './use-native-chat-launch-draft-a
 import { NativeChatLaunchRetry } from './NativeChatLaunchRetry'
 import { useNativeChatProvisionalLaunch } from './use-native-chat-provisional-launch'
 import { NativeChatDeliveryRetry } from './NativeChatDeliveryRetry'
+import { useStructuredAgentSessionStatusSummary } from './StructuredAgentSessionStatusBridge'
+import { structuredAgentLabel } from '@/lib/structured-agent-session-launch-label'
 
 function encodeQuestionAnswer(questionId: string, answer: string): string {
   return `${encodeURIComponent(questionId)}:${encodeURIComponent(answer)}`
@@ -37,6 +39,10 @@ export function NativeChatStructuredSession(
     props.sessionId
   )
   const { sendThroughRelaunch } = provisionalLaunch
+  // The host's own word on whether the provider child has answered startup yet.
+  const startupPhase =
+    useStructuredAgentSessionStatusSummary(props.sessionId, props.target).summary
+      ?.hostExecutionPhase ?? null
   const controller = useStructuredAgentSession({
     ...props,
     transportEnabled: provisionalLaunch.transportEnabled
@@ -316,6 +322,8 @@ export function NativeChatStructuredSession(
       />
       <NativeChatStructuredSessionStatus
         sessionId={props.sessionId}
+        agentLabel={structuredAgentLabel(props.agent === 'codex' ? 'codex' : 'claude')}
+        startupPhase={startupPhase}
         error={controller.error}
         composerError={composerError}
         isVisible={props.isVisible}

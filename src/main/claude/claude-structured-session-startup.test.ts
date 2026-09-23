@@ -65,6 +65,35 @@ describe('Claude structured session publishes before the CLI answers initialize'
     await adapter.closeAll()
   })
 
+  it('reports `started` once saved options are restored, before any held prompt is written', async () => {
+    const claude = fakeClaude({ initDelayMs: SLOW_INIT_MS, initModel: 'claude-opus-9' })
+    const { adapter, events } = startingAdapter(claude)
+    const order: string[] = []
+    claude.routes.set_model = () => {
+      order.push('set_model')
+      return undefined
+    }
+    await adapter.acquire({ ...ACQUIRE, options: { model: 'opus' } })
+    await adapter.dispatch(PROMPT)
+    expect(events.some((event) => event.type === 'started')).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(SLOW_INIT_MS)
+    await adapter.drainStartup('session-1')
+
+    const startedAt = events.findIndex((event) => event.type === 'started')
+    expect(events[startedAt]).toEqual({
+      type: 'started',
+      sessionId: 'session-1',
+      fence: 7,
+      acquisitionGeneration: expect.any(String)
+    })
+    // The restore wrote the saved model before `started`, and the held prompt only after it.
+    expect(order).toEqual(['set_model'])
+    expect(claude.connections[0].sent).toHaveLength(1)
+    expect(events.slice(0, startedAt).some((event) => event.type === 'options')).toBe(true)
+    await adapter.closeAll()
+  })
+
   it('holds a prompt sent before init and writes it once startup lands', async () => {
     const claude = fakeClaude({ initDelayMs: SLOW_INIT_MS })
     const { adapter } = startingAdapter(claude)
@@ -158,6 +187,7 @@ describe('Claude structured session publishes before the CLI answers initialize'
       expect.objectContaining({ clientMessageId: 'client-1', state: 'rejected' })
     ])
     expect(events.some((event) => event.type === 'ended' && event.startupUnproven)).toBe(false)
+    expect(events.some((event) => event.type === 'started')).toBe(false)
   })
 
   it('withdraws a held prompt when the turn is cancelled before init', async () => {

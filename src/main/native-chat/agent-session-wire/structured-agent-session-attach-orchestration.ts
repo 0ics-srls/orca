@@ -121,7 +121,7 @@ export function attachStructuredAgentSession(
           eventSink.close()
           context.runtimeState.discardEventSink(sessionId)
         },
-        onAttached: async (attached, acquisitionGeneration, acquiredOwner) => {
+        onAttached: async (attached, acquisitionGeneration, acquiredOwner, providerChildPhase) => {
           const fence = context.deps.store.getRecord(sessionId)?.lease.runtimeFence ?? 0
           const previous = context.sessions.get(sessionId)
           const previousFence = previous?.fence
@@ -161,6 +161,10 @@ export function attachStructuredAgentSession(
             params,
             fence,
             hasProviderChild: true,
+            // A re-attach to a live child keeps what that child already proved.
+            providerChildPhase: acquiredOwner
+              ? providerChildPhase
+              : (previous?.providerChildPhase ?? 'ready'),
             acquisitionGeneration: acquisitionGeneration ?? previous?.acquisitionGeneration ?? null
           })
           if (!rewind) {

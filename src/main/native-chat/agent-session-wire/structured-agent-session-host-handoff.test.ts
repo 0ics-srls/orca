@@ -165,6 +165,7 @@ describe('native handoff acquisition', () => {
       },
       fence: reserved.record.lease.runtimeFence,
       hasProviderChild: false,
+      providerChildPhase: 'ready' as const,
       acquisitionGeneration: null
     }
     const acquiring = acquireNativeHandoffOwner(
@@ -262,6 +263,7 @@ describe('native handoff acquisition', () => {
       },
       fence: reserved.record.lease.runtimeFence,
       hasProviderChild: false,
+      providerChildPhase: 'ready' as const,
       acquisitionGeneration: null
     }
 
@@ -356,6 +358,7 @@ describe('native handoff acquisition', () => {
       },
       fence: reserved.record.lease.runtimeFence,
       hasProviderChild: false,
+      providerChildPhase: 'ready' as const,
       acquisitionGeneration: null
     }
 

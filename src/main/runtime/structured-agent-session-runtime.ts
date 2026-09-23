@@ -284,7 +284,7 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
               readClaudeManagedAccountGateSettings(deps.getClaudeManagedAccountGateSettings!)
           }
         : {}),
-      onUnexpectedExit: (event) => {
+      onLifecycleEvent: (event) => {
         recoveryChain = recoveryChain.then(async () => {
           try {
             await host?.handleAdapterEvent(event)

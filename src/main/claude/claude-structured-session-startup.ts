@@ -148,6 +148,8 @@ export async function settleClaudeSessionStartup(input: {
   isCurrent: () => boolean
   requestTimeoutMs: number | undefined
   fault: (error: Error) => void
+  /** Startup has proven: the host may now read this child's options as fact. */
+  onStarted: () => void
 }): Promise<void> {
   const { session } = input
   const superseded = (): boolean => {
@@ -165,6 +167,7 @@ export async function settleClaudeSessionStartup(input: {
     applyClaudeStartupFacts(session, facts)
     await restoreClaudeStructuredSessionOptions(session, input.requestTimeoutMs)
     if (!superseded()) {
+      input.onStarted()
       await openClaudeStartupGate(session)
     }
   } catch (caught) {

@@ -73,7 +73,9 @@ export function createStructuredSessionMocks() {
 
   const moduleFactories = {
     structuredAgentSessionClient: () => ({
-      callStructuredAgentSession: mocks.call
+      callStructuredAgentSession: mocks.call,
+      // The pane activates the host status feed for its startup phase; nothing here drives it.
+      subscribeStructuredAgentSessionStatus: async () => ({ unsubscribe: () => {} })
     }),
     useStructuredAgentSession: async () => {
       const { useStructuredAgentSessionOutbox } =

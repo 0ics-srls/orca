@@ -252,12 +252,17 @@ export async function acquireNativeHandoffOwner(
   })
   let proved: AgentSessionRecord
   try {
-    const options = await readNativeSessionOptions({
-      adapter: deps.adapter,
-      sessionId: input.sessionId,
-      fence: input.fence,
-      ...(record.options ? { priorOptions: record.options } : {})
-    })
+    // A starting child has proven nothing yet: the record keeps the saved options as intent, and
+    // the `started` event persists what the child reports.
+    const options =
+      acquired.providerChildPhase === 'starting'
+        ? undefined
+        : await readNativeSessionOptions({
+            adapter: deps.adapter,
+            sessionId: input.sessionId,
+            fence: input.fence,
+            ...(record.options ? { priorOptions: record.options } : {})
+          })
     await deps.store.commitProcessIdentity({
       sessionId: input.sessionId,
       fence: input.fence,
@@ -275,6 +280,7 @@ export async function acquireNativeHandoffOwner(
     return rethrowAfterAgentSessionAcquisitionCleanup(deps.adapter, input.sessionId, error)
   }
   session.hasProviderChild = true
+  session.providerChildPhase = acquired.providerChildPhase ?? 'ready'
   host.publishStatus?.(input.sessionId)
   session.fence = proved.lease.runtimeFence
   session.acquisitionGeneration = acquired.acquisitionGeneration ?? null

@@ -253,9 +253,25 @@ export async function acquireClaudeSession({
       facts: facts ?? readFacts(),
       isCurrent: () => sessions.get(sessionId) === session,
       requestTimeoutMs: deps.requestTimeoutMs,
-      fault: (error) => callbacks.handleExit(sessionId, attempt, error)
+      fault: (error) => callbacks.handleExit(sessionId, attempt, error),
+      onStarted: () =>
+        emit({
+          type: 'started',
+          sessionId,
+          fence: input.fence,
+          acquisitionGeneration: session.acquisitionGeneration
+        })
     })
-    return publication.acquisition
+    // A child whose exit already reached `handleExit` is not handed over as live: the create
+    // fails with the CLI's own diagnostic, as one that died before publish does.
+    if (sessions.get(sessionId) !== session) {
+      throw (
+        exits.get(sessionId)?.error ?? new Error('claude session ended before acquisition returned')
+      )
+    }
+    // Even a proof-first start applies its facts and restores saved options only now, so the
+    // child is `starting` until `started` says otherwise.
+    return { ...publication.acquisition, providerChildPhase: 'starting' }
   } catch (error) {
     unbindReadingControl?.()
     const acquisitionError = await resolveClaudeAcquisitionError({

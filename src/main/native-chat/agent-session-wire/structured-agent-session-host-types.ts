@@ -6,7 +6,10 @@ import type { AgentSessionRecordStore } from '../../runtime/agent-session-record
 import type { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import type { AgentSessionSpawnTokenScan } from '../../runtime/agent-session-spawn-token-process-scan'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
-import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
+import type {
+  StructuredAgentSessionAdapter,
+  StructuredAgentSessionProviderChildPhase
+} from './structured-agent-session-adapter'
 import type { AgentSessionAttachParams } from './structured-agent-session-attach'
 import type { StructuredAgentSessionHandoffTransport } from './structured-agent-session-handoff-types'
 import type { StructuredAgentSessionStatusSink } from './structured-agent-session-status-feed'
@@ -32,6 +35,9 @@ export type StructuredAgentSessionHostSession = {
    *  restored for reading has none, and neither has a session a TUI owns — so neither may be
    *  evicted to free a child, and neither may have its lease released as an observed exit. */
   hasProviderChild: boolean
+  /** Whether the child behind `hasProviderChild` has proven its start. A publish-first acquire
+   *  is `starting` until the adapter's `started` event; only then are its reported options fact. */
+  providerChildPhase: StructuredAgentSessionProviderChildPhase
   /** The wind-down this host still owes for a child it started: settling that generation's work
    *  and handing the lease back. A separate fact from `hasProviderChild`, which goes false the
    *  moment the adapter proves the exit — an eviction that aborts after that point must still be

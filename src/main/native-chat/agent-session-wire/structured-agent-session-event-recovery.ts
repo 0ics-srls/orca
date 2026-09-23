@@ -7,6 +7,7 @@ import type {
 } from './structured-agent-session-host-types'
 import type { StructuredAgentSessionSinkBarrier } from './structured-agent-session-event-sink'
 import { resumeHeldStructuredAgentSession } from './structured-agent-session-hold-resume'
+import { settleStructuredAgentSessionProviderStarted } from './structured-agent-session-provider-started'
 import {
   isStructuredAgentSessionRecoveryTicketCurrent,
   settleUnexpectedStructuredAgentSessionExit
@@ -65,6 +66,9 @@ export class StructuredAgentSessionEventRecovery {
   }
 
   async handle(event: StructuredAgentSessionLifecycleEvent): Promise<void> {
+    if (event.type === 'started') {
+      return settleStructuredAgentSessionProviderStarted(this.context, event)
+    }
     const ticket = await settleUnexpectedStructuredAgentSessionExit(this.context, event)
     if (!ticket) {
       return

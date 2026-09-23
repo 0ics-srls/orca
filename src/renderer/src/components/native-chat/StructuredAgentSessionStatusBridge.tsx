@@ -19,7 +19,7 @@ import { getStructuredAgentSessionTabs, type StructuredTab } from './structured-
 export { getStructuredAgentSessionTabs } from './structured-agent-session-tabs'
 
 /** The host's projected status for one session, live while the caller is mounted. */
-function useStructuredAgentSessionStatusSummary(
+export function useStructuredAgentSessionStatusSummary(
   sessionId: string,
   target: RuntimeClientTarget
 ): { summary: AgentSessionStatusSummary | null; observation: 'live' | 'unverifiable' } {

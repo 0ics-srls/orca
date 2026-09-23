@@ -46,7 +46,9 @@ export function setClaudeStructuredSessionOption(
   // Each write is a control request the CLI answers only after initialize.
   if (session.startup.state !== 'proven') {
     return Promise.reject(
-      new AgentSessionOptionRejectedError('Claude is still starting. Try again in a moment.')
+      new AgentSessionOptionRejectedError(
+        'Claude is still starting; options can be changed once it is ready.'
+      )
     )
   }
   return setClaudeStructuredOption(session, input, timeoutMs)
