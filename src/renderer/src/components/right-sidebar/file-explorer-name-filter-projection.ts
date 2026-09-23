@@ -1,7 +1,8 @@
 import { joinPath, normalizeRelativePath } from '@/lib/path'
-import { isClipboardTextByteLengthOverLimit } from '../../../../shared/clipboard-text'
 import { compareFileNames } from '../../../../shared/file-name-sort'
 import {
+  FILE_NAME_FILTER_QUERY_MAX_BYTES,
+  isFileNameFilterQueryTooLarge,
   pathMatchesFileNameFilterTokens,
   splitFileNameFilterTokens
 } from '../../../../shared/file-name-filter-tokens'
@@ -20,7 +21,7 @@ export type FileExplorerNameFilterProjectionSource = {
   operationOwner?: FileExplorerOperationOwner
 }
 
-export const FILE_EXPLORER_NAME_FILTER_QUERY_MAX_BYTES = 2 * 1024
+export const FILE_EXPLORER_NAME_FILTER_QUERY_MAX_BYTES = FILE_NAME_FILTER_QUERY_MAX_BYTES
 
 export function getNextNameFilterCollapsedPaths(
   collapsedPaths: ReadonlySet<string>,
@@ -52,8 +53,7 @@ export function isFileExplorerNameFilterQueryTooLarge(
   query: string | undefined,
   maxBytes = FILE_EXPLORER_NAME_FILTER_QUERY_MAX_BYTES
 ): boolean {
-  const value = query ?? ''
-  return isClipboardTextByteLengthOverLimit(value, maxBytes)
+  return isFileNameFilterQueryTooLarge(query ?? '', maxBytes)
 }
 
 export function getFileExplorerNameFilterTokens(query: string | undefined): string[] {

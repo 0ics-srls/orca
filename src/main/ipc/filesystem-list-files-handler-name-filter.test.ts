@@ -87,4 +87,13 @@ describe('fs:listFiles local name filter', () => {
 
     expect(listQuickOpenFilesMock.mock.calls[0][6]).toBeUndefined()
   })
+
+  it('refuses oversized name filters at the IPC boundary', async () => {
+    registerHandlers()
+
+    await expect(
+      handlers.get('fs:listFiles')!(null, { rootPath: '/repo', nameFilter: 'x'.repeat(4096) })
+    ).resolves.toEqual([])
+    expect(listQuickOpenFilesMock).not.toHaveBeenCalled()
+  })
 })

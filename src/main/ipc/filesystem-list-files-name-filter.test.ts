@@ -55,7 +55,7 @@ function spawnMissingRipgrep(): void {
   )
 }
 
-function fakeRipgrep(output: string): EventEmitter {
+function fakeRipgrep(output: string, killSignal: NodeJS.Signals | null = null): EventEmitter {
   const child = new EventEmitter()
   const stdout = Object.assign(new EventEmitter(), { setEncoding: vi.fn() })
   Object.assign(child, {
@@ -68,7 +68,7 @@ function fakeRipgrep(output: string): EventEmitter {
   })
   setTimeout(() => {
     stdout.emit('data', output)
-    child.emit('close', 0, null)
+    child.emit('close', killSignal ? null : 0, killSignal)
   }, 0)
   return child
 }
@@ -123,11 +123,9 @@ describe('listQuickOpenFiles name filter', () => {
     ).resolves.toEqual(['zz/Notion Web Clipper/AppDelegate.swift'])
   })
 
-  it('keeps the capped prefix when an uncapped walk exceeds its budget', async () => {
+  it('rejects an over-budget filtered walk so the renderer keeps its capped listing', async () => {
     spawnMissingRipgrep()
-    listFilesWithGitSpy
-      .mockRejectedValueOnce(new Error('File listing exceeded 20001 files'))
-      .mockResolvedValueOnce(['src/target.ts', 'src/other.ts'])
+    listFilesWithGitSpy.mockRejectedValueOnce(new Error('File listing exceeded 20001 files'))
 
     await expect(
       listQuickOpenFiles(
@@ -139,7 +137,36 @@ describe('listQuickOpenFiles name filter', () => {
         undefined,
         nameFilter('target')
       )
-    ).resolves.toEqual(['src/target.ts'])
-    expect(listFilesWithGitSpy.mock.calls.map((call) => call[4])).toEqual([undefined, 5])
+    ).rejects.toThrow()
+    expect(listFilesWithGitSpy).toHaveBeenCalledTimes(1)
+    expect(listFilesWithGitSpy.mock.calls[0][4]).toBeUndefined()
+  })
+
+  it('keeps primary matches when the ignored-file pass fails during a filtered scan', async () => {
+    wslAwareSpawnMock
+      .mockImplementationOnce(() => fakeRipgrep('ios/AppDelegate.swift\n'))
+      .mockImplementationOnce(() => fakeRipgrep('', 'SIGKILL'))
+
+    await expect(
+      listQuickOpenFiles(
+        '/repo',
+        makeStore('/repo'),
+        undefined,
+        undefined,
+        5,
+        undefined,
+        nameFilter('appdelegate')
+      )
+    ).resolves.toEqual(['ios/AppDelegate.swift'])
+  })
+
+  it('still rejects an ignored-pass failure for unfiltered listings', async () => {
+    wslAwareSpawnMock
+      .mockImplementationOnce(() => fakeRipgrep('a.ts\n'))
+      .mockImplementationOnce(() => fakeRipgrep('', 'SIGKILL'))
+
+    await expect(
+      listQuickOpenFiles('/repo', makeStore('/repo'), undefined, undefined, 5)
+    ).rejects.toThrow('rg killed by SIGKILL')
   })
 })

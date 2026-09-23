@@ -25,6 +25,7 @@ import { checkRgAvailable } from '../rg-availability'
 import { resolveAuthorizedPath } from '../filesystem-auth'
 import { listQuickOpenFiles } from '../filesystem-list-files'
 import {
+  isFileNameFilterQueryTooLarge,
   pathMatchesFileNameFilterTokens,
   splitFileNameFilterTokens
 } from '../../../shared/file-name-filter-tokens'
@@ -226,6 +227,9 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
             ...(args.searchQuery === undefined ? {} : { searchQuery: args.searchQuery }),
             signal: controller?.signal
           })
+        }
+        if (args.nameFilter !== undefined && isFileNameFilterQueryTooLarge(args.nameFilter)) {
+          return []
         }
         const nameFilterTokens = args.nameFilter ? splitFileNameFilterTokens(args.nameFilter) : []
         return await listQuickOpenFiles(

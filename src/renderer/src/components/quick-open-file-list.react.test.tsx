@@ -691,7 +691,7 @@ describe('useRuntimeFileListForWorktree', () => {
       projectGroups: [makeProjectGroup()],
       repos: [],
       worktreesByRepo: {}
-    } as Partial<AppState>)
+    })
     listRuntimeFilesMock
       .mockResolvedValueOnce(
         Array.from({ length: QUICK_OPEN_LISTING_MAX_RESULTS }, (_, i) => `src/file-${i}.ts`)
@@ -713,7 +713,7 @@ describe('useRuntimeFileListForWorktree', () => {
 
       expect(listRuntimeFilesMock).toHaveBeenCalledTimes(2)
       expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
-      expect(listRuntimeFilesMock.mock.calls[1][1]).toMatchObject({ nameFilter: 'AppDelegate' })
+      expect(listRuntimeFilesMock.mock.calls[1][1]).toMatchObject({ nameFilter: 'appdelegate' })
       expect(states.at(-1)).toMatchObject({
         files: ['ios/AppDelegate.swift'],
         loading: false,
@@ -730,7 +730,7 @@ describe('useRuntimeFileListForWorktree', () => {
       projectGroups: [makeProjectGroup()],
       repos: [],
       worktreesByRepo: {}
-    } as Partial<AppState>)
+    })
 
     await renderProbe({
       enabled: true,
@@ -744,5 +744,54 @@ describe('useRuntimeFileListForWorktree', () => {
 
     expect(listRuntimeFilesMock).toHaveBeenCalledTimes(1)
     expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
+  })
+  it('falls back to the capped listing and stops re-listing after a host filter failure', async () => {
+    vi.useFakeTimers()
+    useAppStore.setState({
+      folderWorkspaces: [makeFolderWorkspace()],
+      projectGroups: [makeProjectGroup()],
+      repos: [],
+      worktreesByRepo: {}
+    })
+    const capped = Array.from({ length: QUICK_OPEN_LISTING_MAX_RESULTS }, (_, i) => `f-${i}.ts`)
+    listRuntimeFilesMock.mockImplementation(async (_context, args: { nameFilter?: string }) => {
+      if (args.nameFilter) {
+        throw new Error('rg list timed out')
+      }
+      return capped
+    })
+    const states: RuntimeFileListState[] = []
+    const workspaceKey = folderWorkspaceKey('folder-workspace-1')
+
+    try {
+      const root = await renderProbe({
+        enabled: true,
+        onState: (state) => states.push(state),
+        query: 'f-1',
+        hostFilterWhenCapped: true,
+        worktreeId: workspaceKey
+      })
+      await act(async () => vi.advanceTimersByTimeAsync(120))
+      await flushEffects()
+      await act(async () => {
+        root.render(
+          createElement(HookProbe, {
+            enabled: true,
+            onState: (state: RuntimeFileListState) => states.push(state),
+            query: 'f-2',
+            hostFilterWhenCapped: true,
+            worktreeId: workspaceKey
+          })
+        )
+      })
+      await act(async () => vi.advanceTimersByTimeAsync(120))
+      await flushEffects()
+
+      const nameFilters = listRuntimeFilesMock.mock.calls.map((call) => call[1].nameFilter)
+      expect(nameFilters.filter(Boolean)).toEqual(['f-1'])
+      expect(states.at(-1)).toMatchObject({ files: capped, loadError: null, truncated: true })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
