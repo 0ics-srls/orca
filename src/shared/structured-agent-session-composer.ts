@@ -116,6 +116,13 @@ export function isBareStructuredAgentSessionGoalCommand(text: string): boolean {
   return command?.name === 'goal' && command.argument === ''
 }
 
+/** The objective a goal-mode draft names. A `/goal …` typed there out of habit
+ *  names the same objective it would outside goal mode, never the literal command. */
+export function structuredAgentSessionGoalObjective(text: string): string {
+  const command = commandParts(text)
+  return command?.name === 'goal' ? command.argument : text.trim()
+}
+
 function unavailable(name: string): StructuredAgentSessionCommandOutcome {
   return {
     handled: true,

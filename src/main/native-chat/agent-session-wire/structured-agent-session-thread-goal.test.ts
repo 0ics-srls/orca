@@ -297,4 +297,17 @@ describe('threadGoalPlan replay', () => {
     expect(journalRecordsThreadGoalChange({ ...GOAL, objective: 'Ship it' }, change)).toBe(false)
     expect(journalRecordsThreadGoalChange(null, change)).toBe(false)
   })
+
+  it('reads a status change as applied only when the recorded goal is in that status', () => {
+    const pause = { kind: 'status' as const, status: 'paused' as const }
+    expect(journalRecordsThreadGoalChange({ ...GOAL, status: 'paused' }, pause)).toBe(true)
+    expect(journalRecordsThreadGoalChange(GOAL, pause)).toBe(false)
+    expect(
+      journalRecordsThreadGoalChange(
+        { ...GOAL, status: 'paused' },
+        { kind: 'status', status: 'active' }
+      )
+    ).toBe(false)
+    expect(journalRecordsThreadGoalChange(null, pause)).toBe(false)
+  })
 })

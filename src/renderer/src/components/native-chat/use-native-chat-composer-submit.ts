@@ -1,10 +1,13 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { translate } from '@/i18n/i18n'
 import { applyPickerSuggestion, type NativeChatPickerItem } from './native-chat-picker-items'
 import { pushHistory, type HistoryState } from './native-chat-composer-state'
 import type { NativeChatStructuredComposerTransport } from './native-chat-composer-types'
 import type { NativeChatComposerImageAttachment } from './NativeChatComposerField'
-import { isBareStructuredAgentSessionGoalCommand } from '../../../../shared/structured-agent-session-composer'
+import {
+  isBareStructuredAgentSessionGoalCommand,
+  structuredAgentSessionGoalObjective
+} from '../../../../shared/structured-agent-session-composer'
 
 const GOAL_COMMAND = 'goal'
 
@@ -58,10 +61,17 @@ export function useNativeChatComposerSubmit(args: {
     [caret, draft, setCaret, setDraft, threadGoal]
   )
 
+  // Setting a goal is a host round trip; the draft is cleared only if it is still
+  // the one that was submitted, as with any other host command.
+  const composition = useRef(draft)
+  useLayoutEffect(() => {
+    composition.current = draft
+  }, [draft])
+
   // In-flight changes are serialized by the session's goal controller, which
   // answers false to a second submit while the first is unsettled.
   const setGoal = useCallback(() => {
-    const objective = draft.trim()
+    const objective = structuredAgentSessionGoalObjective(draft)
     if (!threadGoal || !structuredTransport || objective === '') {
       return
     }
@@ -75,13 +85,17 @@ export function useNativeChatComposerSubmit(args: {
       return
     }
     void threadGoal.setObjective(objective).then((accepted) => {
-      if (accepted) {
-        structuredTransport.onError(null)
-        setHistory((previous) => pushHistory(previous, draft))
-        setDraft('')
-        setCaret(0)
-        setEntered(false)
+      if (!accepted) {
+        return
       }
+      structuredTransport.onError(null)
+      setHistory((previous) => pushHistory(previous, draft))
+      if (composition.current !== draft) {
+        return
+      }
+      setDraft('')
+      setCaret(0)
+      setEntered(false)
     })
   }, [
     draft,

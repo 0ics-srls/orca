@@ -6,7 +6,10 @@ import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import type { AgentJournalThreadGoal } from '../../../../shared/agent-session-journal-types'
-import { agentSessionThreadGoalElapsedSeconds } from '../../../../shared/agent-session-thread-goal'
+import {
+  agentSessionThreadGoalElapsedSeconds,
+  agentSessionThreadGoalStatusChange
+} from '../../../../shared/agent-session-thread-goal'
 import type { AgentSessionThreadGoalChange } from '../../../../shared/agent-session-wire'
 import {
   formatNativeChatThreadGoalElapsed,
@@ -54,6 +57,7 @@ export function NativeChatThreadGoalBanner(props: {
   const { runningTurn } = props
   const now = useNow(1_000, props.isVisible && goal.status === 'active' && runningTurn !== null)
   const label = nativeChatThreadGoalStatusLabel(goal.status)
+  const statusChange = agentSessionThreadGoalStatusChange(goal.status)
   if (label === null) {
     return null
   }
@@ -85,7 +89,7 @@ export function NativeChatThreadGoalBanner(props: {
             >
               <Trash2 className="size-3.5" />
             </GoalAction>
-            {goal.status === 'active' ? (
+            {statusChange === 'paused' ? (
               <GoalAction
                 label={translate('components.native-chat.goal.pause', 'Pause goal')}
                 disabled={pending}
@@ -93,7 +97,7 @@ export function NativeChatThreadGoalBanner(props: {
               >
                 <Pause className="size-3.5" />
               </GoalAction>
-            ) : goal.status === 'paused' ? (
+            ) : statusChange === 'active' ? (
               <GoalAction
                 label={translate('components.native-chat.goal.resume', 'Resume goal')}
                 disabled={pending}

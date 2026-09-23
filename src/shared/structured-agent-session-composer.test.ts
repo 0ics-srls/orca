@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   dispatchStructuredAgentSessionComposerCommand,
   isStructuredAgentSessionComposerCommand,
+  structuredAgentSessionGoalObjective,
   structuredSlashCommands
 } from './structured-agent-session-composer'
 
@@ -213,6 +214,14 @@ describe('agent-implemented commands pass through to the agent', () => {
         setThreadGoalObjective
       })
     ).toEqual({ handled: true, accepted: false, error: null })
+  })
+
+  it('reads the objective a goal-mode draft names, with or without a typed /goal', () => {
+    expect(structuredAgentSessionGoalObjective('  Ship the parser  ')).toBe('Ship the parser')
+    expect(structuredAgentSessionGoalObjective('/goal  Ship the parser ')).toBe('Ship the parser')
+    expect(structuredAgentSessionGoalObjective('/GOAL')).toBe('')
+    // Another command is prose here: goal mode sets objectives, not commands.
+    expect(structuredAgentSessionGoalObjective('/model gpt-5')).toBe('/model gpt-5')
   })
 
   it('asks for an objective when a goal-capable host gets a bare /goal', async () => {

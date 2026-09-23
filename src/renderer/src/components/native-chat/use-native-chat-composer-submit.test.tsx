@@ -25,6 +25,8 @@ function harness(options: {
   caret?: number
   threadGoal?: NativeChatStructuredComposerTransport['threadGoal']
   imageAttachments?: NativeChatComposerImageAttachment[]
+  /** The PTY lane has no structured transport at all. */
+  lane?: 'pty'
 }) {
   const onError = vi.fn()
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: submit reads only threadGoal and onError.
@@ -42,7 +44,7 @@ function harness(options: {
   const hook = renderHook(
     (props: { draft: string; caret: number }) =>
       useNativeChatComposerSubmit({
-        structuredTransport,
+        structuredTransport: options.lane === 'pty' ? undefined : structuredTransport,
         draft: props.draft,
         caret: props.caret,
         imageAttachments: options.imageAttachments ?? [],
@@ -157,9 +159,49 @@ describe('composer goal mode', () => {
     expect(hook.result.current.goalMode.active).toBe(true)
   })
 
+  it('sets the objective a /goal typed inside goal mode names, not the literal command', async () => {
+    const setObjective = vi.fn(async () => true)
+    const { hook } = harness({ draft: '/go', threadGoal: { setObjective } })
+    act(() => hook.result.current.goalMode.interceptPick(vi.fn())(GOAL_ITEM))
+    hook.rerender({ draft: '/goal  fix the parser ', caret: 0 })
+
+    await act(async () => hook.result.current.send())
+
+    expect(setObjective).toHaveBeenCalledWith('fix the parser')
+    expect(hook.result.current.goalMode.active).toBe(false)
+  })
+
+  it('keeps a draft edited while the goal was in flight, and stays in goal mode', async () => {
+    let settle: (accepted: boolean) => void = () => undefined
+    const setObjective = vi.fn(() => new Promise<boolean>((resolve) => (settle = resolve)))
+    const { hook, calls } = harness({ draft: '/go', threadGoal: { setObjective } })
+    act(() => hook.result.current.goalMode.interceptPick(vi.fn())(GOAL_ITEM))
+    hook.rerender({ draft: 'Ship the parser', caret: 0 })
+    calls.setDraft.mockClear()
+
+    act(() => hook.result.current.send())
+    hook.rerender({ draft: 'Ship the parser and its tests', caret: 0 })
+    await act(async () => settle(true))
+
+    expect(setObjective).toHaveBeenCalledWith('Ship the parser')
+    expect(calls.setHistory).toHaveBeenCalledOnce()
+    expect(calls.setDraft).not.toHaveBeenCalled()
+    expect(hook.result.current.goalMode.active).toBe(true)
+  })
+
   it('sends an ordinary message outside goal mode', () => {
     const { hook, calls } = harness({ draft: 'hello', threadGoal: { setObjective: vi.fn() } })
     act(() => hook.result.current.send())
     expect(calls.sendStructured).toHaveBeenCalledWith('hello', [])
+  })
+
+  it('leaves the PTY lane alone: every draft goes to the PTY send, and goal mode never activates', () => {
+    const { hook, calls } = harness({ draft: '/goal', lane: 'pty' })
+    act(() => hook.result.current.send())
+    act(() => hook.result.current.goalMode.interceptPick(calls.setDraft)(GOAL_ITEM))
+    expect(calls.sendPty).toHaveBeenCalledOnce()
+    expect(calls.sendStructured).not.toHaveBeenCalled()
+    expect(calls.setDraft).toHaveBeenCalledExactlyOnceWith(GOAL_ITEM)
+    expect(hook.result.current.goalMode.active).toBe(false)
   })
 })

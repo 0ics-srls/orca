@@ -32,6 +32,16 @@ function goalRow(sequence: number, goal: AgentJournalThreadGoal): AgentJournalRe
   }
 }
 
+function clearedRow(sequence: number): AgentJournalRenderItem {
+  return {
+    itemId: `goal-${sequence}`,
+    revision: 1,
+    sequence,
+    observedAt: sequence,
+    body: { kind: 'status', text: 'Goal cleared', threadGoal: { state: 'cleared' } }
+  }
+}
+
 type MutateCall = (...args: unknown[]) => Promise<unknown>
 
 /** The hook reads only whether an answer is null, so a mock need not carry the generic. */
@@ -71,6 +81,10 @@ describe('useStructuredAgentSessionThreadGoal', () => {
 
     const fromHost = harness({ support: { current: older } })
     expect(fromHost.result.current?.goal).toEqual(older)
+
+    // A clear in the window outranks a host answer read before it.
+    const cleared = harness({ journalItems: [clearedRow(2)], support: { current: older } })
+    expect(cleared.result.current?.goal).toBeNull()
   })
 
   it('serializes changes: a second submit while one is unsettled is answered false, not sent', async () => {

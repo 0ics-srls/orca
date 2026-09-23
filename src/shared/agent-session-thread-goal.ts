@@ -88,6 +88,25 @@ export function isAgentSessionThreadGoalOpen(goal: AgentJournalThreadGoal | null
   return goal !== null && goal.status !== 'complete'
 }
 
+/** The status change a goal in this status accepts, or null when it accepts none:
+ *  a stalled or usage-limited goal resumes the same way a paused one does, while
+ *  a spent token budget and a completed goal can only be cleared or replaced. */
+export function agentSessionThreadGoalStatusChange(
+  status: AgentJournalThreadGoalStatus
+): 'active' | 'paused' | null {
+  switch (status) {
+    case 'active':
+      return 'paused'
+    case 'paused':
+    case 'blocked':
+    case 'usageLimited':
+      return 'active'
+    case 'budgetLimited':
+    case 'complete':
+      return null
+  }
+}
+
 /**
  * Seconds of goal work. The provider's `timeUsedSeconds` is exact as of `updatedAt`;
  * only an active goal with a turn running accrues more, counted from whichever of
