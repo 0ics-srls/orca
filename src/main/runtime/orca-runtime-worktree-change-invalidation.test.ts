@@ -80,16 +80,10 @@ function makeStore() {
   }
 }
 
-type RuntimeInternals = {
-  listDetectedWorktreesForResolvedRepo: (repo: Repo) => Promise<DetectedWorktreeListResult>
-}
-
 function makeRuntime(): () => Promise<DetectedWorktreeListResult> {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every store member the local listing reaches is supplied above.
   const runtime = new OrcaRuntimeService(makeStore() as never)
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the member exists on the service; the cast only exposes a protected one.
-  const internals = runtime as unknown as RuntimeInternals
-  return () => internals.listDetectedWorktreesForResolvedRepo(repo)
+  return () => runtime.listDetectedManagedWorktrees(`id:${REPO_ID}`)
 }
 
 describe('runtime worktree change invalidation', () => {
