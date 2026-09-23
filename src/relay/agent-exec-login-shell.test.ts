@@ -48,6 +48,10 @@ function fixture(shell: string): { cwd: string; pidPath: string; bin: string } {
     if (process.argv.includes('--wait')) {
       fs.writeFileSync(${JSON.stringify(pidPath)}, String(process.pid))
       setInterval(() => {}, 1000)
+    } else if (process.argv.includes('--exit127')) {
+      process.stdout.write('agent output')
+      process.stderr.write('agent error')
+      process.exitCode = 127
     } else if (process.argv.includes('--environment')) {
       process.stdout.write(JSON.stringify({ value: process.env.ORCA_AGENT_FIXTURE, path: process.env.PATH }))
     } else {
@@ -98,6 +102,36 @@ describe('SSH agent login execution', () => {
           canceled: false
         })
         expect(existsSync(join(cwd, 'injected'))).toBe(false)
+      }
+    )
+  }
+
+  for (const shell of ['/bin/bash', '/bin/zsh']) {
+    it.skipIf(process.platform === 'win32' || !existsSync(shell))(
+      `classifies a missing login-shell binary without misclassifying agent exit 127 in ${shell}`,
+      async () => {
+        const { cwd } = fixture(shell)
+        const exec = createHandlers().get('agent.execNonInteractive')!
+        const missing = await exec(
+          { binary: 'orca-no-such-agent', args: [], cwd, loginShell: true },
+          requestContext()
+        )
+        expect(missing).toMatchObject({
+          spawnError: 'spawn orca-no-such-agent ENOENT',
+          stdout: '',
+          stderr: '',
+          exitCode: 127
+        })
+        const failed = await exec(
+          { binary: 'orca-login-agent', args: ['--exit127'], cwd, loginShell: true },
+          requestContext()
+        )
+        expect(failed).toMatchObject({
+          stdout: 'agent output',
+          stderr: expect.stringContaining('agent error'),
+          exitCode: 127
+        })
+        expect(failed).not.toHaveProperty('spawnError')
       }
     )
   }

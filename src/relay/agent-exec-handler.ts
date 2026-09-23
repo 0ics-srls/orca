@@ -224,9 +224,12 @@ export class AgentExecHandler {
         if (laneKey && entry && this.inFlightByLane.get(laneKey) === entry) {
           this.inFlightByLane.delete(laneKey)
         }
+        const output = loginShell ? (loginShell.readStdout(result.stdout) ?? '') : result.stdout
+        const missingBinary = loginShell?.isMissingBinary(output, result.exitCode)
         resolve({
           ...result,
-          stdout: loginShell ? (loginShell.readStdout(result.stdout) ?? '') : result.stdout
+          stdout: missingBinary ? '' : output,
+          ...(missingBinary ? { stderr: '', spawnError: `spawn ${binary} ENOENT` } : {})
         })
       }
       const cancelCurrent = (): void => {
@@ -305,8 +308,10 @@ export class AgentExecHandler {
         }
       }
 
-      // A failed shell exec can close stdin before a large prompt finishes writing.
+      // A failed exec can break any pipe; late stream errors must not crash the relay.
       child.stdin?.on?.('error', () => {})
+      child.stdout?.on('error', () => {})
+      child.stderr?.on('error', () => {})
       if (stdinPayload !== null) {
         child.stdin?.end(stdinPayload)
       } else {
