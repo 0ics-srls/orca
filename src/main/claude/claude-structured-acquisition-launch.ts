@@ -6,6 +6,7 @@ import {
 import { withAgentSessionCreatePhase } from '../observability/agent-session-instrumentation'
 import type { ClaudeRewindAttempt } from './claude-structured-rewind'
 import type { ClaudeStructuredLaunch } from './claude-structured-launch-resolution'
+import { rederiveClaudeResumePoint } from './claude-structured-resume-point'
 import {
   cancelClaudeAcquisitionAttempt,
   type ClaudeAcquisitionAttempt,
@@ -76,6 +77,10 @@ export async function resolveClaudeAcquisitionLaunch(args: {
           ? error
           : new AgentSessionPreSpawnError(error)
       })
+    // A requested rewind or its recovery names its own point; only a plain resume re-derives.
+    if (!input.rewind && !input.rewindRecovery) {
+      await rederiveClaudeResumePoint(launch, deps)
+    }
     rewind.applyLaunch(launch, deps)
     acquisitions.assertCurrent(sessionId, attempt)
     return launch

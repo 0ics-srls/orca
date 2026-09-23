@@ -265,6 +265,7 @@ export class ClaudeStructuredSessionAdapter implements StructuredAgentSessionAda
       exits: this.exits,
       onExitProven: (sessionId, exit) => this.settleUnexpectedExit(sessionId, exit),
       ...(this.deps.persistHandle ? { persistHandle: this.deps.persistHandle } : {}),
+      ...(this.deps.readTranscriptLeaf ? { readTranscriptLeaf: this.deps.readTranscriptLeaf } : {}),
       ...(this.deps.onBackgroundTasksChanged
         ? { onBackgroundTasksChanged: this.deps.onBackgroundTasksChanged }
         : {}),

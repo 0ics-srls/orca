@@ -574,8 +574,9 @@ describe('ClaudeStructuredSessionAdapter transcript-derived recovery', () => {
         fence: 7
       }
     ])
-    expect(readTranscriptLeaf).toHaveBeenCalledOnce()
-    expect(readTranscriptLeaf).toHaveBeenCalledWith({
+    // Once to settle the exit, once to re-derive where the replacement resumes.
+    expect(readTranscriptLeaf).toHaveBeenCalledTimes(2)
+    expect(readTranscriptLeaf).toHaveBeenNthCalledWith(1, {
       providerSessionId: PROVIDER_SESSION_ID,
       previousLeafUuid: 'observed-retained-leaf',
       claudeConfigDir: '/accounts/claude'

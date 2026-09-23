@@ -167,7 +167,13 @@ describe('Claude rewind acquisition', () => {
       })
       expect(acquired.link.handle).toMatchObject({ leafUuid: 'kept' })
       expect(fake.connections[1]!.launch.options).not.toHaveProperty('resumeDropsTurn')
-      expect(proof).toHaveBeenCalledTimes(1)
+      // The plain retry re-derives its point from the transcript instead of re-proving the rewind.
+      expect(proof).toHaveBeenCalledTimes(2)
+      expect(proof).toHaveBeenLastCalledWith({
+        providerSessionId: PROVIDER_SESSION_ID,
+        previousLeafUuid: 'kept',
+        claudeConfigDir: '/accounts/claude'
+      })
     } finally {
       await adapter.closeAll()
     }
