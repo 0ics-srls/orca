@@ -107,6 +107,42 @@ describe('a launch into an existing workspace', () => {
   })
 })
 
+describe('a reserved pane that is already live', () => {
+  // The runtime attaches to a live pane rather than spawning, which is right for `terminal.create`
+  // but here would report an agent that never started and paste into whatever runs there.
+  it('refuses the launch and delivers no prompt', async () => {
+    // An agent that takes its prompt as a paste after start, so a missing refusal would reach it.
+    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalIsReattach: true })
+    const prompt = {
+      waitForTerminal: vi.fn(async () => ({ satisfied: true })),
+      sendTerminalAgentPrompt: vi.fn(async () => true)
+    }
+    Object.assign(runtime, prompt)
+
+    await expect(
+      launch(
+        {
+          ...EXISTING_LAUNCH,
+          agent: 'aider',
+          paneKey: PANE_KEY,
+          prompt: { text: 'hi', delivery: 'submit' }
+        },
+        runtime
+      )
+    ).rejects.toThrow('agent_launch_pane_already_live')
+    expect(prompt.waitForTerminal).not.toHaveBeenCalled()
+    expect(prompt.sendTerminalAgentPrompt).not.toHaveBeenCalled()
+  })
+
+  it('launches normally when the runtime spawned a fresh pane', async () => {
+    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalPaneKey: PANE_KEY })
+
+    const result = await launch({ ...EXISTING_LAUNCH, paneKey: PANE_KEY }, runtime)
+
+    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_1', paneKey: PANE_KEY })
+  })
+})
+
 describe('a launch that creates its workspace', () => {
   it('carries the reservation to the startup terminal the create spawns', async () => {
     const runtime = runtimeStub({ settings: TERMINAL_ONLY })

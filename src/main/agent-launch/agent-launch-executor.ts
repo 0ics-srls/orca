@@ -81,7 +81,9 @@ export type AgentLaunchSurfaceFactory = {
     paneKey?: string
     /** `paneKey` names the pane this create minted, for a caller that presents its own tabs; a
      *  factory whose runtime does not report one omits it rather than inventing a key. */
-  }): Promise<{ handle: string; paneKey?: string; warning?: string }>
+    /** `isReattach` when the reserved pane was already live: the runtime attached to its PTY and
+     *  ran no startup command, so no agent was started. */
+  }): Promise<{ handle: string; paneKey?: string; warning?: string; isReattach?: true }>
   /**
    * Commits the launch text as the session's first turn, answering with the transcript row's id.
    *
@@ -393,6 +395,11 @@ async function createTerminalSurface(
     ...(intent.launchSource ? { launchSource: intent.launchSource } : {}),
     ...(intent.paneKey ? { paneKey: intent.paneKey } : {})
   })
+  // A caller that wants a running terminal says so with `reuseTerminal`; reporting this as a launch
+  // would claim an agent that never started and paste the prompt into whatever already runs there.
+  if (terminal.isReattach) {
+    throw new Error('agent_launch_pane_already_live')
+  }
   return {
     outcome: {
       kind: 'terminal',
