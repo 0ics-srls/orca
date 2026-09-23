@@ -16,6 +16,7 @@ import {
 
 import type { NativeChatBlock, NativeChatMessage } from './native-chat-types'
 import { sha256 } from './sha256'
+import { parseCodexGoalJournalItemId } from './codex-goal-journal-identity'
 
 // Re-exported so the live-turn readers' existing consumers keep one import site.
 export {
@@ -157,13 +158,15 @@ export function projectStructuredItemToNativeChat(
   }
   // Reducer updates replace journal items, so unchanged rows keep their render caches.
   const projected = itemBlocks(item)
+  const goal = parseCodexGoalJournalItemId(item.itemId)
   const message: NativeChatMessage | null = projected
     ? {
         id: item.itemId,
         role: projected.role,
         blocks: projected.blocks,
         timestamp: item.observedAt,
-        source: 'transcript'
+        source: 'transcript',
+        ...(goal ? { codexGoal: { threadId: goal.thread, signature: goal.signature } } : {})
       }
     : null
   projectedItems.set(item, message)
