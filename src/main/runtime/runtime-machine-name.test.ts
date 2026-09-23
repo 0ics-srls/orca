@@ -49,6 +49,13 @@ describe('runtime machine name detection', () => {
     ).resolves.toBe('m4-air.local')
   })
 
+  it('answers with the detected name once the one-time lookup lands', async () => {
+    const machine = new RuntimeMachineName(() => undefined)
+    machine.start()
+    const expected = await detectRuntimeMachineName()
+    await vi.waitFor(() => expect(machine.read()).toBe(expected))
+  })
+
   it('prefers a configured name and falls back to the detected name', async () => {
     let configured: string | undefined
     const machine = new RuntimeMachineName(() => configured)

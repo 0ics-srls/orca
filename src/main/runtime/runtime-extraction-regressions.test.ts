@@ -58,4 +58,20 @@ describe('runtime extraction regressions', () => {
     expect(runtime.getStatus().machineName).toBe('Build server')
     expect(runtime.getStatus().hostPlatform).toBe(process.platform)
   })
+
+  it('labels a handed-off terminal with the same name status publishes', () => {
+    const settings = { machineName: 'Build server' }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this test exercises status with only the store surface the runtime reads during construction.
+    const runtime = new OrcaRuntimeService({ getSettings: () => settings } as RuntimeStore)
+    type TransportFactory = {
+      createStructuredAgentSessionHandoffTransport(): { hostLabel: string }
+    }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the transport factory is protected; the test reaches it to compare the label it hands the handoff status.
+    const factory: TransportFactory = runtime as unknown as TransportFactory
+    const transport = factory.createStructuredAgentSessionHandoffTransport()
+    expect(transport.hostLabel).toBe('Build server')
+    settings.machineName = 'Renamed desk'
+    expect(transport.hostLabel).toBe(runtime.getStatus().machineName)
+    expect(transport.hostLabel).toBe('Renamed desk')
+  })
 })

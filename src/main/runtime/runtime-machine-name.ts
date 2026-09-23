@@ -1,5 +1,6 @@
 import os from 'node:os'
 import { runProcess } from '../../shared/child-process/run-process'
+import { normalizeMachineName } from '../../shared/machine-name'
 
 const MACOS_COMPUTER_NAME = '/usr/sbin/scutil'
 const MACOS_COMPUTER_NAME_TIMEOUT_MS = 1_000
@@ -39,27 +40,38 @@ export async function detectRuntimeMachineName(
   return fallback
 }
 
+// Why: the friendly name is a property of the process's host, so every runtime in a process
+// (the app, plus each one a test builds) shares one lookup instead of spawning scutil apiece.
+let sharedDetection: Promise<string> | null = null
+
+function detectRuntimeMachineNameOnce(): Promise<string> {
+  sharedDetection ??= detectRuntimeMachineName()
+  return sharedDetection
+}
+
 export class RuntimeMachineName {
   private detectedName = normalizeMachineName(os.hostname())
   private started = false
 
   constructor(private readonly readConfiguredName: MachineNameReader) {}
 
+  /** Starts the one-time lookup; `read` answers with the hostname until it lands. */
   start(): void {
     if (this.started) {
       return
     }
     this.started = true
-    void detectRuntimeMachineName().then((name) => {
-      this.detectedName = name
-    })
+    void detectRuntimeMachineNameOnce().then(
+      (name) => {
+        this.detectedName = name
+      },
+      () => {
+        // detectRuntimeMachineName resolves on every path it owns; keep a surprise from becoming an unhandled rejection.
+      }
+    )
   }
 
   read(): string {
     return normalizeMachineName(this.readConfiguredName()) || this.detectedName
   }
-}
-
-function normalizeMachineName(value: string | undefined): string {
-  return value?.trim() ?? ''
 }
