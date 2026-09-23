@@ -28,7 +28,9 @@ export class SshGitNoninteractiveProvider extends SshGitReadProvider {
         cwd,
         stdin: plan.stdinPayload,
         timeoutMs,
-        operation
+        operation,
+        // SSH agents may only be on PATH after interactive login startup.
+        loginShell: true
       },
       undefined,
       operation
@@ -99,6 +101,7 @@ export class SshGitNoninteractiveProvider extends SshGitReadProvider {
       timeoutMs: number
       env?: Record<string, string>
       operation?: string
+      loginShell?: boolean
     },
     signal?: AbortSignal,
     operation?: string

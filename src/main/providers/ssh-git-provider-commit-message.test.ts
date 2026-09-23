@@ -177,7 +177,8 @@ describe('SshGitProvider', () => {
         cwd: '/home/user/repo',
         stdin: null,
         timeoutMs: 60_000,
-        operation: 'commit-message'
+        operation: 'commit-message',
+        loginShell: true
       },
       { timeoutMs: 65_000 }
     )
@@ -226,7 +227,8 @@ describe('SshGitProvider', () => {
         cwd: '/home/user/repo',
         stdin: null,
         timeoutMs: 60_000,
-        operation: 'commit-message'
+        operation: 'commit-message',
+        loginShell: true
       },
       { timeoutMs: 65_000 }
     )
@@ -239,7 +241,8 @@ describe('SshGitProvider', () => {
         cwd: '/home/user/repo',
         stdin: null,
         timeoutMs: 60_000,
-        operation: 'pull-request-fields'
+        operation: 'pull-request-fields',
+        loginShell: true
       },
       { timeoutMs: 65_000 }
     )

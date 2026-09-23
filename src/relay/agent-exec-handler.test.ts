@@ -78,7 +78,10 @@ describe('AgentExecHandler', () => {
         GCM_INTERACTIVE: 'never'
       }),
       stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
+      windowsHide: true,
+      detached: undefined,
+      windowsVerbatimArguments: undefined,
+      shell: false
     })
     expect(child.stdin.end).toHaveBeenCalledWith('PROMPT')
   })
@@ -117,7 +120,10 @@ describe('AgentExecHandler', () => {
         PATH: '/managed/bin'
       }),
       stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
+      windowsHide: true,
+      detached: undefined,
+      windowsVerbatimArguments: undefined,
+      shell: false
     })
   })
 

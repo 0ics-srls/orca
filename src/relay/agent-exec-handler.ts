@@ -1,10 +1,12 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { delimiter, join } from 'node:path'
 import type { RelayDispatcher, RequestContext } from './dispatcher'
 import { applyTerminalGitCredentialPromptGuard } from '../shared/terminal-git-credential-guard'
 import { mergeGitConfigEnvProtocol } from '../shared/git-credential-prompt-env'
 import { terminateRelaySubprocessTree } from './subprocess-tree-termination'
+import { spawnProcess } from '../shared/child-process/run-process'
+import { agentExecLoginShell } from './agent-exec-login-shell'
 
 const DEFAULT_TIMEOUT_MS = 60_000
 const MAX_TIMEOUT_MS = 5 * 60 * 1000
@@ -75,6 +77,7 @@ type ExecParams = {
   timeoutMs: unknown
   env: unknown
   operation: unknown
+  loginShell?: unknown
 }
 
 type CancelParams = {
@@ -161,13 +164,15 @@ export class AgentExecHandler {
 
     return new Promise<ExecResult>((resolve) => {
       let child
+      const loginShell = agentExecLoginShell(binary, args, cwd, params.loginShell)
       try {
-        const { spawnCmd, spawnArgs } = getWindowsSafeSpawn(binary, args, spawnEnv)
-        child = spawn(spawnCmd, spawnArgs, {
+        const { spawnCmd, spawnArgs } = loginShell ?? getWindowsSafeSpawn(binary, args, spawnEnv)
+        child = spawnProcess({
+          program: spawnCmd,
+          args: spawnArgs,
           cwd,
           env: spawnEnv,
-          stdio: ['pipe', 'pipe', 'pipe'],
-          windowsHide: true
+          stdio: ['pipe', 'pipe', 'pipe']
         })
       } catch (error) {
         resolve({
@@ -206,7 +211,10 @@ export class AgentExecHandler {
         if (laneKey && entry && this.inFlightByLane.get(laneKey) === entry) {
           this.inFlightByLane.delete(laneKey)
         }
-        resolve(result)
+        resolve({
+          ...result,
+          stdout: loginShell ? (loginShell.readStdout(result.stdout) ?? '') : result.stdout
+        })
       }
       const cancelCurrent = (): void => {
         canceled = true
@@ -284,6 +292,8 @@ export class AgentExecHandler {
         }
       }
 
+      // A failed shell exec can close stdin before a large prompt finishes writing.
+      child.stdin?.on?.('error', () => {})
       if (stdinPayload !== null) {
         child.stdin?.end(stdinPayload)
       } else {
