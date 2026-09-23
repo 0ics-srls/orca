@@ -10034,7 +10034,17 @@
               "4a0c826f3d": "code",
               "3c1807a81a": "qr",
               "7fb728fb2b": "Pair a mobile device by scanning a QR code.",
-              "d49925710a": "Mobile Pairing"
+              "d49925710a": "Mobile Pairing",
+              "machineName": {
+                "title": "Machine name",
+                "description": "Choose the name paired devices list this computer under.",
+                "keyword": {
+                  "machine": "machine",
+                  "hostname": "hostname",
+                  "computer": "computer",
+                  "rename": "rename"
+                }
+              }
             }
           },
           "settings": {

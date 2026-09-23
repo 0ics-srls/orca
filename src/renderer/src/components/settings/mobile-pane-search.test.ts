@@ -10,7 +10,8 @@ describe('getMobilePaneSearchEntries', () => {
       'Mobile Pairing',
       'Connected Devices',
       'Network Interface',
-      'When you leave the mobile app'
+      'When you leave the mobile app',
+      'Machine name'
     ])
   })
 })

@@ -120,5 +120,34 @@ export const getMobilePaneSearchEntries = createLocalizedCatalog(() => [
       ),
       ...translateSearchKeyword('auto.components.settings.mobile.pane.search.dbccde3a60', 'close')
     ]
+  },
+  {
+    title: translate(
+      'auto.components.settings.mobile.pane.search.machineName.title',
+      'Machine name'
+    ),
+    description: translate(
+      'auto.components.settings.mobile.pane.search.machineName.description',
+      'Choose the name paired devices list this computer under.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.mobile.pane.search.6db86f445f', 'mobile'),
+      ...translateSearchKeyword(
+        'auto.components.settings.mobile.pane.search.machineName.keyword.machine',
+        'machine'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.mobile.pane.search.machineName.keyword.hostname',
+        'hostname'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.mobile.pane.search.machineName.keyword.computer',
+        'computer'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.mobile.pane.search.machineName.keyword.rename',
+        'rename'
+      )
+    ]
   }
 ])

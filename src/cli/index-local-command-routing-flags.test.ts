@@ -156,6 +156,26 @@ describe('runtime-selector flags on locally pinned CLI commands', () => {
     expect(runtimeClientConstructorMock).toHaveBeenCalledWith(undefined, 'm4air')
   })
 
+  it('routes `host name` through an ambient ORCA_ENVIRONMENT, unlike the pinned `host list`', async () => {
+    // Why: the pin used to cover the whole `host` family, which silently answered for this machine
+    // when the shell was pointed at another one. `host name` describes one runtime, so it routes.
+    process.env.ORCA_ENVIRONMENT = 'm4air'
+    pairRuntimeEnvironment(listEnvironmentsMock, 'env-m4air', 'm4air')
+    fakeMachineNameRuntime('M4 Air')
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    runtimeClientConstructorMock.mockClear()
+
+    await main(['host', 'name', '--json'], '/tmp/repo')
+
+    const printed = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
+    expect(printed.ok).toBe(true)
+    expect(printed.result.machineName).toBe('M4 Air')
+    expect(printed._meta.runtimeId).toBe('runtime-1')
+    // The ambient selector is left for the client to honour; a `null` here would pin it local.
+    expect(runtimeClientConstructorMock).toHaveBeenCalledWith(undefined, undefined)
+    expect(runtimeClientConstructorMock).not.toHaveBeenCalledWith(null, null)
+  })
+
   it('reports an unreachable runtime as an error instead of inventing a name', async () => {
     const { RuntimeClientError } = await import('./runtime/types.js')
     callMock.mockRejectedValue(new RuntimeClientError('runtime_unavailable', 'Orca is not running'))
