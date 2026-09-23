@@ -49,6 +49,12 @@ export class StructuredAgentSessionHolds {
     this.clock = new StructuredAgentSessionReleaseClock(clockDeps)
   }
 
+  /** A write reaching a session with no child is the user asking for it back: the same resume a
+   *  first hold runs, without taking a holder, since the surface that sent already holds one. */
+  resumeForWrite(sessionId: string): Promise<void> {
+    return this.deps.hasProviderChild(sessionId) ? Promise.resolve() : this.deps.resume(sessionId)
+  }
+
   async hold(
     sessionId: string,
     holderId: string,

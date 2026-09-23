@@ -1,4 +1,5 @@
 import { rewindRefusal } from './structured-rewind-refusal'
+import { isResumableStructuredAgentSessionRecord } from './structured-agent-session-resume-eligibility'
 // Everything a client can ask an ALREADY-ATTACHED session to do: send a turn, cancel one, answer a
 // prompt, change an option, read the options back.
 //
@@ -41,6 +42,8 @@ export type StructuredAgentSessionMutationContext = {
   hasPendingStreamedEvents?: (sessionId: string) => boolean
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
+  /** Gives a childless session its provider child back before a write is admitted. */
+  resumeProviderChild?: (sessionId: string) => Promise<void>
   now: () => number
 }
 
@@ -66,7 +69,29 @@ function mutate<TValue>(
   )
 }
 
-export function sendStructuredAgentSessionTurn(
+/** A send into a session whose child ended (a start that failed, an exit at idle) restarts it
+ *  the way a surface's first hold does, so the message is not parked forever behind a released
+ *  lease. The resume's own failure is not this send's answer: admission reports the lease as it
+ *  stands, and the client re-drives under the fence the resume published. */
+async function resumeBeforeSend(
+  context: StructuredAgentSessionMutationContext,
+  sessionId: string
+): Promise<void> {
+  const session = context.sessions.get(sessionId)
+  const record = context.deps.store.getRecord(sessionId)
+  if (
+    !context.resumeProviderChild ||
+    !session ||
+    session.hasProviderChild ||
+    !record ||
+    !isResumableStructuredAgentSessionRecord(record)
+  ) {
+    return
+  }
+  await context.resumeProviderChild(sessionId).catch(() => undefined)
+}
+
+export async function sendStructuredAgentSessionTurn(
   context: StructuredAgentSessionMutationContext,
   caller: StructuredAgentSessionCaller,
   params: {
@@ -77,6 +102,7 @@ export function sendStructuredAgentSessionTurn(
   }
 ): Promise<AgentSessionMutationResult<AgentSessionSendResult>> {
   const plan = sendPlan(params)
+  await resumeBeforeSend(context, params.envelope.sessionId)
   return mutate(context, caller, params.envelope, {
     ...plan,
     run: (ctx) => {
