@@ -20,7 +20,6 @@ import { sha256 } from './sha256'
 
 // Re-exported so the live-turn readers' existing consumers keep one import site.
 export {
-  activeStructuredAgentSessionToolCall,
   activeStructuredAgentSessionTurnId,
   newestStructuredAgentSessionTurn
 } from './structured-agent-session-live-turn'

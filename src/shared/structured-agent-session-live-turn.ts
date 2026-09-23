@@ -122,55 +122,30 @@ export function isStructuredAgentSessionThinking(
   return false
 }
 
-/** The tool call the SESSION'S OWN agent is still inside, or null when nothing is
- *  running. An abandoned `running` call from an earlier crashed turn can never be
- *  reported as live work, and neither can a subagent's — while a child runs a
- *  tool, the parent is still inside the call that spawned it. */
-export function activeStructuredAgentSessionToolCall(
-  items: readonly AgentJournalRenderItem[]
-): AgentJournalToolCallItem | null {
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    const item = items[index]
-    const body = item?.body
-    if (readAgentJournalTurn(body)) {
-      return null
-    }
-    if (body?.kind === 'tool-call' && body.state === 'running' && isRootAgentJournalItem(item)) {
-      return body
-    }
-  }
-  return null
-}
-
-/** The tool the status row names: the running call, else the turn's newest root call if it
- *  completed. Matches the hook lane, whose post-tool event keeps naming the finished tool while
- *  the agent thinks and whose failure event clears it. */
+/** The tool the status row names for the SESSION'S OWN agent: the running turn's newest running
+ *  call, else its newest call if that completed (a failed one names nothing, as Claude's hook lane
+ *  clears it). Nothing is named unless the scan reaches a RUNNING turn record, so an ended turn's
+ *  calls never surface; a mid-turn send's user row is not a boundary. */
 export function statusStructuredAgentSessionToolCall(
   items: readonly AgentJournalRenderItem[]
 ): AgentJournalToolCallItem | null {
+  let running: AgentJournalToolCallItem | null = null
   let newestSettled: AgentJournalToolCallItem | null | undefined
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index]
     const body = item?.body
-    if (readAgentJournalTurn(body)) {
-      break
+    const turn = readAgentJournalTurn(body)
+    if (turn) {
+      return turn.state === 'running' ? (running ?? newestSettled ?? null) : null
     }
-    if (!isRootAgentJournalItem(item)) {
-      continue
-    }
-    // Why: a legacy journal may lack turn records; the prompt still bounds this turn.
-    if (body?.kind === 'message' && body.role === 'user') {
-      break
-    }
-    if (body?.kind !== 'tool-call') {
+    if (running || body?.kind !== 'tool-call' || !isRootAgentJournalItem(item)) {
       continue
     }
     if (body.state === 'running') {
-      return body
-    }
-    if (newestSettled === undefined) {
+      running = body
+    } else if (newestSettled === undefined) {
       newestSettled = body.state === 'completed' ? body : null
     }
   }
-  return newestSettled ?? null
+  return null
 }

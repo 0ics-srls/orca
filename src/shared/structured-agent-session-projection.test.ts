@@ -13,11 +13,11 @@ import {
   projectStructuredItemToNativeChat,
   projectStructuredItemsToNativeChat,
   latestStructuredAgentSessionAssistantMessage,
-  activeStructuredAgentSessionToolCall,
   projectStructuredAgentSessionStatus,
   projectStructuredAgentSessionStatusSummary,
   structuredAgentSessionPaneKey
 } from './structured-agent-session-projection'
+import { statusStructuredAgentSessionToolCall } from './structured-agent-session-live-turn'
 
 function item(
   itemId: string,
@@ -359,7 +359,7 @@ describe('structured agent session status projection', () => {
       expect(summary).toMatchObject({ toolName: 'Read', toolInput: '/repo/Read.ts' })
     })
 
-    it('names no tool after a failed call, as the hook lane does', () => {
+    it("names no tool after a failed call, as Claude's hook lane does", () => {
       const summary = projectStructuredAgentSessionStatusSummary([
         ask,
         running,
@@ -392,6 +392,44 @@ describe('structured agent session status projection', () => {
         call('read', 3, 'Read', 'completed'),
         nextTurn
       ])
+      expect(summary.toolName).toBeUndefined()
+    })
+
+    // A send's user row lands at submit time, mid-turn too; the turn record bounds the turn.
+    const followUp = item('follow-up', 5, {
+      kind: 'message',
+      role: 'user',
+      blocks: [{ type: 'text', text: 'also check the tests' }]
+    })
+
+    it("keeps naming the running turn's tool past a mid-turn send", () => {
+      const pending = [submission('follow-up', 'pending')]
+      expect(
+        projectStructuredAgentSessionStatusSummary(
+          [ask, running, call('bash', 3, 'Bash', 'running'), followUp],
+          pending
+        ).toolName
+      ).toBe('Bash')
+      expect(
+        projectStructuredAgentSessionStatusSummary(
+          [ask, running, call('read', 3, 'Read', 'completed'), followUp],
+          pending
+        ).toolName
+      ).toBe('Read')
+    })
+
+    it('names nothing from an ended turn while the next send is pending', () => {
+      // The record keeps its creation slot when revised to completed, so it sits before its calls.
+      const ended = item('running', 2, {
+        kind: 'status',
+        text: 'Done',
+        turnLifecycle: { turnId: 'turn-1', state: 'completed' }
+      })
+      const summary = projectStructuredAgentSessionStatusSummary(
+        [ask, ended, call('read', 3, 'Read', 'completed'), followUp],
+        [submission('follow-up', 'pending')]
+      )
+      expect(summary.status).toBe('working')
       expect(summary.toolName).toBeUndefined()
     })
   })
@@ -629,7 +667,7 @@ describe("producer linkage — a subagent's output never speaks for the parent",
 
   it("shows the parent's own prose and its own running call, not the child's newer ones", () => {
     expect(latestStructuredAgentSessionAssistantMessage(items)).toBe('delegating')
-    expect(activeStructuredAgentSessionToolCall(items)?.name).toBe('Task')
+    expect(statusStructuredAgentSessionToolCall(items)?.name).toBe('Task')
   })
 
   it("publishes the parent's own line and call on the summary the sidebar reads", () => {
@@ -672,7 +710,7 @@ describe("producer linkage — a subagent's output never speaks for the parent",
     // reachable today — the point is that the rule does not rely on that.)
     const windowed = [childProse, childCall]
     expect(latestStructuredAgentSessionAssistantMessage(windowed)).toBe('')
-    expect(activeStructuredAgentSessionToolCall(windowed)).toBeNull()
+    expect(statusStructuredAgentSessionToolCall(windowed)).toBeNull()
   })
 
   it("does not quote a subagent's own user-role prompt as the session's", () => {
