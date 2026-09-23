@@ -104,10 +104,7 @@ function getAutomaticGitHubIconRefresh(
   current: Repo,
   probed: NonNullable<Repo['gitRemoteIdentity']>
 ): RepoIcon | undefined {
-  // A peer's repo metadata must never be repaired from a client-local probe.
-  const hostId = getRepoExecutionHostId(current)
   if (
-    (hostId !== LOCAL_EXECUTION_HOST_ID && !getSshTargetIdForExecutionHost(hostId)) ||
     (current.upstream?.owner && current.upstream.repo) ||
     current.repoIcon?.type !== 'image' ||
     current.repoIcon.source !== 'github'
@@ -135,6 +132,11 @@ function writeIdentity(
   snapshot: Repo,
   gitRemoteIdentity: Repo['gitRemoteIdentity']
 ): boolean {
+  // A peer's repo metadata must never be repaired from a client-local probe.
+  const hostId = getRepoExecutionHostId(snapshot)
+  if (hostId !== LOCAL_EXECUTION_HOST_ID && !getSshTargetIdForExecutionHost(hostId)) {
+    return false
+  }
   const current = getCurrentRepo(store, snapshot)
   if (!isSameProbedRepo(snapshot, current)) {
     return false
@@ -144,7 +146,6 @@ function writeIdentity(
     ? getAutomaticGitHubIconRefresh(current, gitRemoteIdentity)
     : undefined
   const update = (updates: Pick<Partial<Repo>, 'gitRemoteIdentity' | 'repoIcon'>): Repo | null => {
-    const hostId = getRepoExecutionHostId(snapshot)
     return hostId === LOCAL_EXECUTION_HOST_ID
       ? store.updateRepo(snapshot.id, updates)
       : store.updateRepo(snapshot.id, updates, hostId)

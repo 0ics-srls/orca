@@ -191,15 +191,30 @@ it.each(['unavailable', 'no-remote'] as const)(
   }
 )
 
-it('does not repair a peer-owned row from a client-local probe', async () => {
-  const row = repo({ executionHostId: 'runtime:peer', connectionId: 'nested' })
-  const original = row.repoIcon
-  const store = storeFor([row])
-  vi.mocked(probeGitRemoteIdentity).mockResolvedValue({ status: 'resolved', identity: identity() })
-  await refresh(store)
-  expect(row.repoIcon).toBe(original)
-  expect(store.updateRepo).not.toHaveBeenCalled()
-})
+it.each(['same', 'different', 'missing'] as const)(
+  'does not write peer-owned metadata from a client-local probe when identity is %s',
+  async (kind) => {
+    const row = repo({
+      executionHostId: 'runtime:peer',
+      connectionId: 'nested',
+      gitRemoteIdentity:
+        kind === 'missing'
+          ? undefined
+          : identity(kind === 'different' ? 'https://github.com/peer-only/app.git' : undefined)
+    })
+    const originalIcon = row.repoIcon
+    const originalIdentity = row.gitRemoteIdentity
+    const store = storeFor([row])
+    vi.mocked(probeGitRemoteIdentity).mockResolvedValue({
+      status: 'resolved',
+      identity: identity()
+    })
+    await (kind === 'missing' ? sweep(store) : refresh(store))
+    expect(row.repoIcon).toBe(originalIcon)
+    expect(row.gitRemoteIdentity).toBe(originalIdentity)
+    expect(store.updateRepo).not.toHaveBeenCalled()
+  }
+)
 
 it('repairs only the matching owner when repo IDs and paths collide across hosts', async () => {
   const local = repo({ repoIcon: githubAvatarIcon({ owner: 'org-b', repo: 'app' }) })
