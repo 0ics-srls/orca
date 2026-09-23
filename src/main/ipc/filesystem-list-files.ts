@@ -2,7 +2,6 @@ import { sep } from 'node:path'
 import type { ChildProcess } from 'node:child_process'
 import type { Store } from '../persistence'
 import { resolveAuthorizedPath } from './filesystem-auth'
-import { checkRgAvailable } from './rg-availability'
 import { wslAwareSpawn } from '../git/runner'
 import { parseWslPath, toWindowsWslPath } from '../wsl'
 import { getLocalGitOptionsForRegisteredWorktree } from './local-worktree-runtime-options'
@@ -18,7 +17,11 @@ import {
   limitQuickOpenFilesBySerializedBytes,
   serializedQuickOpenPathBytes
 } from '../../shared/quick-open-transport-budget'
-import { listFilesWithoutRipgrep } from './filesystem-list-files-without-ripgrep'
+import {
+  bundledRipgrepCommand,
+  bundledRipgrepUnavailableError,
+  bundledRipgrepWslSpawnOptions
+} from '../ripgrep/bundled-ripgrep-path'
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableExit,
@@ -51,23 +54,6 @@ export async function listQuickOpenFiles(
   const excludePathPrefixes = buildExcludePathPrefixes(authorizedRootPath, excludePaths)
   const wslDistroForOutput = parseWslPath(authorizedRootPath)?.distro ?? localGitOptions.wslDistro
 
-  const listWithoutRipgrep = (): Promise<string[]> =>
-    listFilesWithoutRipgrep({
-      rootPath: authorizedRootPath,
-      excludePathPrefixes,
-      localGitOptions,
-      signal,
-      maxResults,
-      maxSerializedBytes,
-      pathFilter
-    })
-  if (
-    wslDistroForOutput &&
-    !(await checkRgAvailable(authorizedRootPath, localGitOptions.wslDistro))
-  ) {
-    return listWithoutRipgrep()
-  }
-
   const files = new Set<string>()
   let serializedBytes = 2 // []
   const children: {
@@ -89,6 +75,7 @@ export async function listQuickOpenFiles(
   })
   const primary = rgArgs.primary
   const ignoredPass = rgArgs.ignoredPass
+  const rgCommand = bundledRipgrepCommand({ wsl: Boolean(wslDistroForOutput) })
 
   const runRg = (args: string[]): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -137,9 +124,10 @@ export async function listQuickOpenFiles(
         return maxResults !== undefined && files.size >= maxResults
       }
 
-      const child = wslAwareSpawn('rg', args, {
+      const child = wslAwareSpawn(rgCommand, args, {
         cwd: authorizedRootPath,
         ...(localGitOptions.wslDistro ? { wslDistro: localGitOptions.wslDistro } : {}),
+        ...(wslDistroForOutput ? bundledRipgrepWslSpawnOptions(rgCommand) : {}),
         stdio: ['ignore', 'pipe', 'pipe']
       })
       let timer: ReturnType<typeof setTimeout>
@@ -175,7 +163,7 @@ export async function listQuickOpenFiles(
       const handleClose = (code: number | null, signal: NodeJS.Signals | null): void => {
         if (
           isRipgrepUnavailableExit(child, code, signal, {
-            classifyNativeLauncherExit: !wslDistroForOutput
+            classifyNativeLauncherExit: true
           })
         ) {
           unavailableExitObserved = true
@@ -307,10 +295,7 @@ export async function listQuickOpenFiles(
     }
   } catch (err) {
     killSurvivors()
-    if (err instanceof RipgrepUnavailableError) {
-      return listWithoutRipgrep()
-    }
-    throw err
+    throw err instanceof RipgrepUnavailableError ? bundledRipgrepUnavailableError() : err
   }
   const result = Array.from(files).slice(0, maxResults)
   return maxSerializedBytes === undefined

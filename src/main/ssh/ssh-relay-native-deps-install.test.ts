@@ -1,5 +1,6 @@
 // Why: regression coverage for the install-probe contract — the "node-pty is not available" bug shipped because every guard layer was silent.
 
+import type * as RelayRipgrepInstallModule from './ssh-relay-ripgrep-install'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as RelayInstallMarkerModule from './ssh-relay-install-marker'
 
@@ -40,6 +41,12 @@ vi.mock('./ssh-remote-node-resolution', () => ({
 vi.mock('./ssh-relay-install-marker', async (importOriginal) => ({
   ...(await importOriginal<typeof RelayInstallMarkerModule>()),
   createRelayInstallMarkerFileName: () => '.sftp-namespace-00000000000000000000000000000000'
+}))
+
+// Why: the post-launch ripgrep install would consume this file's queued exec mocks.
+vi.mock('./ssh-relay-ripgrep-install', async (importOriginal) => ({
+  ...(await importOriginal<typeof RelayRipgrepInstallModule>()),
+  ensureRemoteBundledRipgrep: vi.fn().mockResolvedValue('present')
 }))
 
 vi.mock('./ssh-relay-versioned-install', () => ({

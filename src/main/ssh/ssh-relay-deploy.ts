@@ -24,6 +24,7 @@ import {
 } from './ssh-relay-install-namespace'
 import { createRelayInstallMarkerFileName } from './ssh-relay-install-marker'
 import { resolveRemoteNodePath } from './ssh-remote-node-resolution'
+import { ensureRemoteBundledRipgrep, remoteRipgrepLayout } from './ssh-relay-ripgrep-install'
 import {
   readLocalFullVersion,
   computeRemoteRelayDir,
@@ -586,7 +587,8 @@ async function deployAndLaunchRelayAttempt(
       nodePath,
       graceTimeSeconds,
       relayInstanceId,
-      deploySignal
+      deploySignal,
+      remoteRipgrepLayout(hostPlatform, remoteHome)?.binaryPath
     )
     launchLivenessObserved = true
   } finally {
@@ -645,6 +647,8 @@ async function deployAndLaunchRelayAttempt(
       })
     )
     .catch(() => {})
+    // Why after launch: the relay re-checks --ripgrep-path per spawn, so the one-time upload never delays connect.
+    .then(() => ensureRemoteBundledRipgrep(conn, hostPlatform, remoteHome))
 
   return {
     transport: launched.transport,
@@ -1680,7 +1684,8 @@ async function launchRelay(
   nodePath: string,
   graceTimeSeconds?: number,
   relayInstanceId?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  ripgrepPath?: string
 ): Promise<{
   transport: MultiplexerTransport
   nodePath: string
@@ -1733,7 +1738,8 @@ async function launchRelay(
         graceTime,
         activePipeMarkerPath,
         reconnectFallback: fallbackEndpoint,
-        credentialFile
+        credentialFile,
+        ripgrepPath
       },
       signal
     )
@@ -1799,7 +1805,8 @@ async function launchRelay(
   // Why: the relay derives its hook endpoint dir from the socket path; pin it back under the relay dir when the socket moved to /tmp.
   const endpointDirArg =
     sockFile === defaultSockFile ? '' : ` --endpoint-dir ${shellEscape(endpointDir)}`
-  const launchCmd = `cd ${escapedDir} && nohup ${escapedNode} relay.js --detached --grace-time ${graceTime} --sock-path ${shellEscape(sockFile)}${endpointDirArg} --credential-file ${shellEscape(credentialFile)} --log-file ${shellEscape(logFile)} > ${shellEscape(logFile)} 2>&1 </dev/null &`
+  const ripgrepPathArg = ripgrepPath ? ` --ripgrep-path ${shellEscape(ripgrepPath)}` : ''
+  const launchCmd = `cd ${escapedDir} && nohup ${escapedNode} relay.js --detached --grace-time ${graceTime} --sock-path ${shellEscape(sockFile)}${endpointDirArg} --credential-file ${shellEscape(credentialFile)} --log-file ${shellEscape(logFile)}${ripgrepPathArg} > ${shellEscape(logFile)} 2>&1 </dev/null &`
   const launchChannel = await conn.exec(launchCmd, { signal })
   launchChannel.on('data', () => {})
   launchChannel.on('error', () => {})
@@ -1991,6 +1998,7 @@ type WindowsRelayLaunchOptions = {
   graceTime: number
   activePipeMarkerPath: string
   credentialFile: string
+  ripgrepPath?: string
 } & WindowsRelayEndpoint & {
     reconnectFallback?: WindowsRelayEndpoint
   }
@@ -2073,7 +2081,8 @@ async function launchWindowsRelay(
       launchOpts.graceTime,
       logFile,
       errFile,
-      launchOpts.credentialFile
+      launchOpts.credentialFile,
+      launchOpts.ripgrepPath
     ),
     { signal }
   )
@@ -2165,7 +2174,8 @@ function windowsRelayLaunchCommand(
   graceTime: number,
   logFile: string,
   errFile: string,
-  credentialFile: string
+  credentialFile: string,
+  ripgrepPath?: string
 ): string {
   const relayScript = joinRemotePath(hostPlatform, remoteDir, 'relay.js')
   // Why: Windows sshd kills the exec channel's process tree on close; WMI re-parents the detached relay to survive.
@@ -2185,6 +2195,7 @@ function windowsRelayLaunchCommand(
     // Why: --log-file owns rotation; shell redirects still capture pre-JS boot/crash output.
     '--log-file',
     quoted(logFile),
+    ...(ripgrepPath ? ['--ripgrep-path', quoted(ripgrepPath)] : []),
     `1>${quoted(logFile)}`,
     `2>${quoted(errFile)}`
   ].join(' ')

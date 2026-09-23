@@ -21,7 +21,6 @@ import {
   getSshFilesystemProvider,
   requireSshFilesystemProvider
 } from '../../providers/ssh-filesystem-dispatch'
-import { checkRgAvailable } from '../rg-availability'
 import { resolveAuthorizedPath } from '../filesystem-auth'
 import { listQuickOpenFiles } from '../filesystem-list-files'
 import {
@@ -29,7 +28,11 @@ import {
   pathMatchesFileNameFilterTokens,
   splitFileNameFilterTokens
 } from '../../../shared/file-name-filter-tokens'
-import { searchWithGitGrep } from '../filesystem-search-git'
+import {
+  bundledRipgrepCommand,
+  bundledRipgrepUnavailableError,
+  bundledRipgrepWslSpawnOptions
+} from '../../ripgrep/bundled-ripgrep-path'
 import { getLocalGitOptionsForRegisteredWorktree } from '../local-worktree-runtime-options'
 import { QuickOpenPathRanker } from '../../../shared/quick-open-path-search'
 import type { FilesystemHandlerContext } from './filesystem-handler-context'
@@ -58,12 +61,7 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
         Math.min(args.maxResults ?? DEFAULT_SEARCH_MAX_RESULTS, DEFAULT_SEARCH_MAX_RESULTS)
       )
       const searchKey = `${event.sender.id}:${rootPath}`
-      // Why: WSL's bash exit 127 is ambiguous with a real executable returning 127.
       const wslDistroForOutput = parseWslPath(rootPath)?.distro ?? localGitOptions.wslDistro
-
-      if (wslDistroForOutput && !(await checkRgAvailable(rootPath, localGitOptions.wslDistro))) {
-        return searchWithGitGrep(rootPath, args, maxResults, localGitOptions)
-      }
 
       return new Promise<SearchResult>((resolvePromise) => {
         const rgArgs = buildRgArgs(args.query, rootPath, args)
@@ -110,8 +108,8 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
           resolvePromise(result)
         }
         const resolveOnce = (): void => finish(finalize(acc))
-        const resolveWithoutRipgrep = (): void =>
-          finish(searchWithGitGrep(rootPath, args, maxResults, localGitOptions))
+        const rejectUnavailable = (): void =>
+          finish(Promise.reject(bundledRipgrepUnavailableError()))
         const processLine = (line: string): void => {
           const verdict = ingestRgJsonLine(line, rootPath, acc, maxResults, transformAbsPath)
           if (verdict === 'stop' && child) {
@@ -119,9 +117,11 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
           }
         }
 
-        const nextChild = wslAwareSpawn('rg', rgArgs, {
+        const rgCommand = bundledRipgrepCommand({ wsl: Boolean(wslDistroForOutput) })
+        const nextChild = wslAwareSpawn(rgCommand, rgArgs, {
           cwd: rootPath,
           ...(localGitOptions.wslDistro ? { wslDistro: localGitOptions.wslDistro } : {}),
+          ...(wslDistroForOutput ? bundledRipgrepWslSpawnOptions(rgCommand) : {}),
           stdio: ['ignore', 'pipe', 'pipe']
         })
         child = nextChild
@@ -136,7 +136,7 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
         const handleError = (): void => {
           processErrorObserved = true
           if (child && isRipgrepUnavailableExit(child, null, null)) {
-            resolveWithoutRipgrep()
+            rejectUnavailable()
             return
           }
           resolveOnce()
@@ -145,11 +145,11 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
           if (
             child &&
             isRipgrepUnavailableExit(child, code, signal, {
-              classifyNativeLauncherExit: !wslDistroForOutput
+              classifyNativeLauncherExit: true
             })
           ) {
             unavailableExitObserved = true
-            resolveWithoutRipgrep()
+            rejectUnavailable()
             return
           }
           const tail = lines.finish()

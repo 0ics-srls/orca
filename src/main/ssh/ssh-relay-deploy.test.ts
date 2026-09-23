@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as RelayRipgrepInstallModule from './ssh-relay-ripgrep-install'
 
 vi.mock('electron', () => ({
   app: { getAppPath: () => '/mock/app' }
@@ -52,6 +53,12 @@ vi.mock('./ssh-remote-node-resolution', () => ({
   resolveRemoteNodePath: vi.fn().mockResolvedValue('/usr/bin/node')
 }))
 
+// Why: the fire-and-forget ripgrep install would drain the queued exec mocks.
+vi.mock('./ssh-relay-ripgrep-install', async (importOriginal) => ({
+  ...(await importOriginal<typeof RelayRipgrepInstallModule>()),
+  ensureRemoteBundledRipgrep: vi.fn()
+}))
+
 // Why: the versioned-install modules shell out for install state, locking,
 // and GC. Stub them so deploy tests need no real SSH connection.
 vi.mock('./ssh-relay-versioned-install', () => ({
@@ -85,6 +92,7 @@ import { execCommand, waitForSentinel } from './ssh-relay-deploy-helpers'
 import { resolveRemoteNodePath } from './ssh-remote-node-resolution'
 import { isRelayAlreadyInstalled } from './ssh-relay-versioned-install'
 import { acquireInstallLock } from './ssh-relay-install-lock'
+import { ensureRemoteBundledRipgrep } from './ssh-relay-ripgrep-install'
 import * as DeployTiming from './ssh-relay-deploy-timing'
 import type { SshConnection } from './ssh-connection'
 import type * as SshRemoteNodeResolution from './ssh-remote-node-resolution'
@@ -132,6 +140,22 @@ function makeMockConnection(): SshConnection {
 
 function queueLaunchNamespaceAndDeadSocketProbe(): void {
   vi.mocked(execCommand).mockResolvedValueOnce('').mockResolvedValueOnce('DEAD')
+}
+
+function queueFreshLinuxDeploy(): void {
+  vi.mocked(execCommand)
+    .mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
+    .mockResolvedValueOnce('/home/user')
+    .mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
+  queueLaunchNamespaceAndDeadSocketProbe()
+  vi.mocked(execCommand).mockResolvedValueOnce('READY')
+}
+
+function detachedLaunchCommand(conn: SshConnection): string | undefined {
+  return vi
+    .mocked(conn.exec)
+    .mock.calls.map(([cmd]) => cmd as string)
+    .find((cmd) => cmd.includes('--detached'))
 }
 
 describe('deployAndLaunchRelay', () => {
@@ -207,12 +231,7 @@ describe('deployAndLaunchRelay', () => {
 
   it('resolves the remote node path once per deploy', async () => {
     const conn = makeMockConnection()
-    const mockExecCommand = vi.mocked(execCommand)
-    mockExecCommand.mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
-    mockExecCommand.mockResolvedValueOnce('/home/user')
-    mockExecCommand.mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
-    queueLaunchNamespaceAndDeadSocketProbe()
-    mockExecCommand.mockResolvedValueOnce('READY')
+    queueFreshLinuxDeploy()
 
     await deployAndLaunchRelay(conn)
 
@@ -483,40 +502,30 @@ describe('deployAndLaunchRelay', () => {
 
   it('defaults fresh relays to keep-alive-until-reset without rollout artifacts', async () => {
     const conn = makeMockConnection()
-    const mockExecCommand = vi.mocked(execCommand)
-    mockExecCommand.mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
-    mockExecCommand.mockResolvedValueOnce('/home/user')
-    mockExecCommand.mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
-    queueLaunchNamespaceAndDeadSocketProbe()
-    mockExecCommand.mockResolvedValueOnce('READY')
+    queueFreshLinuxDeploy()
 
     await deployAndLaunchRelay(conn)
 
-    const launchCommand = vi
-      .mocked(conn.exec)
-      .mock.calls.map(([cmd]) => cmd as string)
-      .find((cmd) => cmd.includes('--detached'))
+    const launchCommand = detachedLaunchCommand(conn)
 
     expect(launchCommand).toContain(`--grace-time ${DEFAULT_SSH_RELAY_GRACE_PERIOD_SECONDS}`)
+    expect(launchCommand).toContain(
+      "--ripgrep-path '/home/user/.orca-remote/ripgrep/15.0.0-linux-x64/rg'"
+    )
+    await vi.waitFor(() =>
+      expect(ensureRemoteBundledRipgrep).toHaveBeenCalledWith(conn, expect.anything(), '/home/user')
+    )
     expect(launchCommand).not.toContain('--pty-source-credit-v1')
     expect(launchCommand).not.toContain('.pty-source-credit-policy')
   })
 
   it('allows an unlimited SSH disconnect grace window', async () => {
     const conn = makeMockConnection()
-    const mockExecCommand = vi.mocked(execCommand)
-    mockExecCommand.mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
-    mockExecCommand.mockResolvedValueOnce('/home/user')
-    mockExecCommand.mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
-    queueLaunchNamespaceAndDeadSocketProbe()
-    mockExecCommand.mockResolvedValueOnce('READY')
+    queueFreshLinuxDeploy()
 
     await deployAndLaunchRelay(conn, undefined, 0, 'target-a')
 
-    const launchCommand = vi
-      .mocked(conn.exec)
-      .mock.calls.map(([cmd]) => cmd as string)
-      .find((cmd) => cmd.includes('--detached'))
+    const launchCommand = detachedLaunchCommand(conn)
 
     expect(launchCommand).toContain('--grace-time 0')
     expect(launchCommand).not.toContain('--pty-source-credit-v1')
@@ -525,19 +534,11 @@ describe('deployAndLaunchRelay', () => {
 
   it('clamps configured SSH disconnect grace to the seven-day maximum', async () => {
     const conn = makeMockConnection()
-    const mockExecCommand = vi.mocked(execCommand)
-    mockExecCommand.mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
-    mockExecCommand.mockResolvedValueOnce('/home/user')
-    mockExecCommand.mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
-    queueLaunchNamespaceAndDeadSocketProbe()
-    mockExecCommand.mockResolvedValueOnce('READY')
+    queueFreshLinuxDeploy()
 
     await deployAndLaunchRelay(conn, undefined, MAX_SSH_RELAY_GRACE_PERIOD_SECONDS + 1, 'target-a')
 
-    const launchCommand = vi
-      .mocked(conn.exec)
-      .mock.calls.map(([cmd]) => cmd as string)
-      .find((cmd) => cmd.includes('--detached'))
+    const launchCommand = detachedLaunchCommand(conn)
 
     expect(launchCommand).toContain(`--grace-time ${MAX_SSH_RELAY_GRACE_PERIOD_SECONDS}`)
   })
@@ -545,11 +546,7 @@ describe('deployAndLaunchRelay', () => {
   it('uses a content-hashed versioned remote install directory', async () => {
     const conn = makeMockConnection()
     const mockExecCommand = vi.mocked(execCommand)
-    mockExecCommand.mockResolvedValueOnce('__ORCA_REMOTE_PLATFORM__ Linux x86_64')
-    mockExecCommand.mockResolvedValueOnce('/home/user')
-    mockExecCommand.mockResolvedValueOnce('ORCA-NATIVE-DEPS-OK')
-    queueLaunchNamespaceAndDeadSocketProbe()
-    mockExecCommand.mockResolvedValueOnce('READY')
+    queueFreshLinuxDeploy()
 
     await deployAndLaunchRelay(conn)
 
@@ -777,6 +774,9 @@ describe('deployAndLaunchRelay', () => {
       '"C:/Users/me user/.orca-remote/relay-0.1.0+abcdef012345/agent-hooks/orca-relay-'
     )
     expect(launchScript).toContain('--endpoint-dir')
+    expect(launchScript).toContain(
+      '--ripgrep-path "C:/Users/me user/.orca-remote/ripgrep/15.0.0-win32-x64/rg.exe"'
+    )
     expect(launchScript).not.toContain('--pty-source-credit-v1')
     expect(launchScript).not.toContain('.pty-source-credit-policy')
     expect(launchScript).not.toContain('\\\\.\\pipe\\agent-hooks')

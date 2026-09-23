@@ -20,11 +20,14 @@ import {
 } from '../../shared/ripgrep-process-availability'
 import { wslAwareSpawn } from '../git/runner'
 import { parseWslPath, toWindowsWslPath } from '../wsl'
-import { checkRgAvailable } from './rg-availability'
 import { resolveAuthorizedPath } from './filesystem-auth'
 import { getLocalGitOptionsForRegisteredWorktree } from './local-worktree-runtime-options'
 import { QuickOpenSubprocessPathAccumulator } from '../../shared/quick-open-listing-limits'
-import { buildRipgrepRequiredMessage } from '../../shared/quick-open-install-rg'
+import {
+  bundledRipgrepCommand,
+  bundledRipgrepUnavailableError,
+  bundledRipgrepWslSpawnOptions
+} from '../ripgrep/bundled-ripgrep-path'
 
 export type QuickOpenFilePathSearchResult = {
   paths: string[]
@@ -53,9 +56,6 @@ export async function searchQuickOpenFilePaths(
   )
   const wslDistroForOutput = parseWslPath(authorizedRootPath)?.distro ?? localGitOptions.wslDistro
 
-  const fallback = async (): Promise<QuickOpenFilePathSearchResult> => {
-    throw new Error(await buildRipgrepRequiredMessage())
-  }
   const excludePathPrefixes = buildExcludePathPrefixes(authorizedRootPath, args.excludePaths)
   const { ignoredPass } = buildRgArgsForQuickOpen({
     searchRoot: '.',
@@ -79,18 +79,10 @@ export async function searchQuickOpenFilePaths(
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      if (
-        wslDistroForOutput &&
-        !(await checkRgAvailable(authorizedRootPath, localGitOptions.wslDistro, {
-          rejectTransientLaunchFailure: true
-        }))
-      ) {
-        return fallback()
-      }
       return await scanOnce()
     } catch (error) {
       if (error instanceof RipgrepUnavailableError) {
-        return fallback()
+        throw bundledRipgrepUnavailableError()
       }
       // Why: a supersede that lands after the scan rejected still owes the caller a cancellation.
       if (args.signal?.aborted) {
@@ -125,9 +117,11 @@ function scanRipgrepPaths(args: {
     let unavailableExitObserved = false
     let child: ReturnType<typeof wslAwareSpawn>
     try {
-      child = wslAwareSpawn('rg', args.args, {
+      const rgCommand = bundledRipgrepCommand({ wsl: Boolean(args.wslDistroForOutput) })
+      child = wslAwareSpawn(rgCommand, args.args, {
         cwd: args.authorizedRootPath,
         ...(args.localGitOptions.wslDistro ? { wslDistro: args.localGitOptions.wslDistro } : {}),
+        ...(args.wslDistroForOutput ? bundledRipgrepWslSpawnOptions(rgCommand) : {}),
         stdio: ['ignore', 'pipe', 'pipe']
       })
     } catch (error) {
@@ -207,7 +201,7 @@ function scanRipgrepPaths(args: {
     const handleClose = (code: number | null, signal: NodeJS.Signals | null): void => {
       if (
         isRipgrepUnavailableExit(child, code, signal, {
-          classifyNativeLauncherExit: !args.wslDistroForOutput
+          classifyNativeLauncherExit: true
         })
       ) {
         unavailableExitObserved = true

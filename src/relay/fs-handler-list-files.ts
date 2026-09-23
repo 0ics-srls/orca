@@ -31,6 +31,11 @@ import {
   RipgrepUnavailableError
 } from '../shared/ripgrep-process-availability'
 import { QuickOpenPathRanker } from '../shared/quick-open-path-search'
+import { buildRelayCommandEnv } from './relay-command-env'
+import {
+  resolveRelayRipgrepCommand,
+  retryRipgrepOnPathAfterLaunchFailure
+} from './relay-bundled-ripgrep'
 
 export const LIST_FILES_TIMEOUT_MS = 25_000
 
@@ -102,10 +107,12 @@ export function listFilesWithRg(
         // are evaluated against rg's working directory, not the absolute
         // search target. Without cwd, nested-worktree exclusions silently
         // stop working.
+        const command = resolveRelayRipgrepCommand()
         let child: ChildProcess
         try {
-          child = spawn('rg', ['--no-messages', ...args], {
+          child = spawn(command, ['--no-messages', ...args], {
             cwd: rootPath,
+            env: buildRelayCommandEnv(),
             stdio: ['ignore', 'pipe', 'pipe'],
             windowsHide: true
           })
@@ -155,8 +162,14 @@ export function listFilesWithRg(
           if (launchFailureCheck) {
             return
           }
-          launchFailureCheck = isRipgrepUnavailableAfterLaunchFailure(rootPath).then(
-            (unavailable) => {
+          launchFailureCheck = retryRipgrepOnPathAfterLaunchFailure(command, rootPath, error).then(
+            async (retryOnPath) => {
+              if (retryOnPath) {
+                // Why: runPass retries a launch failure once, and the retry resolves to PATH rg.
+                rejectPass(new RipgrepLaunchFailureError('bundled rg failed to start'))
+                return
+              }
+              const unavailable = await isRipgrepUnavailableAfterLaunchFailure(rootPath)
               rejectPass(unavailable ? new RipgrepUnavailableError() : error)
             }
           )

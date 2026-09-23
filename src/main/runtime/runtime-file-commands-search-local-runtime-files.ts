@@ -13,8 +13,11 @@ import {
   ingestRgJsonLine
 } from '../../shared/text-search'
 import { parseWslPath, toWindowsWslPath } from '../wsl'
-import { checkRgAvailable } from '../ipc/rg-availability'
-import { searchWithGitGrep } from '../ipc/filesystem-search-git'
+import {
+  bundledRipgrepCommand,
+  bundledRipgrepUnavailableError,
+  bundledRipgrepWslSpawnOptions
+} from '../ripgrep/bundled-ripgrep-path'
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableExit,
@@ -42,13 +45,7 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
       1,
       Math.min(options.maxResults ?? DEFAULT_SEARCH_MAX_RESULTS, DEFAULT_SEARCH_MAX_RESULTS)
     )
-    const wslInfo = parseWslPath(authorizedRootPath)
-    if (
-      (wslInfo || localGitOptions.wslDistro) &&
-      !(await checkRgAvailable(authorizedRootPath, localGitOptions.wslDistro))
-    ) {
-      return searchWithGitGrep(authorizedRootPath, options, maxResults, localGitOptions)
-    }
+    const wslDistroForOutput = parseWslPath(authorizedRootPath)?.distro ?? localGitOptions.wslDistro
 
     return new Promise<SearchResult>((resolvePromise) => {
       const searchKey = `${this.host.getRuntimeId()}:${authorizedRootPath}`
@@ -64,8 +61,8 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
       let processErrorObserved = false
       let unavailableExitObserved = false
       let child: ChildProcessHandle | null = null
-      const transformAbsPath = wslInfo
-        ? (p: string): string => toWindowsWslPath(p, wslInfo.distro)
+      const transformAbsPath = wslDistroForOutput
+        ? (p: string): string => (p.startsWith('/') ? toWindowsWslPath(p, wslDistroForOutput) : p)
         : undefined
 
       const finish = (result: SearchResult | PromiseLike<SearchResult>): void => {
@@ -80,8 +77,7 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
         resolvePromise(result)
       }
       const resolveOnce = (): void => finish(finalize(acc))
-      const resolveWithoutRipgrep = (): void =>
-        finish(searchWithGitGrep(authorizedRootPath, options, maxResults, localGitOptions))
+      const rejectUnavailable = (): void => finish(Promise.reject(bundledRipgrepUnavailableError()))
 
       let killTimeout: ReturnType<typeof setTimeout> | null = null
       const cleanupListeners = (): void => {
@@ -115,9 +111,11 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
         }
       }
 
-      const nextChild = wslAwareSpawn('rg', rgArgs, {
+      const rgCommand = bundledRipgrepCommand({ wsl: Boolean(wslDistroForOutput) })
+      const nextChild = wslAwareSpawn(rgCommand, rgArgs, {
         cwd: authorizedRootPath,
         ...(localGitOptions.wslDistro ? { wslDistro: localGitOptions.wslDistro } : {}),
+        ...(wslDistroForOutput ? bundledRipgrepWslSpawnOptions(rgCommand) : {}),
         stdio: ['ignore', 'pipe', 'pipe']
       })
       child = nextChild
@@ -133,7 +131,7 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
       const onError = (): void => {
         processErrorObserved = true
         if (child && isRipgrepUnavailableExit(child, null, null)) {
-          resolveWithoutRipgrep()
+          rejectUnavailable()
           return
         }
         resolveOnce()
@@ -142,11 +140,11 @@ export class RuntimeFileCommandsWithSearchLocalRuntimeFiles extends RuntimeFileC
         if (
           child &&
           isRipgrepUnavailableExit(child, code, signal, {
-            classifyNativeLauncherExit: !(wslInfo || localGitOptions.wslDistro)
+            classifyNativeLauncherExit: true
           })
         ) {
           unavailableExitObserved = true
-          resolveWithoutRipgrep()
+          rejectUnavailable()
           return
         }
         const tail = lines.finish()

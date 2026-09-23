@@ -67,6 +67,8 @@ export function resolveCommand(
     wslGitReadEnvironment?: WslGitReadEnvironment
     env?: NodeJS.ProcessEnv
     terminationBarrier?: boolean
+    /** Pre-quoted shell expression that names the program inside WSL, replacing `command`. */
+    wslShellCommand?: string
   } = {}
 ): ResolvedCommand {
   if (process.platform !== 'win32') {
@@ -85,7 +87,7 @@ export function resolveCommand(
   const translatedArgs = translateArgsForWsl(args)
   // Why: env on wsl.exe stays Windows-side (WSLENV forwards only named vars), so the locale must ride the command string (issue #7808).
   const localePrefix = command === 'git' ? `${GIT_OUTPUT_LOCALE_SHELL_PREFIX} ` : ''
-  const escapedCommand = quotePosixShell(command)
+  const escapedCommand = options.wslShellCommand ?? quotePosixShell(command)
   // Why: shell-escape each arg to prevent word splitting / glob expansion inside the bash -c string.
   const escapedArgs = translatedArgs.map(quotePosixShell)
   // Why: prepend `cd <linuxPath> &&` for a UNC cwd; skip it when only a distro override was given (global gh needs no cwd).
