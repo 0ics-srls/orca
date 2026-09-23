@@ -19,6 +19,14 @@ type PowerSaveBlocker = {
   isStarted: (id: number) => boolean
 }
 
+// Hold the system awake but let the display sleep and lock. Windows keeps the display
+// hold: its app-suspension request does not stop idle sleep on Modern Standby devices.
+function blockerTypeForPlatform(
+  platform: NodeJS.Platform
+): 'prevent-app-suspension' | 'prevent-display-sleep' {
+  return platform === 'win32' ? 'prevent-display-sleep' : 'prevent-app-suspension'
+}
+
 type PlatformAwakeAssertion = {
   start: (reason: string) => boolean | void
   stop: (reason: string) => void
@@ -190,7 +198,7 @@ export class AgentAwakeService {
       }
     }
     try {
-      const id = this.blocker.start('prevent-display-sleep')
+      const id = this.blocker.start(blockerTypeForPlatform(this.platform))
       this.blockerId = id
       this.reconcileBlocker('post-start')
     } catch (err) {
