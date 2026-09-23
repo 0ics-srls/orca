@@ -101,11 +101,13 @@ export function buildNativeChatTranscriptSlots(
   })
   // Liveness is the turn's, not any one call's: the run at the frontier stays
   // live between its calls, and a run the agent has moved past is settled even
-  // while its last call is still reporting.
+  // while its last call is still reporting. An approval's receipt decides a call
+  // of the run above it, which then runs, so it does not move past that run.
   const trailingRunIndex = foldRows.findLastIndex(
     (row, index) =>
       row.role !== 'user' &&
       row.role !== 'reasoning' &&
+      receipts.get(messages[index].id)?.kind !== 'approval' &&
       (row.rendersProse || messages[index].blocks.some(isToolCallBlock))
   )
   const settledTurnKeys = new Set(

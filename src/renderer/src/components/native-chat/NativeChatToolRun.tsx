@@ -122,14 +122,16 @@ export function NativeChatToolRun({
   const askSubject = hasAskCall ? nativeChatAskRunSubject(asks) : null
   const showsHeader = !hasAskCall || countToolCalls(headerBlocks) > 0
   const callCount = countToolCalls(headerBlocks) || headerBlocks.length
+  const askIsActive = selectActiveToolCall(unansweredAsks, { activeTurnIsWorking }) !== null
   // Live is the turn's state, not a call's. Deriving it from "some call is
   // running" flipped the header to settled and back around every call, and a
   // call that finished inside a frame still bought the whole flip. The turn's
   // trailing run stays live from its first call until the agent moves on; a
-  // caller with no turn state falls back to the calls themselves.
+  // caller with no turn state, or a turn blocked on the reader's answer, falls
+  // back to the calls themselves.
   const live =
     structuredActivityUi &&
-    (activeTurnIsWorking === true
+    (activeTurnIsWorking === true && !askIsActive
       ? trailing !== false
       : selectActiveToolCall(headerBlocks, { activeTurnIsWorking }) !== null)
   // One sentence for the whole run, or the command itself when the run is one
@@ -139,7 +141,6 @@ export function NativeChatToolRun({
   // not, so a call that finished in a frame still leaves its name until the next.
   const latestCall = live ? headerBlocks.findLast(isToolCallBlock) : undefined
   const latestCallLabel = latestCall ? describeLatestToolCall(latestCall) : null
-  const askIsActive = selectActiveToolCall(unansweredAsks, { activeTurnIsWorking }) !== null
   const { succeeded: runSucceeded, failedCallCount } = nativeChatToolRunOutcome(headerBlocks, {
     activeTurnIsWorking
   })
@@ -227,6 +228,7 @@ export function NativeChatToolRun({
           onClick={() => setOpen(!open)}
           className="group/tool-run flex min-h-6 w-full items-center gap-1.5 rounded-md py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
           aria-expanded={open}
+          aria-live="polite"
           data-native-chat-tool-run-state={live ? 'live' : 'settled'}
         >
           {structuredActivityUi && settledHeaderIcon ? (
@@ -277,10 +279,7 @@ export function NativeChatToolRun({
             />
           ) : null}
           {latestCallLabel ? (
-            <span
-              aria-live="polite"
-              className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
-            >
+            <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
               {latestCallLabel}
             </span>
           ) : null}

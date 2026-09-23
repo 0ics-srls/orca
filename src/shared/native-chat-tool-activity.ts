@@ -1,6 +1,6 @@
-// Live tool-activity derivation and copy for the native-chat "Running …" row,
-// shared by the desktop renderer (as its i18n fallback strings) and the mobile
-// app (used directly — mobile ships English only) so the two surfaces never drift.
+// Live tool-activity derivation and copy for native chat's tool runs. Mobile's
+// "Running …" row renders this copy directly (it ships English only); desktop
+// uses the count and failure strings as i18n fallbacks, so the two never drift.
 
 import { createToolInputDisplay } from './native-chat-tool-summary'
 import { isToolCallBlock, type NativeChatBlock } from './native-chat-types'

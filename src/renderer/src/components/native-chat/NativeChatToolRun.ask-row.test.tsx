@@ -92,9 +92,10 @@ describe('NativeChatToolRun awaiting-input row', () => {
     render(<NativeChatToolRun blocks={blocks} expandSignal activeTurnIsWorking />)
 
     expect(screen.getByText('Awaiting user input:')).toBeInTheDocument()
-    // One call ran; being asked a question is not work to summarize. Present
-    // tense: the turn is still working, so the run is still live.
-    expect(screen.getByText('Reading 1 file')).toBeInTheDocument()
+    // One call ran; being asked a question is not work to summarize. The agent
+    // is blocked on the reader, so the run reads settled, not in progress.
+    expect(screen.getByText('Read 1 file')).toBeInTheDocument()
+    expect(screen.queryByText('Reading 1 file')).toBeNull()
   })
 
   it('draws the row from the tool name when the payload names no question', () => {

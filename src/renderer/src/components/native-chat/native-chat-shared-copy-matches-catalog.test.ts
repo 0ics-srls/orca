@@ -3,7 +3,6 @@ import en from '@/i18n/locales/en.json'
 import { NATIVE_CHAT_TOOL_ACTIVITY_COPY } from '../../../../shared/native-chat-tool-activity'
 import { NATIVE_CHAT_TURN_STATUS_COPY } from '../../../../shared/native-chat-turn-status'
 import {
-  NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY,
   NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY,
   NATIVE_CHAT_TOOL_RUN_SENTENCE_JOINERS
 } from '../../../../shared/native-chat-tool-run-sentence'
@@ -61,26 +60,6 @@ describe('native-chat shared copy matches the English catalog', () => {
     ['runPlanMany', NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY.todoList.many],
     ['runToolOne', NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY.other.one],
     ['runToolMany', NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY.other.many],
-    ['runLiveReadOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.read.one],
-    ['runLiveReadMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.read.many],
-    ['runLiveSearchOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.search.one],
-    ['runLiveSearchMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.search.many],
-    ['runLiveListFilesOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.listFiles.one],
-    ['runLiveListFilesMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.listFiles.many],
-    ['runLiveCommandOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.unknown.one],
-    ['runLiveCommandMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.unknown.many],
-    ['runLiveFileChangeOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.fileChange.one],
-    ['runLiveFileChangeMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.fileChange.many],
-    ['runLiveWebSearchOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.webSearch.one],
-    ['runLiveWebSearchMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.webSearch.many],
-    ['runLiveIntegrationOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.mcpToolCall.one],
-    ['runLiveIntegrationMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.mcpToolCall.many],
-    ['runLiveAgentOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.subAgentActivity.one],
-    ['runLiveAgentMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.subAgentActivity.many],
-    ['runLivePlanOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.todoList.one],
-    ['runLivePlanMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.todoList.many],
-    ['runLiveToolOne', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.other.one],
-    ['runLiveToolMany', NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY.other.many],
     ['runPair', NATIVE_CHAT_TOOL_RUN_SENTENCE_JOINERS.pair],
     ['runList', NATIVE_CHAT_TOOL_RUN_SENTENCE_JOINERS.list]
   ])('tool.%s matches the shared run sentence copy', (key, value) => {

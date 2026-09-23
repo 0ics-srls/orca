@@ -74,6 +74,30 @@ describe('transcript slots', () => {
     expect(trailing([toolRun('a'), text('u', 'again', 'user')])).toEqual(['a'])
   })
 
+  // Approving a call lets that call run, and it sits in the run above the
+  // receipt. A question's receipt blocks the agent on the reader, so it does not.
+  it('keeps the run above an approval receipt trailing, but not above a question', () => {
+    const resolution = {
+      state: 'resolved' as const,
+      selectedOptionId: 'yes',
+      resolvedBy: 'desktop',
+      resolvedAt: 1
+    }
+    const receipts = new Map<string, NativeChatResolvedPrompt>([
+      ['approval', { kind: 'approval', title: 'Run?', detail: 'ls', options: [], resolution }],
+      ['question', { kind: 'question', question: 'Which?', options: [], resolution }]
+    ])
+    const trailing = (receiptId: string) =>
+      build([text('u', 'go', 'user'), toolRun('a'), text(receiptId, 'Run?', 'system')], {
+        receipts
+      })
+        .filter((slot) => slot.trailingRun)
+        .map((slot) => slot.message.id)
+
+    expect(trailing('approval')).toEqual(['a'])
+    expect(trailing('question')).toEqual(['question'])
+  })
+
   // A counted row that draws nothing is a gap in the transcript: it reserves
   // estimated height for a bubble that never appears.
   it('gives no slot to a message with nothing to draw', () => {
