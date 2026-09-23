@@ -7,8 +7,8 @@ import {
   printResult
 } from '../format'
 import { listSshTargets } from '../host-selector-alternatives'
-import { getDefaultUserDataPath, RuntimeClient, RuntimeClientError } from '../runtime-client'
-import type { RuntimeRpcSuccess } from '../runtime-client'
+import { getDefaultUserDataPath, RuntimeClientError } from '../runtime-client'
+import type { RuntimeClient, RuntimeRpcSuccess } from '../runtime-client'
 import { rejectRemoteSelectionFlags } from '../remote-selection-flag-rejection'
 import { redactRuntimeEnvironment } from '../../shared/runtime-environments'
 import type { RuntimeStatus } from '../../shared/runtime-types'
@@ -79,20 +79,14 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       ...(target.remotePlatform ? { platform: target.remotePlatform } : {})
     }))
     const localStatus = await readStatusDescriptor(client)
-    const environments = await Promise.all(
-      listEnvironments(getDefaultUserDataPath()).map(async (environment) => {
-        const descriptor = await readStatusDescriptor(
-          new RuntimeClient(getDefaultUserDataPath(), undefined, null, environment.name)
-        )
-        return {
-          kind: 'environment' as const,
-          name: environment.name,
-          id: environment.id,
-          selector: `--environment ${environment.name}`,
-          ...descriptor
-        }
-      })
-    )
+    // Why: this listing answers from the local pairing store; dialing each paired server would make
+    // it slow and offline-fragile. `orca host name --environment <name>` asks one server directly.
+    const environments = listEnvironments(getDefaultUserDataPath()).map((environment) => ({
+      kind: 'environment' as const,
+      name: environment.name,
+      id: environment.id,
+      selector: `--environment ${environment.name}`
+    }))
     const hosts = [
       {
         kind: 'local' as const,
@@ -113,14 +107,7 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       '`orca environment list`. Paired servers are stored on this machine, so there is no other host to ask.',
       'Run `orca environment list` on that machine to see the servers paired with it.'
     )
-    const environments = await Promise.all(
-      listEnvironments(getDefaultUserDataPath()).map(async (environment) => {
-        const descriptor = await readStatusDescriptor(
-          new RuntimeClient(getDefaultUserDataPath(), undefined, null, environment.name)
-        )
-        return { ...redactRuntimeEnvironment(environment), ...descriptor }
-      })
-    )
+    const environments = listEnvironments(getDefaultUserDataPath()).map(redactRuntimeEnvironment)
     printResult(localSuccess({ environments }), json, formatEnvironmentList)
   },
   'environment show': async ({ flags, json }) => {
