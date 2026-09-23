@@ -1,44 +1,24 @@
+import { isAgentStatusHeldOpenByChildWork } from '../../../shared/agent-lead-status-fold'
 import { claudeTeammateIdMatchesName } from '../../../shared/claude-subagent-roster'
 import { isAskUserQuestionTool } from '../../../shared/agent-question-answered-intent'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import type { EnrichedAgentHookEventPayload } from './server-types'
 
-export function attachClaudeChildOnlyBoundary(
-  previous: EnrichedAgentHookEventPayload | undefined,
-  next: AgentHookEventPayload
-): AgentHookEventPayload & { claudeLeadBoundaryChildOnly?: true } {
-  const establishesBoundary =
-    next.payload.agentType === 'claude' &&
-    (next.hookEventName === 'Stop' || next.hookEventName === 'StopFailure') &&
-    !next.toolAgentId &&
-    next.payload.state === 'working' &&
-    next.payload.subagents?.some((subagent) => subagent.state === 'working') === true &&
-    next.claudeRunningNonAgentTask === false
-  const carriesBoundary =
-    previous?.claudeLeadBoundaryChildOnly === true &&
-    next.payload.agentType === 'claude' &&
-    next.claudeRunningNonAgentTask === false &&
-    (next.toolAgentId !== undefined ||
-      next.hookEventName === 'SubagentStart' ||
-      next.hookEventName === 'SubagentStop' ||
-      next.hookEventName === 'TeammateIdle')
-  return establishesBoundary || carriesBoundary
-    ? { ...next, claudeLeadBoundaryChildOnly: true }
-    : next
-}
-
-export function invalidateClaudeChildOnlyBoundary(
-  previous: EnrichedAgentHookEventPayload | undefined,
-  next: AgentHookEventPayload
-): EnrichedAgentHookEventPayload | undefined {
-  if (
-    previous?.claudeLeadBoundaryChildOnly !== true ||
-    attachClaudeChildOnlyBoundary(previous, next).claudeLeadBoundaryChildOnly === true
-  ) {
-    return previous
-  }
-  const { claudeLeadBoundaryChildOnly: _boundary, ...withoutBoundary } = previous
-  return withoutBoundary
+/** The Claude lead has settled and child agents alone hold the row `working`. Derived from the
+ *  row's `lead` fact and its child evidence, never stored: the persisted flag this replaced was a
+ *  second copy of `lead.state === 'done'` that could disagree with it. A running shell beside the
+ *  agents disqualifies a live row; a hydrated row no longer carries that fact and errs toward
+ *  keeping its hook-written state. */
+export function isClaudeLeadBoundaryHeldByChildrenOnly(
+  row: Pick<AgentHookEventPayload, 'payload' | 'claudeRunningNonAgentTask'>
+): boolean {
+  return (
+    row.payload.agentType === 'claude' &&
+    isAgentStatusHeldOpenByChildWork(row.payload) &&
+    row.payload.state === 'working' &&
+    row.payload.subagents?.some((subagent) => subagent.state === 'working') === true &&
+    row.claudeRunningNonAgentTask !== true
+  )
 }
 
 export function shouldKeepClaudePermissionVisible(

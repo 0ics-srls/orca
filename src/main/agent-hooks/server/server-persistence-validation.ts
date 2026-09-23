@@ -31,6 +31,30 @@ export function dropHydratedIdleClaudeSubagents(
   }
 }
 
+/** Rows written before `lead` existed persisted `claudeLeadBoundaryChildOnly: true` instead: the
+ *  lead had settled and child agents alone held the row `working`. That is `lead.state === 'done'`
+ *  stored as a boolean, so it only fills an absent `lead`; a row carrying both keeps `lead`. The
+ *  flag stays readable until every user's file has been rewritten without it. */
+function fillLeadFromLegacyChildOnlyBoundary(
+  payload: ParsedAgentStatusPayload,
+  record: Record<string, unknown>,
+  stateStartedAt: number
+): ParsedAgentStatusPayload {
+  if (
+    payload.lead !== undefined ||
+    record.claudeLeadBoundaryChildOnly !== true ||
+    payload.agentType !== 'claude'
+  ) {
+    return payload
+  }
+  return {
+    ...payload,
+    // Why: the gated working row stamps the lead's end as `turnCompletedAt`; the row clock is the
+    // nearest fact an older row that lacks it can offer.
+    lead: { state: 'done', stateStartedAt: payload.turnCompletedAt ?? stateStartedAt }
+  }
+}
+
 export function sanitizeHydratedEntry(
   paneKey: string,
   rawEntry: unknown
@@ -84,10 +108,11 @@ export function sanitizeHydratedEntry(
   } else {
     return null
   }
-  const payload = normalizeAgentStatusPayload(record.payload)
-  if (!payload) {
+  const normalizedPayload = normalizeAgentStatusPayload(record.payload)
+  if (!normalizedPayload) {
     return null
   }
+  const payload = fillLeadFromLegacyChildOnlyBoundary(normalizedPayload, record, stateStartedAt)
   const providerSession = normalizeAgentProviderSession(record.providerSession) ?? undefined
   const providerSessionOnly = record.providerSessionOnly === true
   const retainedForLiveness = record.retainedForLiveness === true
@@ -127,7 +152,9 @@ export function sanitizeHydratedEntry(
     toolAgentId: typeof record.toolAgentId === 'string' ? record.toolAgentId : undefined,
     teammateName: typeof record.teammateName === 'string' ? record.teammateName : undefined,
     toolAgentType: typeof record.toolAgentType === 'string' ? record.toolAgentType : undefined,
-    claudeLeadBoundaryChildOnly: record.claudeLeadBoundaryChildOnly === true ? true : undefined,
+    ...(typeof record.claudeRunningNonAgentTask === 'boolean'
+      ? { claudeRunningNonAgentTask: record.claudeRunningNonAgentTask }
+      : {}),
     providerSession,
     providerSessionOnly: providerSessionOnly ? true : undefined,
     retainedForLiveness: retainedForLiveness ? true : undefined,

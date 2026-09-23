@@ -9,6 +9,10 @@ import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
 } from '../../../shared/structured-agent-session-projection'
+import {
+  continueAgentLeadStatus,
+  isAgentStatusHeldOpenByChildWork
+} from '../../../shared/agent-lead-status-fold'
 import { structuredAgentSessionAgentStatus } from '../../../shared/structured-agent-session-agent-status'
 import { structuredStatusLegacyEvent } from './server-structured-status-row'
 import { AgentHookServerIngestTerminal } from './server-ingest-terminal'
@@ -35,10 +39,15 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
     }
     const previous = this.canonicalStatusStore.getParent(parsed)
     const priorStatus = previous?.status
-    const { state, workingMode, fromChildWork } = structuredAgentSessionAgentStatus({
+    const agentStatus = structuredAgentSessionAgentStatus({
       status: summary.status,
-      backgroundTasks: summary.backgroundTasks
+      backgroundTasks: summary.backgroundTasks,
+      turnOutcome: summary.turnOutcome
     })
+    const { state, workingMode } = agentStatus
+    // The lead's own clock keeps continuity the same way the combined row's does below, dated
+    // by the journal: a restart's republish is not a new lead state either.
+    const lead = continueAgentLeadStatus(priorStatus?.lead, agentStatus.lead, summary.updatedAt)
     const tabId = structuredAgentSessionTabId(parsed.sessionId)
     const paneKey = structuredAgentSessionPaneKey(tabId, parsed.sessionId)
     if (this.state.lastStatusByPaneKey.has(paneKey)) {
@@ -55,6 +64,7 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
       ...(summary.providerSession ? { providerSession: summary.providerSession } : {}),
       state,
       ...(workingMode ? { workingMode } : {}),
+      lead,
       prompt: summary.latestPrompt,
       agentType: summary.agent,
       ...(summary.model ? { model: summary.model } : {}),
@@ -68,7 +78,9 @@ export abstract class AgentHookServerIngestStructured extends AgentHookServerIng
       // cannot date child work: it stopped when the lead did, and reading it as the evidence age
       // retires a genuinely live roster at the 30-minute staleness window. Only then does the
       // host's own observation clock stand in, matching what the hook lane stamps for its rows.
-      evidenceObservedAt: fromChildWork ? observedAt : summary.updatedAt,
+      evidenceObservedAt: isAgentStatusHeldOpenByChildWork({ state, lead })
+        ? observedAt
+        : summary.updatedAt,
       // Continuity is the whole published work identity: `state` alone no longer means "a turn is
       // running", so monitoring that becomes a real turn must restart the clock, not inherit it.
       stateStartedAt:

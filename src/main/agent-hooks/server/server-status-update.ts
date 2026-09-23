@@ -11,9 +11,7 @@ import type { EnrichedAgentHookEventPayload } from './server-types'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import type { AgentStatusObservationOrigin } from '../../../shared/agent-status-observation'
 import {
-  attachClaudeChildOnlyBoundary,
   attachClaudePermissionToolUseId,
-  invalidateClaudeChildOnlyBoundary,
   shouldKeepClaudePermissionVisible
 } from './server-claude-status-rules'
 import { isStaleGrokTurnEnd } from './server-grok-status-rules'
@@ -36,7 +34,8 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       // Why: the prompt boundary is authoritative even when text is unchanged; its next OSC working row must not inherit the prior cron/background turn stamp.
       this.activeHookTurnCompletedAtByPaneKey.delete(payload.paneKey)
     }
-    let previous = this.state.lastStatusByPaneKey.get(payload.paneKey) as
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Main admits enriched legacy rows; the shared view declares their base event type.
+    const previous = this.state.lastStatusByPaneKey.get(payload.paneKey) as
       | EnrichedAgentHookEventPayload
       | undefined
     const rowBefore = mutationBefore ?? previous
@@ -122,19 +121,6 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
               : stateReconciledPayload.payload
           }
         : stateReconciledPayload
-    const boundaryReconciledPrevious = invalidateClaudeChildOnlyBoundary(
-      previous,
-      rootContextPreservingPayload
-    )
-    if (boundaryReconciledPrevious !== previous) {
-      previous = boundaryReconciledPrevious
-      if (previous) {
-        if (!this.writeLegacyStatusRow(previous)) {
-          return undefined
-        }
-        this.scheduleStatusPersist()
-      }
-    }
     const identity = resolveAgentStatusIdentity({
       existing: previous
         ? {
@@ -165,7 +151,6 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
             payload: { ...rootContextPreservingPayload.payload, agentType: identity.agentType }
           }
     const effectivePayload = attachClaudePermissionToolUseId(previous, identityResolvedPayload)
-    const boundaryAwarePayload = attachClaudeChildOnlyBoundary(previous, effectivePayload)
     if (previous && shouldKeepClaudePermissionVisible(previous, effectivePayload)) {
       this.commitStatusRowMutation(rowBefore, previous)
       return previous
@@ -212,8 +197,8 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     // Why carried forward only within one host: main's OSC parse resolves the handle, so a later
     // hook must not erase its terminal join; a connection change must not inherit another host's.
     const enriched = {
-      ...this.attachStatusTiming(boundaryAwarePayload, now, observedAt),
-      observation: this.stampObservation(boundaryAwarePayload, origin, observedAt ?? now)
+      ...this.attachStatusTiming(effectivePayload, now, observedAt),
+      observation: this.stampObservation(effectivePayload, origin, observedAt ?? now)
     }
     if (
       typeof enriched.payload.turnCompletedAt === 'number' &&

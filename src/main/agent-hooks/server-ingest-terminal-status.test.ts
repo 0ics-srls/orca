@@ -443,3 +443,48 @@ describe('AgentHookServer ingestTerminalStatus', () => {
     expect(server.getStatusSnapshot()).toEqual([])
   })
 })
+
+describe('the lead fact across an OSC repaint', () => {
+  it('carries the hook row lead while OSC repaints the same state, and drops it on a state edge', () => {
+    const server = new AgentHookServer()
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'claude',
+        hookEventName: 'Stop',
+        payload: {
+          state: 'working',
+          workingMode: 'monitoring',
+          prompt: 'watch the build',
+          agentType: 'claude',
+          lead: { state: 'done', stateStartedAt: 10 }
+        }
+      },
+      'conn-1'
+    )
+    server.ingestTerminalStatus({
+      paneKey: PANE,
+      connectionId: 'conn-1',
+      payload: {
+        state: 'working',
+        prompt: 'watch the build',
+        agentType: 'claude',
+        toolName: 'Bash'
+      }
+    })
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      toolName: 'Bash',
+      lead: { state: 'done', stateStartedAt: 10 }
+    })
+
+    // OSC cannot date a turn edge: a different state is a lead it has no fact about.
+    server.ingestTerminalStatus({
+      paneKey: PANE,
+      connectionId: 'conn-1',
+      payload: { state: 'done', prompt: 'watch the build', agentType: 'claude' }
+    })
+    expect(server.getStatusSnapshot()[0]).toMatchObject({ state: 'done' })
+    expect(server.getStatusSnapshot()[0]).not.toHaveProperty('lead')
+  })
+})

@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import {
+  agentLeadStatusEqual,
   agentSubagentsEqual,
   isFreshNonDoneAgentStatus,
   parseAgentStatusPayload,
@@ -705,5 +706,56 @@ describe('WellKnownAgentType', () => {
   it('keeps AgentType open to custom agent names', () => {
     const custom: AgentType = 'some-in-house-agent'
     expect(custom).toBe('some-in-house-agent')
+  })
+})
+
+describe('the lead field on a status payload', () => {
+  it('admits a well-formed lead with its verdict only while the lead is done', () => {
+    expect(
+      parseAgentStatusPayload(
+        '{"state":"working","lead":{"state":"done","outcome":"cancellation","stateStartedAt":5}}'
+      )?.lead
+    ).toEqual({ state: 'done', outcome: 'cancellation', stateStartedAt: 5 })
+    // A verdict belongs to a finished turn; one riding on a live lead state is stale.
+    expect(
+      parseAgentStatusPayload(
+        '{"state":"working","lead":{"state":"working","outcome":"failure","stateStartedAt":5}}'
+      )?.lead
+    ).toEqual({ state: 'working', stateStartedAt: 5 })
+    expect(
+      parseAgentStatusPayload(
+        '{"state":"done","lead":{"state":"done","outcome":"maybe","stateStartedAt":5}}'
+      )?.lead
+    ).toEqual({ state: 'done', stateStartedAt: 5 })
+  })
+
+  it('drops a malformed lead but never the row it rides on', () => {
+    for (const lead of [
+      '"done"',
+      '{"state":"running","stateStartedAt":5}',
+      '{"state":"done"}',
+      '{"state":"done","stateStartedAt":"5"}',
+      '{"stateStartedAt":5}',
+      'null'
+    ]) {
+      const parsed = parseAgentStatusPayload(
+        `{"state":"working","prompt":"keep me","lead":${lead}}`
+      )
+      expect(parsed, lead).toMatchObject({ state: 'working', prompt: 'keep me' })
+      expect(parsed?.lead, lead).toBeUndefined()
+    }
+  })
+
+  it('is carried by the client-visible projection and compared structurally', () => {
+    const lead = { state: 'done' as const, stateStartedAt: 7 }
+    expect(pickParsedAgentStatusPayload({ state: 'working', prompt: '', lead }).lead).toEqual(lead)
+    expect(pickParsedAgentStatusPayload({ state: 'working', prompt: '' })).not.toHaveProperty(
+      'lead'
+    )
+    expect(agentLeadStatusEqual(lead, { ...lead })).toBe(true)
+    expect(agentLeadStatusEqual(lead, { ...lead, outcome: 'failure' })).toBe(false)
+    expect(agentLeadStatusEqual(lead, { ...lead, stateStartedAt: 8 })).toBe(false)
+    expect(agentLeadStatusEqual(undefined, undefined)).toBe(true)
+    expect(agentLeadStatusEqual(lead, undefined)).toBe(false)
   })
 })

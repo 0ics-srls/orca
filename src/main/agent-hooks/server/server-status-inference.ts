@@ -108,7 +108,9 @@ export abstract class AgentHookServerStatusInference extends AgentHookServerRowO
         ...(payload.model ? { model: payload.model } : {}),
         interrupted: true,
         // Why: idle children are display state; dropping them on an inferred interrupt blanks rows a later hook would restore.
-        ...(payload.subagents ? { subagents: payload.subagents } : {})
+        ...(payload.subagents ? { subagents: payload.subagents } : {}),
+        // Why: the synthesized row is the lead's own end; its verdict is the interrupt that produced it.
+        lead: { state: 'done', outcome: 'cancellation', stateStartedAt: Date.now() }
       }
     })
     if (!inferred) {
@@ -172,7 +174,8 @@ export abstract class AgentHookServerStatusInference extends AgentHookServerRowO
         ...(restored.turnCompletedAt !== undefined
           ? { turnCompletedAt: restored.turnCompletedAt }
           : {}),
-        ...(payload.subagents ? { subagents: payload.subagents } : {})
+        ...(payload.subagents ? { subagents: payload.subagents } : {}),
+        lead: restored.lead
       }
     })
     if (!inferred) {

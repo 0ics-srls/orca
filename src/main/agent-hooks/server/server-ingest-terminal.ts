@@ -4,6 +4,7 @@ import { parseLegacyNumericPaneKey, parsePaneKey } from '../../../shared/stable-
 import { terminalStatusPayloadMatchesHook } from '../../../shared/agent-terminal-status-equivalence'
 import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
 import type { EnrichedAgentHookEventPayload } from './server-types'
+import { isClaudeLeadBoundaryHeldByChildrenOnly } from './server-claude-status-rules'
 import { AgentHookServerIngestNormalization } from './server-ingest-normalization'
 
 export abstract class AgentHookServerIngestTerminal extends AgentHookServerIngestNormalization {
@@ -82,11 +83,11 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
       | EnrichedAgentHookEventPayload
       | undefined
     if (
-      previous?.claudeLeadBoundaryChildOnly === true &&
-      previous.payload.agentType === 'claude' &&
+      previous &&
+      isClaudeLeadBoundaryHeldByChildrenOnly(previous) &&
       event.payload.agentType === 'claude'
     ) {
-      // Why: OSC has no child identity or lead boundary, so it cannot replace a persisted child-only proof before the lifecycle hook arrives.
+      // Why: OSC has no child identity or lead boundary, so it cannot replace a child-only proof before the lifecycle hook arrives.
       if (mutationBefore !== undefined) {
         this.commitStatusRowMutation(mutationBefore, previous)
         this.emitEnrichedStatus(previous)
@@ -130,6 +131,14 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
       (previous.payload.state !== 'done' || event.payload.state === 'done')
         ? previous.providerSession
         : undefined
+    // Why: OSC carries no lead fact. While it repaints the state the hook row already holds, the
+    // lead behind that state is unchanged too; a different state is a turn edge OSC cannot date.
+    const preservedLead =
+      previous?.payload.lead &&
+      previous.payload.state === event.payload.state &&
+      (claimedAgentType === undefined || claimedAgentType === previous.payload.agentType)
+        ? previous.payload.lead
+        : undefined
     // Why: OSC status is a runtime observation, not a prompt boundary; keep prompt-sent telemetry tied to native hooks.
     this.applyNormalizedStatus(
       {
@@ -139,7 +148,7 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
         connectionId,
         ...(preservedProviderSession ? { providerSession: preservedProviderSession } : {}),
         ...(terminalHandle ? { terminalHandle } : {}),
-        payload: event.payload
+        payload: preservedLead ? { ...event.payload, lead: preservedLead } : event.payload
       },
       undefined,
       'osc',

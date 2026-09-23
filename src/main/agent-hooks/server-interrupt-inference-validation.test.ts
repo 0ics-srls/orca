@@ -362,3 +362,41 @@ describe('AgentHookServer listener replay', () => {
     }
   })
 })
+
+describe('the lead fact on an inferred interrupt', () => {
+  it('publishes the synthesized done as a cancelled lead turn', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    try {
+      const server = new AgentHookServer()
+      server.ingestRemote(
+        {
+          paneKey: PANE,
+          tabId: 'tab-1',
+          worktreeId: 'wt-1',
+          payload: { state: 'working', prompt: 'long task', agentType: 'claude' }
+        },
+        'conn-1'
+      )
+      const baseline = server.getStatusSnapshot()[0]
+      vi.setSystemTime(1_500)
+      expect(
+        server.inferInterrupt({
+          paneKey: PANE,
+          baselineUpdatedAt: baseline.receivedAt,
+          baselineStateStartedAt: baseline.stateStartedAt,
+          baselinePrompt: 'long task',
+          baselineAgentType: 'claude',
+          intent: 'ctrl-c'
+        })
+      ).toBe(true)
+      expect(server.getStatusSnapshot()[0]).toMatchObject({
+        state: 'done',
+        interrupted: true,
+        lead: { state: 'done', outcome: 'cancellation', stateStartedAt: 1_500 }
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

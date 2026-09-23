@@ -378,3 +378,54 @@ describe('structured rows and last-status.json', () => {
     }
   })
 })
+
+describe('the lead fact on a structured row', () => {
+  it('publishes the lead beside the folded state, on the journal clock with continuity', () => {
+    const server = new AgentHookServer()
+    server.ingestStructuredStatus(
+      summary({ status: 'idle', backgroundTasks: [{ id: 'c', kind: 'agent', state: 'working' }] }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      lead: { state: 'done', stateStartedAt: OBSERVED_AT }
+    })
+    expect(server.getStatusSnapshot()[0]?.lead).not.toHaveProperty('outcome')
+
+    // The lead is still done while its child drains: the lead's clock does not move.
+    server.ingestStructuredStatus(
+      summary({ status: 'idle', updatedAt: OBSERVED_AT + 5, turnOutcome: 'failure' }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'done',
+      stateStartedAt: OBSERVED_AT + 5,
+      lead: { state: 'done', outcome: 'failure', stateStartedAt: OBSERVED_AT }
+    })
+
+    server.ingestStructuredStatus(
+      summary({ status: 'working', updatedAt: OBSERVED_AT + 9 }),
+      SUBJECT
+    )
+    expect(server.getStatusSnapshot()[0]?.lead).toEqual({
+      state: 'working',
+      stateStartedAt: OBSERVED_AT + 9
+    })
+  })
+
+  it('reaches the enriched fanout every legacy subscriber reads', () => {
+    const server = new AgentHookServer()
+    const enriched = vi.fn()
+    server.subscribeEnrichedStatus(enriched)
+    server.ingestStructuredStatus(summary({ status: 'idle', turnOutcome: 'cancellation' }), SUBJECT)
+    expect(enriched).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paneKey: STRUCTURED_PANE,
+        payload: expect.objectContaining({
+          state: 'done',
+          lead: { state: 'done', outcome: 'cancellation', stateStartedAt: OBSERVED_AT }
+        })
+      })
+    )
+  })
+})

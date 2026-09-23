@@ -400,3 +400,54 @@ describe('shared agent-hook-listener', () => {
     expect(latestPrompt).toBe('prompt 39')
   })
 })
+
+describe('the lead verdict across a child-induced wait', () => {
+  let state: HookListenerState
+
+  beforeEach(() => {
+    state = createHookListenerState()
+  })
+
+  function claude(payload: Record<string, unknown>) {
+    return normalizeHookPayload(state, 'claude', { paneKey: PANE_KEY, payload }, 'production')
+      ?.payload
+  }
+
+  it('restores the cancelled verdict when a child permission pause clears', () => {
+    claude({ hook_event_name: 'UserPromptSubmit', prompt: 'go' })
+    claude({ hook_event_name: 'SubagentStart', agent_id: 'a1' })
+    const cancelled = claude({ hook_event_name: 'Stop', is_interrupt: true })
+    expect(cancelled?.lead).toEqual({
+      state: 'done',
+      outcome: 'cancellation',
+      stateStartedAt: expect.any(Number)
+    })
+    const settledAt = cancelled?.lead?.stateStartedAt
+
+    const wait = claude({
+      hook_event_name: 'PermissionRequest',
+      agent_id: 'a1',
+      tool_name: 'Bash',
+      tool_input: { command: 'rm -rf build' }
+    })
+    expect(wait).toMatchObject({ state: 'waiting', lead: { state: 'waiting' } })
+    expect(wait?.lead).not.toHaveProperty('outcome')
+
+    // The child's pause displaced the lead; clearing it must give the verdict and clock back.
+    const drained = claude({ hook_event_name: 'SubagentStop', agent_id: 'a1' })
+    expect(drained).toMatchObject({
+      state: 'done',
+      interrupted: true,
+      lead: { state: 'done', outcome: 'cancellation', stateStartedAt: settledAt }
+    })
+  })
+
+  it('clears the verdict when a new turn starts', () => {
+    claude({ hook_event_name: 'UserPromptSubmit', prompt: 'go' })
+    claude({ hook_event_name: 'StopFailure', error: 'invalid_request' })
+    expect(claude({ hook_event_name: 'UserPromptSubmit', prompt: 'again' })?.lead).toEqual({
+      state: 'working',
+      stateStartedAt: expect.any(Number)
+    })
+  })
+})

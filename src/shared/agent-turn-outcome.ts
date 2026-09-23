@@ -1,0 +1,12 @@
+/** What the PROVIDER said became of a turn, kept separate from any lifecycle
+ *  state so those stay a report on what the HOST observed. `cancellation` is a
+ *  stop somebody asked for, `failure` is the provider's own error, and the two
+ *  are never interchangeable: only `failure` is a fault. Shared by the journal's
+ *  turn record and the agent-status row's `lead` fact so one vocabulary serves
+ *  both; absent always means UNKNOWN, never success. */
+export const AGENT_JOURNAL_TURN_OUTCOMES = ['success', 'failure', 'cancellation'] as const
+export type AgentJournalTurnOutcome = (typeof AGENT_JOURNAL_TURN_OUTCOMES)[number]
+
+export function isAgentJournalTurnOutcome(value: unknown): value is AgentJournalTurnOutcome {
+  return AGENT_JOURNAL_TURN_OUTCOMES.some((known) => known === value)
+}
