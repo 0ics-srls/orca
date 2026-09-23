@@ -25,7 +25,8 @@ const RUNNING_SHELL = {
   command: 'sleep 15'
 }
 
-const RUNNING_WORKFLOW = { id: 'wf-1', type: 'local_workflow', status: 'running' }
+// The hook inventory labels tasks; `workflow` is the label for a `local_workflow` task.
+const RUNNING_WORKFLOW = { id: 'wf-1', type: 'workflow', status: 'running' }
 
 function claudeEvent(state: HookListenerState, paneKey: string, payload: Record<string, unknown>) {
   return normalizeHookPayload(state, 'claude', { paneKey, payload }, 'production')?.payload
@@ -254,7 +255,7 @@ describe('Claude background task status', () => {
     expect(
       claudeEvent(shell, SOURCE_PANE, {
         hook_event_name: 'Stop',
-        background_tasks: [{ id: 'bash-1', type: 'local_bash', status: 'running' }]
+        background_tasks: [{ id: 'bash-1', type: 'shell', status: 'running' }]
       })
     ).toMatchObject({ state: 'working', workingMode: 'monitoring' })
   })
