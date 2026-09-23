@@ -39,7 +39,7 @@ describe('useFileExplorerNameFilter', () => {
       enabled: true,
       worktreeId: 'worktree-1',
       query: 'AppDelegate.swift',
-      searchLocalPaths: true
+      hostFilterWhenCapped: true
     })
     expect(result.current.nameFilterSource?.query).toBe('AppDelegate.swift')
   })

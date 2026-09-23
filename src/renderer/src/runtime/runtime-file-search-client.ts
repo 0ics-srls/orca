@@ -52,6 +52,8 @@ export async function listRuntimeFiles(
     // the whole listing when no limit is named, so a caller that never states one cannot tell a
     // bound from a total.
     maxResults?: number
+    /** Local hosts only; SSH and runtime hosts list unfiltered. */
+    nameFilter?: string
     signal?: AbortSignal
   }
 ): Promise<string[]> {
@@ -62,7 +64,8 @@ export async function listRuntimeFiles(
       connectionId: context.connectionId,
       excludePaths: args.excludePaths,
       requestToken: args.requestToken,
-      ...(args.maxResults === undefined ? {} : { maxResults: args.maxResults })
+      ...(args.maxResults === undefined ? {} : { maxResults: args.maxResults }),
+      ...(args.nameFilter && !context.connectionId ? { nameFilter: args.nameFilter } : {})
     })
   }
   return callRuntimeRpc<string[]>(
@@ -90,13 +93,13 @@ export async function searchRuntimeFilePaths(
 ): Promise<{ files: string[]; truncated: boolean }> {
   const target = getActiveRuntimeTarget(context.settings)
   if (target.kind !== 'environment') {
-    if (!context.worktreePath) {
+    if (!context.connectionId || !context.worktreePath) {
       return { files: [], truncated: false }
     }
     const limit = args.limit ?? 32
     const files = await window.api.fs.listFiles({
       rootPath: context.worktreePath,
-      ...(context.connectionId ? { connectionId: context.connectionId } : {}),
+      connectionId: context.connectionId,
       excludePaths: args.excludePaths,
       requestToken: args.requestToken,
       maxResults: limit + 1,

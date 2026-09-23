@@ -99,16 +99,16 @@ function HookProbe({
   enabled,
   onState,
   query,
-  searchLocalPaths,
+  hostFilterWhenCapped,
   worktreeId
 }: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
-  searchLocalPaths?: boolean
+  hostFilterWhenCapped?: boolean
   worktreeId: string | null
 }): null {
-  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query, searchLocalPaths }))
+  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query, hostFilterWhenCapped }))
   return null
 }
 
@@ -133,7 +133,7 @@ async function renderProbe(args: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
-  searchLocalPaths?: boolean
+  hostFilterWhenCapped?: boolean
   worktreeId: string | null
 }): Promise<Root> {
   const container = document.createElement('div')
@@ -684,7 +684,7 @@ describe('useRuntimeFileListForWorktree', () => {
       loading: false
     })
   })
-  it('searches a local workspace on the host when the caller opts in', async () => {
+  it('re-lists a capped local workspace with the name filter applied on the host', async () => {
     vi.useFakeTimers()
     useAppStore.setState({
       folderWorkspaces: [makeFolderWorkspace()],
@@ -692,31 +692,57 @@ describe('useRuntimeFileListForWorktree', () => {
       repos: [],
       worktreesByRepo: {}
     } as Partial<AppState>)
-    searchRuntimeFilePathsMock.mockResolvedValue({
-      files: ['ios/AppDelegate.swift'],
-      truncated: false
-    })
+    listRuntimeFilesMock
+      .mockResolvedValueOnce(
+        Array.from({ length: QUICK_OPEN_LISTING_MAX_RESULTS }, (_, i) => `src/file-${i}.ts`)
+      )
+      .mockResolvedValueOnce(['ios/AppDelegate.swift'])
     const states: RuntimeFileListState[] = []
 
     try {
       await renderProbe({
         enabled: true,
         onState: (state) => states.push(state),
-        query: 'AppDelegate.swift',
-        searchLocalPaths: true,
+        query: 'AppDelegate',
+        hostFilterWhenCapped: true,
         worktreeId: folderWorkspaceKey('folder-workspace-1')
       })
+      await flushEffects()
       await act(async () => vi.advanceTimersByTimeAsync(120))
       await flushEffects()
 
-      expect(searchRuntimeFilePathsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ settings: { activeRuntimeEnvironmentId: null } }),
-        expect.objectContaining({ query: 'AppDelegate.swift', requestToken: expect.any(String) })
-      )
-      expect(listRuntimeFilesMock).not.toHaveBeenCalled()
-      expect(states.at(-1)).toMatchObject({ files: ['ios/AppDelegate.swift'], loading: false })
+      expect(listRuntimeFilesMock).toHaveBeenCalledTimes(2)
+      expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
+      expect(listRuntimeFilesMock.mock.calls[1][1]).toMatchObject({ nameFilter: 'AppDelegate' })
+      expect(states.at(-1)).toMatchObject({
+        files: ['ios/AppDelegate.swift'],
+        loading: false,
+        truncated: false
+      })
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('filters an uncapped local listing in the renderer without a host re-list', async () => {
+    useAppStore.setState({
+      folderWorkspaces: [makeFolderWorkspace()],
+      projectGroups: [makeProjectGroup()],
+      repos: [],
+      worktreesByRepo: {}
+    } as Partial<AppState>)
+
+    await renderProbe({
+      enabled: true,
+      onState: () => {},
+      query: 'package',
+      hostFilterWhenCapped: true,
+      worktreeId: folderWorkspaceKey('folder-workspace-1')
+    })
+    await waitForListRuntimeFilesCall()
+    await flushEffects()
+
+    expect(listRuntimeFilesMock).toHaveBeenCalledTimes(1)
+    expect(listRuntimeFilesMock.mock.calls[0][1]).not.toHaveProperty('nameFilter')
   })
 })

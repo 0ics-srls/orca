@@ -20,7 +20,7 @@ import {
   limitQuickOpenFilesBySerializedBytes,
   serializedQuickOpenPathBytes
 } from '../../shared/quick-open-transport-budget'
-import { listFilesWithGit } from './filesystem-list-files-git-fallback'
+import { listFilesWithoutRipgrep } from './filesystem-list-files-without-ripgrep'
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableExit,
@@ -35,7 +35,9 @@ export async function listQuickOpenFiles(
   excludePaths?: string[],
   signal?: AbortSignal,
   maxResults?: number,
-  maxSerializedBytes?: number
+  maxSerializedBytes?: number,
+  /** Applied before `maxResults`, so the cap counts matches rather than scanned files. */
+  pathFilter?: (relativePath: string) => boolean
 ): Promise<string[]> {
   const authorizedRootPath = await resolveAuthorizedPath(rootPath, store)
   const localGitOptions = getLocalGitOptionsForRegisteredWorktree(
@@ -53,12 +55,13 @@ export async function listQuickOpenFiles(
 
   const listWithoutRipgrep = async (): Promise<string[]> => {
     try {
-      const files = await listFilesWithGit(
+      const files = await listFilesWithoutRipgrep(
         authorizedRootPath,
         excludePathPrefixes,
         localGitOptions,
         signal,
-        maxResults
+        maxResults,
+        pathFilter
       )
       return maxSerializedBytes === undefined
         ? files
@@ -124,6 +127,9 @@ export async function listQuickOpenFiles(
           return false
         }
         if (shouldExcludeQuickOpenRelPath(relPath, excludePathPrefixes)) {
+          return false
+        }
+        if (pathFilter && !pathFilter(relPath)) {
           return false
         }
         if (files.has(relPath)) {

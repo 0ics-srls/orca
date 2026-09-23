@@ -40,8 +40,6 @@ export async function searchQuickOpenFilePaths(
     limit: number
     excludePaths?: string[]
     signal?: AbortSignal
-    /** Paths to rank when rg is unavailable; omitted means the search fails with install guidance. */
-    listWithoutRipgrep?: () => Promise<readonly string[]>
   }
 ): Promise<QuickOpenFilePathSearchResult> {
   if (args.limit <= 0 || !args.query.trim() || isQuickOpenQueryTooLarge(args.query)) {
@@ -56,15 +54,7 @@ export async function searchQuickOpenFilePaths(
   const wslDistroForOutput = parseWslPath(authorizedRootPath)?.distro ?? localGitOptions.wslDistro
 
   const fallback = async (): Promise<QuickOpenFilePathSearchResult> => {
-    if (!args.listWithoutRipgrep) {
-      throw new Error(await buildRipgrepRequiredMessage())
-    }
-    const ranker = new QuickOpenPathRanker(args.query, args.limit)
-    for (const path of await args.listWithoutRipgrep()) {
-      ranker.consider(path)
-    }
-    const result = ranker.result()
-    return { ...result, truncated: result.totalCount > args.limit }
+    throw new Error(await buildRipgrepRequiredMessage())
   }
   const excludePathPrefixes = buildExcludePathPrefixes(authorizedRootPath, args.excludePaths)
   const { ignoredPass } = buildRgArgsForQuickOpen({

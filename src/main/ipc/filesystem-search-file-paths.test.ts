@@ -130,21 +130,6 @@ describe('searchQuickOpenFilePaths', () => {
     expect(wslAwareSpawnMock).not.toHaveBeenCalled()
   })
 
-  it('ranks the caller-provided listing when ripgrep is unavailable', async () => {
-    getLocalGitOptionsForRegisteredWorktreeMock.mockReturnValue({ wslDistro: 'Ubuntu' })
-    checkRgAvailableMock.mockResolvedValue(false)
-
-    await expect(
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: store is only passed to mocked auth and git-option lookups.
-      searchQuickOpenFilePaths('C:\\repo', {} as Store, {
-        query: 'target',
-        limit: 32,
-        listWithoutRipgrep: async () => ['src/index.ts', 'src/target.ts']
-      })
-    ).resolves.toEqual({ paths: ['src/target.ts'], totalCount: 1, truncated: false })
-    expect(wslAwareSpawnMock).not.toHaveBeenCalled()
-  })
-
   it('retries transient WSL rg availability pressure before showing install guidance', async () => {
     getLocalGitOptionsForRegisteredWorktreeMock.mockReturnValue({ wslDistro: 'Ubuntu' })
     checkRgAvailableMock

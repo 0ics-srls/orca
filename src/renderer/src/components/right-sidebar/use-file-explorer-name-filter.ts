@@ -47,7 +47,7 @@ export function useFileExplorerNameFilter({
     enabled: hasNameFilter && !nameFilterQueryTooLarge,
     worktreeId: activeWorktreeId,
     query: nameFilterQuery,
-    searchLocalPaths: true
+    hostFilterWhenCapped: true
   })
   const nameFilterSource = useMemo(
     () =>

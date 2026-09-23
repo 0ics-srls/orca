@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handlers, store, resetFilesystemIpcMocks } from './filesystem-test-harness'
 
-const { searchQuickOpenFilePathsMock, listQuickOpenFilesMock } = vi.hoisted(() => ({
-  searchQuickOpenFilePathsMock: vi.fn(),
-  listQuickOpenFilesMock: vi.fn()
-}))
+const { listQuickOpenFilesMock } = vi.hoisted(() => ({ listQuickOpenFilesMock: vi.fn() }))
 
 vi.mock('electron', async () => (await import('./filesystem-test-harness')).electronMock)
 vi.mock('fs/promises', async () => (await import('./filesystem-test-harness')).fsPromisesMock)
@@ -53,9 +50,6 @@ vi.mock(
   '../source-control/pull-request-linked-issue',
   async () => (await import('./filesystem-test-harness')).pullRequestLinkedIssueMock
 )
-vi.mock('./filesystem-search-file-paths', () => ({
-  searchQuickOpenFilePaths: searchQuickOpenFilePathsMock
-}))
 vi.mock('./filesystem-list-files', () => ({ listQuickOpenFiles: listQuickOpenFilesMock }))
 
 import { registerFilesystemHandlers } from './filesystem'
@@ -65,66 +59,32 @@ function registerHandlers(): void {
   registerFilesystemHandlers(store as never)
 }
 
-describe('fs:listFiles local name search', () => {
+describe('fs:listFiles local name filter', () => {
   beforeEach(() => {
     resetFilesystemIpcMocks()
-    searchQuickOpenFilePathsMock.mockReset()
-    listQuickOpenFilesMock.mockReset()
+    listQuickOpenFilesMock.mockReset().mockResolvedValue([])
   })
 
-  it('ranks the whole local workspace instead of filtering a capped listing', async () => {
-    searchQuickOpenFilePathsMock.mockResolvedValue({
-      paths: ['ios/AppDelegate.swift'],
-      totalCount: 1,
-      truncated: false
+  it('filters the local scan with the Explorer word rule before the cap', async () => {
+    registerHandlers()
+
+    await handlers.get('fs:listFiles')!(null, {
+      rootPath: '/repo',
+      maxResults: 20_001,
+      nameFilter: '  App   Delegate '
     })
-    registerHandlers()
 
-    await expect(
-      handlers.get('fs:listFiles')!(null, {
-        rootPath: '/repo',
-        maxResults: 33,
-        searchQuery: 'AppDelegate.swift'
-      })
-    ).resolves.toEqual(['ios/AppDelegate.swift'])
-
-    expect(searchQuickOpenFilePathsMock).toHaveBeenCalledWith(
-      '/repo',
-      store,
-      expect.objectContaining({ query: 'AppDelegate.swift', limit: 33 })
-    )
-    expect(listQuickOpenFilesMock).not.toHaveBeenCalled()
+    const [rootPath, , , , maxResults, , pathFilter] = listQuickOpenFilesMock.mock.calls[0]
+    expect([rootPath, maxResults]).toEqual(['/repo', 20_001])
+    expect(pathFilter('ios/Notion Web Clipper/AppDelegate.swift')).toBe(true)
+    expect(pathFilter('ios/App.swift')).toBe(false)
   })
 
-  it('falls back to an uncapped listing when ripgrep is unavailable', async () => {
-    listQuickOpenFilesMock.mockResolvedValue(['ios/AppDelegate.swift'])
-    searchQuickOpenFilePathsMock.mockImplementation(
-      async (_root, _store, args: { listWithoutRipgrep: () => Promise<string[]> }) => ({
-        paths: await args.listWithoutRipgrep(),
-        totalCount: 1,
-        truncated: false
-      })
-    )
+  it('lists unfiltered when the name filter is blank', async () => {
     registerHandlers()
 
-    await handlers.get('fs:listFiles')!(null, { rootPath: '/repo', searchQuery: 'AppDelegate' })
+    await handlers.get('fs:listFiles')!(null, { rootPath: '/repo', nameFilter: '   ' })
 
-    expect(listQuickOpenFilesMock).toHaveBeenCalledWith('/repo', store, undefined, undefined)
-  })
-
-  it('keeps plain local listings on the capped listing path', async () => {
-    listQuickOpenFilesMock.mockResolvedValue(['src/a.ts'])
-    registerHandlers()
-
-    await handlers.get('fs:listFiles')!(null, { rootPath: '/repo', maxResults: 20_001 })
-
-    expect(searchQuickOpenFilePathsMock).not.toHaveBeenCalled()
-    expect(listQuickOpenFilesMock).toHaveBeenCalledWith(
-      '/repo',
-      store,
-      undefined,
-      undefined,
-      20_001
-    )
+    expect(listQuickOpenFilesMock.mock.calls[0][6]).toBeUndefined()
   })
 })
