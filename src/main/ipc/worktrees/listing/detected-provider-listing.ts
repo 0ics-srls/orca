@@ -117,6 +117,7 @@ export async function listDetectedWorktreesForCapturedRepo(
       }
     }
     const scan = await scanUntilNotOvertaken(
+      repo.id,
       repo.connectionId && capturedProvider
         ? () => listSshWorktreesWithMutationWitness(capturedProvider, repo, providerAbort?.signal)
         : () => listDetectedGitWorktrees(store, repo),

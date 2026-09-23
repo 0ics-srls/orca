@@ -14,12 +14,20 @@ export const SUPERSEDED_SCAN_RESCANS = 2
  * instead, because the reply shapes differ between the desktop and runtime wires.
  */
 export async function scanUntilNotOvertaken<T extends { superseded: boolean }>(
+  repoId: string,
   scanOnce: () => Promise<T>,
   mayRescan: () => boolean
 ): Promise<T> {
   let scan = await scanOnce()
   for (let rescans = 0; scan.superseded; rescans += 1) {
-    if (rescans >= SUPERSEDED_SCAN_RESCANS || !mayRescan()) {
+    if (rescans >= SUPERSEDED_SCAN_RESCANS) {
+      // Why warn: the spent bound is the only trace continuous churn leaves on a host.
+      console.warn(
+        `[worktrees] ${rescans + 1} scans of repo ${repoId} in a row were overtaken by worktree changes; answering without the last one`
+      )
+      return scan
+    }
+    if (!mayRescan()) {
       return scan
     }
     scan = await scanOnce()

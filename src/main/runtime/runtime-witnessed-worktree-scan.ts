@@ -76,6 +76,7 @@ export function scanRuntimeWorktreesUntilNotOvertaken(
   scanRepo: (repo: Repo) => Promise<RuntimeWorktreeScanResult>
 ): Promise<WitnessedRuntimeWorktreeScan> {
   return scanUntilNotOvertaken(
+    repo.id,
     () => scanRuntimeWorktreesWithMutationWitness(store, repo, scanRepo),
     () => true
   )
