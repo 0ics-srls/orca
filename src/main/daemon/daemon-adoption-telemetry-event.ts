@@ -1,5 +1,6 @@
-// App-side emitters for `daemon_adopted` and `daemon_pty_cwd_denied` (#17696). Both sit on the
-// daemon launch / PTY spawn path, so every failure dies here — telemetry can never cost a terminal.
+// App-side emitters for `daemon_adopted`, `daemon_pty_cwd_denied`, and `daemon_pty_cwd_readable`
+// (#17696). All sit on the daemon launch / PTY spawn path, so every failure dies here — telemetry
+// can never cost a terminal.
 
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -7,6 +8,7 @@ import { getAppEnvironment } from '../../shared/app-environment'
 import {
   classifyDaemonPtyCwd,
   classifyDaemonSpawnerPath,
+  isMacTccFolderClass,
   type DaemonAdoptedAppVersionMatch,
   type DaemonSpawnerPathClass
 } from '../../shared/daemon-adoption-telemetry'
@@ -102,6 +104,44 @@ export async function trackDaemonPtyCwdDenied(cwd: string, pidPath: string | nul
   }
 }
 
+/** `${daemon}:${cwdClass}` pairs already reported readable; bounded by daemons × 3 per app run. */
+const reportedReadable = new Set<string>()
+
+/**
+ * The control for `daemon_pty_cwd_denied`: a daemon that could read a TCC-gated cwd, once per
+ * daemon and folder class, so `code_identity` can be read against both outcomes.
+ */
+export async function trackDaemonPtyCwdReadable(
+  cwd: string,
+  pidPath: string | null,
+  daemonIdentity: DaemonEndpointIdentity | null
+): Promise<void> {
+  try {
+    if (process.platform !== 'darwin' || !daemonIdentity) {
+      return
+    }
+    const cwdClass = classifyDaemonPtyCwd(cwd, homedir())
+    if (!isMacTccFolderClass(cwdClass)) {
+      return
+    }
+    const key = `${daemonIdentity.pid}:${daemonIdentity.startedAtMs}:${daemonIdentity.launchNonce}:${cwdClass}`
+    if (reportedReadable.has(key)) {
+      return
+    }
+    reportedReadable.add(key)
+    track('daemon_pty_cwd_readable', {
+      cwd_class: cwdClass,
+      ...(await classifyDaemonAdoptionOrigin(readDaemonPidRecord(pidPath)))
+    })
+  } catch {
+    // Telemetry is best-effort; a dropped event must not reach the caller.
+  }
+}
+
+export function resetDaemonPtyCwdReadableForTests(): void {
+  reportedReadable.clear()
+}
+
 /**
  * The spawn path's single reader of the daemon's cwd verdict: one directory read feeds both the
  * event and the user-facing notice. Local current-protocol daemons only — one that omits the
@@ -123,6 +163,7 @@ export async function reportDaemonPtyCwdVerdict(args: {
     }
     if (args.cwdReadableByDaemon === true) {
       clearDaemonFolderAccessMismatch(args.daemonIdentity, cwd)
+      await trackDaemonPtyCwdReadable(cwd, args.pidPath, args.daemonIdentity)
       return
     }
     if (!(await hasDaemonPtyCwdDenialDiverged(cwd, args.cwdReadableByDaemon))) {

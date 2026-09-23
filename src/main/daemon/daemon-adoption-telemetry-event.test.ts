@@ -42,8 +42,10 @@ import {
   classifyDaemonAdoptionOrigin,
   hasDaemonPtyCwdDenialDiverged,
   reportDaemonPtyCwdVerdict,
+  resetDaemonPtyCwdReadableForTests,
   trackDaemonAdopted,
-  trackDaemonPtyCwdDenied
+  trackDaemonPtyCwdDenied,
+  trackDaemonPtyCwdReadable
 } from './daemon-adoption-telemetry-event'
 import {
   getDaemonFolderAccessMismatch,
@@ -85,6 +87,7 @@ const PID_PATH = '/fake/daemon.pid'
 beforeEach(() => {
   trackMock.mockReset()
   resetDaemonFolderAccessMismatchForTests()
+  resetDaemonPtyCwdReadableForTests()
   opendirMock.mockReset().mockReturnValue(readableDir())
   existsSyncMock.mockReset().mockReturnValue(true)
   readFileSyncMock.mockReset().mockReturnValue(JSON.stringify(stalePidRecord))
@@ -210,7 +213,60 @@ describe('trackDaemonPtyCwdDenied', () => {
   })
 })
 
+describe('trackDaemonPtyCwdReadable', () => {
+  it('emits a validator-accepted payload for a TCC-gated cwd', async () => {
+    await trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, DAEMON)
+    expect(trackMock).toHaveBeenCalledTimes(1)
+    const [name, props] = trackMock.mock.calls[0]
+    expect(name).toBe('daemon_pty_cwd_readable')
+    expect(props).toEqual({ cwd_class: 'documents', ...origin })
+    expect(validate('daemon_pty_cwd_readable', props).ok).toBe(true)
+  })
+
+  it('reports once per daemon and folder class', async () => {
+    await trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, DAEMON)
+    await trackDaemonPtyCwdReadable('/Users/alice/Documents/other', PID_PATH, DAEMON)
+    await trackDaemonPtyCwdReadable('/Users/alice/Desktop/repo', PID_PATH, DAEMON)
+    await trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, { ...DAEMON, launchNonce: 'n2' })
+
+    expect(trackMock.mock.calls.map(([, props]) => props.cwd_class)).toEqual([
+      'documents',
+      'desktop',
+      'documents'
+    ])
+  })
+
+  it('skips a cwd outside the TCC-gated folders, an unknown daemon, and non-macOS', async () => {
+    await trackDaemonPtyCwdReadable('/Users/alice/code/repo', PID_PATH, DAEMON)
+    await trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, null)
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
+    await trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, DAEMON)
+
+    expect(trackMock).not.toHaveBeenCalled()
+    expect(codeIdentityMock).not.toHaveBeenCalled()
+  })
+
+  it('swallows a throwing telemetry client', async () => {
+    trackMock.mockImplementationOnce(() => {
+      throw new Error('posthog exploded')
+    })
+    await expect(trackDaemonPtyCwdReadable(DENIED_CWD, PID_PATH, DAEMON)).resolves.toBeUndefined()
+  })
+})
+
 describe('reportDaemonPtyCwdVerdict', () => {
+  it('reports a readable TCC-gated cwd as the control, without an app-side read', async () => {
+    await reportDaemonPtyCwdVerdict({
+      cwd: DENIED_CWD,
+      cwdReadableByDaemon: true,
+      pidPath: PID_PATH,
+      daemonIdentity: DAEMON
+    })
+
+    expect(opendirMock).not.toHaveBeenCalled()
+    expect(trackMock.mock.calls.map(([name]) => name)).toEqual(['daemon_pty_cwd_readable'])
+  })
+
   it('emits the event and records the notice evidence on one directory read', async () => {
     await reportDaemonPtyCwdVerdict({
       cwd: DENIED_CWD,

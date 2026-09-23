@@ -19,7 +19,8 @@ import {
   DAEMON_CODE_IDENTITY_VALUES,
   DAEMON_PTY_CWD_CLASSES,
   DAEMON_SPAWNER_PATH_CLASSES,
-  DAEMON_TCC_ATTRIBUTION_VALUES
+  DAEMON_TCC_ATTRIBUTION_VALUES,
+  MAC_TCC_FOLDER_CLASSES
 } from './daemon-adoption-telemetry'
 import { errorClassSchema, settingsChangedKeySchema } from './telemetry-property-schemas'
 
@@ -76,6 +77,17 @@ export const daemonAdoptedSchema = z
 export const daemonPtyCwdDeniedSchema = z
   .object({
     cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES),
+    app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
+    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
+    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
+  })
+  .strict()
+
+// Why: the control for `daemon_pty_cwd_denied`, so `code_identity` has a false-positive rate: a
+// daemon that did read a TCC-gated cwd. Once per daemon and folder class per app run; enum-only.
+export const daemonPtyCwdReadableSchema = z
+  .object({
+    cwd_class: z.enum(MAC_TCC_FOLDER_CLASSES),
     app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
     spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
     code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
