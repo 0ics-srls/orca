@@ -18,7 +18,6 @@ import { applyBrowserSessionProxies } from '../browser/browser-session-proxy'
 import { browserSessionRegistry } from '../browser/browser-session-registry'
 import { normalizeProxyBypassRules, normalizeProxyUrl } from '../../shared/network-proxy'
 import { normalizeAppIconId } from '../../shared/app-icon'
-import { normalizeMachineName } from '../../shared/machine-name'
 import { normalizeUiLanguage } from '../../shared/ui-language'
 import { applyAppIcon } from '../app-icon'
 import { normalizeTerminalCustomThemes } from '../../shared/terminal-custom-themes'
@@ -57,9 +56,6 @@ function sanitizeRendererSettingsUpdate(args: Partial<GlobalSettings>): Partial<
   // writes must pass the dedicated reviewed-fingerprint handlers.
   delete sanitizedArgs.pluginConsents
   delete sanitizedArgs.disabledPlugins
-  if ('machineName' in sanitizedArgs) {
-    sanitizedArgs.machineName = normalizeMachineName(sanitizedArgs.machineName)
-  }
   return sanitizedArgs
 }
 

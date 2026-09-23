@@ -214,20 +214,6 @@ describe('registerSettingsHandlers', () => {
     )
   })
 
-  it('stores the machine name in its published form', async () => {
-    store.getSettings.mockReturnValue({ machineName: '' })
-    store.updateSettings.mockReturnValue({ machineName: 'Build server' })
-    registerSettingsHandlers(store as never)
-    const handler = handleMock.mock.calls.find((call) => call[0] === 'settings:set')?.[1]
-
-    await handler(settingsInvokeEvent, { machineName: `  ${'x'.repeat(300)}  ` })
-
-    expect(store.updateSettings).toHaveBeenCalledWith(
-      { machineName: 'x'.repeat(255) },
-      expect.objectContaining({ originWebContentsId: 1 })
-    )
-  })
-
   it('persists Active Server only through the dedicated preference channel', () => {
     store.updateSettings.mockReturnValue({ activeRuntimeEnvironmentId: 'windows-2' })
     registerSettingsHandlers(store as never)
