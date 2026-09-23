@@ -490,11 +490,15 @@ const TARGET_ROW_LOCK = 'FOR UPDATE OF cell, admission NOWAIT'
 
 type RecordedStatement = { sql: string; locked: boolean; options?: RelayLockOptions }
 
-// Reports the Postgres dialect so the store emits its real lock clause, and
-// strips that clause before SQLite runs the statement.
-function recordAsPostgres(database: RelayDatabase, statements: RecordedStatement[]): RelayDatabase {
+// Reports Postgres (or no dialect) so the store emits its real lock clause,
+// and strips that clause before SQLite runs the statement.
+function recordAsPostgres(
+  database: RelayDatabase,
+  statements: RecordedStatement[],
+  dialect: 'postgres' | 'omitted'
+): RelayDatabase {
   const decorate = (delegate: RelayDatabase): RelayDatabase => ({
-    dialect: 'postgres',
+    ...(dialect === 'postgres' ? { dialect } : {}),
     query: async (sql, params) => {
       statements.push({ sql, locked: false })
       return await delegate.query(sql, params)
@@ -510,14 +514,14 @@ function recordAsPostgres(database: RelayDatabase, statements: RecordedStatement
   return decorate(database)
 }
 
-async function idleRehomeCommitStatements(): Promise<{
+async function idleRehomeCommitStatements(dialect: 'postgres' | 'omitted' = 'postgres'): Promise<{
   outcome: string
   statements: RecordedStatement[]
 }> {
   const sqlite = await openInMemoryRelayDatabase()
   const statements: RecordedStatement[] = []
   let recording = false
-  const recorded = recordAsPostgres(sqlite, statements)
+  const recorded = recordAsPostgres(sqlite, statements, dialect)
   let now = 100_000_000
   const plain = new RelayAssignmentStore(sqlite, () => now, { regionalRehomeCohortPercent: 100 })
   const store = new RelayAssignmentStore(
@@ -662,5 +666,15 @@ describe('RelayAssignmentStore idle rehome commit lock order', () => {
         (statement.locked || /FOR UPDATE/.test(statement.sql))
       )
     ).toEqual([])
+  })
+  // Why: dialect is optional, and a wrapper that omits it must not silently
+  // run the target-row write unlocked and without NOWAIT.
+  it('keeps the target-row lock clause when a wrapper omits the dialect', async () => {
+    const { outcome, statements } = await idleRehomeCommitStatements('omitted')
+    expect(outcome).toBe('committed')
+    const target = statements.filter((statement) => statement.sql.includes('WITH target AS'))
+
+    expect(target).toHaveLength(1)
+    expect(target[0]!.sql).toContain(TARGET_ROW_LOCK)
   })
 })

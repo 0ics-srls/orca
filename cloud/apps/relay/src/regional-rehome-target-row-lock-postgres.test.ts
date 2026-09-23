@@ -15,13 +15,19 @@ const describePostgres = databaseUrl ? describe : describe.skip
 // Roughly the round trip from an Asia cell to the us-central1 database.
 const STATEMENT_DELAY_MS = 150
 
-// Everything the fleet-wide rehome lock used to hold, per cell.
+// Everything the fleet-wide rehome lock used to hold, per cell, plus the
+// admission and region tables the commit reads.
 const CELL_TABLES = [
   'relay_cells',
   'relay_cell_runtime',
   'relay_cell_capabilities',
-  'relay_cell_rehome_safety'
+  'relay_cell_rehome_safety',
+  'relay_cell_admission',
+  'relay_cell_regions'
 ] as const
+
+// The target-row statement locks exactly these, held from it to COMMIT.
+const TARGET_LOCKED = ['target:relay_cells', 'target:relay_cell_admission']
 
 type Trip = { sql: string; lockable: Record<string, boolean> }
 
@@ -169,14 +175,16 @@ describePostgres('PostgreSQL regional rehome target-row lock', () => {
     expect(trips[trips.length - 1]!.sql).toBe('COMMIT')
     for (const trip of trips) {
       for (const [key, free] of Object.entries(trip.lockable)) {
-        if (key === 'target:relay_cells') continue
+        if (TARGET_LOCKED.includes(key)) continue
         expect({ sql: trip.sql, key, free }).toEqual({ sql: trip.sql, key, free: true })
       }
     }
     // Locked at exactly one trip boundary, the one before COMMIT.
-    expect(
-      trips.filter((trip) => !trip.lockable['target:relay_cells']).map((trip) => trip.sql)
-    ).toEqual(['COMMIT'])
+    for (const key of TARGET_LOCKED) {
+      expect(trips.filter((trip) => !trip.lockable[key]).map((trip) => trip.sql)).toEqual([
+        'COMMIT'
+      ])
+    }
     const counts = consumeRelayCellInventoryHold(delayed)
     console.info(
       JSON.stringify({ event: 'rehome_target_row_hold', trips: trips.length, ...counts })

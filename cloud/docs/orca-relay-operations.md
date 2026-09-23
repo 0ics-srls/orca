@@ -507,7 +507,11 @@ reason `candidate-ineligible`. The cell logs
 to its next candidate. Runtime metrics report the hold as
 `rehomeTargetRowHoldMsMax` and `rehomeTargetRowHolds`. The same hold also feeds
 `cellInventoryHoldMsMax`, and `cellInventoryHoldMaxSite` names the lock that
-produced that max.
+produced that max. An Asia-sourced commit still holds the global rehome control
+row for its whole length, roughly 6.5 s at 175 ms per statement. An operator
+pause through `applyRegionalRehomeControl` waits 1 s for that row, 3 attempts,
+so it can fail during one commit: retry a pause that fails once, and do not
+treat that as a fault.
 
 `host-cooldown-ms` is the minimum gap between two rehomes of one host. It bounds the damage from
 a desktop whose region probe flips: without it the host would be dragged back across the ocean on

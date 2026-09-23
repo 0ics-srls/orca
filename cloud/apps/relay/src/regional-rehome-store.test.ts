@@ -1870,6 +1870,7 @@ function hookAfterCandidateScan(
 ): RelayDatabase {
   let fired = false
   const decorate = (delegate: RelayDatabase): RelayDatabase => ({
+    dialect: delegate.dialect,
     query: async (sql, params) => {
       const rows = await delegate.query(sql, params)
       if (!fired && sql.includes('SELECT d.user_id, d.relay_host_id')) {
@@ -2010,6 +2011,7 @@ class CellInventoryLockProbe {
   wrap(database: RelayDatabase): RelayDatabase {
     const probe = this
     const decorate = (delegate: RelayDatabase): RelayDatabase => ({
+      dialect: delegate.dialect,
       query: async (sql, params) => await delegate.query(sql, params),
       queryLocked: async (sql, params, options) => {
         // The idle commit's only cell lock is its target row, so it counts too.

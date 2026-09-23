@@ -6020,7 +6020,7 @@ export class RelayAssignmentStore {
     units: number,
     now: number
   ): Promise<'reserved' | RegionalRehomeTargetDeferral> {
-    const lockClause = database.dialect === 'postgres' ? 'FOR UPDATE OF cell, admission NOWAIT' : ''
+    const lockClause = database.dialect === 'sqlite' ? '' : 'FOR UPDATE OF cell, admission NOWAIT'
     try {
       const rows = await database.queryLocked(
         `WITH target AS (
