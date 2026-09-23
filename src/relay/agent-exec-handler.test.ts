@@ -36,6 +36,7 @@ describe('AgentExecHandler', () => {
   })
 
   afterEach(() => {
+    vi.unstubAllEnvs()
     for (const [key, value] of Object.entries(ambientGuardEnv)) {
       if (value !== undefined) {
         process.env[key] = value
@@ -84,6 +85,7 @@ describe('AgentExecHandler', () => {
   })
 
   it('merges caller-supplied provider environment into the spawned command environment', async () => {
+    vi.stubEnv('ORCA_EXEC_INHERITED', 'inherited-value')
     const child = createFakeChild()
     spawnMock.mockReturnValue(child as never)
     const handlers = createHandlers()
@@ -112,7 +114,7 @@ describe('AgentExecHandler', () => {
     expect(spawnMock).toHaveBeenCalledWith('codex', ['exec'], {
       cwd: '/repo',
       env: expect.objectContaining({
-        ...process.env,
+        ORCA_EXEC_INHERITED: 'inherited-value',
         CODEX_HOME: '/managed/codex-home',
         PATH: '/managed/bin'
       }),
