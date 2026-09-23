@@ -106,6 +106,27 @@ describe('Claude structured session publishes before the CLI answers initialize'
     expect(claude.connections[0].closeCount).toBe(1)
   })
 
+  it('ends a start whose root exit was seen first-hand even when its descendants are unverifiable', async () => {
+    const claude = fakeClaude({
+      initDelayMs: SLOW_INIT_MS,
+      exitBeforeInit: 'claude stream-json exited (code 1): stderr says no',
+      unprovenCloseVerdict: { root: 'exited', tree: 'unverifiable' }
+    })
+    const { adapter, events } = startingAdapter(claude)
+    await adapter.acquire(ACQUIRE)
+
+    await vi.advanceTimersByTimeAsync(SLOW_INIT_MS)
+    await adapter.drainStartup('session-1')
+    await adapter.drainObservedExits()
+
+    // A failed start is released on the same evidence a failed create is; a proven-live
+    // descendant would have answered `tree: 'live'` instead.
+    expect(events.find((event) => event.type === 'ended')).toMatchObject({
+      cause: 'unexpected-exit',
+      startupUnproven: true
+    })
+  })
+
   it('ends an unauthenticated start with sign-in guidance', async () => {
     const claude = fakeClaude({ initAccount: { apiProvider: 'firstParty', tokenSource: 'none' } })
     const { adapter, events } = startingAdapter(claude)
