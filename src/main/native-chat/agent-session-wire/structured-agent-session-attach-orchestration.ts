@@ -81,6 +81,14 @@ export function attachStructuredAgentSession(
       const probe = await withAgentSessionCreatePhase('probe_owner', recordPhase, () =>
         context.runtimeState.probeOwner(sessionId)
       )
+      // Why: a failed attach that left no session behind must not strand a bound sink; the runtime
+      // caches one per session id and would hand this same closed instance to the next attempt.
+      const discardUnattachedSink = (): void => {
+        if (!context.sessions.has(sessionId)) {
+          eventSink.close()
+          context.runtimeState.discardEventSink(sessionId)
+        }
+      }
       const attached = await performAttach({
         rewind,
         store: context.deps.store,
@@ -174,12 +182,14 @@ export function attachStructuredAgentSession(
             context.subscribers.publish(sessionId, attached.journal)
           }
         }
+      }).catch((error: unknown) => {
+        // A throw is a failed attach too, and its dead child may already have queued into the
+        // unbound sink; left cached, that queue wedges the next attach's drain and shutdown.
+        discardUnattachedSink()
+        throw error
       })
-      // Why: a failed attach that left no session behind must not strand a bound sink; the runtime
-      // caches one per session id and would hand this same closed instance to the next attempt.
-      if (!attached.ok && !context.sessions.has(sessionId)) {
-        eventSink.close()
-        context.runtimeState.discardEventSink(sessionId)
+      if (!attached.ok) {
+        discardUnattachedSink()
       }
       return attached
     })
