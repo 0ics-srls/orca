@@ -1,17 +1,12 @@
 import { RuntimeClientError } from './types'
 import { isProcessRunning } from './runtime-pid-liveness'
 
-export const RUNTIME_ACCESS_DENIED_CODE = 'runtime_access_denied'
-
 // Why: the errno decides the classification; CODEX_SANDBOX only picks the wording.
 export function runtimeAccessDeniedError(
-  socketError: unknown,
+  socketError: Error,
   pid: number
 ): RuntimeClientError | null {
-  const systemCode =
-    socketError !== null && typeof socketError === 'object' && 'code' in socketError
-      ? socketError.code
-      : null
+  const systemCode = 'code' in socketError ? socketError.code : undefined
   // Why: a sandbox still sees ESRCH, so a dead Orca's leftover socket gets not-running advice.
   if ((systemCode !== 'EPERM' && systemCode !== 'EACCES') || !isProcessRunning(pid)) {
     return null
@@ -23,7 +18,7 @@ export function runtimeAccessDeniedError(
   const retryStep = codexSandbox
     ? 'Re-run this command with escalated permissions, outside the Codex sandbox.'
     : 'Re-run this command outside its sandbox, or as a user allowed to reach the Orca runtime.'
-  return new RuntimeClientError(RUNTIME_ACCESS_DENIED_CODE, message, {
+  return new RuntimeClientError('runtime_access_denied', message, {
     systemCode,
     nextSteps: [
       retryStep,
