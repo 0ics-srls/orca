@@ -269,6 +269,25 @@ name segments out as literal maps rather than deriving them, so the same test
 compares the two declarations directly. Adding a region to the contract
 without its segment is a compile error in relay-contract, not a silent gap.
 
+## Relay lock contention alert policies
+
+Two policies in `cloud/infra/terraform/relay-observability.tf` page the relay
+channel when one transaction holds the relay cell table long enough to stall
+the fleet. `Orca Relay: cell table lock held over 1 second` fires on any
+30-second runtime sample whose `cellInventoryHoldMsMax` is at least 1,000 ms,
+labelled with the process's `cell_id`. `Orca Relay: lock timeout burst` fires
+when Postgres cancels at least 20 relay statements in one minute for waiting
+out their lock timeout; auth traffic on the shared instance and fail-fast
+refusals from background sweeps are excluded. Replayed over 2026-09-20 14:00
+to 2026-09-22 15:00 UTC, the hold policy matched all 93 holds from asia-east2
+rehome commits (about 3.6 s each) and 9 director holds of 1.0-1.8 s, and every
+one of the 88 burst minutes overlapped an asia-east2 hold. First response: if
+the hold names an asia-east2 cell, pause regional rehoming through
+`Operate Relay Production Rehome` with action `pause`. If rehoming is already
+paused, the holder is the director; record the time and do not drain or
+restart cells for it. A cell that has stopped reporting emits no hold sample,
+so these policies catch lock convoys, not outages.
+
 ## Implementation log
 
 - Gave `collector_failed` the same two-consecutive-sample tolerance as an unread
