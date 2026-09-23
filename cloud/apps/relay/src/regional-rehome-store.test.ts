@@ -2012,7 +2012,11 @@ class CellInventoryLockProbe {
     const decorate = (delegate: RelayDatabase): RelayDatabase => ({
       query: async (sql, params) => await delegate.query(sql, params),
       queryLocked: async (sql, params, options) => {
-        if (sql.trim() === 'SELECT * FROM relay_cells ORDER BY cell_id ASC') {
+        // The idle commit's only cell lock is its target row, so it counts too.
+        if (
+          sql.trim() === 'SELECT * FROM relay_cells ORDER BY cell_id ASC' ||
+          sql.includes('FROM relay_cells cell')
+        ) {
           probe.locks.push(options)
           if (probe.failWith) throw probe.failWith
           if (options?.failIfUnavailable && probe.failNoWaitTimes > 0) {
