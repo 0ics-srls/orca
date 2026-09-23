@@ -1,0 +1,208 @@
+{
+  "schema": "lsai.mjsf/1",
+  "generatedAt": "2026-09-23T09:00:30Z",
+  "generatedBy": {
+    "tool": "lsai-analyzer",
+    "version": "1.0.197"
+  },
+  "workspace": {
+    "root": "/home/laco/orca",
+    "name": "orca"
+  },
+  "tools": {
+    "typescript-language-server": {
+      "version": "",
+      "path": "/mnt/c/nvm4w/nodejs/typescript-language-server",
+      "args": [
+        "--stdio"
+      ]
+    },
+    "ty": {
+      "version": "",
+      "path": "/home/laco/.lsai/servers/ty/bin/ty",
+      "args": [
+        "server"
+      ]
+    },
+    "intelephense": {
+      "version": "",
+      "path": "/home/laco/.lsai/servers/intelephense/node_modules/.bin/intelephense",
+      "args": [
+        "--stdio"
+      ]
+    },
+    "rust-analyzer": {
+      "version": "",
+      "path": "/home/laco/.cargo/bin/rust-analyzer",
+      "args": []
+    }
+  },
+  "projects": [
+    {
+      "id": "typescript:",
+      "name": "orca",
+      "language": "typescript",
+      "root": ".",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:docs/site",
+      "name": "site",
+      "language": "typescript",
+      "root": "docs/site",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:mobile",
+      "name": "mobile",
+      "language": "typescript",
+      "root": "mobile",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:mobile/packages/expo-two-way-audio",
+      "name": "expo-two-way-audio",
+      "language": "typescript",
+      "root": "mobile/packages/expo-two-way-audio",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/apps/relay-ops",
+      "name": "relay-ops",
+      "language": "typescript",
+      "root": "cloud/apps/relay-ops",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/apps/relay-fence-broker",
+      "name": "relay-fence-broker",
+      "language": "typescript",
+      "root": "cloud/apps/relay-fence-broker",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/apps/relay",
+      "name": "relay",
+      "language": "typescript",
+      "root": "cloud/apps/relay",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/apps/push",
+      "name": "push",
+      "language": "typescript",
+      "root": "cloud/apps/push",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/packages/relay-contract",
+      "name": "relay-contract",
+      "language": "typescript",
+      "root": "cloud/packages/relay-contract",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/packages/postgres-schema",
+      "name": "postgres-schema",
+      "language": "typescript",
+      "root": "cloud/packages/postgres-schema",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "typescript:cloud/packages/push-contract",
+      "name": "push-contract",
+      "language": "typescript",
+      "root": "cloud/packages/push-contract",
+      "buildSystem": "tsconfig",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "javascript:mobile/modules/orca-mobile-web-shell",
+      "name": "orca-mobile-web-shell",
+      "language": "javascript",
+      "root": "mobile/modules/orca-mobile-web-shell",
+      "buildSystem": "npm",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "javascript:mobile/modules/orca-notification-dismissal",
+      "name": "orca-notification-dismissal",
+      "language": "javascript",
+      "root": "mobile/modules/orca-notification-dismissal",
+      "buildSystem": "npm",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "javascript:cloud",
+      "name": "cloud",
+      "language": "javascript",
+      "root": "cloud",
+      "buildSystem": "npm",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    },
+    {
+      "id": "javascript:native/windows-registry",
+      "name": "windows-registry",
+      "language": "javascript",
+      "root": "native/windows-registry",
+      "buildSystem": "npm",
+      "sourceRoots": [],
+      "resourceRoots": [],
+      "testRoots": [],
+      "outputRoots": []
+    }
+  ],
+  "plugins": {}
+}

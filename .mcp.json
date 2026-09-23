@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lsai": {
+      "command": "/home/laco/.lsai/run",
+      "args": [
+        "--stdio"
+      ]
+    },
+    "xmp4": {
+      "type": "http",
+      "url": "https://mcp.example4.ai/mcp"
+    }
+  }
+}

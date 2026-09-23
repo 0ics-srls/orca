@@ -1,0 +1,9 @@
+agents
+agents/
+commands
+commands/
+support
+support/
+settings.local.json
+node_modules
+node_modules/
