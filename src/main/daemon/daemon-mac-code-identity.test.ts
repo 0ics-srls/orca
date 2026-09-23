@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const { runProcessMock } = vi.hoisted(() => ({ runProcessMock: vi.fn() }))
+vi.mock('../../shared/child-process/run-process', () => ({ runProcess: runProcessMock }))
+
 import { classifyCodesignDisplayOutput, getDaemonMacCodeIdentity } from './daemon-mac-code-identity'
 
 const HELPER_PATH =
@@ -7,11 +10,12 @@ const HELPER_PATH =
 const PARKED_PATH =
   '/private/var/folders/x/T/com.stablyai.orca.ShipIt.abc/Orca.app/Contents/MacOS/Orca'
 
-function runnerReturning(stderr: string, code: number | null, timedOut = false) {
-  return vi.fn(async () => ({ code, stdout: '', stderr, timedOut }))
+function codesignReturns(stderr: string, code: number | null, timedOut = false): void {
+  runProcessMock.mockResolvedValue({ code, stdout: '', stderr, timedOut })
 }
 
 beforeEach(() => {
+  runProcessMock.mockReset()
   vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
 })
 
@@ -66,66 +70,53 @@ describe('classifyCodesignDisplayOutput', () => {
 
 describe('getDaemonMacCodeIdentity', () => {
   it('asks codesign to display the running pid and reads its stderr', async () => {
-    const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
-    await expect(getDaemonMacCodeIdentity(3337, runCommand)).resolves.toBe('resolved')
-    expect(runCommand).toHaveBeenCalledWith(
-      '/usr/bin/codesign',
-      ['--display', '--verbose=1', '+3337'],
-      expect.any(Number)
+    codesignReturns(`Executable=${HELPER_PATH}\n`, 0)
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('resolved')
+    expect(runProcessMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        program: '/usr/bin/codesign',
+        args: ['--display', '--verbose=1', '+3337']
+      })
     )
   })
 
   it('reports unresolvable when codesign cannot map the pid to on-disk code', async () => {
-    await expect(
-      getDaemonMacCodeIdentity(3337, runnerReturning('+3337: No such file or directory\n', 1))
-    ).resolves.toBe('unresolvable')
+    codesignReturns('+3337: No such file or directory\n', 1)
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('unresolvable')
   })
 
-  // No verdict is retained: a daemon's parked bundle can vanish partway through the same run.
   it('reprobes on every ask rather than reporting an earlier verdict', async () => {
-    const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
-    await getDaemonMacCodeIdentity(3337, runCommand)
-    await getDaemonMacCodeIdentity(3337, runCommand)
-    expect(runCommand).toHaveBeenCalledTimes(2)
+    codesignReturns(`Executable=${HELPER_PATH}\n`, 0)
+    await getDaemonMacCodeIdentity(3337)
+    await getDaemonMacCodeIdentity(3337)
+    expect(runProcessMock).toHaveBeenCalledTimes(2)
 
-    runCommand.mockResolvedValue({
-      code: 1,
-      stdout: '',
-      stderr: '+3337: No such file or directory\n',
-      timedOut: false
-    })
-    await expect(getDaemonMacCodeIdentity(3337, runCommand)).resolves.toBe('unresolvable')
+    codesignReturns('+3337: No such file or directory\n', 1)
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('unresolvable')
   })
 
   it('discards a timed-out probe even when it printed a path first', async () => {
-    await expect(
-      getDaemonMacCodeIdentity(3337, runnerReturning('Executable=/x\n', null, true))
-    ).resolves.toBe('probe-failed')
+    codesignReturns('Executable=/x\n', null, true)
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('probe-failed')
   })
 
   it('coalesces concurrent asks about one pid into a single probe', async () => {
-    const runCommand = runnerReturning(`Executable=${HELPER_PATH}\n`, 0)
+    codesignReturns(`Executable=${HELPER_PATH}\n`, 0)
     await expect(
-      Promise.all([
-        getDaemonMacCodeIdentity(3337, runCommand),
-        getDaemonMacCodeIdentity(3337, runCommand)
-      ])
+      Promise.all([getDaemonMacCodeIdentity(3337), getDaemonMacCodeIdentity(3337)])
     ).resolves.toEqual(['resolved', 'resolved'])
-    expect(runCommand).toHaveBeenCalledTimes(1)
+    expect(runProcessMock).toHaveBeenCalledTimes(1)
   })
 
   it('fails open when codesign cannot be spawned, off macOS, or without a pid', async () => {
-    await expect(
-      getDaemonMacCodeIdentity(3337, async () => {
-        throw new Error('spawn ENOENT')
-      })
-    ).resolves.toBe('probe-failed')
+    runProcessMock.mockRejectedValue(new Error('spawn ENOENT'))
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('probe-failed')
 
-    const runCommand = vi.fn()
-    await expect(getDaemonMacCodeIdentity(0, runCommand)).resolves.toBe('probe-failed')
-    await expect(getDaemonMacCodeIdentity(null, runCommand)).resolves.toBe('probe-failed')
+    runProcessMock.mockClear()
+    await expect(getDaemonMacCodeIdentity(0)).resolves.toBe('probe-failed')
+    await expect(getDaemonMacCodeIdentity(null)).resolves.toBe('probe-failed')
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
-    await expect(getDaemonMacCodeIdentity(3337, runCommand)).resolves.toBe('probe-failed')
-    expect(runCommand).not.toHaveBeenCalled()
+    await expect(getDaemonMacCodeIdentity(3337)).resolves.toBe('probe-failed')
+    expect(runProcessMock).not.toHaveBeenCalled()
   })
 })

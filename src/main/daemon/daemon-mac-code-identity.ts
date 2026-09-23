@@ -1,30 +1,16 @@
-// Adapted from David Bebawy's PR #21826, which established `codesign --display` as the only
-// probe that answers "where is this running pid's executable now". Kept to measurement here:
-// the verdict rides on `daemon_adopted` / `daemon_pty_cwd_denied` and decides nothing.
+// Adapted from David Bebawy's PR #21826: `codesign --display +<pid>` is the probe that answers
+// where a running pid's executable lives now. Measurement only; nothing reads the verdict.
 
 import { runProcess } from '../../shared/child-process/run-process'
 import type { DaemonCodeIdentity } from '../../shared/daemon-adoption-telemetry'
 
-export type MacCodeIdentityCommandRunner = (
-  program: string,
-  args: readonly string[],
-  timeoutMs: number
-) => Promise<{ code: number | null; stderr: string; stdout: string; timedOut: boolean }>
-
-const CODESIGN_PATH = '/usr/bin/codesign'
 const CODESIGN_TIMEOUT_MS = 3_000
 
-// The whole unlinked case: once the executable is gone, --display prints no `Executable=` at all
-// and exits 1 with this, verified on Darwin 25.5. errSecCSNoSuchCode ('host has no guest') means
-// proc_pidpath resolved and the pid is merely exiting, so it is not evidence of anything.
+// An unlinked executable prints no `Executable=` and exits 1 with this (Darwin 25.5). The exiting-
+// pid error ('host has no guest') means the path did resolve, so it must not match.
 const UNLINKED_EXECUTABLE_PATTERN = /No such file or directory/
 // Squirrel parks the outgoing bundle under a `…ShipIt…` directory in $TMPDIR or ~/Library/Caches.
-// A path outside one is only `resolved`, never "inside the installed app": that claim would need
-// the pid record's spawner path, and nothing here is entitled to act on the answer anyway.
 const PARKED_BUNDLE_PATTERN = /\/[^/]*ShipIt[^/]*\//
-
-const defaultRunner: MacCodeIdentityCommandRunner = (program, args, timeoutMs) =>
-  runProcess({ program, args, timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] })
 
 export function classifyCodesignDisplayOutput(
   output: string,
@@ -41,16 +27,14 @@ export function classifyCodesignDisplayOutput(
   return code !== 0 && UNLINKED_EXECUTABLE_PATTERN.test(output) ? 'unresolvable' : 'probe-failed'
 }
 
-async function probe(
-  pid: number,
-  runCommand: MacCodeIdentityCommandRunner
-): Promise<DaemonCodeIdentity> {
+async function probe(pid: number): Promise<DaemonCodeIdentity> {
   try {
-    const result = await runCommand(
-      CODESIGN_PATH,
-      ['--display', '--verbose=1', `+${pid}`],
-      CODESIGN_TIMEOUT_MS
-    )
+    const result = await runProcess({
+      program: '/usr/bin/codesign',
+      args: ['--display', '--verbose=1', `+${pid}`],
+      timeoutMs: CODESIGN_TIMEOUT_MS,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     // A killed codesign can still have printed a path; that half-written display proves nothing.
     if (result.timedOut) {
       return 'probe-failed'
@@ -62,26 +46,18 @@ async function probe(
   }
 }
 
-/** Concurrent asks about one pid share a probe; nothing outlives it, so no verdict is retained. */
+// Concurrent asks about one pid (a burst of spawns) share a probe; nothing outlives it.
 let inFlight: { pid: number; pending: Promise<DaemonCodeIdentity> } | null = null
 
-/**
- * Where macOS says the daemon pid's code lives, read fresh at every ask.
- *
- * Why never cached: one pid's verdict is not stable. An install moves the outgoing bundle aside
- * and logs no removal of it, yet the parked copies are gone within a day or two, so `parked`
- * turns into `unresolvable` on a schedule we have not pinned down and can cross over inside a
- * single app run. Dating that crossover is the point, so a retained verdict would be the bug.
- */
+/** Read fresh on every ask: a parked bundle can be deleted mid-run, flipping `parked` to `unresolvable`. */
 export function getDaemonMacCodeIdentity(
-  pid: number | null | undefined,
-  runCommand: MacCodeIdentityCommandRunner = defaultRunner
+  pid: number | null | undefined
 ): Promise<DaemonCodeIdentity> {
   if (process.platform !== 'darwin' || !pid || !Number.isSafeInteger(pid) || pid <= 0) {
     return Promise.resolve('probe-failed')
   }
   if (inFlight?.pid !== pid) {
-    const entry = { pid, pending: probe(pid, runCommand) }
+    const entry = { pid, pending: probe(pid) }
     inFlight = entry
     void entry.pending.then(() => {
       if (inFlight === entry) {

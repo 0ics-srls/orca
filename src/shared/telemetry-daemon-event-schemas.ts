@@ -19,8 +19,7 @@ import {
   DAEMON_CODE_IDENTITY_VALUES,
   DAEMON_PTY_CWD_CLASSES,
   DAEMON_SPAWNER_PATH_CLASSES,
-  DAEMON_TCC_ATTRIBUTION_VALUES,
-  MAC_TCC_FOLDER_CLASSES
+  DAEMON_TCC_ATTRIBUTION_VALUES
 } from './daemon-adoption-telemetry'
 import { errorClassSchema, settingsChangedKeySchema } from './telemetry-property-schemas'
 
@@ -58,40 +57,27 @@ export const mainThreadHangDetectedSchema = z
   })
   .strict()
 
+// Where the daemon came from; `code_identity` is #21826's unlinked-executable theory under measurement.
+const daemonOriginShape = {
+  app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
+  spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
+  code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
+}
+
 // Why: #17696 — a macOS app adopting a daemon from an earlier bundle is invisible to
 // `daemon_lifecycle` (nothing is replaced). Once per macOS launch that adopts; enum-only.
-// `code_identity` is the #21826 hypothesis under measurement: that the denials track the daemon's
-// own executable being unlinked by an update, not the spawner path `tcc_attribution` reads.
 export const daemonAdoptedSchema = z
   .object({
-    app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
-    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
-    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES),
+    ...daemonOriginShape,
     tcc_attribution: z.enum(DAEMON_TCC_ATTRIBUTION_VALUES),
     live_session_count_bucket: z.enum(DAEMON_LIFECYCLE_SESSION_BUCKETS)
   })
   .strict()
 
-// Why: the #17696 symptom itself — the daemon spawned a terminal into a cwd it cannot read while
-// the app can. Emitted only on that proven divergence, so a missing or app-unreadable cwd never counts.
-export const daemonPtyCwdDeniedSchema = z
-  .object({
-    cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES),
-    app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
-    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
-    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
-  })
-  .strict()
-
-// Why: the control for `daemon_pty_cwd_denied`, so `code_identity` has a false-positive rate: a
-// daemon that did read a TCC-gated cwd. Once per daemon and folder class per app run; enum-only.
-export const daemonPtyCwdReadableSchema = z
-  .object({
-    cwd_class: z.enum(MAC_TCC_FOLDER_CLASSES),
-    app_version_match: z.enum(DAEMON_ADOPTED_APP_VERSION_MATCH),
-    spawner_path_class: z.enum(DAEMON_SPAWNER_PATH_CLASSES),
-    code_identity: z.enum(DAEMON_CODE_IDENTITY_VALUES)
-  })
+// Why: `daemon_pty_cwd_denied` is the #17696 symptom — the daemon cannot read a cwd the app can,
+// on proven divergence only. `daemon_pty_cwd_readable` is its control, on TCC-gated folders only.
+export const daemonPtyCwdVerdictSchema = z
+  .object({ cwd_class: z.enum(DAEMON_PTY_CWD_CLASSES), ...daemonOriginShape })
   .strict()
 
 // Why: STA-7948 — `daemon_pty_cwd_denied` counts the failure; this counts how often a user is

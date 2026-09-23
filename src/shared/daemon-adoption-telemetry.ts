@@ -23,22 +23,11 @@ export type DaemonSpawnerPathClass = (typeof DAEMON_SPAWNER_PATH_CLASSES)[number
 export const DAEMON_TCC_ATTRIBUTION_VALUES = ['intact', 'severed', 'unknown'] as const
 
 /**
- * What macOS itself can still say about the daemon process's own code (#21826).
- *
- * `resolved`: macOS maps the pid to an executable that still exists and is not under a Squirrel
- * ShipIt parking directory. Deliberately not "inside the installed app": proving that needs the
- * pid record's spawner path, and acting on where the code lives is #21826's proposal, not this
- * measurement.
- * `parked`: the executable resolves inside a `…ShipIt…` directory, the copy Squirrel moves the
- * outgoing bundle to during an update. How long that copy survives is not known: the install
- * logs the move and no removal, yet the parked bundles do disappear within a day or two.
- * `unresolvable`: macOS cannot map the pid to on-disk code at all, which is where tccd stops
- * being able to resolve the daemon's code identity. One daemon can report `parked` and later
- * `unresolvable` without restarting, which is why the probe never reuses an earlier answer.
- * `probe-failed`: the probe could not answer — not macOS, no pid, no codesign, timeout, or
- * output it could not parse.
- *
- * Measurement only — nothing reads this verdict to decide anything.
+ * Where macOS says the daemon pid's own executable is now (#21826). Measurement only.
+ * `resolved`: an existing file outside a ShipIt directory (not a claim it is the installed app).
+ * `parked`: inside a Squirrel `…ShipIt…` directory, where an update moves the outgoing bundle.
+ * `unresolvable`: the file is gone, which is where tccd loses the daemon's code identity.
+ * `probe-failed`: not macOS, no pid, no codesign, timeout, or unrecognised output.
  */
 export const DAEMON_CODE_IDENTITY_VALUES = [
   'resolved',

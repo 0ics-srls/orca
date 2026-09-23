@@ -31,10 +31,7 @@ export type DaemonAdoptionOrigin = Pick<
   'app_version_match' | 'code_identity' | 'spawner_path_class'
 >
 
-/**
- * Classifies the adopted daemon's pid record against the running app; enum-only by construction.
- * Async for `code_identity` alone, which costs one codesign spawn per event; both are rare.
- */
+/** Classifies the adopted daemon's pid record against the running app; enum-only by construction. */
 export async function classifyDaemonAdoptionOrigin(
   pidRecord: ParsedDaemonPid | null
 ): Promise<DaemonAdoptionOrigin> {
@@ -90,56 +87,22 @@ export async function hasDaemonPtyCwdDenialDiverged(
   }
 }
 
-/** Emits `daemon_pty_cwd_denied` for a cwd `hasDaemonPtyCwdDenialDiverged` already proved diverged. */
-export async function trackDaemonPtyCwdDenied(cwd: string, pidPath: string | null): Promise<void> {
+/** Emits a spawn's cwd verdict; `readable` is the control that gives `code_identity` a false-positive rate. */
+export async function trackDaemonPtyCwdVerdict(
+  event: 'daemon_pty_cwd_denied' | 'daemon_pty_cwd_readable',
+  cwd: string,
+  pidPath: string | null
+): Promise<void> {
   try {
     // Why read now, not the adapter's startup snapshot: a respawn swaps the daemon under a
-    // long-lived adapter, and the denial must be attributed to the daemon that just spawned.
-    track('daemon_pty_cwd_denied', {
+    // long-lived adapter, and the verdict must be attributed to the daemon that just spawned.
+    track(event, {
       cwd_class: classifyDaemonPtyCwd(cwd, homedir()),
       ...(await classifyDaemonAdoptionOrigin(readDaemonPidRecord(pidPath)))
     })
   } catch {
     // Telemetry is best-effort; a dropped event must not reach the caller.
   }
-}
-
-/** `${daemon}:${cwdClass}` pairs already reported readable; bounded by daemons × 3 per app run. */
-const reportedReadable = new Set<string>()
-
-/**
- * The control for `daemon_pty_cwd_denied`: a daemon that could read a TCC-gated cwd, once per
- * daemon and folder class, so `code_identity` can be read against both outcomes.
- */
-export async function trackDaemonPtyCwdReadable(
-  cwd: string,
-  pidPath: string | null,
-  daemonIdentity: DaemonEndpointIdentity | null
-): Promise<void> {
-  try {
-    if (process.platform !== 'darwin' || !daemonIdentity) {
-      return
-    }
-    const cwdClass = classifyDaemonPtyCwd(cwd, homedir())
-    if (!isMacTccFolderClass(cwdClass)) {
-      return
-    }
-    const key = `${daemonIdentity.pid}:${daemonIdentity.startedAtMs}:${daemonIdentity.launchNonce}:${cwdClass}`
-    if (reportedReadable.has(key)) {
-      return
-    }
-    reportedReadable.add(key)
-    track('daemon_pty_cwd_readable', {
-      cwd_class: cwdClass,
-      ...(await classifyDaemonAdoptionOrigin(readDaemonPidRecord(pidPath)))
-    })
-  } catch {
-    // Telemetry is best-effort; a dropped event must not reach the caller.
-  }
-}
-
-export function resetDaemonPtyCwdReadableForTests(): void {
-  reportedReadable.clear()
 }
 
 /**
@@ -163,7 +126,13 @@ export async function reportDaemonPtyCwdVerdict(args: {
     }
     if (args.cwdReadableByDaemon === true) {
       clearDaemonFolderAccessMismatch(args.daemonIdentity, cwd)
-      await trackDaemonPtyCwdReadable(cwd, args.pidPath, args.daemonIdentity)
+      // TCC-gated folders only: elsewhere a readable cwd says nothing about the theory.
+      if (
+        process.platform === 'darwin' &&
+        isMacTccFolderClass(classifyDaemonPtyCwd(cwd, homedir()))
+      ) {
+        await trackDaemonPtyCwdVerdict('daemon_pty_cwd_readable', cwd, args.pidPath)
+      }
       return
     }
     if (!(await hasDaemonPtyCwdDenialDiverged(cwd, args.cwdReadableByDaemon))) {
@@ -171,7 +140,7 @@ export async function reportDaemonPtyCwdVerdict(args: {
     }
     // Notice first: the event now waits on a codesign probe, and the user-facing notice must not.
     recordDaemonFolderAccessMismatch(args.daemonIdentity, cwd)
-    await trackDaemonPtyCwdDenied(cwd, args.pidPath)
+    await trackDaemonPtyCwdVerdict('daemon_pty_cwd_denied', cwd, args.pidPath)
   } catch {
     // Best-effort evidence; a spawn must not fail because the notice could not be recorded.
   }
