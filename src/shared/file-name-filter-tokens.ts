@@ -25,7 +25,7 @@ export function splitFileNameFilterTokens(query: string): string[] {
       continue
     }
     if (tokenStart !== -1) {
-      tokens.push(query.slice(tokenStart, index).toLocaleLowerCase())
+      tokens.push(query.slice(tokenStart, index).toLowerCase())
       tokenStart = -1
     }
   }
@@ -55,7 +55,7 @@ export function pathMatchesFileNameFilterTokens(
   if (tokens.length === 0) {
     return true
   }
-  // Why: callers pass already-normalized paths — lowercasing only, no second normalize per path per keystroke.
-  const haystack = relativePath.toLocaleLowerCase()
+  // Why: locale-independent so host and renderer agree; callers pass already-normalized paths.
+  const haystack = relativePath.toLowerCase()
   return tokens.every((token) => haystack.includes(token))
 }
