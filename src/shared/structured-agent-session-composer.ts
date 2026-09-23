@@ -37,6 +37,9 @@ export type StructuredAgentSessionComposerOptions = {
   runConversationCommand?: (
     command: AgentSessionConversationCommand
   ) => Promise<{ accepted: boolean; error: string | null }>
+  /** Present only where the host can set this session's goal; otherwise `/goal`
+   *  stays message text the agent acts on itself. */
+  setThreadGoalObjective?: (objective: string) => Promise<boolean>
 }
 
 export type StructuredAgentSessionCommandOutcome = {
@@ -102,6 +105,11 @@ export function isStructuredAgentSessionComposerCommand(
   )
 }
 
+/** `/goal …`, which the host answers only where it can set this session's goal. */
+export function isStructuredAgentSessionGoalCommand(text: string): boolean {
+  return commandParts(text)?.name === 'goal'
+}
+
 function unavailable(name: string): StructuredAgentSessionCommandOutcome {
   return {
     handled: true,
@@ -115,6 +123,17 @@ export async function dispatchStructuredAgentSessionComposerCommand(
   controller: StructuredAgentSessionComposerOptions
 ): Promise<StructuredAgentSessionCommandOutcome> {
   const command = commandParts(text)
+  if (command?.name === 'goal' && controller.setThreadGoalObjective) {
+    if (!command.argument) {
+      return { handled: true, accepted: false, error: 'Describe the goal after /goal.' }
+    }
+    // A refusal reaches the user through the session's own error surface.
+    return {
+      handled: true,
+      accepted: await controller.setThreadGoalObjective(command.argument),
+      error: null
+    }
+  }
   if (!command || !isStructuredAgentSessionComposerCommand(text, controller.agent)) {
     return { handled: false, accepted: false, error: null }
   }

@@ -27,6 +27,7 @@ import type {
   AgentSessionBackgroundTaskState,
   AgentSessionOptionsResult,
   AgentSessionSlashCommand,
+  AgentSessionThreadGoalChange,
   AgentSessionWireRefusalCode
 } from '../../../shared/agent-session-wire'
 import type { ProviderHistoryWindow } from '../agent-session-journal/journal-submission-reconciler'
@@ -217,6 +218,15 @@ export type StructuredAgentSessionAdapter = {
      *  delivery fence may have waited. Absent for direct callers with no journal. */
     resolveLiveTurnId?: () => string | null
   }): Promise<{ cancelled: boolean }>
+  /** Changes the provider thread's goal. `rejected` is the provider refusing the
+   *  change; a throw leaves its effect unknown. Absent where no goal exists. */
+  changeThreadGoal?(input: {
+    sessionId: string
+    fence: number
+    change: AgentSessionThreadGoalChange
+  }): Promise<{ ok: true } | { ok: false; rejected: string }>
+  /** Whether this live session can change its goal. */
+  supportsThreadGoal?(sessionId: string): boolean
   stopBackgroundTasks?(input: {
     sessionId: string
     fence: number
