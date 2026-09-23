@@ -58,6 +58,35 @@ function queueSshTargetLookups(count: number): void {
   )
 }
 
+/**
+ * A runtime that answers `status.get` with the name it currently publishes: the stored override
+ * when one is set, else the detected name. `settings.update` replies with the real `{ settings }`
+ * envelope so a handler reading a bare `machineName` off it prints `undefined`.
+ */
+function fakeMachineNameRuntime(detectedName: string): { updates: unknown[] } {
+  const updates: unknown[] = []
+  let override = ''
+  callMock.mockImplementation(async (method: string, params?: unknown) => {
+    if (method === 'status.get') {
+      return okFixture('req_status', {
+        machineName: override || detectedName,
+        hostPlatform: 'darwin'
+      })
+    }
+    if (method === 'settings.update') {
+      updates.push(params)
+      const requested =
+        typeof params === 'object' && params !== null && 'machineName' in params
+          ? params.machineName
+          : ''
+      override = String(requested).trim()
+      return okFixture('req_settings', { settings: { machineName: override } })
+    }
+    throw new Error(`unexpected call ${method}`)
+  })
+  return { updates }
+}
+
 describe('runtime-selector flags on locally pinned CLI commands', () => {
   useWorktreeAwarenessEnvironment({
     callMock,
@@ -89,24 +118,56 @@ describe('runtime-selector flags on locally pinned CLI commands', () => {
     expect(runtimeClientConstructorMock).toHaveBeenCalledWith(null, null)
   })
 
-  it('reads and updates the answering runtime machine name', async () => {
-    callMock.mockImplementation(async (method: string) => {
-      if (method === 'status.get') {
-        return okFixture('req_status', { machineName: 'm4airs-Air', hostPlatform: 'darwin' })
-      }
-      return okFixture('req_settings', { machineName: 'build-server' })
-    })
+  it('reads and updates the name the answering runtime publishes', async () => {
+    const runtime = fakeMachineNameRuntime('m4airs-Air')
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
     await main(['host', 'name', '--json'], '/tmp/repo')
-    await main(['host', 'name', '--name', 'build-server', '--json'], '/tmp/repo')
+    await main(['host', 'name', '--name', ' build-server ', '--json'], '/tmp/repo')
+    await main(['host', 'name', '--name', '', '--json'], '/tmp/repo')
+    await main(['host', 'name'], '/tmp/repo')
 
-    const first = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
-    const second = JSON.parse(String(logSpy.mock.calls[1]?.[0]))
-    expect(first.result).toMatchObject({ machineName: 'm4airs-Air', platform: 'darwin' })
-    expect(second.result.machineName).toBe('build-server')
-    expect(callMock).toHaveBeenNthCalledWith(1, 'status.get')
-    expect(callMock).toHaveBeenNthCalledWith(2, 'settings.update', { machineName: 'build-server' })
+    const [first, second, third] = logSpy.mock.calls
+      .slice(0, 3)
+      .map((call) => JSON.parse(String(call[0])))
+    expect(first.result).toEqual({ machineName: 'm4airs-Air', platform: 'darwin' })
+    // The write reply is `{ settings }`; the printed name must be what the runtime publishes now.
+    expect(second.result).toEqual({ machineName: 'build-server', platform: 'darwin' })
+    expect(second._meta.runtimeId).toBe('runtime-1')
+    // A blank `--name` returns to the detected name — and prints it, not an empty string.
+    expect(third.result.machineName).toBe('m4airs-Air')
+    expect(logSpy.mock.calls[3]?.[0]).toBe('m4airs-Air (darwin)')
+    expect(runtime.updates).toEqual([{ machineName: ' build-server ' }, { machineName: '' }])
+  })
+
+  it('routes `host name --environment` and stamps the runtime that answered', async () => {
+    pairRuntimeEnvironment(listEnvironmentsMock, 'env-m4air', 'm4air')
+    fakeMachineNameRuntime('M4 Air')
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    runtimeClientConstructorMock.mockClear()
+
+    await main(['host', 'name', '--environment', 'm4air', '--json'], '/tmp/repo')
+
+    const printed = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
+    expect(printed.ok).toBe(true)
+    expect(printed.result.machineName).toBe('M4 Air')
+    expect(printed._meta.runtimeId).toBe('runtime-1')
+    expect(printed._meta.runtimeId).not.toBe('local')
+    expect(runtimeClientConstructorMock).toHaveBeenCalledWith(undefined, 'm4air')
+  })
+
+  it('reports an unreachable runtime as an error instead of inventing a name', async () => {
+    const { RuntimeClientError } = await import('./runtime/types.js')
+    callMock.mockRejectedValue(new RuntimeClientError('runtime_unavailable', 'Orca is not running'))
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(['host', 'name', '--json'], '/tmp/repo')
+
+    const printed = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
+    expect(printed.ok).toBe(false)
+    expect(printed.error.code).toBe('runtime_unavailable')
+    expect(process.exitCode).toBe(1)
+    process.exitCode = 0
   })
 
   it('rejects `host list --environment` instead of answering with a half-routed listing', async () => {

@@ -4,7 +4,8 @@ import {
   formatEnvironmentList,
   formatHostList,
   formatHostName,
-  printResult
+  printResult,
+  type HostNameResult
 } from '../format'
 import { listSshTargets } from '../host-selector-alternatives'
 import { getDefaultUserDataPath, RuntimeClientError } from '../runtime-client'
@@ -28,21 +29,12 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       throw new RuntimeClientError('invalid_argument', 'Missing value for --name')
     }
     if (typeof requestedName === 'string') {
-      const result = await client.call<{ machineName: string }>('settings.update', {
-        machineName: requestedName
-      })
-      printResult(result, json, (settings) => formatHostName({ machineName: settings.machineName }))
-      return
+      await client.call('settings.update', { machineName: requestedName })
     }
-    const descriptor = await readStatusDescriptor(client)
-    printResult(
-      localSuccess({
-        machineName: descriptor.machineName ?? 'unknown',
-        ...(descriptor.platform ? { platform: descriptor.platform } : {})
-      }),
-      json,
-      formatHostName
-    )
+    // Why: print what the runtime publishes after the write (a blank `--name` means the detected
+    // name), inside the runtime's own envelope so a routed answer is stamped with that runtime.
+    const status = await client.call<RuntimeStatus>('status.get')
+    printResult({ ...status, result: describeRuntimeHost(status.result) }, json, formatHostName)
   },
   'environment add': async ({ flags, json }) => {
     const name = getRequiredStringFlag(flags, 'name')
@@ -78,9 +70,9 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       ...(target.connectionStatus ? { connectionStatus: target.connectionStatus } : {}),
       ...(target.remotePlatform ? { platform: target.remotePlatform } : {})
     }))
-    const localStatus = await readStatusDescriptor(client)
     // Why: this listing answers from the local pairing store; dialing each paired server would make
     // it slow and offline-fragile. `orca host name --environment <name>` asks one server directly.
+    const localStatus = await readLocalHostDescriptor(client)
     const environments = listEnvironments(getDefaultUserDataPath()).map((environment) => ({
       kind: 'environment' as const,
       name: environment.name,
@@ -131,16 +123,17 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
   }
 }
 
-async function readStatusDescriptor(client: RuntimeClient): Promise<{
-  machineName?: string
-  platform?: string
-}> {
+function describeRuntimeHost(status: RuntimeStatus): HostNameResult {
+  return {
+    ...(status.machineName ? { machineName: status.machineName } : {}),
+    ...(status.hostPlatform ? { platform: status.hostPlatform } : {})
+  }
+}
+
+/** The local row of `host list` still prints when this machine's runtime is not running. */
+async function readLocalHostDescriptor(client: RuntimeClient): Promise<HostNameResult> {
   try {
-    const status = await client.call<RuntimeStatus>('status.get')
-    return {
-      ...(status.result.machineName ? { machineName: status.result.machineName } : {}),
-      ...(status.result.hostPlatform ? { platform: status.result.hostPlatform } : {})
-    }
+    return describeRuntimeHost((await client.call<RuntimeStatus>('status.get')).result)
   } catch {
     return {}
   }

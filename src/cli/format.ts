@@ -102,13 +102,14 @@ export function formatHostList(result: { hosts: HostListEntry[] }): string {
     .join('\n')
 }
 
+/** What one runtime calls itself; `machineName` is absent when the runtime predates the field. */
 export type HostNameResult = {
-  machineName: string
+  machineName?: string
   platform?: string
 }
 
 export function formatHostName(result: HostNameResult): string {
-  return `${result.machineName}${result.platform ? ` (${result.platform})` : ''}`
+  return `${result.machineName ?? 'unknown'}${result.platform ? ` (${result.platform})` : ''}`
 }
 
 function formatHostConnection(host: HostListEntry): string {
