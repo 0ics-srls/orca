@@ -27,6 +27,9 @@ export function structuredHostStub(
     // supports creating there. A real host always answers; leaving it unstubbed made every
     // `ensure` refuse for the harness's own reason rather than the location's.
     supportsCreate: vi.fn(() => true),
+    // History and subscribe open a visible chat's journal before answering. A real host always
+    // answers; leaving it unstubbed made both refuse for the harness's own reason.
+    ensureReadable: vi.fn(async () => true),
     conversationCommand: vi.fn(async () => ({
       ok: true,
       value: { command: 'compact', state: 'completed' }
