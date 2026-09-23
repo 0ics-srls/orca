@@ -143,9 +143,10 @@ export function parseCodexUsageRecord(
 
   context.previousTotals = resolvedUsage.nextTotals
 
-  // Why: OpenAI prices a request by its own prompt size (input includes cached), so the tier is
-  // decided here per token_count. A total-only delta can span several requests; it is classed as one.
-  const isLongContext = delta.inputTokens > LONG_CONTEXT_THRESHOLD_TOKENS
+  // Why: the long-context tier is read as per request — GPT-5.6/6 pages say "full request", while
+  // GPT-5.4/5.5 pages say "full session", and one token_count's last_token_usage is one response.
+  // A total-only delta can span several requests, so it is never classed as long.
+  const isLongContext = lastUsage !== null && delta.inputTokens > LONG_CONTEXT_THRESHOLD_TOKENS
   const resolvedModel = extractModel(parsed.payload) ?? context.currentModel
   const hasInferredPricing = resolvedModel === null
 

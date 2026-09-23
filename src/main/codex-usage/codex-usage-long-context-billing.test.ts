@@ -95,7 +95,7 @@ describe('per-request long-context classification', () => {
     })
   })
 
-  it('classifies each total-only delta by its own input and ignores replayed totals', () => {
+  it('never classes a total-only delta as long, since it can span several requests', () => {
     const context = createContext()
     const events = [
       tokenCountLine('2026-04-09T10:00:00.000Z', { input: 100_000, cached: 50_000, output: 1_000 }),
@@ -118,15 +118,10 @@ describe('per-request long-context classification', () => {
       null,
       100_000
     ])
-    expect(events.map((event) => event?.longContextInputTokens ?? null)).toEqual([
-      0,
-      300_000,
-      null,
-      0
-    ])
+    expect(events.map((event) => event?.longContextInputTokens ?? null)).toEqual([0, 0, null, 0])
     expect(events[1]).toMatchObject({
-      longContextCachedInputTokens: 150_000,
-      longContextOutputTokens: 2_000
+      longContextCachedInputTokens: 0,
+      longContextOutputTokens: 0
     })
   })
 })
