@@ -45,6 +45,7 @@ import {
 } from './claude-structured-session-state'
 import { resolveClaudeAcquisitionError } from './claude-structured-session-close'
 import { readClaudeTranscriptEntryUuid } from './claude-tui-exit'
+import { persistClaudeTurnResumePoint } from './claude-structured-resume-point'
 import { withAgentSessionCreatePhase } from '../observability/agent-session-instrumentation'
 import { resolveClaudeAcquisitionLaunch } from './claude-structured-acquisition-launch'
 import {
@@ -122,6 +123,9 @@ export async function acquireClaudeSession({
     if (liveSession) {
       liveSession.leafUuid = observedLeafUuid
       observeClaudeFastModeFacts(liveSession, message)
+      if (message.type === 'result') {
+        persistClaudeTurnResumePoint(sessionId, liveSession, deps)
+      }
     }
     const turnOrigin = liveSession
       ? resolveClaudeReplayTurn(liveSession, message, (settlement) =>

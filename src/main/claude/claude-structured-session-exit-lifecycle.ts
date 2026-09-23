@@ -32,6 +32,7 @@ export async function persistClaudeSessionHandle(
   session: ClaudeSession,
   deps: Pick<ClaudeStructuredSessionAdapterDeps, 'readTranscriptLeaf' | 'persistHandle'>
 ): Promise<void> {
+  await session.resumePointWrite?.settled
   try {
     const transcriptLeaf = deps.readTranscriptLeaf
       ? await readClaudeTranscriptLeafWithReproof({

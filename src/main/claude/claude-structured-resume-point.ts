@@ -1,5 +1,8 @@
 import type { ClaudeStructuredLaunch } from './claude-structured-launch-resolution'
-import type { ClaudeStructuredSessionAdapterDeps } from './claude-structured-session-state'
+import type {
+  ClaudeSession,
+  ClaudeStructuredSessionAdapterDeps
+} from './claude-structured-session-state'
 import { readClaudeTranscriptLeafWithReproof } from './claude-transcript-branch-proof'
 
 /**
@@ -32,4 +35,47 @@ export async function rederiveClaudeResumePoint(
   delete options.resumeSessionAt
   launch.options = derived === null ? options : { ...options, resumeSessionAt: derived }
   launch.resumeLeafUuid = derived
+}
+
+/**
+ * Advance the durable resume point to the live leaf once a turn ends, so an owner that dies before
+ * its close path runs still resumes from its last completed turn. Writes run one at a time, and a
+ * failure is only logged: this is bookkeeping and must never fail the turn.
+ */
+export function persistClaudeTurnResumePoint(
+  sessionId: string,
+  session: ClaudeSession,
+  deps: Pick<ClaudeStructuredSessionAdapterDeps, 'persistResumePoint'>
+): void {
+  const leafUuid = session.leafUuid
+  const persist = deps.persistResumePoint
+  if (
+    !persist ||
+    leafUuid === null ||
+    session.closeFinalization ||
+    session.closeFinalized ||
+    session.resumePointWrite?.leafUuid === leafUuid
+  ) {
+    return
+  }
+  const previous = session.resumePointWrite?.settled ?? Promise.resolve()
+  session.resumePointWrite = {
+    leafUuid,
+    settled: previous
+      .then(() =>
+        persist({
+          sessionId,
+          providerSessionId: session.providerSessionId,
+          leafUuid,
+          fence: session.fence
+        })
+      )
+      .catch((error: unknown) => {
+        console.warn('[claude-resume-point] turn-end resume point was not persisted:', {
+          sessionId,
+          leafUuid,
+          error
+        })
+      })
+  }
 }

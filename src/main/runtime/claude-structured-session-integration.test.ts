@@ -706,9 +706,10 @@ describe('a structured Claude session over agentSession.*', () => {
         }
       }
     }
+    // A completed turn advances the durable resume point in place while the owner is live.
     expect(host.deps.store.getRecord(SESSION).providerHandleChain.at(-1)?.handle).toMatchObject({
       provider: 'claude',
-      leafUuid: null
+      leafUuid: 'assistant-leaf'
     })
     const old = claude.live()
     const resumed = await ok<{ fence: number }>('agentSession.ensure', ensureParams(created.fence))

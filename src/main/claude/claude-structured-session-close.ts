@@ -113,6 +113,8 @@ async function finalizeClaudePublishedSession(
   if (session.backgroundTasks.clear()) {
     input.onBackgroundTasksChanged?.(input.sessionId, null)
   }
+  // The close cursor lands after, never under, the last turn-end write.
+  await session.resumePointWrite?.settled
   try {
     const transcriptLeaf = input.readTranscriptLeaf
       ? await readClaudeTranscriptLeafWithReproof({

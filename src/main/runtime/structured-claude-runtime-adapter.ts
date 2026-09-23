@@ -16,7 +16,10 @@ import {
   readClaudeTranscriptLeafUuid,
   resolveSessionFilePath
 } from '../native-chat/session-file-resolver'
-import { recordAgentSessionProviderHandle } from './agent-session-provider-handle-transition'
+import {
+  recordAgentSessionProviderHandle,
+  reviseAgentSessionClaudeResumePoint
+} from './agent-session-provider-handle-transition'
 import type { ClaudeManagedAccountGateSettings } from '../native-chat/claude-structured-managed-account-support'
 import type { AgentSessionRecordStore } from './agent-session-record-store'
 
@@ -74,6 +77,17 @@ export function createStructuredClaudeRuntimeAdapter(
             observedAt
           }),
           now: observedAt
+        })
+      )
+    },
+    persistResumePoint: async ({ sessionId, providerSessionId, leafUuid, fence }) => {
+      await store.transitionHandoff(sessionId, (record: AgentSessionRecord) =>
+        reviseAgentSessionClaudeResumePoint({
+          record,
+          fence,
+          providerSessionId,
+          leafUuid,
+          now: Date.now()
         })
       )
     },
