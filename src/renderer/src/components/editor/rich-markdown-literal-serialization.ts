@@ -35,7 +35,13 @@ export function preserveLiteralMarkdownSource(
   manager.renderNodeToMarkdown = (node, ...args) => {
     const markdown = render(node, ...args)
     const block = blocks?.get(node)
-    if (!block || markdown.length > MAX_LITERAL_BLOCK_CODE_UNITS || !/\\[_[\]]/.test(markdown)) {
+    if (!block || !/\\[_[\]]/.test(markdown)) {
+      return markdown
+    }
+    // Retain existing large paragraph/heading fidelity; cap only the expanded validation.
+    const preservesBrackets =
+      (node.type === 'paragraph' || node.type === 'heading') && /\\[[\]]/.test(markdown)
+    if (markdown.length > MAX_LITERAL_BLOCK_CODE_UNITS && !preservesBrackets) {
       return markdown
     }
     const cached = cache.get(block)
