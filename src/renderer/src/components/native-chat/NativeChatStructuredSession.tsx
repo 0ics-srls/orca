@@ -36,6 +36,7 @@ export function NativeChatStructuredSession(
     fileLinkContext?.worktreeId,
     props.sessionId
   )
+  const { sendThroughRelaunch } = provisionalLaunch
   const controller = useStructuredAgentSession({
     ...props,
     transportEnabled: provisionalLaunch.transportEnabled
@@ -155,12 +156,14 @@ export function NativeChatStructuredSession(
   const structuredTransport = useMemo(
     () => ({
       send: (text: string, attachments: readonly { id: string; path: string }[]): boolean =>
-        controller.send(
-          text,
-          attachments.map((attachment) => ({
-            path: attachment.path,
-            previewUri: attachment.path
-          }))
+        sendThroughRelaunch(() =>
+          controller.send(
+            text,
+            attachments.map((attachment) => ({
+              path: attachment.path,
+              previewUri: attachment.path
+            }))
+          )
         ),
       dispatchCommand: (text: string) =>
         dispatchStructuredAgentSessionComposerCommand(text, {
@@ -192,7 +195,8 @@ export function NativeChatStructuredSession(
       optionPickerRequest,
       props.agent,
       props.sessionId,
-      props.target
+      props.target,
+      sendThroughRelaunch
     ]
   )
 
