@@ -80,9 +80,13 @@ function makeStore() {
   }
 }
 
-function makeRuntime(): () => Promise<DetectedWorktreeListResult> {
+function makeRuntimeService(): OrcaRuntimeService {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every store member the local listing reaches is supplied above.
-  const runtime = new OrcaRuntimeService(makeStore() as never)
+  return new OrcaRuntimeService(makeStore() as never)
+}
+
+function makeRuntime(): () => Promise<DetectedWorktreeListResult> {
+  const runtime = makeRuntimeService()
   return () => runtime.listDetectedManagedWorktrees(`id:${REPO_ID}`)
 }
 
@@ -97,6 +101,15 @@ describe('runtime worktree change invalidation', () => {
     const before = getLocalWorktreeScanGeneration(REPO_ID)
 
     runWorktreeChangeInvalidators(REPO_ID)
+
+    expect(getLocalWorktreeScanGeneration(REPO_ID)).not.toBe(before)
+  })
+
+  it('bumps that generation from the change event the runtime itself sends, with no window notifier attached', () => {
+    const runtime = makeRuntimeService()
+    const before = getLocalWorktreeScanGeneration(REPO_ID)
+
+    runtime.notifyBranchRenamed(REPO_ID)
 
     expect(getLocalWorktreeScanGeneration(REPO_ID)).not.toBe(before)
   })
