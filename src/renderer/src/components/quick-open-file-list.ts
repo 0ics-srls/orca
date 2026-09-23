@@ -138,11 +138,14 @@ export function getNestedWorktreeExcludeRequest(
 export function useRuntimeFileListForWorktree({
   enabled,
   worktreeId,
-  query
+  query,
+  searchLocalPaths = false
 }: {
   enabled: boolean
   worktreeId: string | null
   query?: string
+  /** Search local workspaces on the host too, instead of filtering the capped listing. */
+  searchLocalPaths?: boolean
 }): RuntimeFileListState {
   const worktree = useAppStore((state) =>
     // Why: folder workspaces live behind getKnownWorktreeById, not worktreesByRepo.
@@ -193,7 +196,8 @@ export function useRuntimeFileListForWorktree({
     activeTargetStatus === 'deploying-relay' ||
     activeTargetStatus === 'reconnecting'
   const usesRuntimePathSearch =
-    (runtimeEnvironmentId !== null || connectionId !== undefined) && query !== undefined
+    (searchLocalPaths || runtimeEnvironmentId !== null || connectionId !== undefined) &&
+    query !== undefined
   const remoteQuery = usesRuntimePathSearch ? query.trim() : ''
   const remoteQueryTooLarge = usesRuntimePathSearch && isQuickOpenRemoteQueryTooLarge(remoteQuery)
   const requestKey = useMemo(
@@ -264,7 +268,7 @@ export function useRuntimeFileListForWorktree({
             query: remoteQuery,
             limit: 32,
             excludePaths,
-            ...(connectionId ? { requestToken } : {}),
+            ...(runtimeEnvironmentId === null ? { requestToken } : {}),
             signal: requestAbortController.signal
           })
         )

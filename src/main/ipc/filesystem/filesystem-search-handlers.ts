@@ -24,6 +24,7 @@ import {
 import { checkRgAvailable } from '../rg-availability'
 import { resolveAuthorizedPath } from '../filesystem-auth'
 import { listQuickOpenFiles } from '../filesystem-list-files'
+import { searchQuickOpenFilePaths } from '../filesystem-search-file-paths'
 import { searchWithGitGrep } from '../filesystem-search-git'
 import { getLocalGitOptionsForRegisteredWorktree } from '../local-worktree-runtime-options'
 import { QuickOpenPathRanker } from '../../../shared/quick-open-path-search'
@@ -220,6 +221,19 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
             ...(args.searchQuery === undefined ? {} : { searchQuery: args.searchQuery }),
             signal: controller?.signal
           })
+        }
+        if (args.searchQuery !== undefined) {
+          // Why: ranking the whole scan finds files a capped listing drops in large workspaces.
+          const result = await searchQuickOpenFilePaths(args.rootPath, store, {
+            query: args.searchQuery,
+            limit: args.maxResults ?? QUICK_OPEN_SSH_LEGACY_RESULT_LIMIT,
+            excludePaths: args.excludePaths,
+            signal: controller?.signal,
+            // Why: uncapped so a missing rg cannot hide files past the listing cap.
+            listWithoutRipgrep: () =>
+              listQuickOpenFiles(args.rootPath, store, args.excludePaths, controller?.signal)
+          })
+          return result.paths
         }
         return await listQuickOpenFiles(
           args.rootPath,

@@ -38,7 +38,8 @@ describe('useFileExplorerNameFilter', () => {
     expect(useRuntimeFileListForWorktreeMock).toHaveBeenLastCalledWith({
       enabled: true,
       worktreeId: 'worktree-1',
-      query: 'AppDelegate.swift'
+      query: 'AppDelegate.swift',
+      searchLocalPaths: true
     })
     expect(result.current.nameFilterSource?.query).toBe('AppDelegate.swift')
   })

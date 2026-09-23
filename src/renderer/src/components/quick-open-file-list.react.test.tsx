@@ -99,14 +99,16 @@ function HookProbe({
   enabled,
   onState,
   query,
+  searchLocalPaths,
   worktreeId
 }: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
+  searchLocalPaths?: boolean
   worktreeId: string | null
 }): null {
-  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query }))
+  onState(useRuntimeFileListForWorktree({ enabled, worktreeId, query, searchLocalPaths }))
   return null
 }
 
@@ -131,6 +133,7 @@ async function renderProbe(args: {
   enabled: boolean
   onState: (state: RuntimeFileListState) => void
   query?: string
+  searchLocalPaths?: boolean
   worktreeId: string | null
 }): Promise<Root> {
   const container = document.createElement('div')
@@ -680,5 +683,40 @@ describe('useRuntimeFileListForWorktree', () => {
       files: ['packages/app/package.json'],
       loading: false
     })
+  })
+  it('searches a local workspace on the host when the caller opts in', async () => {
+    vi.useFakeTimers()
+    useAppStore.setState({
+      folderWorkspaces: [makeFolderWorkspace()],
+      projectGroups: [makeProjectGroup()],
+      repos: [],
+      worktreesByRepo: {}
+    } as Partial<AppState>)
+    searchRuntimeFilePathsMock.mockResolvedValue({
+      files: ['ios/AppDelegate.swift'],
+      truncated: false
+    })
+    const states: RuntimeFileListState[] = []
+
+    try {
+      await renderProbe({
+        enabled: true,
+        onState: (state) => states.push(state),
+        query: 'AppDelegate.swift',
+        searchLocalPaths: true,
+        worktreeId: folderWorkspaceKey('folder-workspace-1')
+      })
+      await act(async () => vi.advanceTimersByTimeAsync(120))
+      await flushEffects()
+
+      expect(searchRuntimeFilePathsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ settings: { activeRuntimeEnvironmentId: null } }),
+        expect.objectContaining({ query: 'AppDelegate.swift', requestToken: expect.any(String) })
+      )
+      expect(listRuntimeFilesMock).not.toHaveBeenCalled()
+      expect(states.at(-1)).toMatchObject({ files: ['ios/AppDelegate.swift'], loading: false })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

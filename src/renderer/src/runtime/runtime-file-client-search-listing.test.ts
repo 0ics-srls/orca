@@ -205,6 +205,29 @@ describe('runtime file client', () => {
     expect(runtimeEnvironmentCall).not.toHaveBeenCalled()
   })
 
+  it('routes bounded quick-open queries through the local host', async () => {
+    fsListFiles.mockResolvedValue(['ios/AppDelegate.swift'])
+
+    await expect(
+      searchRuntimeFilePaths(
+        {
+          settings: { activeRuntimeEnvironmentId: null },
+          worktreeId: 'wt-1',
+          worktreePath: '/repo'
+        },
+        { query: 'AppDelegate.swift', limit: 32, requestToken: 'explorer-1' }
+      )
+    ).resolves.toEqual({ files: ['ios/AppDelegate.swift'], truncated: false })
+
+    expect(fsListFiles).toHaveBeenCalledWith({
+      rootPath: '/repo',
+      excludePaths: undefined,
+      requestToken: 'explorer-1',
+      maxResults: 33,
+      searchQuery: 'AppDelegate.swift'
+    })
+  })
+
   it('falls back to one cached legacy inventory and ranks evolving queries locally', async () => {
     replaceRuntimeEnvironmentRevisions([{ id: 'env-1', createdAt: 1 }])
     runtimeEnvironmentCall.mockImplementation(({ method }) => {
