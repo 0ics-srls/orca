@@ -10,15 +10,13 @@ export type NativeChatContextUsage = {
   windowTokens: number | null
   /** Rounded and never clamped: an over-limit turn reads above 100. Null with the window. */
   percentage: number | null
-  /** Derived from the last response rather than counted by the provider. */
-  estimated: true
 }
 
 /** Resolves a model's context window, or null when the host does not know it. */
 export type NativeChatContextWindowLookup = (message: NativeChatMessage) => number | null
 
 /** Everything the model read on the request, which is what fills the window. */
-export function contextTokensFromUsage(usage: NativeChatTokenUsage): number {
+function contextTokensFromUsage(usage: NativeChatTokenUsage): number {
   return usage.inputTokens + usage.cacheCreationInputTokens + usage.cacheReadInputTokens
 }
 
@@ -53,8 +51,7 @@ export function deriveNativeChatContextUsage(
     return {
       usedTokens,
       windowTokens,
-      percentage: windowTokens === null ? null : Math.round((usedTokens / windowTokens) * 100),
-      estimated: true
+      percentage: windowTokens === null ? null : Math.round((usedTokens / windowTokens) * 100)
     }
   }
   return null

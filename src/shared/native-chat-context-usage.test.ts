@@ -51,8 +51,7 @@ describe('deriveNativeChatContextUsage', () => {
     expect(derived).toEqual({
       usedTokens: 21_680,
       windowTokens: 272_000,
-      percentage: 8,
-      estimated: true
+      percentage: 8
     })
     // The window is asked of the response that was measured, not the session's picker.
     expect(windows.map(({ id }) => id)).toEqual(['newest'])
@@ -62,8 +61,7 @@ describe('deriveNativeChatContextUsage', () => {
     expect(deriveNativeChatContextUsage([assistant('a', usage(450_000))], noWindow)).toEqual({
       usedTokens: 450_000,
       windowTokens: null,
-      percentage: null,
-      estimated: true
+      percentage: null
     })
     expect(
       deriveNativeChatContextUsage([assistant('a', usage(10))], () => 0)?.windowTokens
