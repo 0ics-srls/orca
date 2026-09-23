@@ -2,6 +2,7 @@ import type { BrowserTabSwitchResult } from '../../shared/runtime-types'
 import { BrowserError } from './cdp-bridge'
 import { AgentBrowserBridgeShutdown } from './agent-browser-bridge-shutdown'
 import { ORCA_TAB_SESSION_PREFIX } from './agent-browser-orphan-sweep'
+import { isBrowserGuestStreaming } from './browser-screencast-streaming-guests'
 import type {
   EnqueueTargetedCommandOptions,
   ResolvedBrowserCommandTarget
@@ -101,7 +102,9 @@ export abstract class AgentBrowserBridgeQueue extends AgentBrowserBridgeShutdown
     execute: (sessionName: string, target: ResolvedBrowserCommandTarget) => Promise<T>,
     options: EnqueueTargetedCommandOptions
   ): Promise<T> {
-    if (options.ensureVisible === false) {
+    // Why: a streamed guest is already kept paintable for its remote viewer; leasing again would
+    // stall each phone tap up to 2s on the desktop renderer's rAF whenever that window is hidden.
+    if (options.ensureVisible === false || isBrowserGuestStreaming(target.webContentsId)) {
       return execute(sessionName, target)
     }
 

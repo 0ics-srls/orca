@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createBrowserScreencastMessageHandler } from './browser-screencast-cdp-events'
 import { startBrowserScreencast } from './browser-screencast-stream'
+import { isBrowserGuestStreaming } from './browser-screencast-streaming-guests'
 
 function createWebContents() {
   let attached = false
@@ -21,10 +22,27 @@ function createWebContents() {
     attached = false
   })
   debuggerApi.sendCommand = vi.fn(async () => ({}))
-  return { isDestroyed: vi.fn(() => false), debugger: debuggerApi }
+  return { id: 41, isDestroyed: vi.fn(() => false), debugger: debuggerApi }
 }
 
 describe('browser screencast lifecycle', () => {
+  it('marks the guest as streaming for exactly the life of the stream', async () => {
+    const webContents = createWebContents()
+    const session = await startBrowserScreencast(webContents as never, {
+      format: 'jpeg',
+      quality: 70,
+      maxWidth: 800,
+      maxHeight: 600,
+      everyNthFrame: 1,
+      minFrameIntervalMs: 0,
+      onFrame: vi.fn()
+    })
+    expect(isBrowserGuestStreaming(41)).toBe(true)
+    session.stop()
+    await session.done
+    expect(isBrowserGuestStreaming(41)).toBe(false)
+  })
+
   it('updates a live shared stream viewport and clears an obsolete override', async () => {
     const webContents = createWebContents()
     const onFrame = vi.fn()

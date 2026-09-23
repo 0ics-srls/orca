@@ -6,6 +6,7 @@ import { sendDebuggerCommand } from './browser-screencast-debugger-command'
 import { createBrowserScreencastDeviceMetrics } from './browser-screencast-device-metrics'
 import { createBrowserScreencastFramePacer } from './browser-screencast-frame-pacer'
 import { createBrowserScreencastSnapshotCapture } from './browser-screencast-snapshot-capture'
+import { markBrowserGuestStreaming } from './browser-screencast-streaming-guests'
 import type {
   BrowserScreencastFrameBudget,
   BrowserScreencastOptions,
@@ -23,6 +24,7 @@ export async function startBrowserScreencast(
 
   const dbg = webContents.debugger
   let debuggerLease: ElectronDebuggerLease | null = null
+  let releaseStreamingMark: (() => void) | null = null
   try {
     debuggerLease = acquireElectronDebugger(webContents)
   } catch {
@@ -104,6 +106,8 @@ export async function startBrowserScreencast(
     dbg.removeListener('detach', handleDetach as never)
     debuggerLease?.release()
     debuggerLease = null
+    releaseStreamingMark?.()
+    releaseStreamingMark = null
     resolveDone()
   }
 
@@ -119,6 +123,7 @@ export async function startBrowserScreencast(
     await sendDebuggerCommand(dbg, 'Page.enable')
     await deviceMetrics.apply()
     await startScreencast()
+    releaseStreamingMark = markBrowserGuestStreaming(webContents.id)
     pendingUpdate = snapshotCapture.emitSnapshotFrame(true)
   } catch (error) {
     if (deviceMetrics.isOverridden()) {
