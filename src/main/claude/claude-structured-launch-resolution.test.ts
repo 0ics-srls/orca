@@ -307,6 +307,30 @@ describe('claude structured launch resolution', () => {
     }
   })
 
+  it('builds on the supplied inherited env instead of Orca process env', async () => {
+    const launch = await createClaudeStructuredLaunchResolver({
+      store: { getRecord: () => record() } as unknown as AgentSessionRecordStore,
+      resolveWorkspacePath: async (id) => `/repos/${id}`,
+      resolveCommand: () => '/usr/local/bin/claude',
+      resolveAuthPolicy: () => ({ stripAuthEnv: false }),
+      resolveInheritedEnv: async () => ({ PATH: '/shell/bin', SHELL_ONLY_MARKER: 'from-shell' })
+    })({ identity: IDENTITY })
+
+    expect(launch.env?.SHELL_ONLY_MARKER).toBe('from-shell')
+  })
+
+  it('still strips an inherited auth key under a managed account', async () => {
+    const launch = await createClaudeStructuredLaunchResolver({
+      store: { getRecord: () => record() } as unknown as AgentSessionRecordStore,
+      resolveWorkspacePath: async (id) => `/repos/${id}`,
+      resolveCommand: () => '/usr/local/bin/claude',
+      resolveAuthPolicy: () => ({ stripAuthEnv: true }),
+      resolveInheritedEnv: async () => ({ PATH: '/shell/bin', ANTHROPIC_API_KEY: 'listed-key' })
+    })({ identity: IDENTITY })
+
+    expect(launch.env?.ANTHROPIC_API_KEY).toBeUndefined()
+  })
+
   it('lets an explicit Claude env overlay override ambient auth under system auth', async () => {
     const restore = process.env.ANTHROPIC_API_KEY
     process.env.ANTHROPIC_API_KEY = 'sk-ant-SHELL-LEAK'

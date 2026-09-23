@@ -27,6 +27,7 @@ import type { OrcaRuntimeService } from './orca-runtime'
 import type { RpcRequest, RpcResponse } from './rpc/core'
 import type { ClaudeStructuredAuthPolicy } from '../claude-accounts/claude-structured-auth-policy'
 import { RpcDispatcher } from './rpc/dispatcher'
+import type { NativeChatShellEnvironmentPolicy } from '../../shared/native-chat-shell-environment'
 import { STRUCTURED_AGENT_SESSION_METHODS } from './rpc/methods/structured-agent-session'
 import {
   ensureStructuredAgentSessionHost,
@@ -252,6 +253,8 @@ let transcriptPath: string
 /** Managed-account state and configured overlay this host installs, per test. */
 let claudeAuthPolicy: ClaudeStructuredAuthPolicy
 let claudeLaunchEnv: Record<string, string>
+let shellEnv: NodeJS.ProcessEnv
+let shellEnvironmentPolicy: NativeChatShellEnvironmentPolicy
 
 async function call(method: string, params: unknown): Promise<RpcResponse> {
   const replies: RpcResponse[] = []
@@ -316,6 +319,8 @@ function textOf(item: AgentJournalRenderItem): string {
 beforeEach(async () => {
   operations = 0
   claudeAuthPolicy = { stripAuthEnv: false }
+  shellEnv = { PATH: '/shell/bin:/usr/bin' }
+  shellEnvironmentPolicy = { inheritAll: true, names: [] }
   claudeLaunchEnv = {
     ANTHROPIC_AUTH_TOKEN: 'configured-token',
     ANTHROPIC_BASE_URL: 'https://gateway.example.test'
@@ -409,6 +414,9 @@ beforeEach(async () => {
         resolveClaudeCommand: () => '/usr/local/bin/claude',
         readProcessStartTime: async (pid: number) => pid * 10,
         resolveClaudeLaunchEnv: () => claudeLaunchEnv,
+        // Hermetic: never the developer's real login shell.
+        resolveEnvironment: async () => shellEnv,
+        resolveShellEnvironmentPolicy: () => shellEnvironmentPolicy,
         resolveClaudeAuthPolicy: () => claudeAuthPolicy,
         openClaudeConnection: claude.openConnection,
         handoffTransport
@@ -433,8 +441,11 @@ describe('a structured Claude session over agentSession.*', () => {
   it('strips ambient Anthropic auth from the child once a managed account is pinned', async () => {
     claudeAuthPolicy = { stripAuthEnv: true }
     claudeLaunchEnv = { ANTHROPIC_BASE_URL: 'https://gateway.example.test' }
-    vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-SHELL-LEAK')
-    vi.stubEnv('ANTHROPIC_AUTH_TOKEN', 'tok-SHELL-LEAK')
+    shellEnv = {
+      ...shellEnv,
+      ANTHROPIC_API_KEY: 'sk-ant-SHELL-LEAK',
+      ANTHROPIC_AUTH_TOKEN: 'tok-SHELL-LEAK'
+    }
 
     await ok<{ fence: number }>('agentSession.create', createIntentParams())
 
@@ -445,6 +456,32 @@ describe('a structured Claude session over agentSession.*', () => {
       ANTHROPIC_BASE_URL: 'https://gateway.example.test',
       CLAUDE_CONFIG_DIR: join(root, 'claude-home')
     })
+  })
+
+  it('passes shell exports straight to the child, as a terminal would', async () => {
+    shellEnv = {
+      ...shellEnv,
+      CODEX_LB_API_KEY: 'shell-exported',
+      ANTHROPIC_API_KEY: 'sk-ant-SHELL-ONLY'
+    }
+
+    await ok<{ fence: number }>('agentSession.create', createIntentParams())
+
+    expect(claude.live().launch.env).toMatchObject({
+      CODEX_LB_API_KEY: 'shell-exported',
+      ANTHROPIC_API_KEY: 'sk-ant-SHELL-ONLY'
+    })
+  })
+
+  it('leaves unlisted shell exports out when inheritance is off', async () => {
+    shellEnv = { ...shellEnv, CODEX_LB_API_KEY: 'shell-exported', LISTED_ONLY: 'yes' }
+    shellEnvironmentPolicy = { inheritAll: false, names: ['LISTED_ONLY'] }
+
+    await ok<{ fence: number }>('agentSession.create', createIntentParams())
+
+    const env = claude.live().launch.env
+    expect(env?.LISTED_ONLY).toBe('yes')
+    expect(env).not.toHaveProperty('CODEX_LB_API_KEY')
   })
 
   it('refuses a create whose configured env overrides the pinned managed account auth', async () => {
@@ -533,7 +570,7 @@ describe('a structured Claude session over agentSession.*', () => {
   })
 
   it('creates, sends, streams, approves, interrupts, and resumes from the chain head', async () => {
-    vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-SHELL-LEAK')
+    shellEnv = { ...shellEnv, ANTHROPIC_API_KEY: 'sk-ant-SHELL-LEAK' }
     const created = await ok<{ fence: number }>('agentSession.create', createIntentParams())
     expect(claude.live().launch.options).toMatchObject({ sessionId: PROVIDER_SESSION })
     expect(claude.live().launch.options.resume).toBeUndefined()

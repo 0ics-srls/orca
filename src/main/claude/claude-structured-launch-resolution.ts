@@ -106,6 +106,8 @@ export type ClaudeStructuredLaunchResolverDeps = {
     | Promise<Record<string, string> | undefined>
     | Record<string, string>
     | undefined
+  /** The env the child inherits before auth stripping; absent inherits Orca's own process env. */
+  resolveInheritedEnv?: () => Promise<Record<string, string>>
   /**
    * Required, and deliberately not defaulted. `stripAuthEnv` used to be a literal
    * `true` here, so a missing dependency could not under-strip. Now it can, and the
@@ -200,6 +202,9 @@ export function createClaudeStructuredLaunchResolver(
     const command = (deps.resolveCommand ?? resolveClaudeCommand)()
     const auth = await deps.resolveAuthPolicy()
     const overlay = await deps.resolveEnv?.()
+    const inheritedEnv = deps.resolveInheritedEnv
+      ? await deps.resolveInheritedEnv()
+      : cloneDefinedEnv(process.env)
     // A switch can begin while the policy and overlay resolve, exactly as it can
     // during the terminal preflight's prepareClaudeAuth — recheck after the awaits.
     await assertClaudeAuthSwitchSettled(deps.authSwitchSettleTimeoutMs)
@@ -219,7 +224,7 @@ export function createClaudeStructuredLaunchResolver(
       // PATH; an ordinary chat session's env passes through untouched.
       structuredWorkerChildIdentityEnv(record.sessionId, {
         ...applyClaudeEnvPatch(
-          cloneDefinedEnv(process.env),
+          { ...inheritedEnv },
           {},
           {
             stripAuthEnv: auth.stripAuthEnv,
