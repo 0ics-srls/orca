@@ -161,3 +161,14 @@ test('plans every non-target cell at its served image, read from state templates
   assert.ok(workflow.indexOf('- id: targets') < workflow.indexOf('- id: live-images'))
   assert.ok(workflow.indexOf('- id: live-images') < workflow.indexOf('- name: Create and validate the saved topology plan'))
 })
+
+test('the deployments output tolerates a cell declared before its topology apply', () => {
+  const outputs = readFileSync(new URL('../../infra/terraform/outputs.tf', import.meta.url), 'utf8')
+  const start = outputs.indexOf('output "relay_gce_cell_deployments" {')
+  const block = outputs.slice(start, outputs.indexOf('\n}\n', start))
+  const lookups = [...block.matchAll(/^\s+\w+\s+=\s+(.*\.relay_gce_cell\[cell_id\].*)$/gm)].map((match) => match[1])
+  assert.equal(lookups.length, 6)
+  for (const lookup of lookups) {
+    assert.match(lookup, /^try\(google_compute_\w+\.relay_gce_cell\[cell_id\]\.\w+, null\)$/)
+  }
+})
