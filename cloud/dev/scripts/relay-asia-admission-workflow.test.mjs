@@ -153,6 +153,25 @@ test('requires immutable staged evidence and a timed C27 canary before expansion
   assert.doesNotMatch(provenance, /--commit-sha "\$\{GITHUB_SHA\}"/)
 })
 
+test('binds each production promotion wave to its exact evidence kind', () => {
+  const cases = /case "\$\{TARGET_CELL_IDS\}" in\n([\s\S]*?)\n\s*esac/.exec(workflow)?.[1]
+  assert.ok(cases)
+  const kinds = Object.fromEntries(
+    [...cases.matchAll(/^\s*([a-z0-9,-]+)\)\n[\s\S]*?evidence_kind=([a-z0-9]+)/gm)]
+      .map((match) => [match[1], match[2]])
+  )
+  assert.deepEqual(kinds, {
+    'production-gce-c27': 'staging',
+    'production-gce-c28,production-gce-c29': 'c27',
+    'production-gce-c30': 'staging'
+  })
+  assert.match(cases, /\*\) echo "production promotion wave is not reviewed" >&2; exit 1 ;;/)
+  // Only the C27 canary runs the timed load and its automatic return to migration-only.
+  const canarySteps = [...workflow.matchAll(/inputs\.cell-ids == '([a-z0-9,-]+)'/g)]
+  assert.ok(canarySteps.length > 0)
+  assert.ok(canarySteps.every((match) => match[1] === 'production-gce-c27'))
+})
+
 test('creates staging evidence only after the bounded launch-path load and rollback', () => {
   assert.match(stagingProof, /runs-on: \[self-hosted, linux, x64, relay-asia-east2-load\]/)
   assert.doesNotMatch(stagingProof, /group: relay-asia-east2-load/)

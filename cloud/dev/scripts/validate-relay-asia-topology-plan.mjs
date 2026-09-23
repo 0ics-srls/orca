@@ -14,20 +14,28 @@ const CELL_SHAPES = {
   production: {
     domain: 'relay.onorca.dev',
     project: 'onorca-cloud',
+    databasePoolMax: '16',
     cells: {
       'production-gce-c27': 'asia-east2-a',
       'production-gce-c28': 'asia-east2-b',
-      'production-gce-c29': 'asia-east2-c'
-    }
+      'production-gce-c29': 'asia-east2-c',
+      'production-gce-c30': 'asia-east2-a'
+    },
+    waves: [
+      ['production-gce-c27', 'production-gce-c28', 'production-gce-c29'],
+      ['production-gce-c30']
+    ]
   },
   staging: {
     domain: 'relay-staging.onorca.dev',
     project: 'onorca-cloud-staging',
-    cells: { 'staging-gce-c4': 'asia-east2-a' }
+    databasePoolMax: '10',
+    cells: { 'staging-gce-c4': 'asia-east2-a' },
+    waves: [['staging-gce-c4']]
   }
 }
 
-function parseArguments(argv) {
+export function parseRelayAsiaTopologyPlanArguments(argv) {
   const values = {}
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index]
@@ -40,8 +48,11 @@ function parseArguments(argv) {
   }
   if (!(values.environment in CELL_SHAPES)) throw new Error('--environment is invalid')
   const cells = values['cell-ids'].split(',').map((value) => value.trim()).filter(Boolean)
-  const expectedCells = Object.keys(CELL_SHAPES[values.environment].cells)
-  if (new Set(cells).size !== cells.length || JSON.stringify(cells.sort()) !== JSON.stringify(expectedCells.sort())) {
+  const sorted = JSON.stringify([...cells].sort())
+  if (
+    new Set(cells).size !== cells.length ||
+    !CELL_SHAPES[values.environment].waves.some((wave) => JSON.stringify([...wave].sort()) === sorted)
+  ) {
     throw new Error('--cell-ids must be the exact reviewed Asia topology set')
   }
   if (values.region !== REGION) throw new Error('--region must be asia-east2')
@@ -90,7 +101,8 @@ function requireCellTemplate(change, config, cellId) {
     (after?.network_interface?.[0]?.access_config?.length ?? 0) !== 0 ||
     startupValue(script, 'ORCA_RELAY_REGION') !== REGION ||
     startupValue(script, 'ORCA_RELAY_CELL_CAPACITY') !== '6000' ||
-    startupValue(script, 'ORCA_RELAY_DATABASE_POOL_MAX') !== '10' ||
+    startupValue(script, 'ORCA_RELAY_DATABASE_POOL_MAX') !==
+      CELL_SHAPES[config.environment].databasePoolMax ||
     startupValue(script, 'ORCA_RELAY_CELL_CONNECTION_HARD_CAP') !== '3000' ||
     startupValue(script, 'ORCA_RELAY_CELL_CONNECTION_UNOBSERVED_BOUND') !== '60' ||
     startupValue(script, 'ORCA_RELAY_IMAGE_DIGEST') !== config.image.split('@')[1] ||
@@ -297,7 +309,7 @@ export function validateRelayAsiaTopologyPlan(plan, config) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const config = parseArguments(process.argv.slice(2))
+  const config = parseRelayAsiaTopologyPlanArguments(process.argv.slice(2))
   const plan = JSON.parse(readFileSync(config.planJson, 'utf8'))
   console.log(JSON.stringify(validateRelayAsiaTopologyPlan(plan, config)))
 }

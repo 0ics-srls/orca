@@ -165,6 +165,14 @@ or moving a cell and rejects intervening drift. Then
 atomically register the new cells as migration-only, binding every mutation to
 the exact live selector generation and a durable attempt ID. Deploy and verify
 the director configuration only after registration, then promote C27 alone before C28/C29.
+
+The production Asia set is C27-C30. C27-C29 launched as one wave; C30 is an additive wave of its
+own at the same shape. Its topology plan targets only C30's template, MIG, and backend (the network
+is a no-op and every existing host route must survive). Register it alone as migration-only,
+configure the director with `cell-ids` set to C30 while regional rehome is paused, then promote it
+alone. Promotion requires C27 to be general and a staging proof no older than 24 hours for the
+same image digest, because the C27 canary evidence expires in six hours and binds a selector
+generation. Any later Asia cell follows the same pattern as its own reviewed wave.
 Rollback returns
 Asia cells to migration-only; it does not destroy the network or use
 existing-only. The production topology dispatch remains unavailable until the

@@ -35,6 +35,20 @@ test('uses only its exact workflow-bound topology identity', () => {
   assert.match(iam, /assertion\.environment == '\$\{var\.environment\}'/)
 })
 
+test('accepts only the reviewed Asia topology waves', () => {
+  const cases = /case "\$\{TARGET_ENVIRONMENT\}:\$\{TARGET_CELL_IDS\}" in\n([\s\S]*?)\n\s*esac/
+    .exec(workflow)?.[1]
+  assert.ok(cases)
+  assert.deepEqual(
+    [...cases.matchAll(/^\s*([a-z]+:[a-z0-9,-]+)\) ;;$/gm)].map((match) => match[1]),
+    [
+      'staging:staging-gce-c4',
+      'production:production-gce-c27,production-gce-c28,production-gce-c29',
+      'production:production-gce-c30'
+    ]
+  )
+})
+
 test('plans only additive Asia topology and applies the saved plan', () => {
   assert.doesNotMatch(workflow, /manage_artifact_dns/)
   for (const target of [

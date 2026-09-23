@@ -37,7 +37,9 @@ const launchDigest = '5aedbca5c86de24c8b4d4bf7e3b444b76c712f281ede916cb9d90f70ca
 
 // Scoped to the Asia cells by name: the production capacity cells now serve this digest too,
 // so a file-wide count no longer isolates Asia.
-const asiaCells = ['production-gce-c27', 'production-gce-c28', 'production-gce-c29']
+const asiaCells = [
+  'production-gce-c27', 'production-gce-c28', 'production-gce-c29', 'production-gce-c30'
+]
 
 function cellBlock(tfvars, cellId) {
   const start = tfvars.indexOf(`"${cellId}"`)

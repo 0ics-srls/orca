@@ -48,12 +48,19 @@ test('requires one canary or a bounded reviewed batch', () => {
     rollbackDigest,
     confirmation: `ROLL_RELAY_SAME_CAP ${targetDigest} production-gce-c28`
   }).cells, ['production-gce-c28'])
-  assert.throws(() => validateSameCapWave({
+  assert.deepEqual(validateSameCapWave({
     mode: 'canary-apply',
     cellIds: 'production-gce-c30',
     targetDigest,
     rollbackDigest,
     confirmation: `ROLL_RELAY_SAME_CAP ${targetDigest} production-gce-c30`
+  }).cells, ['production-gce-c30'])
+  assert.throws(() => validateSameCapWave({
+    mode: 'canary-apply',
+    cellIds: 'production-gce-c31',
+    targetDigest,
+    rollbackDigest,
+    confirmation: `ROLL_RELAY_SAME_CAP ${targetDigest} production-gce-c31`
   }), /cells/)
 })
 
