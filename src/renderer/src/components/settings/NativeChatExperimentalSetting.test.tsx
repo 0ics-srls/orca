@@ -66,6 +66,29 @@ describe('NativeChatExperimentalSetting shell environment', () => {
     expect(updateSettings).toHaveBeenCalledWith({ nativeChatInheritShellEnvironment: false })
   })
 
+  it('keeps an uncommitted draft across an unrelated settings re-render', () => {
+    const { container, rerender } = renderSetting({
+      ...structuredOn,
+      nativeChatInheritShellEnvironment: false
+    })
+    const input = container.querySelector<HTMLTextAreaElement>(NAMES_INPUT)!
+    fireEvent.change(input, { target: { value: 'HTTPS_PRO' } })
+
+    rerender(
+      <NativeChatExperimentalSetting
+        settings={{
+          ...getDefaultSettings('/tmp'),
+          ...structuredOn,
+          nativeChatInheritShellEnvironment: false,
+          nativeChatResumeWorkOnRestart: true
+        }}
+        updateSettings={vi.fn()}
+      />
+    )
+
+    expect(container.querySelector<HTMLTextAreaElement>(NAMES_INPUT)!.value).toBe('HTTPS_PRO')
+  })
+
   it('commits parsed names when focus leaves the list', () => {
     const updateSettings = vi.fn()
     const { container } = renderSetting(

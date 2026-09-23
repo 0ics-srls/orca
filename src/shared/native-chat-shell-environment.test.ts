@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   nativeChatShellEnvironmentPolicy,
+  normalizeNativeChatShellEnvironmentVariables,
   parseNativeChatShellEnvironmentNames
 } from './native-chat-shell-environment'
 
@@ -29,5 +30,19 @@ describe('nativeChatShellEnvironmentPolicy', () => {
         nativeChatShellEnvironmentVariables: ['CODEX_LB_API_KEY', 'not valid', 'CODEX_LB_API_KEY']
       })
     ).toEqual({ inheritAll: false, names: ['CODEX_LB_API_KEY'] })
+  })
+})
+
+describe('normalizeNativeChatShellEnvironmentVariables', () => {
+  it('returns an empty list for anything that is not an array', () => {
+    expect(normalizeNativeChatShellEnvironmentVariables(undefined)).toEqual([])
+    expect(normalizeNativeChatShellEnvironmentVariables('HTTPS_PROXY')).toEqual([])
+    expect(normalizeNativeChatShellEnvironmentVariables({ 0: 'HTTPS_PROXY' })).toEqual([])
+  })
+
+  it('keeps only valid string names, once each', () => {
+    expect(
+      normalizeNativeChatShellEnvironmentVariables(['HTTPS_PROXY', 7, 'not valid', 'HTTPS_PROXY'])
+    ).toEqual(['HTTPS_PROXY'])
   })
 })

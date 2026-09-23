@@ -8,17 +8,32 @@ export type NativeChatShellEnvironmentPolicy = {
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
 
+/** The persisted list as a valid, deduplicated name list; anything malformed (hand-edited file) is empty. */
+export function normalizeNativeChatShellEnvironmentVariables(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const names: string[] = []
+  for (const entry of value) {
+    // Validate each saved entry whole; re-splitting would turn "not valid" into two names.
+    if (typeof entry === 'string' && ENV_NAME.test(entry) && !names.includes(entry)) {
+      names.push(entry)
+    }
+  }
+  return names
+}
+
 export function nativeChatShellEnvironmentPolicy(
   settings: Pick<
     GlobalSettings,
     'nativeChatInheritShellEnvironment' | 'nativeChatShellEnvironmentVariables'
   > | null
 ): NativeChatShellEnvironmentPolicy {
-  const saved = settings?.nativeChatShellEnvironmentVariables ?? []
   return {
     inheritAll: settings?.nativeChatInheritShellEnvironment !== false,
-    // Validate each saved entry whole; re-splitting would turn "not valid" into two names.
-    names: saved.filter((name, index) => ENV_NAME.test(name) && saved.indexOf(name) === index)
+    names: normalizeNativeChatShellEnvironmentVariables(
+      settings?.nativeChatShellEnvironmentVariables
+    )
   }
 }
 
