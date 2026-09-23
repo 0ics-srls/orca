@@ -75,6 +75,27 @@ test('appends C30 after the configured launch cells without touching them', () =
   })
 })
 
+test('checks C30 against its own digest, not the launch cells\' digest', () => {
+  const c30Digest = `sha256:${'b'.repeat(64)}`
+  const c30 = {
+    ...topologyCell(30, 'asia-east2-a'),
+    image: `us-central1-docker.pkg.dev/onorca-cloud/orca-cloud/relay@${c30Digest}`
+  }
+  const launch = [27, 28, 29].map((ordinal) => ({
+    id: `production-gce-c${ordinal}`, url: `https://c${ordinal}.relay.onorca.dev`,
+    capacityRequests: 6_000, region: 'asia-east2', initiallyEnabled: false,
+    connectionHardCap: 3_000, connectionUnobservedBound: 60
+  }))
+  assert.equal(prepareRelayAsiaDirectorCells({
+    currentCells: launch, topology: { 'production-gce-c30': c30 },
+    cellIds: 'production-gce-c30', imageDigest: c30Digest
+  }).length, 4)
+  assert.throws(() => prepareRelayAsiaDirectorCells({
+    currentCells: launch, topology: { 'production-gce-c30': c30 },
+    cellIds: 'production-gce-c30', imageDigest: digest
+  }), /does not match/)
+})
+
 test('pins the Asia pool per environment', () => {
   const staging = { ...topologyCell(4, 'asia-east2-a'), database_pool_max: 10 }
   assert.equal(prepareRelayAsiaDirectorCells({

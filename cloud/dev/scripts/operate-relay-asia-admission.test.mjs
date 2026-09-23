@@ -10,7 +10,7 @@ const digest = `sha256:${'a'.repeat(64)}`
 const membershipDigest = (membership) =>
   createHash('sha256').update(JSON.stringify(membership)).digest('hex')
 
-function harness(initialSelector) {
+function harness(initialSelector, runtimeDigests = {}) {
   const initialMembership = structuredClone(initialSelector.membership)
   let selector = structuredClone(initialSelector)
   const intents = new Map()
@@ -26,7 +26,7 @@ function harness(initialSelector) {
         cellId: `production-gce-${cell}`,
         cellUrl: parsed.origin,
         region: 'asia-east2',
-        imageDigest: digest,
+        imageDigest: runtimeDigests[`production-gce-${cell}`] ?? digest,
         draining: false,
         connectionCapacity: { hardCap: 3_000, unobservedBound: 60 }
       }
@@ -626,4 +626,23 @@ test('requires the C27 canary to be general before promoting C30', async () => {
   const result = await operateRelayAsiaAdmission(config, subject)
   assert.deepEqual(result.states, { 'production-gce-c30': 'general' })
   assert.equal(subject.requests.filter(({ path }) => path === '/v1/admin/cell-status').length, 1)
+})
+
+test('promotes C30 on its own digest while the launch cells serve another', async () => {
+  const c30Digest = `sha256:${'b'.repeat(64)}`
+  const selector = {
+    generation: 10,
+    membership: { existingOnly: [], migrationOnly: ['production-gce-c30'], general: [...launchCells] }
+  }
+  const config = {
+    environment: 'production', mode: 'promote', cells: ['production-gce-c30'],
+    expectedGeneration: 10, imageDigest: c30Digest, attemptId: 'asia_promote_c30', token: 'not-logged'
+  }
+  const digests = { 'production-gce-c30': c30Digest }
+  const result = await operateRelayAsiaAdmission(config, harness(selector, digests))
+  assert.deepEqual(result.states, { 'production-gce-c30': 'general' })
+  await assert.rejects(
+    operateRelayAsiaAdmission({ ...config, imageDigest: digest }, harness(selector, digests)),
+    /production-gce-c30 runtime does not match/
+  )
 })

@@ -64,16 +64,22 @@ test('matches every committed production Asia cell entry', () => {
     }
     committed[cellId] = cell
   }
-  const committedImage = committed['production-gce-c27'].image
+  // Each wave is pinned on its own: C30 launches on the director's digest, not C27's.
   for (const wave of [
     'production-gce-c27,production-gce-c28,production-gce-c29',
     'production-gce-c30'
   ]) {
+    const committedImage = committed[wave.split(',')[0]].image
     assert.doesNotThrow(() => prepareRelayAsiaTopologyInput({
       existingCells: committed, existingAdditionalRegions: additionalRegions,
       environment: 'production', cellIds: wave, image: committedImage
     }), wave)
   }
+  assert.throws(() => prepareRelayAsiaTopologyInput({
+    existingCells: committed, existingAdditionalRegions: additionalRegions,
+    environment: 'production', cellIds: 'production-gce-c30',
+    image
+  }), /differs from the reviewed topology/)
 })
 
 test('accepts the one exact committed staging Asia cell', () => {
