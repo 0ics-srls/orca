@@ -108,11 +108,8 @@ export function commandMarkersAsMessages(
   return markers.map((marker) => ({
     id: `command:${marker.id}`,
     role: 'system' as const,
-    blocks: [
-      marker.output === undefined
-        ? { type: 'text' as const, text: `Ran ${marker.command}` }
-        : { type: 'text' as const, text: marker.output, presentation: 'command-output' }
-    ],
+    // Why: a host answer is one sentence, so it reads as the aside it replaces, not a grid.
+    blocks: [{ type: 'text' as const, text: marker.output ?? `Ran ${marker.command}` }],
     timestamp: marker.sentAt,
     source: 'scrape' as const
   }))

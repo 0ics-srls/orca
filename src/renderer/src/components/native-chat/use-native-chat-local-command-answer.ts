@@ -3,6 +3,7 @@ import type { AgentType } from '../../../../shared/agent-status-types'
 import { deriveNativeChatContextUsage } from '../../../../shared/native-chat-context-usage'
 import { nativeChatLocalCommand } from '../../../../shared/native-chat-local-commands'
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
+import { ompModelSelector } from '../../../../shared/omp-model-list-probe'
 import {
   formatNativeChatContextUsageAnswer,
   formatNativeChatContextUsageUnreported
@@ -33,9 +34,8 @@ export function answerNativeChatLocalCommand(args: {
     return formatNativeChatContextUsageUnreported()
   }
   const usage = deriveNativeChatContextUsage(args.messages, (message) => {
-    // Why: OMP's listing keys models by `provider/model`; several providers share a bare id.
-    const selector =
-      message.provider && message.model ? `${message.provider}/${message.model}` : null
+    // Why: several providers share a bare model id; the listing keys by selector.
+    const selector = ompModelSelector(message.provider, message.model)
     return selector ? args.contextWindowTokens(selector) : null
   })
   return formatNativeChatContextUsageAnswer(usage)

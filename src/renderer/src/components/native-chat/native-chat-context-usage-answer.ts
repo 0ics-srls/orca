@@ -9,7 +9,7 @@ export function formatNativeChatContextUsageAnswer(usage: NativeChatContextUsage
   if (!usage) {
     return translate(
       'components.native-chat.context.unavailable',
-      'Context usage is not known yet. It becomes available once the agent has answered in this session.'
+      'Context usage is not known yet. It becomes available after the agent next responds.'
     )
   }
   // Why: a guessed window would print a plausible but wrong percentage.

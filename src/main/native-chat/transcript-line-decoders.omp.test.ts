@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { deriveNativeChatContextUsage } from '../../shared/native-chat-context-usage'
+import type { NativeChatMessage } from '../../shared/native-chat-types'
+import { ompModelSelector, parseOmpModelList } from '../../shared/omp-model-list-probe'
 import { decodeOmpTranscriptLine } from './transcript-line-decoders'
 
 const line = (record: unknown): string => JSON.stringify(record)
@@ -323,6 +326,35 @@ describe('decodeOmpTranscriptLine', () => {
         expect(decoded?.model).toBe('gpt-5.5')
         expect(decoded).not.toHaveProperty('usage')
       }
+    })
+
+    it("measures the prompt OMP recorded, against its listing's window for that model", () => {
+      // A `omp models --json` row as OMP 17.0.5 prints it.
+      const listing = parseOmpModelList(
+        line({
+          models: [
+            {
+              provider: 'openai-codex',
+              id: 'gpt-5.5',
+              selector: 'openai-codex/gpt-5.5',
+              name: 'GPT-5.5',
+              contextWindow: 272000
+            }
+          ]
+        })
+      )
+      const windowFor = (served: NativeChatMessage): number | null =>
+        listing.find(({ id }) => id === ompModelSelector(served.provider, served.model))
+          ?.contextWindowTokens ?? null
+      const decoded = decodeOmpTranscriptLine(reply(), 'f')!
+      // 21,672 is the `contextSnapshot.promptTokens` OMP stored on this reply.
+      expect(deriveNativeChatContextUsage([decoded], windowFor)).toEqual({
+        usedTokens: 21672,
+        windowTokens: 272000,
+        percentage: 8
+      })
+      const compaction = decodeOmpTranscriptLine(line({ type: 'compaction', id: 'c' }), 'f')!
+      expect(deriveNativeChatContextUsage([decoded, compaction], windowFor)).toBeNull()
     })
 
     it('puts none of it on turns that are not replies', () => {

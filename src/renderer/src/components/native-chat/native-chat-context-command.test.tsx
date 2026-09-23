@@ -133,7 +133,7 @@ describe('answerNativeChatLocalCommand', () => {
 
   it('reports nothing between a compaction and the next response', () => {
     const unavailable =
-      'Context usage is not known yet. It becomes available once the agent has answered in this session.'
+      'Context usage is not known yet. It becomes available after the agent next responds.'
     const compaction: NativeChatMessage = {
       id: 'c',
       role: 'system',
@@ -150,7 +150,7 @@ describe('answerNativeChatLocalCommand', () => {
 
   it('does not promise a later answer when the host never reports usage', () => {
     const pending =
-      'Context usage is not known yet. It becomes available once the agent has answered in this session.'
+      'Context usage is not known yet. It becomes available after the agent next responds.'
     const {
       model: _model,
       provider: _provider,

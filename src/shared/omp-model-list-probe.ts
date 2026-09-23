@@ -26,6 +26,14 @@ function parseJsonObject(stdout: string): unknown {
   }
 }
 
+/** OMP's `provider/model` selector, the id its listing and `--model` share. */
+export function ompModelSelector(
+  provider: string | undefined,
+  model: string | undefined
+): string | null {
+  return provider && model ? `${provider}/${model}` : null
+}
+
 /** Parses `omp models --json`. Ids are OMP's `provider/model` selector — the form
  *  `--model` and `/model` resolve exactly, unlike a bare model id that several
  *  providers can share. */
@@ -49,7 +57,7 @@ export function parseOmpModelList(stdout: string): CommitMessageModel[] {
     const bareId = 'id' in value && typeof value.id === 'string' ? value.id.trim() : ''
     const selector =
       'selector' in value && typeof value.selector === 'string' ? value.selector.trim() : ''
-    const id = selector || (provider && bareId ? `${provider}/${bareId}` : '')
+    const id = selector || ompModelSelector(provider, bareId)
     if (!id || byId.has(id)) {
       continue
     }

@@ -17558,7 +17558,7 @@
       },
       "copyCode": "Copy code",
       "context": {
-        "unavailable": "Context usage is not known yet. It becomes available once the agent has answered in this session.",
+        "unavailable": "Context usage is not known yet. It becomes available after the agent next responds.",
         "summary": "Context: {{used}} / {{window}} tokens ({{percent}}%), estimated from the last response.",
         "used": "Context: {{used}} tokens used, estimated from the last response.",
         "unreported": "Context usage is not available for this session."
