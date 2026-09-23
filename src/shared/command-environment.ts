@@ -31,6 +31,7 @@ export function mergeCommandEnvironment(
     return base
   }
   const entries = [...Object.entries(base ?? process.env), ...Object.entries(overrides)]
+  // Windows keys share one spelling so guards cannot retain differently cased aliases.
   return Object.fromEntries(
     platform === 'win32' ? entries.map(([key, value]) => [key.toUpperCase(), value]) : entries
   )
