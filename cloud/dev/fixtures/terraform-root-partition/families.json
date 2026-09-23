@@ -146,6 +146,7 @@
     "google_monitoring_alert_policy.relay_cloud_sql_checkpoint_loop",
     "google_monitoring_alert_policy.relay_cloud_sql_disk",
     "google_monitoring_alert_policy.relay_custom",
+    "google_monitoring_alert_policy.relay_director_cell_inventory_hold",
     "google_monitoring_alert_policy.relay_far_cell_accept_latency",
     "google_monitoring_alert_policy.relay_gce_connection_headroom",
     "google_monitoring_alert_policy.relay_lock_timeout_burst",

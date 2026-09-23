@@ -816,6 +816,8 @@ resource "google_monitoring_alert_policy" "relay_cell_process_exit" {
   depends_on = [google_logging_metric.relay_incident]
 }
 
+# Pages on cell holds only: director holds of 1-2.5 s recur several times a day with rehoming paused,
+# and pausing rehome does not stop them, so paging on them would ask on-call to do nothing.
 resource "google_monitoring_alert_policy" "relay_long_cell_inventory_hold" {
   project               = var.project_id
   display_name          = "Orca Relay: cell table lock held over 1 second"
@@ -824,11 +826,11 @@ resource "google_monitoring_alert_policy" "relay_long_cell_inventory_hold" {
   notification_channels = var.relay_alert_notification_channels
 
   conditions {
-    display_name = "Cell table lock held at least 1,000 ms (director)"
+    display_name = "Cell table lock held at least 1,000 ms (GCE cell)"
 
     condition_threshold {
       # The metric filter already drops samples under 1,000 ms, so any value present is a breach.
-      filter          = "resource.type=\"cloud_run_revision\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.relay_long_cell_inventory_hold.name}\""
+      filter          = "resource.type=\"gce_instance\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.relay_long_cell_inventory_hold.name}\" AND metric.label.\"role\"=\"cell\""
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "0s"
@@ -847,10 +849,10 @@ resource "google_monitoring_alert_policy" "relay_long_cell_inventory_hold" {
   }
 
   conditions {
-    display_name = "Cell table lock held at least 1,000 ms (GCE cell)"
+    display_name = "Cell table lock held at least 1,000 ms (Cloud Run cell)"
 
     condition_threshold {
-      filter          = "resource.type=\"gce_instance\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.relay_long_cell_inventory_hold.name}\""
+      filter          = "resource.type=\"cloud_run_revision\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.relay_long_cell_inventory_hold.name}\" AND metric.label.\"role\"=\"cell\""
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "0s"
@@ -869,7 +871,43 @@ resource "google_monitoring_alert_policy" "relay_long_cell_inventory_hold" {
   }
 
   documentation {
-    content   = "A relay process held the lock on every row of the relay cell table for at least one second. While it is held, host connects and reservation changes on every cell wait and then fail, so each hold is a fleet-wide stall of that length. Between 2026-09-20 and 2026-09-22 every hold from a cell came from a regional rehome committed on an asia-east2 cell (c27, c28 or c29), about 3.6 s each; a few 1-2 s holds came from the director. First response when `cell_id` is an asia-east2 cell: pause regional rehoming with the `Operate Relay Production Rehome` workflow, action `pause`. When `cell_id` is `director` and rehoming is already paused, note the time for the lock investigation; do not drain or restart cells for it. See `cloud/docs/relay-incident-monitor.md`, section \"Relay lock contention alert policies\"."
+    content   = "A relay cell held the lock on every row of the relay cell table for at least one second. While it is held, host connects and reservation changes on every cell wait and then fail, so each hold is a fleet-wide stall of that length. Between 2026-09-20 and 2026-09-22 every cell hold came from a regional rehome committed on an asia-east2 cell (c27, c28 or c29), about 3.6 s each. First response: pause regional rehoming with the `Operate Relay Production Rehome` workflow, action `pause`. See `cloud/docs/relay-incident-monitor.md`, section \"Relay lock contention alert policies\"."
+    mime_type = "text/markdown"
+  }
+}
+
+# Visibility only, no notification channel, like the non-paging relay_custom policies.
+resource "google_monitoring_alert_policy" "relay_director_cell_inventory_hold" {
+  project               = var.project_id
+  display_name          = "Orca Relay: director cell table lock held over 1 second"
+  combiner              = "OR"
+  enabled               = true
+  notification_channels = []
+
+  conditions {
+    display_name = "Director cell table lock held at least 1,000 ms"
+
+    condition_threshold {
+      filter          = "resource.type=\"cloud_run_revision\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.relay_long_cell_inventory_hold.name}\" AND metric.label.\"role\"=\"director\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_PERCENTILE_99"
+        cross_series_reducer = "REDUCE_MAX"
+        group_by_fields      = ["metric.label.\"cell_id\""]
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  documentation {
+    content   = "The director held the lock on every row of the relay cell table for at least one second. These holds happen a few times a day even with regional rehoming paused, and pausing rehome does not stop them, so this policy does not page. Use it to explain a `Orca Relay: lock timeout burst` alert that has no cell hold in the same minute. Do not drain or restart cells for it."
     mime_type = "text/markdown"
   }
 }
@@ -903,7 +941,7 @@ resource "google_monitoring_alert_policy" "relay_lock_timeout_burst" {
   }
 
   documentation {
-    content   = "Postgres cancelled at least 20 relay statements in one minute because they waited too long for a lock. Each cancel is a host connect, reservation or placement that failed and retried. Only the relay database is counted; auth traffic on the same instance and fail-fast lock refusals from background sweeps are excluded. Between 2026-09-20 and 2026-09-22 all 88 such minutes overlapped a lock hold from a regional rehome on an asia-east2 cell, and none occurred while rehoming was paused. First response: check the `Orca Relay: cell table lock held over 1 second` policy for the holder. If it is an asia-east2 cell, pause regional rehoming with the `Operate Relay Production Rehome` workflow, action `pause`. If rehoming is already paused, the holder is the director; note the time and do not drain or restart cells for it. See `cloud/docs/relay-incident-monitor.md`, section \"Relay lock contention alert policies\"."
+    content   = "Postgres cancelled at least 20 relay statements in one minute because they waited too long for a lock. Each cancel is a host connect, reservation or placement that failed and retried. Only the relay database is counted; auth traffic on the same instance and fail-fast lock refusals from background sweeps are excluded. Between 2026-09-20 and 2026-09-22 all 88 such minutes overlapped a lock hold from a regional rehome on an asia-east2 cell. A burst can also come from a director hold while rehoming is paused, as on 2026-09-23 at 04:23 UTC. First response: check the `Orca Relay: cell table lock held over 1 second` policy for the same minute. If an asia-east2 cell held the lock, pause regional rehoming with the `Operate Relay Production Rehome` workflow, action `pause`. If no cell hold appears in that minute, check `Orca Relay: director cell table lock held over 1 second` instead of pausing rehome, and do not drain or restart cells for it. See `cloud/docs/relay-incident-monitor.md`, section \"Relay lock contention alert policies\"."
     mime_type = "text/markdown"
   }
 

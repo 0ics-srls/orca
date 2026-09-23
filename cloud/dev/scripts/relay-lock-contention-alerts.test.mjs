@@ -34,9 +34,26 @@ test('the long-hold buckets start at the filter bar so any sample reads above ze
   const bounds = /bounds\s*=\s*\[([^\]]*)\]/.exec(metric)?.[1].split(',').map(Number)
   assert.ok(bounds && bounds.length > 0)
   assert.equal(bounds[0], 1000)
-  const policy = block('google_monitoring_alert_policy', 'relay_long_cell_inventory_hold')
-  assert.equal([...policy.matchAll(/resource\.type=\\"(cloud_run_revision|gce_instance)\\"/g)].length, 2)
-  assert.equal([...policy.matchAll(/threshold_value\s*=\s*0\n/g)].length, 2)
+  for (const name of ['relay_long_cell_inventory_hold', 'relay_director_cell_inventory_hold']) {
+    const policy = block('google_monitoring_alert_policy', name)
+    const conditions = [...policy.matchAll(/threshold_value\s*=\s*(\d+)\n/g)]
+    assert.ok(conditions.length > 0)
+    for (const match of conditions) assert.equal(match[1], '0')
+  }
+})
+
+test('only cell holds page; director holds stay visible without paging', () => {
+  // Director holds recur with rehoming paused, and the paging runbook's first step is to pause it.
+  const paging = block('google_monitoring_alert_policy', 'relay_long_cell_inventory_hold')
+  const pagingRoles = [...paging.matchAll(/metric\.label\.\\"role\\"=\\"([a-z]+)\\"/g)].map((m) => m[1])
+  assert.ok(pagingRoles.length > 0)
+  assert.deepEqual([...new Set(pagingRoles)], ['cell'])
+  assert.equal([...paging.matchAll(/condition_threshold \{/g)].length, pagingRoles.length)
+
+  const director = block('google_monitoring_alert_policy', 'relay_director_cell_inventory_hold')
+  const directorRoles = [...director.matchAll(/metric\.label\.\\"role\\"=\\"([a-z]+)\\"/g)].map((m) => m[1])
+  assert.deepEqual(directorRoles, ['director'])
+  assert.match(director, /notification_channels\s*=\s*\[\]/)
 })
 
 test('the lock-timeout metric counts relay cancels only, never NOWAIT refusals or auth', () => {
