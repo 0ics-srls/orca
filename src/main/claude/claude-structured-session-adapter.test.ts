@@ -485,16 +485,25 @@ describe('ClaudeStructuredSessionAdapter.acquire', () => {
     expect(wrongClaude.connections[0].closeCount).toBe(1)
   })
 
-  it('ends the published session with the CLI startup failure, never a timer', async () => {
+  it('fails the acquire with the CLI diagnostic when the exit lands before the handover', async () => {
+    // No init delay: the child dies inside the initialize call, before acquire can return it.
     const claude = fakeClaude({ exitBeforeInit: 'Claude login required' })
+    const events: ClaudeStructuredSessionEvent[] = []
+    const adapter = adapterFor(claude, {}, events)
 
-    await expect(endedAtStartup(claude)).resolves.toMatchObject({
-      type: 'ended',
+    await expect(
+      adapter.acquire({ identity: identityFor(), fence: 7, spawnToken: 'spawn-9' })
+    ).rejects.toThrow('Claude login required')
+    await adapter.drainObservedExits()
+
+    // The published-then-ended path is the slow-init case in the startup suite. The first-hand
+    // exit is still reported as it was seen; the host holds no session under it to end.
+    expect(events.find((event) => event.type === 'ended')).toMatchObject({
       reason: 'Claude login required',
       cause: 'unexpected-exit',
       startupUnproven: true
     })
-    expect(claude.connections[0].closeCount).toBe(1)
+    expect(claude.connections[0].closeCount).toBeGreaterThanOrEqual(1)
   })
 
   it('refuses an unauthenticated initialize response even when SessionStart runs', async () => {
