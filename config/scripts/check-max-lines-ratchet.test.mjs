@@ -166,6 +166,14 @@ describe('max-lines repository coverage', () => {
   it.each(['.oxlintrc.json', 'mobile/.oxlintrc.json'])(
     'enforces exact budgets with installed oxlint and %s',
     (config) => {
+      rmSync(scratch, { recursive: true, force: true })
+      scratch = mkdtempSync(join(dirname(join(repoRoot, config)), '.max-lines-test-'))
+      const initialized = runProcessSync({
+        program: 'git',
+        args: ['init', '--quiet'],
+        cwd: scratch
+      })
+      expect(initialized.code, initialized.stderr).toBe(0)
       const budgets = [
         ['ts', 300],
         ['mts', 300],
