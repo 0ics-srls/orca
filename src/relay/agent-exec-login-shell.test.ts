@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { quotePosixShell } from '../shared/wsl-login-shell-command'
 import { createHandlers, requestContext, withPlatform } from './agent-exec-handler-test-harness'
 import { agentExecLoginShell } from './agent-exec-login-shell'
+import { planAgentBinary } from '../shared/commit-message-plan'
 
 const fixtureDirs: string[] = []
 
@@ -107,13 +108,20 @@ describe('SSH agent login execution', () => {
       async () => {
         const { cwd, bin } = fixture(shell)
         const value = 'caller $HOME $(touch injected) `pwd`'
+        const plan = planAgentBinary(
+          'orca-login-agent',
+          `ORCA_AGENT_FIXTURE=${quotePosixShell(value)} PATH=${quotePosixShell(bin)} orca-login-agent`
+        )
+        if (!plan.ok) {
+          throw new Error(plan.error)
+        }
         const result = await createHandlers().get('agent.execNonInteractive')!(
           {
-            binary: 'orca-login-agent',
+            binary: plan.binary,
             args: ['--environment'],
             cwd,
             loginShell: true,
-            env: { ORCA_AGENT_FIXTURE: value, PATH: bin }
+            env: plan.env
           },
           requestContext()
         )
