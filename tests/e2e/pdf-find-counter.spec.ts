@@ -90,7 +90,12 @@ test('PDF counter follows navigation, new queries, and reopening', async ({
       focused: window.isFocused()
     }))
   }))
-  expect(windows.windows.every((window) => !window.visible && !window.focused)).toBe(true)
+  expect(windows.windows.every((window) => !window.focused)).toBe(true)
+  const headful =
+    process.env.ORCA_E2E_FORCE_HEADFUL === '1' || testInfo.project.metadata.orcaHeadful === true
+  if (process.env.ORCA_BACKGROUND_LAUNCH === '1' || !headful) {
+    expect(windows.windows.every((window) => !window.visible)).toBe(true)
+  }
   writeFileSync(
     testInfo.outputPath('observations.json'),
     JSON.stringify({ windows, observations }, null, 2)
