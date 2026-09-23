@@ -140,11 +140,14 @@ export function syncSystemConfigIntoLegacySharedCodexHome(
   }
   const runtimeConfigBeforeMirror =
     runtimeConfigObservation.kind === 'present' ? runtimeConfigObservation.value : null
+  // The retired home has no ownership baseline; its entire MCP root stays canonical.
   const nextRuntimeConfig =
     runtimeConfigBeforeMirror !== null
       ? mergeSystemCodexConfigIntoRuntime(
           runtimeConfigBeforeMirror,
-          prepareSystemConfigForRuntimeMirror(rawSystemConfig, sourceConfigDir)
+          prepareSystemConfigForRuntimeMirror(rawSystemConfig, sourceConfigDir),
+          new Set(),
+          true
         )
       : prepareSystemConfigForFreshRuntimeMirror(rawSystemConfig, sourceConfigDir)
   if (runtimeConfigBeforeMirror === nextRuntimeConfig) {

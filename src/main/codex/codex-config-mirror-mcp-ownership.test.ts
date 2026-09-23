@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { syncSystemConfigIntoManagedCodexHome } from './codex-config-mirror'
+import {
+  syncSystemConfigIntoManagedCodexHome,
+  syncSystemConfigIntoLegacySharedCodexHome
+} from './codex-config-mirror'
 
 let root: string
 let runtimeHomePath: string
@@ -84,6 +87,73 @@ describe('canonical MCP ownership during config mirroring', () => {
 
     expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).not.toContain(
       '[mcp_servers.'
+    )
+  })
+})
+
+describe('MCP ownership migration', () => {
+  it.each([1, 2, 3])(
+    'keeps pre-ownership baseline version %s canonical for one pass',
+    (version) => {
+      writeFileSync(
+        join(runtimeHomePath, 'config.toml'),
+        '[mcp_servers.removed]\ncommand = "old"\n'
+      )
+      writeFileSync(join(systemHomePath, 'config.toml'), 'model = "system"\n')
+      writeFileSync(
+        join(runtimeHomePath, '.orca-config-settings-baseline.json'),
+        JSON.stringify({ version, settings: {} })
+      )
+
+      syncSystemConfigIntoManagedCodexHome({ runtimeHomePath, systemHomePath })
+
+      expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).not.toContain(
+        '[mcp_servers.'
+      )
+      expect(
+        JSON.parse(
+          readFileSync(join(runtimeHomePath, '.orca-config-settings-baseline.json'), 'utf-8')
+        )
+      ).toMatchObject({ mcpServers: [] })
+      writeFileSync(join(runtimeHomePath, 'config.toml'), '[mcp_servers.added]\ncommand = "new"\n')
+
+      syncSystemConfigIntoManagedCodexHome({ runtimeHomePath, systemHomePath })
+
+      expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).toContain(
+        '[mcp_servers.added]'
+      )
+    }
+  )
+
+  it('keeps the retained shared home one-way without an ownership baseline', () => {
+    writeFileSync(join(runtimeHomePath, 'config.toml'), '[mcp_servers.removed]\ncommand = "old"\n')
+    writeFileSync(join(systemHomePath, 'config.toml'), 'model = "system"\n')
+
+    syncSystemConfigIntoLegacySharedCodexHome({ runtimeHomePath, systemHomePath })
+
+    expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).not.toContain(
+      '[mcp_servers.'
+    )
+  })
+
+  it('tracks commented CRLF names so their later removal remains authoritative', () => {
+    writeFileSync(
+      join(runtimeHomePath, 'config.toml'),
+      '[mcp_servers.shared]\ncommand = "runtime"\n'
+    )
+    writeFileSync(
+      join(systemHomePath, 'config.toml'),
+      '[mcp_servers.shared] # see [docs]\r\ncommand = "system"\r\n'
+    )
+
+    syncSystemConfigIntoManagedCodexHome({ runtimeHomePath, systemHomePath })
+    expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).not.toContain('"runtime"')
+    writeFileSync(join(systemHomePath, 'config.toml'), 'model = "system"\n')
+
+    syncSystemConfigIntoManagedCodexHome({ runtimeHomePath, systemHomePath })
+
+    expect(readFileSync(join(runtimeHomePath, 'config.toml'), 'utf-8')).not.toContain(
+      '[mcp_servers.shared]'
     )
   })
 })

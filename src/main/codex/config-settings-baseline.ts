@@ -91,7 +91,8 @@ function readParsedCodexSettingsBaseline(
       conflicts,
       registrations: readStoredRegistrations(parsed.registrations),
       mcpServers: readStoredMcpServers(parsed.mcpServers),
-      mcpServerRoot: parsed.mcpServerRoot === true
+      // Older mirrors owned the whole MCP root; retain that removal policy for one pass.
+      mcpServerRoot: parsed.mcpServers === undefined || parsed.mcpServerRoot === true
     }
   } catch (error) {
     // Why: invalid baseline state is still `null` — resetting it is the intent,
@@ -139,7 +140,8 @@ export function writeCodexSettingsBaseline(
 ): void {
   const file: StoredSettingsBaseline = {
     version: 3,
-    settings: Object.fromEntries(baseline.settings)
+    settings: Object.fromEntries(baseline.settings),
+    mcpServers: [...baseline.mcpServers]
   }
   if (baseline.conflicts.size > 0) {
     file.conflicts = Object.fromEntries(baseline.conflicts)
@@ -148,9 +150,6 @@ export function writeCodexSettingsBaseline(
     file.registrations = Object.fromEntries(
       [...baseline.registrations].map(([key, fields]) => [key, Object.fromEntries(fields)])
     )
-  }
-  if (baseline.mcpServers.size > 0) {
-    file.mcpServers = [...baseline.mcpServers]
   }
   if (baseline.mcpServerRoot) {
     file.mcpServerRoot = true

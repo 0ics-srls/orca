@@ -13,19 +13,20 @@ export function readMcpServerTomlOwnership(config: string): {
 } {
   const names = new Set<string>()
   let ownsRoot = false
-  let tablePath: string[] = []
+  let tablePath: string[] | null = []
   let state = createTomlLineScanState()
   for (const line of config.split('\n')) {
     if (isTomlStructuralLine(state)) {
       const header = getTomlTableHeader(line)
       if (header) {
-        tablePath = parseTomlTableHeaderPath(header)?.segments ?? []
-        if (tablePath[0] === 'mcp_servers' && tablePath[1] !== undefined) {
+        tablePath = parseTomlTableHeaderPath(header)?.segments ?? null
+        if (tablePath?.[0] === 'mcp_servers' && tablePath[1] !== undefined) {
           names.add(tablePath[1])
         }
       } else {
         const key = parseTomlKeyPath(line)
-        const path = key && line[key.end] === '=' ? [...tablePath, ...key.segments] : []
+        const path =
+          tablePath && key && line[key.end] === '=' ? [...tablePath, ...key.segments] : []
         if (path[0] === 'mcp_servers') {
           if (path[1] === undefined) {
             ownsRoot = true
