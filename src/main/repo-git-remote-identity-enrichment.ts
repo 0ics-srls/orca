@@ -58,14 +58,12 @@ function getRepoLocationKey(repo: Pick<Repo, 'path' | 'connectionId' | 'executio
   return `${getRepoExecutionHostId(repo)}\0${repo.path}`
 }
 
-/**
- * The host *this* process may run the probe on. `getSshTargetIdForExecutionHost`, not the row's
- * file-holding target: a `runtime:` row's nested SSH target lives in that server's namespace, so
- * dialing it here would reach a same-named box of ours — a wrong-host answer, not a local one.
- */
-function getRepoProbeHostId(repo: Repo): ExecutionHostId {
+// A peer's nested SSH targets belong to its dispatch table, never this client's.
+function getRepoProbeHostId(repo: Repo): ExecutionHostId | null {
   const hostId = getRepoExecutionHostId(repo)
-  return getSshTargetIdForExecutionHost(hostId) ? hostId : LOCAL_EXECUTION_HOST_ID
+  return hostId === LOCAL_EXECUTION_HOST_ID || getSshTargetIdForExecutionHost(hostId)
+    ? hostId
+    : null
 }
 
 function getCurrentRepo(store: RepoIdentityStore, snapshot: Repo): Repo | undefined {
@@ -133,8 +131,8 @@ function writeIdentity(
   gitRemoteIdentity: Repo['gitRemoteIdentity']
 ): boolean {
   // A peer's repo metadata must never be repaired from a client-local probe.
-  const hostId = getRepoExecutionHostId(snapshot)
-  if (hostId !== LOCAL_EXECUTION_HOST_ID && !getSshTargetIdForExecutionHost(hostId)) {
+  const hostId = getRepoProbeHostId(snapshot)
+  if (!hostId) {
     return false
   }
   const current = getCurrentRepo(store, snapshot)
@@ -146,9 +144,7 @@ function writeIdentity(
     ? getAutomaticGitHubIconRefresh(current, gitRemoteIdentity)
     : undefined
   const update = (updates: Pick<Partial<Repo>, 'gitRemoteIdentity' | 'repoIcon'>): Repo | null => {
-    return hostId === LOCAL_EXECUTION_HOST_ID
-      ? store.updateRepo(snapshot.id, updates)
-      : store.updateRepo(snapshot.id, updates, hostId)
+    return store.updateRepo(snapshot.id, updates, hostId)
   }
   if (icon) {
     return !!update({ ...(writeRemote ? { gitRemoteIdentity } : {}), repoIcon: icon })
@@ -157,6 +153,10 @@ function writeIdentity(
 }
 
 async function enrichRepoGitRemoteIdentity(store: RepoIdentityStore, repo: Repo): Promise<boolean> {
+  const hostId = getRepoProbeHostId(repo)
+  if (!hostId) {
+    return false
+  }
   const locationKey = getRepoLocationKey(repo)
   const retryAfter = probeRetryAfterByLocation.get(locationKey) ?? 0
   if (retryAfter > Date.now()) {
@@ -173,7 +173,7 @@ async function enrichRepoGitRemoteIdentity(store: RepoIdentityStore, repo: Repo)
     : NO_IDENTITY_RETRY_TTL_MS
   const controller = new AbortController()
   const promise = (async () => {
-    const result = await probeGitRemoteIdentity(repo.path, getRepoProbeHostId(repo), {
+    const result = await probeGitRemoteIdentity(repo.path, hostId, {
       signal: controller.signal
     })
     // Why the signal and not a catch: probeGitRemoteIdentity swallows the AbortError and RESOLVES
@@ -241,7 +241,9 @@ function retireRemovedLocations(allRepos: Repo[]): void {
 
 function selectEnrichmentCandidates(store: RepoIdentityStore): Repo[] {
   const now = Date.now()
-  const repos = store.getRepos().filter((repo) => repo.kind !== 'folder')
+  const repos = store
+    .getRepos()
+    .filter((repo) => repo.kind !== 'folder' && getRepoProbeHostId(repo) !== null)
   // Why: the settled `null` marker stays a candidate on purpose — a repo that
   // gains a remote later must still resolve. Do not tighten this to
   // `=== undefined`; the retry TTL already bounds the cost and `writeIdentity`

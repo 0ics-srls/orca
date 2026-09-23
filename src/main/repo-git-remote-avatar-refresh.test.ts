@@ -192,7 +192,7 @@ it.each(['unavailable', 'no-remote'] as const)(
 )
 
 it.each(['same', 'different', 'missing'] as const)(
-  'does not write peer-owned metadata from a client-local probe when identity is %s',
+  'never probes or writes peer-owned metadata when identity is %s',
   async (kind) => {
     const row = repo({
       executionHostId: 'runtime:peer',
@@ -210,6 +210,7 @@ it.each(['same', 'different', 'missing'] as const)(
       identity: identity()
     })
     await (kind === 'missing' ? sweep(store) : refresh(store))
+    expect(probeGitRemoteIdentity).not.toHaveBeenCalled()
     expect(row.repoIcon).toBe(originalIcon)
     expect(row.gitRemoteIdentity).toBe(originalIdentity)
     expect(store.updateRepo).not.toHaveBeenCalled()
@@ -228,6 +229,58 @@ it('repairs only the matching owner when repo IDs and paths collide across hosts
     'ssh:build'
   )
   expect(projectHostSetupProjectionFromRepos([local, ssh]).projects).toHaveLength(1)
+})
+
+it.each(['ssh:build', 'runtime:peer'] as const)(
+  'keeps local metadata writes scoped when a same-id %s row comes first',
+  async (hostId) => {
+    const foreignIdentity = identity('https://github.com/foreign/app.git')
+    const foreignIcon = githubAvatarIcon({ owner: 'foreign', repo: 'app' })
+    const foreign = repo({
+      executionHostId: hostId,
+      gitRemoteIdentity: foreignIdentity,
+      repoIcon: foreignIcon
+    })
+    const local = repo({ gitRemoteIdentity: identity('https://github.com/old-local/app.git') })
+    const store = storeFor([foreign, local])
+    vi.mocked(probeGitRemoteIdentity).mockImplementation(async (_path, probeHostId) => ({
+      status: 'resolved',
+      identity: probeHostId === 'local' ? identity() : foreignIdentity
+    }))
+    await refresh(store)
+    expect(foreign.gitRemoteIdentity).toBe(foreignIdentity)
+    expect(foreign.repoIcon).toBe(foreignIcon)
+    expect(local.gitRemoteIdentity).toEqual(identity())
+    expect(local.repoIcon).toEqual(githubAvatarIcon({ owner: 'org-b', repo: 'app' }))
+    expect(store.updateRepo).toHaveBeenCalledExactlyOnceWith(
+      'app',
+      { gitRemoteIdentity: identity(), repoIcon: local.repoIcon },
+      'local'
+    )
+  }
+)
+
+it('does not write after a pending local probe becomes peer-owned', async () => {
+  let answer: ((value: GitRemoteIdentityProbe) => void) | undefined
+  const row = repo({ gitRemoteIdentity: undefined })
+  const originalIcon = row.repoIcon
+  const store = storeFor([row])
+  vi.mocked(probeGitRemoteIdentity).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        answer = resolve
+      })
+  )
+  enrichMissingRepoGitRemoteIdentities(store)
+  row.executionHostId = 'runtime:peer'
+  if (!answer) {
+    throw new Error('Expected pending probe')
+  }
+  answer({ status: 'resolved', identity: identity() })
+  await flushRepoGitRemoteIdentityEnrichmentForTests()
+  expect(row.gitRemoteIdentity).toBeUndefined()
+  expect(row.repoIcon).toBe(originalIcon)
+  expect(store.updateRepo).not.toHaveBeenCalled()
 })
 
 it('does not overwrite a custom icon selected while the probe is pending', async () => {
@@ -249,7 +302,7 @@ it('does not overwrite a custom icon selected while the probe is pending', async
   answer({ status: 'resolved', identity: identity() })
   await flushRepoGitRemoteIdentityEnrichmentForTests()
   expect(row.repoIcon).toBe(selected)
-  expect(store.updateRepo).toHaveBeenCalledWith('app', { gitRemoteIdentity: identity() })
+  expect(store.updateRepo).toHaveBeenCalledWith('app', { gitRemoteIdentity: identity() }, 'local')
 })
 
 it('never probes folder workspaces for an avatar repair', async () => {
