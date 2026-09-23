@@ -96,7 +96,8 @@ function grokTurnEndApplies(
   )
 }
 
-/** Grok's inventory names only these two; the shared watch-only rule decides which is agent work. */
+/** Grok also lists persistent `monitor` tasks, which never finish and so settle the Stop; the
+ *  shared watch-only rule decides which finite task is agent work. */
 function isGrokFiniteTaskType(taskType: unknown): boolean {
   return taskType === 'shell' || taskType === 'subagent'
 }
