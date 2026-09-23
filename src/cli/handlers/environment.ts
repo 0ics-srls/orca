@@ -29,6 +29,15 @@ export const ENVIRONMENT_HANDLERS: Record<string, CommandHandler> = {
       throw new RuntimeClientError('invalid_argument', 'Missing value for --name')
     }
     if (typeof requestedName === 'string') {
+      // Why: an older runtime rejects the unknown settings field with a bare `invalid_params`;
+      // a runtime that does not publish a name cannot store one either, so say so plainly.
+      const current = await client.call<RuntimeStatus>('status.get')
+      if (current.result.machineName === undefined) {
+        throw new RuntimeClientError(
+          'incompatible_runtime',
+          'This Orca runtime does not support machine names. Update Orca on that host and try again.'
+        )
+      }
       await client.call('settings.update', { machineName: requestedName })
     }
     // Why: print what the runtime publishes after the write (a blank `--name` means the detected

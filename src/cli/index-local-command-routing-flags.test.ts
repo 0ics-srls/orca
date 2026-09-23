@@ -176,6 +176,32 @@ describe('runtime-selector flags on locally pinned CLI commands', () => {
     expect(runtimeClientConstructorMock).not.toHaveBeenCalledWith(null, null)
   })
 
+  it('refuses to rename a runtime that does not publish a machine name', async () => {
+    // Why: an older runtime's strict settings schema answers the write with a bare `invalid_params`;
+    // the field's absence from status is the tell, so the CLI refuses before writing anything.
+    pairRuntimeEnvironment(listEnvironmentsMock, 'env-m4air', 'm4air')
+    callMock.mockImplementation(async (method: string) => {
+      if (method === 'status.get') {
+        return okFixture('req_status', { hostPlatform: 'darwin' })
+      }
+      throw new Error(`unexpected call ${method}`)
+    })
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(
+      ['host', 'name', '--name', 'build-server', '--environment', 'm4air', '--json'],
+      '/tmp/repo'
+    )
+
+    const printed = JSON.parse(String(logSpy.mock.calls[0]?.[0]))
+    expect(printed.ok).toBe(false)
+    expect(printed.error.code).toBe('incompatible_runtime')
+    expect(printed.error.message).toMatch(/does not support machine names/)
+    expect(callMock).not.toHaveBeenCalledWith('settings.update', expect.anything())
+    expect(process.exitCode).toBe(1)
+    process.exitCode = 0
+  })
+
   it('reports an unreachable runtime as an error instead of inventing a name', async () => {
     const { RuntimeClientError } = await import('./runtime/types.js')
     callMock.mockRejectedValue(new RuntimeClientError('runtime_unavailable', 'Orca is not running'))
