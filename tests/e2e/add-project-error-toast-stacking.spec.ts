@@ -7,7 +7,11 @@ import {
   launchPairedElectronClient
 } from './helpers/paired-electron-client'
 
-test.use({ seedTestRepo: false, testRepoPath: '' })
+test.use({
+  seedTestRepo: false,
+  testRepoPath: '',
+  orcaAppExtraEnv: { ORCA_BACKGROUND_LAUNCH: '1' }
+})
 
 async function assertHiddenIsolation(app: ElectronApplication, testInfo: TestInfo, name: string) {
   const isolation = await app.evaluate(({ app, BrowserWindow }) => ({
@@ -35,7 +39,9 @@ for (const theme of ['dark', 'light'] as const) {
   }, testInfo) => {
     const hostHome = await assertHiddenIsolation(electronApp, testInfo, 'host-isolation')
     const offer = await createRuntimeDesktopPairingOffer(orcaPage)
-    const client = await launchPairedElectronClient(offer, testInfo, 'Disposable host')
+    const client = await launchPairedElectronClient(offer, testInfo, 'Disposable host', {
+      extraEnv: { ORCA_BACKGROUND_LAUNCH: '1' }
+    })
     try {
       await assertHiddenIsolation(client.app, testInfo, 'client-isolation')
       const page = client.page
