@@ -167,6 +167,8 @@ describe('OrcaRuntimeService', () => {
       })
     ).rejects.toThrow('agent_launch_pane_already_live')
 
+    // Nothing registered, so no handle was issued for the live PTY.
+    expect((await runtime.listTerminals()).terminals).toEqual([])
     // No reveal means no renderer launch-config re-registration over the running agent's.
     expect(revealTerminalSession).not.toHaveBeenCalled()
     expect(kill).not.toHaveBeenCalled()
@@ -184,6 +186,7 @@ describe('OrcaRuntimeService', () => {
     })
 
     expect(created.isReattach).toBe(true)
+    expect((await runtime.listTerminals()).terminals.map((t) => t.handle)).toEqual([created.handle])
     expect(revealTerminalSession).toHaveBeenCalledTimes(1)
   })
 })
