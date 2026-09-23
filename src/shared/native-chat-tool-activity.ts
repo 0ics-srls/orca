@@ -72,6 +72,17 @@ export function formatActiveToolLabel(descriptor: NativeChatActiveToolDescriptor
     .replaceAll('{{toolName}}', descriptor.toolName)
 }
 
+/** What a live run names beside its sentence: the command itself, or the tool's
+ *  word and argument. Tense-free on purpose — the sentence carries the state, so
+ *  this never claims a call that just finished is still running. */
+export function describeLatestToolCall(call: NativeChatToolCallBlock): string {
+  const { toolName, preview, isCommand } = describeActiveToolCall(call)
+  if (isCommand) {
+    return preview || toolName
+  }
+  return preview ? `${toolName} ${preview}` : toolName
+}
+
 /** The most recent still-running call in a run, or null once the run is settled.
  *  A block without lifecycle `state` only counts while the turn is known to be
  *  working, so a restored transcript never spins on an orphaned call. */

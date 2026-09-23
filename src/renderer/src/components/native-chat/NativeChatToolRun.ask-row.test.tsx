@@ -37,7 +37,8 @@ describe('NativeChatToolRun awaiting-input row', () => {
       />
     )
     expect(screen.getByText('Awaiting user input:')).toBeInTheDocument()
-    expect(screen.getByText(/Running Read/)).toBeInTheDocument()
+    expect(screen.getByText('Reading 1 file')).toBeInTheDocument()
+    expect(screen.getByText('Read a.ts')).toBeInTheDocument()
   })
 
   it('preserves errors from failed question calls', () => {
@@ -91,8 +92,9 @@ describe('NativeChatToolRun awaiting-input row', () => {
     render(<NativeChatToolRun blocks={blocks} expandSignal activeTurnIsWorking />)
 
     expect(screen.getByText('Awaiting user input:')).toBeInTheDocument()
-    // One call ran; being asked a question is not work to summarize.
-    expect(screen.getByText('Read 1 file')).toBeInTheDocument()
+    // One call ran; being asked a question is not work to summarize. Present
+    // tense: the turn is still working, so the run is still live.
+    expect(screen.getByText('Reading 1 file')).toBeInTheDocument()
   })
 
   it('draws the row from the tool name when the payload names no question', () => {

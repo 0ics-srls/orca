@@ -47,7 +47,33 @@ function build(
   })
 }
 
+function toolRun(id: string): NativeChatMessage {
+  return {
+    id,
+    role: 'assistant',
+    blocks: [{ type: 'tool-call', name: 'shell', input: { command: 'ls' }, state: 'completed' }],
+    timestamp: 1,
+    source: 'transcript'
+  }
+}
+
 describe('transcript slots', () => {
+  // The trailing run is the one still live while the turn works. Prose or a
+  // further run after it settles it; a reasoning aside leaves it live.
+  it('marks the last row that speaks or acts as the trailing run', () => {
+    const trailing = (messages: NativeChatMessage[]) =>
+      build(messages)
+        .filter((slot) => slot.trailingRun)
+        .map((slot) => slot.message.id)
+
+    expect(trailing([text('u', 'go', 'user'), toolRun('a'), text('b', 'Done.')])).toEqual(['b'])
+    expect(trailing([text('u', 'go', 'user'), toolRun('a'), toolRun('b')])).toEqual(['b'])
+    expect(
+      trailing([text('u', 'go', 'user'), toolRun('a'), text('r', 'hmm', 'reasoning')])
+    ).toEqual(['a'])
+    expect(trailing([toolRun('a'), text('u', 'again', 'user')])).toEqual(['a'])
+  })
+
   // A counted row that draws nothing is a gap in the transcript: it reserves
   // estimated height for a bubble that never appears.
   it('gives no slot to a message with nothing to draw', () => {

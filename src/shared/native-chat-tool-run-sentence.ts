@@ -31,6 +31,25 @@ export const NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY: Record<
   other: { one: 'Used 1 tool', many: 'Used {{value0}} tools' }
 }
 
+/** The same clauses while the run is still live. The header keeps one shape and
+ *  speaks its state through tense, so nothing about the row moves when a call
+ *  starts or ends. Counts include the call in flight. */
+export const NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY: Record<
+  NativeChatToolCategory,
+  { one: string; many: string }
+> = {
+  read: { one: 'Reading 1 file', many: 'Reading {{value0}} files' },
+  search: { one: 'Searching 1 time', many: 'Searching {{value0}} times' },
+  listFiles: { one: 'Listing 1 directory', many: 'Listing {{value0}} directories' },
+  unknown: { one: 'Running 1 command', many: 'Running {{value0}} commands' },
+  fileChange: { one: 'Editing 1 file', many: 'Editing {{value0}} files' },
+  webSearch: { one: 'Searching the web 1 time', many: 'Searching the web {{value0}} times' },
+  mcpToolCall: { one: 'Using 1 integration', many: 'Using {{value0}} integrations' },
+  subAgentActivity: { one: 'Running 1 agent', many: 'Running {{value0}} agents' },
+  todoList: { one: 'Updating the plan', many: 'Updating the plan {{value0}} times' },
+  other: { one: 'Using 1 tool', many: 'Using {{value0}} tools' }
+}
+
 export const NATIVE_CHAT_TOOL_RUN_SENTENCE_JOINERS = {
   /** Exactly two clauses. */
   pair: '{{value0}} and {{value1}}',
@@ -86,10 +105,12 @@ export function joinNativeChatToolRunClauses(
 
 /** The sentence in English. For platforms without i18n (mobile). */
 export function formatNativeChatToolRunSentence(
-  calls: readonly { name: string; mcpIdentity?: NativeChatMcpIdentity }[]
+  calls: readonly { name: string; mcpIdentity?: NativeChatMcpIdentity }[],
+  { live = false }: { live?: boolean } = {}
 ): string {
+  const record = live ? NATIVE_CHAT_TOOL_RUN_LIVE_SENTENCE_COPY : NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY
   const rendered = nativeChatToolRunClauses(calls).map(({ category, count }) => {
-    const copy = NATIVE_CHAT_TOOL_RUN_SENTENCE_COPY[category]
+    const copy = record[category]
     return count === 1 ? copy.one : copy.many.replaceAll('{{value0}}', String(count))
   })
   return joinNativeChatToolRunClauses(rendered, {
