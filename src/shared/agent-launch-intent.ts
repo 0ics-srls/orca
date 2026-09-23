@@ -83,11 +83,8 @@ export type AgentLaunchIntent = {
    * it cannot know.
    */
   launchSource?: string
-  /**
-   * The `tabId:leafId` a terminal launch should create its pane under, for a caller that places its
-   * own tabs. Not a route input and not in the fingerprint: which pane id the agent gets does not
-   * change what runs, and a retry reconciles against the recorded `paneKey` in the outcome.
-   */
+  /** The `tabId:leafId` a terminal launch creates its pane under, for a caller that places its own
+   *  tabs. Not a route input; refused when that pane is already live. */
   paneKey?: string
 }
 

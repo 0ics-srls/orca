@@ -10,13 +10,22 @@ import {
 const RESERVED_TAB_ID = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
 const RESERVED_LEAF_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
 
-function runtimeWithDesktopWindow() {
+// A spawn that found the reserved pane already live answers with its owner instead of a new PTY.
+const LIVE_PANE_SPAWN = {
+  id: 'pty-live',
+  stablePaneOwner: { handle: 'term_live', tabId: RESERVED_TAB_ID, leafId: RESERVED_LEAF_ID }
+}
+
+function runtimeWithDesktopWindow(spawnResult: Record<string, unknown> = { id: 'pty-launch' }) {
   const revealTerminalSession = vi.fn().mockResolvedValue({ tabId: RESERVED_TAB_ID })
+  const releaseStablePaneCreate = vi.fn()
+  const kill = vi.fn(() => true)
   const runtime = new OrcaRuntimeService(store)
   runtime.setPtyController({
-    spawn: vi.fn().mockResolvedValue({ id: 'pty-launch' }),
+    claimStablePaneCreate: () => releaseStablePaneCreate,
+    spawn: vi.fn().mockResolvedValue(spawnResult),
     write: () => true,
-    kill: () => true,
+    kill,
     getForegroundProcess: async () => null
   })
   runtime.setNotifier({
@@ -35,7 +44,7 @@ function runtimeWithDesktopWindow() {
   })
   runtime.attachWindow(1)
   runtime.syncWindowGraph(1, { tabs: [], leaves: [] })
-  return { runtime, revealTerminalSession }
+  return { runtime, revealTerminalSession, releaseStablePaneCreate, kill }
 }
 
 describe('OrcaRuntimeService', () => {
@@ -143,5 +152,38 @@ describe('OrcaRuntimeService', () => {
     expect(revealTerminalSession).toHaveBeenCalledTimes(1)
     expect(created.tabId).not.toBe(RESERVED_TAB_ID)
     expect(created.paneKey?.startsWith(`${created.tabId}:`)).toBe(true)
+  })
+
+  it('refuses a live reserved pane before issuing a handle or revealing it', async () => {
+    const { runtime, revealTerminalSession, releaseStablePaneCreate, kill } =
+      runtimeWithDesktopWindow(LIVE_PANE_SPAWN)
+
+    await expect(
+      runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+        startupAgent: 'claude',
+        tabId: RESERVED_TAB_ID,
+        leafId: RESERVED_LEAF_ID,
+        requireFreshPane: true
+      })
+    ).rejects.toThrow('agent_launch_pane_already_live')
+
+    // No reveal means no renderer launch-config re-registration over the running agent's.
+    expect(revealTerminalSession).not.toHaveBeenCalled()
+    expect(kill).not.toHaveBeenCalled()
+    expect(releaseStablePaneCreate).toHaveBeenCalled()
+  })
+
+  it('still attaches to a live pane when the caller did not require a fresh one', async () => {
+    // `terminal.create` keeps its reattach; only agent.launch opts into the refusal.
+    const { runtime, revealTerminalSession } = runtimeWithDesktopWindow(LIVE_PANE_SPAWN)
+
+    const created = await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+      startupAgent: 'claude',
+      tabId: RESERVED_TAB_ID,
+      leafId: RESERVED_LEAF_ID
+    })
+
+    expect(created.isReattach).toBe(true)
+    expect(revealTerminalSession).toHaveBeenCalledTimes(1)
   })
 })

@@ -7,8 +7,16 @@
  * exists, so a caller whose reservation lost (older host, replay, structured route) can tell.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AgentSessionRecordStore } from '../../agent-session-record-store'
+import { setStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
+import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
+import type { OrcaRuntimeService } from '../../orca-runtime'
 import type { RpcContext } from '../core'
+import { RpcDispatcher } from '../dispatcher'
 import {
   CAPABLE_CLIENT,
   STRUCTURED_PREFERENCE,
@@ -27,6 +35,7 @@ vi.mock('./structured-agent-session-create', () => ({
 
 const { AGENT_LAUNCH_METHODS } = await import('./agent-launch')
 const AGENT_LAUNCH = methodNamed(AGENT_LAUNCH_METHODS, 'agent.launch')
+const AGENT_LAUNCH_REPLAY = methodNamed(AGENT_LAUNCH_METHODS, 'agent.launchReplay')
 
 const TAB_ID = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
 const LEAF_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
@@ -59,7 +68,11 @@ describe('a launch into an existing workspace', () => {
 
     await launch({ ...EXISTING_LAUNCH, paneKey: PANE_KEY }, runtime)
 
-    expect(terminalOptions(runtime)).toMatchObject({ tabId: TAB_ID, leafId: LEAF_ID })
+    expect(terminalOptions(runtime)).toMatchObject({
+      tabId: TAB_ID,
+      leafId: LEAF_ID,
+      requireFreshPane: true
+    })
   })
 
   it('leaves the pane to the runtime when the caller reserved none', async () => {
@@ -70,6 +83,7 @@ describe('a launch into an existing workspace', () => {
 
     expect(terminalOptions(runtime)).not.toHaveProperty('tabId')
     expect(terminalOptions(runtime)).not.toHaveProperty('leafId')
+    expect(terminalOptions(runtime)).not.toHaveProperty('requireFreshPane')
   })
 
   it('keeps the reservation through a downgrade from structured to terminal', async () => {
@@ -112,7 +126,7 @@ describe('a reserved pane that is already live', () => {
   // but here would report an agent that never started and paste into whatever runs there.
   it('refuses the launch and delivers no prompt', async () => {
     // An agent that takes its prompt as a paste after start, so a missing refusal would reach it.
-    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalIsReattach: true })
+    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalPaneAlreadyLive: true })
     const prompt = {
       waitForTerminal: vi.fn(async () => ({ satisfied: true })),
       sendTerminalAgentPrompt: vi.fn(async () => true)
@@ -183,9 +197,104 @@ describe('the reservation at the wire', () => {
     expect(AGENT_LAUNCH.params.safeParse({ ...EXISTING_LAUNCH, paneKey }).success).toBe(false)
   })
 
+  it.each([
+    ['a tab id the runtime would trim', ` ${TAB_ID}:${LEAF_ID}`],
+    ['a tab id that trims to nothing', `   :${LEAF_ID}`],
+    ['a tab id longer than the spawn reservation keys', `${'t'.repeat(513)}:${LEAF_ID}`]
+  ])('refuses a pane key with %s, which the runtime would not adopt verbatim', (_, paneKey) => {
+    expect(AGENT_LAUNCH.params.safeParse({ ...EXISTING_LAUNCH, paneKey }).success).toBe(false)
+  })
+
   it('accepts a well-formed pane key', () => {
     expect(AGENT_LAUNCH.params.safeParse({ ...EXISTING_LAUNCH, paneKey: PANE_KEY }).success).toBe(
       true
     )
+  })
+})
+
+describe('a live-pane refusal under a named operation', () => {
+  // The ledger admits against `Date.now()`, so the id must be dated now.
+  const OPERATION_ID = `${Date.now()}-000000000000000000000000000000bb`
+  let directory: string
+  let store: AgentSessionRecordStore
+
+  beforeEach(async () => {
+    directory = await mkdtemp(join(tmpdir(), 'orca-agent-launch-pane-'))
+    store = await AgentSessionRecordStore.open({ directory, hostId: 'local' })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: `deps.store` is the only member `agent.launch` reads, and a member it omits throws on call.
+    setStructuredAgentSessionHost({ deps: { store } } as unknown as StructuredAgentSessionHost)
+  })
+
+  afterEach(async () => {
+    setStructuredAgentSessionHost(null)
+    await rm(directory, { recursive: true, force: true })
+  })
+
+  function outcomeOf(operationId: string) {
+    return store.listOperationRows().find((row) => row.operationId === operationId)?.outcome
+  }
+
+  async function dispatch(runtime: RuntimeStub, method: string, params: unknown) {
+    const dispatcher = new RpcDispatcher({
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture implements every runtime method reached by agent.launch and dispatcher metadata.
+      runtime: { ...runtime, getRuntimeId: () => 'runtime-1' } as unknown as OrcaRuntimeService,
+      methods: AGENT_LAUNCH_METHODS
+    })
+    return dispatcher.dispatch({ id: 'request-1', authToken: 'token', method, params })
+  }
+
+  it('records the refusal as a failure, so a retry is answered rather than left unknown', async () => {
+    const params = { ...EXISTING_LAUNCH, paneKey: PANE_KEY, operationId: OPERATION_ID }
+    await expect(
+      launch(params, runtimeStub({ settings: TERMINAL_ONLY, terminalPaneAlreadyLive: true }))
+    ).rejects.toThrow('agent_launch_pane_already_live')
+    expect(outcomeOf(OPERATION_ID)).toMatchObject({
+      status: 'failed',
+      code: 'agent_launch_pane_already_live'
+    })
+
+    const retry = runtimeStub({ settings: TERMINAL_ONLY })
+    await expect(launch(params, retry)).rejects.toThrow('agent_launch_pane_already_live')
+    expect(retry.createTerminal).not.toHaveBeenCalled()
+  })
+
+  it('answers agent.launchReplay with the refusal code, not operation_unknown', async () => {
+    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalPaneAlreadyLive: true })
+    const params = AGENT_LAUNCH_REPLAY.params.parse({
+      ...EXISTING_LAUNCH,
+      paneKey: PANE_KEY,
+      operationId: OPERATION_ID
+    })
+
+    const response = await dispatch(runtime, 'agent.launchReplay', params)
+
+    expect(response).toMatchObject({
+      ok: false,
+      error: { code: 'agent_launch_pane_already_live' }
+    })
+    expect(outcomeOf(OPERATION_ID)).toMatchObject({ status: 'failed' })
+  })
+
+  it('leaves a create-worktree launch unknown, because its workspace was already created', async () => {
+    const runtime = runtimeStub({ settings: TERMINAL_ONLY, terminalPaneAlreadyLive: true })
+    // No startup terminal came back, so the launch builds its own in the new workspace.
+    runtime.createManagedWorktree.mockResolvedValueOnce({
+      worktree: { id: 'wt-new' },
+      startupTerminal: undefined
+    })
+    const params = AGENT_LAUNCH_REPLAY.params.parse({
+      ...CREATE_LAUNCH,
+      paneKey: PANE_KEY,
+      operationId: OPERATION_ID
+    })
+
+    const response = await dispatch(runtime, 'agent.launchReplay', params)
+
+    expect(runtime.createTerminal).toHaveBeenCalledTimes(1)
+    expect(response).toMatchObject({
+      ok: false,
+      error: { code: 'agent_session_operation_unknown' }
+    })
+    expect(outcomeOf(OPERATION_ID)?.status).toBe('unknown')
   })
 })

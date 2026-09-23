@@ -19,6 +19,8 @@ const BASE = {
   agent: 'claude',
   target: { kind: 'existing' as const, worktree: 'wt-1' }
 }
+const PANE_KEY = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d:3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+const OTHER_PANE_KEY = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d:6fa459ea-ee8a-4ca4-894e-db77e160355e'
 
 /**
  * The handler digests the whole params object, `launchSource` included — excess properties are only
@@ -27,7 +29,7 @@ const BASE = {
  * not merely that the input type has no name for it.
  */
 function fingerprintOfWirePayload(
-  params: AgentLaunchFingerprintInput & { launchSource?: string; paneKey?: string }
+  params: AgentLaunchFingerprintInput & { launchSource?: string }
 ): string {
   return computeAgentLaunchFingerprint(params)
 }
@@ -52,20 +54,19 @@ describe('fields the launch fingerprint covers', () => {
       computeAgentLaunchFingerprint({ ...BASE, cwd: '/repo/packages/b' })
     )
   })
+
+  it('separates two launches that reserved different panes', () => {
+    // The key is baked into the pane's env; replaying another pane's key strands the new reservation.
+    expect(computeAgentLaunchFingerprint({ ...BASE, paneKey: PANE_KEY })).not.toBe(
+      computeAgentLaunchFingerprint({ ...BASE, paneKey: OTHER_PANE_KEY })
+    )
+    expect(computeAgentLaunchFingerprint({ ...BASE, paneKey: PANE_KEY })).not.toBe(
+      computeAgentLaunchFingerprint(BASE)
+    )
+  })
 })
 
 describe('fields the launch fingerprint deliberately ignores', () => {
-  it('does not separate two launches that differ only in the pane the caller reserved', () => {
-    // A retry after a lost reply may carry a fresh reservation; it must replay, and the caller
-    // reconciles against the recorded `paneKey` rather than the host refusing a conflict.
-    expect(
-      fingerprintOfWirePayload({
-        ...BASE,
-        paneKey: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d:3f2504e0-4f89-41d3-9a0c-0305e82c3301'
-      })
-    ).toBe(fingerprintOfWirePayload(BASE))
-  })
-
   it('does not separate two launches that differ only in launchSource', () => {
     // Telemetry. Two buttons producing the same launch are one operation, and a retry that got
     // re-attributed must replay rather than be refused as a conflict.
@@ -98,6 +99,22 @@ describe('compatibility with rows written before these fields existed', () => {
       reuseTerminal: undefined
     })
     expect(computeAgentLaunchFingerprint(BASE)).toBe(previousBuild)
+  })
+
+  it('matches the digest from before the pane key existed when no pane is reserved', () => {
+    const beforePaneKey = canonicalAgentSessionDigest({
+      method: 'agent.launch',
+      agent: BASE.agent,
+      target: BASE.target,
+      prompt: undefined,
+      sessionOptions: undefined,
+      reuseTerminal: undefined,
+      agentArgs: '--model opus',
+      cwd: '/repo/packages/a'
+    })
+    expect(
+      computeAgentLaunchFingerprint({ ...BASE, agentArgs: '--model opus', cwd: '/repo/packages/a' })
+    ).toBe(beforePaneKey)
   })
 
   it('still matches when the caller sends only telemetry the digest excludes', () => {

@@ -18,6 +18,7 @@ import { isValidHostTerminalTabId } from '../terminal-tab-id'
 import { isTuiAgent } from '../tui-agent-config'
 import type { TuiAgent } from '../tui-agent'
 import { WorktreeCreate } from './worktree-create-params'
+import { TerminalTabIdParam } from './agent-session-params'
 
 const LaunchAgent = z
   .unknown()
@@ -87,15 +88,21 @@ export const AgentLaunch = z.object({
    * The pane a terminal launch should create, minted by a caller that places its own tabs.
    *
    * Identity, never placement: the host still reveals the tab, and the caller finds its placement
-   * by this key. Refused here when malformed, because the runtime would otherwise mint its own
-   * silently and the caller's reservation could never match. Ignored by a structured launch and a
-   * reused terminal, which create no pane; the outcome's `paneKey` says which pane really exists.
+   * by this key. Refused here unless the runtime would adopt it verbatim (it trims, and mints its
+   * own for an invalid one), so the caller's reservation always matches. Ignored by a structured
+   * launch and a reused terminal, which create no pane; the outcome's `paneKey` says which pane
+   * really exists. Tab ids are global across workspaces, so the caller mints a fresh UUID for each.
    */
   paneKey: z
     .string()
     .refine((value) => {
       const pane = parsePaneKey(value)
-      return pane !== null && isValidHostTerminalTabId(pane.tabId)
+      return (
+        pane !== null &&
+        pane.tabId === pane.tabId.trim() &&
+        TerminalTabIdParam.safeParse(pane.tabId).success &&
+        isValidHostTerminalTabId(pane.tabId)
+      )
     }, 'Malformed launch pane key')
     .optional()
 })

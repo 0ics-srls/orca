@@ -109,7 +109,8 @@ export function agentLaunchSurfaceFactory(
         ...(startupPrompt ? { startupPrompt } : {}),
         ...(agentArgs !== undefined ? { agentArgs } : {}),
         ...(cwd ? { cwd } : {}),
-        ...paneIdentity(paneKey),
+        // A live reserved pane would be attached, not launched into, so the runtime refuses it.
+        ...(paneKey ? { ...paneIdentity(paneKey), requireFreshPane: true } : {}),
         ...agentLaunchTelemetry(agent, launchSource)
       })
       return {
@@ -117,8 +118,7 @@ export function agentLaunchSurfaceFactory(
         // The runtime already minted this pane and baked it into the PTY's env and its own reveal;
         // dropping it here was what left a client with no way to name the tab it just asked for.
         ...(terminal.paneKey ? { paneKey: terminal.paneKey } : {}),
-        ...(terminal.warning ? { warning: terminal.warning } : {}),
-        ...(terminal.isReattach ? { isReattach: true as const } : {})
+        ...(terminal.warning ? { warning: terminal.warning } : {})
       }
     },
     deliverTerminalPrompt: async ({ handle, prompt }) =>
