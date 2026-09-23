@@ -42,19 +42,15 @@ function handleJiraCollectionReadError(
   mutationGeneration: number,
   set: JiraSliceSet,
   get: JiraSliceGet,
-  options?: { abortable?: boolean }
+  options: { abortable?: boolean; currentRequest: boolean }
 ): JiraIssue[] {
-  if (
-    isIntegrationCredentialDecryptionError(error) &&
-    canWriteCollectionResult(scope, mutationGeneration, get)
-  ) {
+  const canWrite =
+    options.currentRequest && canWriteCollectionResult(scope, mutationGeneration, get)
+  if (isIntegrationCredentialDecryptionError(error) && canWrite) {
     if (!shouldRefreshJiraStatusAfterRead(siteId, get().jiraStatus, options)) {
       void get().checkJiraConnection()
     }
-  } else if (
-    looksLikeJiraAuthError(error) &&
-    canWriteCollectionResult(scope, mutationGeneration, get)
-  ) {
+  } else if (looksLikeJiraAuthError(error) && canWrite) {
     markJiraConnectionLost(set, scope)
   }
   if (isIntegrationCredentialDecryptionError(error) || looksLikeJiraAuthError(error)) {
@@ -120,7 +116,10 @@ export function createJiraCollectionReadActions(
             requestMutationGeneration,
             set,
             get,
-            { abortable }
+            {
+              abortable,
+              currentRequest: abortable || inflightSearchRequests.get(cacheKey) === entry
+            }
           )
         })
         .finally(() => {
@@ -191,7 +190,8 @@ export function createJiraCollectionReadActions(
             siteId,
             requestMutationGeneration,
             set,
-            get
+            get,
+            { currentRequest: inflightListRequests.get(cacheKey) === entry }
           )
         })
         .finally(() => {

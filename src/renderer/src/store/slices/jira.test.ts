@@ -291,6 +291,30 @@ describe('createJiraSlice runtime context', () => {
     ])
   })
 
+  it.each(['list', 'search'] as const)(
+    'ignores an older %s auth failure after a forced refresh succeeds',
+    async (kind) => {
+      const store = createTestStore()
+      store.setState({ jiraStatus: { connected: true, viewer: null, selectedSiteId: 'site-1' } })
+      let rejectOld: (error: Error) => void = () => {}
+      const old = new Promise<JiraIssue[]>((_resolve, reject) => {
+        rejectOld = reject
+      })
+      const service = kind === 'list' ? jiraListIssues : jiraSearchIssues
+      service.mockReturnValueOnce(old).mockResolvedValueOnce([issue('ALP-FRESH')])
+      const read = (force = false) =>
+        kind === 'list'
+          ? store.getState().listJiraIssues('assigned', 30, { force })
+          : store.getState().searchJiraIssues('project = ALP', 30, { force })
+      const previous = read()
+      await expect(read(true)).resolves.toMatchObject([{ key: 'ALP-FRESH' }])
+      rejectOld(new Error('401 Unauthorized'))
+      await expect(previous).resolves.toEqual([])
+      expect(store.getState().jiraStatus.connected).toBe(true)
+      expect(store.getState().jiraConnectionRevisions).toEqual({})
+    }
+  )
+
   it('rejects a forced late write after the Jira mutation generation changes', async () => {
     const store = createTestStore()
     store.setState({ jiraStatus: { connected: true, viewer: null, selectedSiteId: 'site-1' } })
