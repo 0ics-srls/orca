@@ -12,7 +12,7 @@ import type { MobilePairingConnectionMode } from '../../../../shared/mobile-pair
 
 type MobilePairingSetupSectionProps = {
   machineName: string
-  detectedMachineName: string | null
+  publishedMachineName: string | null
   onMachineNameChange: (name: string) => void
   connectionMode: MobilePairingConnectionMode
   /** False when Anywhere is selected but Relay cannot be committed yet. */
@@ -37,7 +37,7 @@ type MobilePairingSetupSectionProps = {
 
 export function MobilePairingSetupSection({
   machineName,
-  detectedMachineName,
+  publishedMachineName,
   onMachineNameChange,
   connectionMode,
   canGenerate = true,
@@ -151,14 +151,21 @@ export function MobilePairingSetupSection({
           value={machineName}
           commit={onMachineNameChange}
           maxLength={255}
-          placeholder={detectedMachineName ?? 'Detected automatically'}
+          placeholder={
+            publishedMachineName ??
+            translate(
+              'auto.components.settings.MobilePairingSetupSection.machineNamePlaceholder',
+              'Detected automatically'
+            )
+          }
           aria-describedby="mobile-machine-name-description"
         />
         <p id="mobile-machine-name-description" className="text-xs text-muted-foreground">
-          {detectedMachineName
+          {publishedMachineName
             ? translate(
                 'auto.components.settings.MobilePairingSetupSection.machineNameDescription',
-                `Paired devices see “${detectedMachineName}”. Set a name here to override it.`
+                'Paired devices see “{{name}}”. Leave this blank to use the computer’s own name.',
+                { name: publishedMachineName }
               )
             : translate(
                 'auto.components.settings.MobilePairingSetupSection.machineNamePending',

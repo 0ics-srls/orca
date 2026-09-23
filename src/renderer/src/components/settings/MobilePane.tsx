@@ -22,14 +22,14 @@ import type { MobileRelayMintFailure } from '../../../../shared/mobile-relay-min
 import { useMobilePairingConnectionMode } from '../mobile/use-mobile-pairing-connection-mode'
 import { useMobilePairingAddressPreference } from '../mobile/use-mobile-pairing-address-preference'
 import { shouldOpenMobilePairingAddress } from './mobile-pane-search'
-import { useDetectedMachineName } from './use-detected-machine-name'
+import { usePublishedMachineName } from './use-published-machine-name'
 export { getMobilePaneSearchEntries } from './mobile-pane-search'
 
 export function MobilePane(): React.JSX.Element {
   const autoRestoreFitMs = useAppStore((s) => s.settings?.mobileAutoRestoreFitMs ?? null)
   const machineName = useAppStore((s) => s.settings?.machineName ?? '')
   const updateSettings = useAppStore((s) => s.updateSettings)
-  const detectedMachineName = useDetectedMachineName()
+  const publishedMachineName = usePublishedMachineName(machineName)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [qrSize, setQrSize] = useState<number | null>(null)
   const [pairingUrl, setPairingUrl] = useState<string | null>(null)
@@ -395,7 +395,7 @@ export function MobilePane(): React.JSX.Element {
     <div className="space-y-6">
       <MobilePairingSetupSection
         machineName={machineName}
-        detectedMachineName={detectedMachineName}
+        publishedMachineName={publishedMachineName}
         onMachineNameChange={(name) => void updateSettings({ machineName: name })}
         connectionMode={connectionMode}
         canGenerate={canMintMobilePairingOffer({ connectionMode, signedIn })}

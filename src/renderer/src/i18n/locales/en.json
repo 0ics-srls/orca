@@ -11286,7 +11286,11 @@
           "generate": "Generate QR code",
           "refresh": "Refresh network interfaces",
           "step2RelayDescription": "Optional. Pick the Wi‑Fi or Tailscale address your phone should use when nearby — usually faster than Relay. Relay still works when you’re away.",
-          "step2RelayDisclosure": "Also use a faster local path"
+          "step2RelayDisclosure": "Also use a faster local path",
+          "machineNameLabel": "Machine name",
+          "machineNameDescription": "Paired devices see “{{name}}”. Leave this blank to use the computer’s own name.",
+          "machineNamePending": "Paired devices see this name. Leave it blank to use the detected computer name.",
+          "machineNamePlaceholder": "Detected automatically"
         },
         "MobileRelayBetaAvailability": {
           "about": "About the Orca Relay beta",

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 
-export function useDetectedMachineName(): string | null {
+/**
+ * The name this computer publishes to paired devices: the saved override, or the detected
+ * computer name when that is blank. Read from the runtime rather than recomputed here, and re-read
+ * whenever the saved override changes so the caption never names what devices used to see.
+ */
+export function usePublishedMachineName(savedOverride: string): string | null {
   const [machineName, setMachineName] = useState<string | null>(null)
 
   useEffect(() => {
@@ -11,6 +16,8 @@ export function useDetectedMachineName(): string | null {
         cancelled = true
       }
     }
+    // Why: settings writes reach the main process before the store publishes them, so a read
+    // triggered by the saved value changing already sees the new name.
     void getRuntimeStatus()
       .then((status) => {
         if (!cancelled && typeof status.machineName === 'string' && status.machineName.trim()) {
@@ -23,7 +30,7 @@ export function useDetectedMachineName(): string | null {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [savedOverride])
 
   return machineName
 }
