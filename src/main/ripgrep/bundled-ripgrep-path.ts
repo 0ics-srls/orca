@@ -1,4 +1,5 @@
-import { existsSync, realpathSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { getAppEnvironment, hasAppEnvironment } from '../../shared/app-environment'
 import { quotePosixShell } from '../../shared/wsl-login-shell-command'
@@ -11,6 +12,7 @@ import {
 } from '../../shared/bundled-ripgrep'
 
 const resolvedPaths = new Map<BundledRipgrepPlatform, string | null>()
+const contentKeys = new Map<BundledRipgrepPlatform, string | null>()
 
 function candidatePaths(platform: BundledRipgrepPlatform): string[] {
   const binaryName = bundledRipgrepBinaryName(platform)
@@ -20,6 +22,10 @@ function candidatePaths(platform: BundledRipgrepPlatform): string[] {
   }
   // Why not packaged: a packaged app must never run a binary from whatever checkout it was launched in.
   if (hasAppEnvironment() && getAppEnvironment().isPackaged()) {
+    // Why: plain-Node orcad has no resourcesPath; its build copies rg into its own install root.
+    candidates.push(
+      join(getAppEnvironment().getAppPath(), BUNDLED_RIPGREP_RESOURCE_DIR, platform, binaryName)
+    )
     return candidates
   }
   // Why: development and test hosts run from a checkout where only node_modules holds the binaries.
@@ -32,25 +38,52 @@ function candidatePaths(platform: BundledRipgrepPlatform): string[] {
   return candidates
 }
 
+function realpathOrSelf(path: string): string {
+  try {
+    return realpathSync(path)
+  } catch {
+    return path
+  }
+}
+
+// Why never throw: the key only gates the SSH upload, which must not break relay deploy.
+function hashBinary(binaryPath: string | null): string | null {
+  if (!binaryPath) {
+    return null
+  }
+  try {
+    return createHash('sha256').update(readFileSync(binaryPath)).digest('hex').slice(0, 16)
+  } catch {
+    return null
+  }
+}
+
 /** Absolute path to Orca's own ripgrep for `platform`, or null when this install lacks it. */
 export function resolveBundledRipgrepPath(platform: BundledRipgrepPlatform): string | null {
   if (!resolvedPaths.has(platform)) {
     const found = candidatePaths(platform).find((path) => existsSync(path))
     // Why realpath: dev checkouts reach the package through pnpm symlinks, which SSH uploads reject.
-    resolvedPaths.set(platform, found ? realpathSync(found) : null)
+    resolvedPaths.set(platform, found ? realpathOrSelf(found) : null)
   }
   return resolvedPaths.get(platform) ?? null
 }
 
 /**
  * The rg command for a local spawn: this host's bundled binary, or its Linux build when the
- * spawn is routed into WSL. Falls back to PATH only for a damaged or unpackaged install.
+ * spawn is routed into WSL. Falls back to PATH `rg` only in unpackaged dev/test hosts.
  */
 export function bundledRipgrepCommand(options: { wsl?: boolean } = {}): string {
   const platform = options.wsl
     ? toBundledRipgrepPlatform('linux', process.arch)
     : toBundledRipgrepPlatform(process.platform, process.arch)
-  return (platform && resolveBundledRipgrepPath(platform)) ?? 'rg'
+  const resolved = platform ? resolveBundledRipgrepPath(platform) : null
+  if (resolved || !platform) {
+    return resolved ?? 'rg'
+  }
+  // Why the expected path, not bare 'rg': Windows resolves a bare name in the spawn cwd (the repo)
+  // first, so a damaged packaged install must fail with ENOENT instead of running a planted rg.exe.
+  const isPackaged = hasAppEnvironment() && getAppEnvironment().isPackaged()
+  return isPackaged ? (candidatePaths(platform)[0] ?? 'rg') : 'rg'
 }
 
 /**
@@ -68,8 +101,20 @@ export function bundledRipgrepWslSpawnOptions(command: string): { wslShellComman
   }
 }
 
+/**
+ * Short content hash of this install's binary for `platform`. Keys the SSH remote cache so any
+ * change to the shipped bytes (a package bump, a rebuild, re-signing) re-uploads without a manual step.
+ */
+export function bundledRipgrepContentKey(platform: BundledRipgrepPlatform): string | null {
+  if (!contentKeys.has(platform)) {
+    contentKeys.set(platform, hashBinary(resolveBundledRipgrepPath(platform)))
+  }
+  return contentKeys.get(platform) ?? null
+}
+
 export function resetBundledRipgrepPathCacheForTests(): void {
   resolvedPaths.clear()
+  contentKeys.clear()
 }
 
 // Why no git/readdir fallback: VS Code ships the same contract — a bundled rg that cannot start

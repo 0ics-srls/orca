@@ -17,11 +17,15 @@ function ripgrepBinaryName(platform) {
   return platform.startsWith('win32-') ? 'rg.exe' : 'rg'
 }
 
-const bundledRipgrepExtraResource = {
-  from: RIPGREP_PACKAGE_BIN_DIR,
-  to: 'ripgrep',
-  filter: BUNDLED_RIPGREP_PLATFORMS.map((platform) => `${platform}/**`)
-}
+const bundledRipgrepExtraResources = [
+  {
+    from: RIPGREP_PACKAGE_BIN_DIR,
+    to: 'ripgrep',
+    filter: BUNDLED_RIPGREP_PLATFORMS.map((platform) => `${platform}/**`)
+  },
+  // Why: the binaries statically link PCRE2 (and musl on Linux), whose licenses require the notice.
+  { from: 'resources/licenses/ripgrep', to: 'ripgrep/licenses' }
+]
 
 // Why: codesign would try to sign the Linux/Windows builds; they are inert data on macOS.
 const bundledRipgrepMacSignIgnore = ['/ripgrep/(linux|win32)-']
@@ -54,7 +58,7 @@ module.exports = {
   BUNDLED_RIPGREP_PLATFORMS,
   RIPGREP_PACKAGE_BIN_DIR,
   assertBundledRipgrepInstalled,
-  bundledRipgrepExtraResource,
+  bundledRipgrepExtraResources,
   bundledRipgrepMacSignIgnore,
   finalizePackagedRipgrep
 }

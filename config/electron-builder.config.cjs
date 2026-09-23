@@ -21,7 +21,7 @@ const {
 const { verifyPackagedPluginResources } = require('./scripts/verify-packaged-plugin-resources.cjs')
 const {
   assertBundledRipgrepInstalled,
-  bundledRipgrepExtraResource,
+  bundledRipgrepExtraResources,
   bundledRipgrepMacSignIgnore,
   finalizePackagedRipgrep
 } = require('./bundled-ripgrep-resources.cjs')
@@ -111,7 +111,7 @@ const emojiShortcodeDatasetResource = {
 }
 const commonExtraResources = [
   relayExtraResource,
-  bundledRipgrepExtraResource,
+  ...bundledRipgrepExtraResources,
   bundledPluginResources,
   skillFreshnessResources,
   emojiShortcodeDatasetResource

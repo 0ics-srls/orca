@@ -25,7 +25,8 @@ const { execCommandMock, uploadRelayDirectoryMock, resolveBundledRipgrepPathMock
 vi.mock('./ssh-relay-deploy-helpers', () => ({ execCommand: execCommandMock }))
 vi.mock('./ssh-relay-install-transfers', () => ({ uploadRelayDirectory: uploadRelayDirectoryMock }))
 vi.mock('../ripgrep/bundled-ripgrep-path', () => ({
-  resolveBundledRipgrepPath: resolveBundledRipgrepPathMock
+  resolveBundledRipgrepPath: resolveBundledRipgrepPathMock,
+  bundledRipgrepContentKey: () => 'c0ffee0123456789'
 }))
 
 import type { SshConnection } from './ssh-connection'
@@ -69,12 +70,12 @@ describe('ensureRemoteBundledRipgrep', () => {
     vi.restoreAllMocks()
   })
 
-  it('keys the cache on ripgrep version and platform, not the relay version', () => {
+  it('keys the cache on the binary content hash and platform, not the relay version', () => {
     expect(remoteRipgrepLayout(LINUX, '/home/me')?.binaryPath).toBe(
-      '/home/me/.orca-remote/ripgrep/15.0.0-linux-x64/rg'
+      '/home/me/.orca-remote/ripgrep/c0ffee0123456789-linux-x64/rg'
     )
     expect(remoteRipgrepLayout(WINDOWS, 'C:/Users/me user')?.binaryPath).toBe(
-      'C:/Users/me user/.orca-remote/ripgrep/15.0.0-win32-x64/rg.exe'
+      'C:/Users/me user/.orca-remote/ripgrep/c0ffee0123456789-win32-x64/rg.exe'
     )
   })
 
@@ -86,7 +87,9 @@ describe('ensureRemoteBundledRipgrep', () => {
     )
 
     expect(execCommandMock).toHaveBeenCalledTimes(1)
-    expect(execScripts()[0]).toContain("-x '/home/me/.orca-remote/ripgrep/15.0.0-linux-x64/rg'")
+    expect(execScripts()[0]).toContain(
+      "-x '/home/me/.orca-remote/ripgrep/c0ffee0123456789-linux-x64/rg'"
+    )
     expect(uploadRelayDirectoryMock).not.toHaveBeenCalled()
   })
 
@@ -112,7 +115,7 @@ describe('ensureRemoteBundledRipgrep', () => {
     expect(promote).toContain('"1234"')
     expect(promote).toContain('chmod 755')
     expect(promote).toContain(
-      `mv -f '${payloadDir}/rg' '/home/me/.orca-remote/ripgrep/15.0.0-linux-x64/rg'`
+      `mv -f '${payloadDir}/rg' '/home/me/.orca-remote/ripgrep/c0ffee0123456789-linux-x64/rg'`
     )
   })
 
@@ -159,7 +162,7 @@ describe('ensureRemoteBundledRipgrep', () => {
     expect(execCommandMock.mock.calls.every(([, , opts]) => opts.wrapCommand === false)).toBe(true)
     const [probe, promote] = execScripts()
     expect(probe).toContain(
-      "Test-Path -LiteralPath 'C:/Users/me user/.orca-remote/ripgrep/15.0.0-win32-x64/rg.exe'"
+      "Test-Path -LiteralPath 'C:/Users/me user/.orca-remote/ripgrep/c0ffee0123456789-win32-x64/rg.exe'"
     )
     expect(promote).toContain('Move-Item -LiteralPath $src -Destination $bin')
     expect(promote).toContain('.Length -eq 1234')
@@ -214,14 +217,15 @@ describe.runIf(process.platform !== 'win32').each(SHELLS)(
       vi.restoreAllMocks()
     })
 
-    const installed = (): string => join(home, '.orca-remote', 'ripgrep', '15.0.0-linux-x64', 'rg')
+    const installed = (): string =>
+      join(home, '.orca-remote', 'ripgrep', 'c0ffee0123456789-linux-x64', 'rg')
     const cacheEntries = (): string[] => readdirSync(join(home, '.orca-remote', 'ripgrep'))
 
     it('installs an executable binary once and leaves no stage behind', async () => {
       await expect(ensureRemoteBundledRipgrep(connection(), LINUX, home)).resolves.toBe('installed')
       expect(statSync(installed()).mode & 0o111).not.toBe(0)
       expect(execFileSync(installed(), { encoding: 'utf-8' })).toContain('ripgrep 15.0.0')
-      expect(cacheEntries()).toEqual(['15.0.0-linux-x64'])
+      expect(cacheEntries()).toEqual(['c0ffee0123456789-linux-x64'])
 
       await expect(ensureRemoteBundledRipgrep(connection(), LINUX, home)).resolves.toBe('present')
       expect(uploadRelayDirectoryMock).toHaveBeenCalledTimes(1)
@@ -240,6 +244,14 @@ describe.runIf(process.platform !== 'win32').each(SHELLS)(
       expect(cacheEntries()).toEqual([])
     })
 
+    it('replaces a truncated binary left at the installed path', async () => {
+      mkdirSync(dirname(installed()), { recursive: true })
+      writeFileSync(installed(), '#!/bin/sh\n', { mode: 0o755 })
+
+      await expect(ensureRemoteBundledRipgrep(connection(), LINUX, home)).resolves.toBe('installed')
+      expect(execFileSync(installed(), { encoding: 'utf-8' })).toContain('ripgrep 15.0.0')
+    })
+
     it('sweeps an abandoned stage older than an hour but keeps a live one', async () => {
       const cache = join(home, '.orca-remote', 'ripgrep')
       mkdirSync(join(cache, '.upload-stale', 'payload'), { recursive: true })
@@ -248,7 +260,7 @@ describe.runIf(process.platform !== 'win32').each(SHELLS)(
 
       await ensureRemoteBundledRipgrep(connection(), LINUX, home)
 
-      expect(cacheEntries().sort()).toEqual(['.upload-live', '15.0.0-linux-x64'])
+      expect(cacheEntries().sort()).toEqual(['.upload-live', 'c0ffee0123456789-linux-x64'])
     })
   }
 )

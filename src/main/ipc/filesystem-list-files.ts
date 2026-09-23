@@ -25,6 +25,7 @@ import {
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableExit,
+  isTransientRipgrepSpawnError,
   killSpawnedRipgrepProcess,
   RipgrepUnavailableError
 } from '../../shared/ripgrep-process-availability'
@@ -149,11 +150,16 @@ export async function listQuickOpenFiles(
       const handleStderrData = (): void => {
         /* drain */
       }
-      const handleError = (): void => {
+      const handleError = (error: NodeJS.ErrnoException): void => {
         processErrorObserved = true
         // Why: treat spawn errors like an abnormal exit — discard residual
         // buffer so a truncated final byte sequence cannot leak as a path.
         buf = ''
+        // Why: fd/process pressure is not a broken install; say so instead of blaming the bundled binary.
+        if (isTransientRipgrepSpawnError(error)) {
+          finish(new Error(`rg could not start (${error.code}); try again`))
+          return
+        }
         if (isRipgrepUnavailableExit(child, null, null)) {
           finish(new RipgrepUnavailableError())
           return

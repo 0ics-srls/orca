@@ -603,11 +603,16 @@ async function deployAndLaunchRelayAttempt(
   }
   console.log('[ssh-relay] Relay started successfully')
 
-  void execHostCommand(
-    conn,
-    hostPlatform,
-    recoverOneStaleRelayUploadStageCommand(hostPlatform, uploadStagePoolDir)
-  )
+  // Why first: bounded Quick Open search needs rg, so the upload must not queue behind sweep and GC;
+  // the relay re-checks --ripgrep-path per spawn, so it never delays connect either.
+  void ensureRemoteBundledRipgrep(conn, hostPlatform, remoteHome)
+    .then(() =>
+      execHostCommand(
+        conn,
+        hostPlatform,
+        recoverOneStaleRelayUploadStageCommand(hostPlatform, uploadStagePoolDir)
+      )
+    )
     .catch(() => {})
     // Why before GC: a superseded relay pins its version dir via the live-socket probe, so the
     // sweep has to settle first or GC keeps every orphan's tree forever.
@@ -647,8 +652,6 @@ async function deployAndLaunchRelayAttempt(
       })
     )
     .catch(() => {})
-    // Why after launch: the relay re-checks --ripgrep-path per spawn, so the one-time upload never delays connect.
-    .then(() => ensureRemoteBundledRipgrep(conn, hostPlatform, remoteHome))
 
   return {
     transport: launched.transport,

@@ -10,7 +10,7 @@ vi.mock('electron', () => ({ app: { getAppPath: () => process.cwd() } }))
 import { SshChannelMultiplexer } from './ssh-channel-multiplexer'
 import { SshConnection } from './ssh-connection'
 import { deployAndLaunchRelay } from './ssh-relay-deploy'
-import { BUNDLED_RIPGREP_VERSION } from '../../shared/bundled-ripgrep'
+import { bundledRipgrepContentKey } from '../ripgrep/bundled-ripgrep-path'
 import type { SshTarget } from '../../shared/ssh-types'
 
 // Why opt-in: needs Docker plus an sshd+node+git image WITHOUT rg (ORCA_REVIEW_SSH_NORG_IMAGE).
@@ -124,8 +124,11 @@ describe.skipIf(!RUN)('SSH relay bundled ripgrep', () => {
   it('installs Orca ripgrep on a host without rg and serves Quick Open search with it', async () => {
     const active = fixture!
     expect(dockerExec(active, 'command -v rg || echo NO_RG')).toBe('NO_RG')
-    const platform = `linux-${dockerExec(active, 'uname -m') === 'aarch64' ? 'arm64' : 'x64'}`
-    const remoteBinary = `/root/.orca-remote/ripgrep/${BUNDLED_RIPGREP_VERSION}-${platform}/rg`
+    const platform = /^(aarch64|arm64)$/.test(dockerExec(active, 'uname -m'))
+      ? 'linux-arm64'
+      : 'linux-x64'
+    const entry = `${bundledRipgrepContentKey(platform)}-${platform}`
+    const remoteBinary = `/root/.orca-remote/ripgrep/${entry}/rg`
     const connection = createConnection(active)
     await connection.connect()
     try {
@@ -143,9 +146,7 @@ describe.skipIf(!RUN)('SSH relay bundled ripgrep', () => {
       expect(dockerExec(active, "ps -eo args | grep '[r]elay.js --detached'")).toContain(
         `--ripgrep-path ${remoteBinary}`
       )
-      expect(
-        dockerExec(active, `ls /root/.orca-remote/ripgrep/${BUNDLED_RIPGREP_VERSION}-${platform}`)
-      ).toBe('rg')
+      expect(dockerExec(active, `ls /root/.orca-remote/ripgrep/${entry}`)).toBe('rg')
 
       const mux = new SshChannelMultiplexer(deployed.transport)
       try {

@@ -13,16 +13,22 @@ import { relayLogLine } from './relay-diagnostic-log'
 export const PATH_RIPGREP_COMMAND = 'rg'
 
 let bundledRipgrepPath: string | null = null
-let bundledRipgrepUnusable = false
+// Why a back-off, not forever: Windows AV often locks a just-installed rg.exe for its first spawns.
+const BUNDLED_RIPGREP_RETRY_MS = 60_000
+let bundledRipgrepUnusableUntil = 0
 
 export function configureRelayBundledRipgrep(path: string | undefined): void {
   bundledRipgrepPath = path ? path : null
-  bundledRipgrepUnusable = false
+  bundledRipgrepUnusableUntil = 0
 }
 
 export function resolveRelayRipgrepCommand(): string {
   // Why check existence per spawn: the deploy uploads rg after the relay starts, so it can appear mid-session.
-  if (bundledRipgrepPath && !bundledRipgrepUnusable && existsSync(bundledRipgrepPath)) {
+  if (
+    bundledRipgrepPath &&
+    Date.now() >= bundledRipgrepUnusableUntil &&
+    existsSync(bundledRipgrepPath)
+  ) {
     return bundledRipgrepPath
   }
   return PATH_RIPGREP_COMMAND
@@ -30,7 +36,7 @@ export function resolveRelayRipgrepCommand(): string {
 
 /**
  * Called when `command` failed to launch. Resolves true when it was the bundled binary and the
- * caller should retry once on PATH `rg`; later spawns then skip the bundled binary.
+ * caller should retry once on PATH `rg`; spawns skip the bundled binary for a back-off window.
  */
 export async function retryRipgrepOnPathAfterLaunchFailure(
   command: string,
@@ -48,9 +54,9 @@ export async function retryRipgrepOnPathAfterLaunchFailure(
   if (!(await isRipgrepSpawnCwdUsable(cwd))) {
     return false
   }
-  // Why only while the file exists: a removed binary is re-checked per spawn, a noexec/EACCES one never works.
-  if (existsSync(command) && !bundledRipgrepUnusable) {
-    bundledRipgrepUnusable = true
+  // Why only while the file exists: a removed binary is re-checked per spawn anyway.
+  if (existsSync(command) && Date.now() >= bundledRipgrepUnusableUntil) {
+    bundledRipgrepUnusableUntil = Date.now() + BUNDLED_RIPGREP_RETRY_MS
     relayLogLine(`[relay] Bundled ripgrep at ${command} failed to launch; using rg from PATH`)
   }
   return true

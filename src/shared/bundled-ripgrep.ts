@@ -5,7 +5,6 @@ import { RELAY_BUILD_PLATFORMS, type RelayBuildPlatform } from './relay-artifact
  * WSL, and SSH searches never depend on the user having installed `rg`.
  * See docs/reference/bundled-ripgrep.md.
  */
-export const BUNDLED_RIPGREP_VERSION = '15.0.0'
 export const BUNDLED_RIPGREP_PLATFORMS: readonly RelayBuildPlatform[] = RELAY_BUILD_PLATFORMS
 export type BundledRipgrepPlatform = RelayBuildPlatform
 /** Directory under the packaged resources root holding `<platform>/rg[.exe]`. */

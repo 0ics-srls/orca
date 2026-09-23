@@ -460,5 +460,22 @@ describe('filesystem-list-files', () => {
       expect(spawnMock).toHaveBeenCalledTimes(1)
       expect(spawnMock.mock.calls.some((call) => call[0] === 'git')).toBe(false)
     })
+
+    it('reports fd pressure as a transient launch failure, not a broken install', async () => {
+      spawnMock.mockImplementation(() => {
+        const child = createMockProcess()
+        Object.defineProperty(child, 'pid', { value: undefined })
+        setTimeout(
+          () => child.emit('error', Object.assign(new Error('EMFILE'), { code: 'EMFILE' })),
+          0
+        )
+        return child
+      })
+
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mocked auth and runtime options never read the store.
+      const listing = listQuickOpenFiles('/mock/root', {} as unknown as Store)
+
+      await expect(listing).rejects.toThrow('rg could not start (EMFILE); try again')
+    })
   })
 })

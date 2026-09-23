@@ -76,6 +76,24 @@ describe('relay bundled ripgrep', () => {
     await expect(retryRipgrepOnPathAfterLaunchFailure('rg', dir)).resolves.toBe(false)
   })
 
+  it('backs off the bundled binary after a launch failure, then tries it again', async () => {
+    vi.useFakeTimers()
+    try {
+      await expect(retryRipgrepOnPathAfterLaunchFailure(bundled, dir)).resolves.toBe(true)
+      expect(resolveRelayRipgrepCommand()).toBe('rg')
+      vi.advanceTimersByTime(60_001)
+      expect(resolveRelayRipgrepCommand()).toBe(bundled)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not back off on fd or process pressure', async () => {
+    const error = Object.assign(new Error('EMFILE'), { code: 'EMFILE' })
+    await expect(retryRipgrepOnPathAfterLaunchFailure(bundled, dir, error)).resolves.toBe(false)
+    expect(resolveRelayRipgrepCommand()).toBe(bundled)
+  })
+
   it('retries a file listing on PATH rg after the bundled binary fails to launch', async () => {
     const commands: string[] = []
     spawnMock.mockImplementation((command: string) => {

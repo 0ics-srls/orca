@@ -13,6 +13,7 @@ import {
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableExit,
+  isTransientRipgrepSpawnError,
   killSpawnedRipgrepProcess
 } from '../../../shared/ripgrep-process-availability'
 import { toWindowsWslPath, parseWslPath } from '../../wsl'
@@ -133,8 +134,13 @@ export function registerFilesystemSearchHandlers(context: FilesystemHandlerConte
         const handleStderrData = (): void => {
           // Drain stderr so rg cannot block on a full pipe.
         }
-        const handleError = (): void => {
+        const handleError = (error: NodeJS.ErrnoException): void => {
           processErrorObserved = true
+          // Why: fd/process pressure is not a broken install; say so instead of blaming the bundled binary.
+          if (isTransientRipgrepSpawnError(error)) {
+            finish(Promise.reject(new Error(`rg could not start (${error.code}); try again`)))
+            return
+          }
           if (child && isRipgrepUnavailableExit(child, null, null)) {
             rejectUnavailable()
             return

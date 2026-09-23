@@ -83,6 +83,18 @@ copyFileSync(AGENT_BROWSER_SOURCE, AGENT_BROWSER_OUTPUT)
 if (process.platform !== 'win32') {
   chmodSync(AGENT_BROWSER_OUTPUT, 0o755)
 }
+// Why: orcad has no Electron resourcesPath; the rg resolver looks under its install root instead.
+const RIPGREP_PLATFORM = `${platform()}-${arch()}`
+const RIPGREP_NAME = process.platform === 'win32' ? 'rg.exe' : 'rg'
+const RIPGREP_OUTPUT_DIR = join(OUT_DIR, 'ripgrep', RIPGREP_PLATFORM)
+mkdirSync(RIPGREP_OUTPUT_DIR, { recursive: true })
+copyFileSync(
+  join(ROOT, 'node_modules', '@vscode', 'ripgrep-universal', 'bin', RIPGREP_PLATFORM, RIPGREP_NAME),
+  join(RIPGREP_OUTPUT_DIR, RIPGREP_NAME)
+)
+if (process.platform !== 'win32') {
+  chmodSync(join(RIPGREP_OUTPUT_DIR, RIPGREP_NAME), 0o755)
+}
 
 /** Why one call per child and not one `outdir` build: esbuild mirrors each entry's source
  *  directory under `outdir`, and both children must land flat beside orcad.js — that is where

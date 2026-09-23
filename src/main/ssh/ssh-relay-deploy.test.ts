@@ -53,10 +53,16 @@ vi.mock('./ssh-remote-node-resolution', () => ({
   resolveRemoteNodePath: vi.fn().mockResolvedValue('/usr/bin/node')
 }))
 
+// Why: this file mocks fs, so the real content hash cannot read a binary.
+vi.mock('../ripgrep/bundled-ripgrep-path', () => ({
+  resolveBundledRipgrepPath: () => null,
+  bundledRipgrepContentKey: () => 'c0ffee0123456789'
+}))
+
 // Why: the fire-and-forget ripgrep install would drain the queued exec mocks.
 vi.mock('./ssh-relay-ripgrep-install', async (importOriginal) => ({
   ...(await importOriginal<typeof RelayRipgrepInstallModule>()),
-  ensureRemoteBundledRipgrep: vi.fn()
+  ensureRemoteBundledRipgrep: vi.fn().mockResolvedValue('present')
 }))
 
 // Why: the versioned-install modules shell out for install state, locking,
@@ -510,7 +516,7 @@ describe('deployAndLaunchRelay', () => {
 
     expect(launchCommand).toContain(`--grace-time ${DEFAULT_SSH_RELAY_GRACE_PERIOD_SECONDS}`)
     expect(launchCommand).toContain(
-      "--ripgrep-path '/home/user/.orca-remote/ripgrep/15.0.0-linux-x64/rg'"
+      "--ripgrep-path '/home/user/.orca-remote/ripgrep/c0ffee0123456789-linux-x64/rg'"
     )
     await vi.waitFor(() =>
       expect(ensureRemoteBundledRipgrep).toHaveBeenCalledWith(conn, expect.anything(), '/home/user')
@@ -775,7 +781,7 @@ describe('deployAndLaunchRelay', () => {
     )
     expect(launchScript).toContain('--endpoint-dir')
     expect(launchScript).toContain(
-      '--ripgrep-path "C:/Users/me user/.orca-remote/ripgrep/15.0.0-win32-x64/rg.exe"'
+      '--ripgrep-path "C:/Users/me user/.orca-remote/ripgrep/c0ffee0123456789-win32-x64/rg.exe"'
     )
     expect(launchScript).not.toContain('--pty-source-credit-v1')
     expect(launchScript).not.toContain('.pty-source-credit-policy')

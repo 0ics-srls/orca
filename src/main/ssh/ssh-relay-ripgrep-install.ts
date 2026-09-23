@@ -1,8 +1,8 @@
 /**
  * Installs Orca's own ripgrep on an SSH host so remote Quick Open and text search do not depend
  * on the user having `rg`. The binary lives at
- * `~/.orca-remote/ripgrep/<BUNDLED_RIPGREP_VERSION>-<platform>/rg[.exe]`, a sibling of the
- * `relay-<version>` dirs keyed on the ripgrep version alone, so a relay upgrade never re-uploads it.
+ * `~/.orca-remote/ripgrep/<content-hash>-<platform>/rg[.exe]`, a sibling of the
+ * `relay-<version>` dirs keyed on the binary's bytes alone, so a relay upgrade never re-uploads it.
  *
  * Uploads land in a private `.upload-<token>` stage and are renamed into place only after a size
  * check, so an interrupted or concurrent deploy never leaves a truncated binary at the final path.
@@ -32,9 +32,11 @@ import {
   type RemoteHostPlatform
 } from './ssh-remote-platform'
 import { removeRemoteTreeCommand } from './ssh-remote-commands'
-import { resolveBundledRipgrepPath } from '../ripgrep/bundled-ripgrep-path'
 import {
-  BUNDLED_RIPGREP_VERSION,
+  bundledRipgrepContentKey,
+  resolveBundledRipgrepPath
+} from '../ripgrep/bundled-ripgrep-path'
+import {
   bundledRipgrepBinaryName,
   toBundledRipgrepPlatform,
   type BundledRipgrepPlatform
@@ -62,10 +64,11 @@ export function remoteRipgrepLayout(
   remoteHome: string
 ): RemoteRipgrepLayout | null {
   const platform = toBundledRipgrepPlatform(host.os, host.arch)
-  if (!platform) {
+  const contentKey = platform ? bundledRipgrepContentKey(platform) : null
+  if (!platform || !contentKey) {
     return null
   }
-  const entryName = `${BUNDLED_RIPGREP_VERSION}-${platform}`
+  const entryName = `${contentKey}-${platform}`
   assertSafeRemotePathSegment(entryName, host.pathFlavor)
   const cacheDir = joinRemotePath(host, remoteHome, RELAY_REMOTE_DIR, REMOTE_RIPGREP_CACHE_DIR_NAME)
   return {
@@ -116,8 +119,9 @@ async function installRemoteRipgrep(
     `${RELAY_REMOTE_DIR}/${REMOTE_RIPGREP_CACHE_DIR_NAME}/${stageName}`
   )
 
+  const size = statSync(localBinary).size
   // Why one round trip: the warm path (already installed) must cost a single exec.
-  const probe = await exec(probeOrStageCommand(host, layout, stageDir, stageNamespace))
+  const probe = await exec(probeOrStageCommand(host, layout, stageDir, stageNamespace, size))
   if (probe.includes(PRESENT)) {
     return 'present'
   }
@@ -139,7 +143,6 @@ async function installRemoteRipgrep(
           : undefined
       }
     )
-    const size = statSync(localBinary).size
     const result = await exec(promoteCommand(host, layout, stageDir, size))
     promoted = true
     if (!result.includes(INSTALLED)) {
@@ -165,21 +168,32 @@ function usesOrcaOwnedSftp(conn: SshConnection, host: RemoteHostPlatform): boole
   return typeof conn.usesSystemSshTransport === 'function' ? !conn.usesSystemSshTransport() : true
 }
 
+// Why size: the path is content-keyed, so a wrong length can only be a truncated or foreign file.
+function posixInstalledTest(bin: string, bytes: string): string {
+  return `[ -f ${bin} ] && [ -x ${bin} ] && [ "$(wc -c < ${bin} 2>/dev/null | tr -d ' \\t')" = "${bytes}" ]`
+}
+
+function windowsInstalledTest(bin: string, bytes: string): string {
+  return `(Test-Path -LiteralPath ${bin} -PathType Leaf) -and ((Get-Item -LiteralPath ${bin}).Length -eq ${bytes})`
+}
+
 export function probeOrStageCommand(
   host: RemoteHostPlatform,
   layout: RemoteRipgrepLayout,
   stageDir: string,
-  stageNamespace: RelayUploadStageNamespace
+  stageNamespace: RelayUploadStageNamespace,
+  expectedBytes: number
 ): string {
+  const bytes = String(Math.trunc(expectedBytes))
   if (!isWindowsRemoteHost(host)) {
     const bin = shellEscape(layout.binaryPath)
     const sweep = `find ${shellEscape(layout.cacheDir)} -mindepth 1 -maxdepth 1 -type d -name '${UPLOAD_STAGE_PREFIX}*' -mmin +${STALE_UPLOAD_STAGE_MINUTES} -exec rm -rf {} + 2>/dev/null`
     const stage = makeRelayUploadStageDirectoryCommand(stageNamespace, host, stageDir)
-    return `if [ -f ${bin} ] && [ -x ${bin} ]; then echo ${PRESENT}; else ${sweep}; ${stage} && echo ${STAGED}; fi`
+    return `if ${posixInstalledTest(bin, bytes)}; then echo ${PRESENT}; else ${sweep}; ${stage} && echo ${STAGED}; fi`
   }
   return powerShellCommand(
     [
-      `if (Test-Path -LiteralPath ${powerShellLiteral(layout.binaryPath)} -PathType Leaf) { '${PRESENT}' } else {`,
+      `if (${windowsInstalledTest(powerShellLiteral(layout.binaryPath), bytes)}) { '${PRESENT}' } else {`,
       `Get-ChildItem -LiteralPath ${powerShellLiteral(layout.cacheDir)} -Directory -Filter '${UPLOAD_STAGE_PREFIX}*' -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddMinutes(-${STALE_UPLOAD_STAGE_MINUTES}) } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`,
       `$null = New-Item -ItemType Directory -Force -Path ${powerShellLiteral(joinRemotePath(host, stageDir, 'payload'))} -ErrorAction Stop`,
       `'${STAGED}' }`
@@ -206,7 +220,7 @@ export function promoteCommand(
     const bytes = String(Math.trunc(expectedBytes))
     return [
       `if [ "$(wc -c < ${src} 2>/dev/null | tr -d ' \\t')" = "${bytes}" ] && chmod 755 ${src} && mkdir -p ${shellEscape(remoteDirname(layout.binaryPath, host))} && mv -f ${src} ${bin}; then r=${INSTALLED};`,
-      `elif [ -f ${bin} ] && [ -x ${bin} ]; then r=${INSTALLED}; else r=ORCA-RG-FAILED; fi;`,
+      `elif ${posixInstalledTest(bin, bytes)}; then r=${INSTALLED}; else r=ORCA-RG-FAILED; fi;`,
       `rm -rf ${shellEscape(stageDir)}; echo "$r"`
     ].join(' ')
   }
@@ -218,11 +232,11 @@ export function promoteCommand(
       'try {',
       `if ((Get-Item -LiteralPath $src -ErrorAction Stop).Length -eq ${Math.trunc(expectedBytes)}) {`,
       `$null = New-Item -ItemType Directory -Force -Path ${powerShellLiteral(remoteDirname(layout.binaryPath, host))} -ErrorAction Stop`,
-      // Why no overwrite: a running relay may hold the installed rg.exe open.
-      'if (-not (Test-Path -LiteralPath $bin -PathType Leaf)) { Move-Item -LiteralPath $src -Destination $bin -ErrorAction Stop }',
+      // Why replace only a wrong-size file: a running relay may hold a good rg.exe open.
+      `if (-not (${windowsInstalledTest('$bin', String(Math.trunc(expectedBytes)))})) { Move-Item -LiteralPath $src -Destination $bin -Force -ErrorAction Stop }`,
       `$r = '${INSTALLED}'`,
       '}',
-      `} catch { if (Test-Path -LiteralPath $bin -PathType Leaf) { $r = '${INSTALLED}' } }`,
+      `} catch { if (${windowsInstalledTest('$bin', String(Math.trunc(expectedBytes)))}) { $r = '${INSTALLED}' } }`,
       `finally { Remove-Item -LiteralPath ${powerShellLiteral(stageDir)} -Recurse -Force -ErrorAction SilentlyContinue }`,
       '$r'
     ].join('\n')

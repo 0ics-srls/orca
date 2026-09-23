@@ -11,10 +11,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { toBundledRipgrepPlatform } from '../../shared/bundled-ripgrep'
-import { execFileSync } from 'node:child_process'
-import { BUNDLED_RIPGREP_VERSION } from '../../shared/bundled-ripgrep'
 import {
   bundledRipgrepCommand,
+  bundledRipgrepContentKey,
   bundledRipgrepWslSpawnOptions,
   resetBundledRipgrepPathCacheForTests,
   resolveBundledRipgrepPath
@@ -67,13 +66,13 @@ describe('bundled ripgrep path', () => {
     expect(toBundledRipgrepPlatform('win32', 'ia32')).toBeNull()
   })
 
-  it('keys the remote cache on the version the pinned binary reports', () => {
+  it('keys the remote cache on the shipped bytes', () => {
     setResourcesPath(undefined)
-    const version = execFileSync(bundledRipgrepCommand(), ['--version'], { encoding: 'utf8' })
+    const platform = toBundledRipgrepPlatform(process.platform, process.arch)!
+    const key = bundledRipgrepContentKey(platform)
 
-    expect(version.split('\n')[0]).toMatch(
-      new RegExp(`^ripgrep ${BUNDLED_RIPGREP_VERSION.replaceAll('.', '\\.')}\\b`)
-    )
+    expect(key).toMatch(/^[0-9a-f]{16}$/)
+    expect(bundledRipgrepContentKey('win32-x64')).not.toBe(key)
   })
 
   it('picks the distro-arch Linux build via wslpath, else the distro rg', () => {
