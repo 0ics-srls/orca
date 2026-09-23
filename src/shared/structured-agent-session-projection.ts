@@ -14,6 +14,10 @@ import {
   activeStructuredAgentSessionTurnId,
   statusStructuredAgentSessionToolCall
 } from './structured-agent-session-live-turn'
+import {
+  isStructuredAgentSessionToolAction,
+  structuredAgentSessionToolCallBlock
+} from './structured-agent-session-tool-call-block'
 
 import type { NativeChatBlock, NativeChatMessage } from './native-chat-types'
 import { sha256 } from './sha256'
@@ -52,23 +56,18 @@ function itemBlocks(item: AgentJournalRenderItem): {
   if (body.kind === 'message') {
     return { role: body.role, blocks: body.blocks }
   }
-  if (body.kind === 'tool-call') {
+  if (isStructuredAgentSessionToolAction(body)) {
+    const call = structuredAgentSessionToolCallBlock(body)
+    if (body.kind === 'diff') {
+      return {
+        role: 'assistant',
+        blocks: [call, { type: 'tool-result', output: boundedText(body.patch) }]
+      }
+    }
     return {
       role: 'assistant',
       blocks: [
-        {
-          type: 'tool-call',
-          name: body.name,
-          input: body.input,
-          state: body.state,
-          ...(body.callId !== undefined ? { callId: body.callId } : {}),
-          ...(body.mcpIdentity !== undefined ? { mcpIdentity: body.mcpIdentity } : {}),
-          ...(body.exitCode !== undefined ? { exitCode: body.exitCode } : {}),
-          ...(body.durationMs !== undefined ? { durationMs: body.durationMs } : {}),
-          ...(body.webSearchResults !== undefined
-            ? { webSearchResults: body.webSearchResults }
-            : {})
-        },
+        call,
         ...(body.output
           ? [
               {
@@ -78,15 +77,6 @@ function itemBlocks(item: AgentJournalRenderItem): {
               }
             ]
           : [])
-      ]
-    }
-  }
-  if (body.kind === 'diff') {
-    return {
-      role: 'assistant',
-      blocks: [
-        { type: 'tool-call', name: 'Diff', input: { path: body.path } },
-        { type: 'tool-result', output: boundedText(body.patch) }
       ]
     }
   }
