@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import {
   SshChannelMultiplexer,
   SSH_MUX_REQUEST_TIMEOUT_CODE,
@@ -111,6 +111,8 @@ function createRelayFixture(operationDurationMs: number): RelayFixture {
 }
 
 describe('SSH worktree add timeout through the relay boundary', () => {
+  beforeEach(() => vi.stubEnv('ORCA_WORKTREE_ADD_TIMEOUT_MS', undefined))
+
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.useRealTimers()

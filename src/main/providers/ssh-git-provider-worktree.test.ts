@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { SshGitProvider } from './ssh-git-provider'
 import {
   createMockMux,
@@ -17,9 +17,12 @@ describe('SshGitProvider', () => {
   let provider: SshGitProvider
 
   beforeEach(() => {
+    vi.stubEnv('ORCA_WORKTREE_ADD_TIMEOUT_MS', undefined)
     mux = createMockMux()
     provider = new SshGitProvider('conn-1', mux as never)
   })
+
+  afterEach(() => vi.unstubAllEnvs())
 
   it('listWorktrees sends git.listWorktrees request', async () => {
     const worktrees = [
