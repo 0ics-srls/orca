@@ -406,8 +406,17 @@ const MERMAID_PACKAGE = 'node_modules/mermaid/'
  *
  *   modules        4212 -> 4213   (+1)
  *   local modules  1026 -> 1027   (+1)
+ *
+ * The OS the host reports joins next, shown under the host name in the docked host header. Three
+ * local modules, nothing vendored: `src/transport/host-platform-store.ts`, which the protocol gate
+ * above every route writes and the header reads; `src/transport/host-platform-persistence.web.ts`,
+ * the store's in-memory-only persistence on the page; and `src/transport/host-platform-label.ts`,
+ * the header's display name for it.
+ *
+ *   modules        4213 -> 4216   (+3)
+ *   local modules  1027 -> 1030   (+3)
  */
-const SESSION_ROUTE_MODULES = 4213
+const SESSION_ROUTE_MODULES = 4216
 
 /** What the page enters this route through once the route is a switch with a `.web.tsx` sibling. */
 const ROUTE_ENTRY = [

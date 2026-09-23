@@ -5,7 +5,8 @@ import type { RpcResponse } from './types'
 
 /**
  * `status.get` as the transport itself asks it: the protocol gate's capability read, the retrying
- * runtime capability probe, and the pairing race's "does this path answer at all".
+ * runtime capability probe, and the pairing race's "does this path answer at all". The home list's
+ * per-connection OS read borrows it too, reading a refusal the same way: it keeps the last record.
  *
  * The third named policy on this method, and the second `success-result-or-skip` one. All three
  * transport callers agree that a refusal is an absent answer rather than an error — the gate falls
