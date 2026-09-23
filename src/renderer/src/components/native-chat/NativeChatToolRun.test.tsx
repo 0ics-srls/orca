@@ -450,13 +450,26 @@ describe('NativeChatToolRun', () => {
     expect(header).toHaveTextContent('Running 1 command')
     expect(header.querySelector('.lucide-check')).toBeNull()
 
+    // The next call starts: still the same element, now counting it.
+    const next: NativeChatBlock[] = [
+      ...settled,
+      { type: 'tool-call', name: 'shell', input: { command: 'sleep 2' }, state: 'running' }
+    ]
+    rerender(<NativeChatToolRun blocks={next} expandSignal={false} activeTurnIsWorking />)
+    expect(runHeader(container)).toBe(header)
+    expect(header).toHaveTextContent('Running 2 commands')
+    expect(header).toHaveTextContent('sleep 2')
+
     // The turn ends: the same element settles in place.
-    rerender(
-      <NativeChatToolRun blocks={settled} expandSignal={false} activeTurnIsWorking={false} />
-    )
+    const done: NativeChatBlock[] = [
+      ...settled,
+      { type: 'tool-call', name: 'shell', input: { command: 'sleep 2' }, state: 'completed' },
+      { type: 'tool-result', output: 'done' }
+    ]
+    rerender(<NativeChatToolRun blocks={done} expandSignal={false} activeTurnIsWorking={false} />)
     expect(runHeader(container)).toBe(header)
     expect(header).toHaveAttribute('data-native-chat-tool-run-state', 'settled')
-    expect(header).toHaveTextContent('sleep 1')
+    expect(header).toHaveTextContent('Ran 2 commands')
     expect(header).not.toHaveTextContent('Running')
     expect(header.querySelector('.lucide-check')).toBeInTheDocument()
     expect(header.querySelector('.animate-pulse')).toBeNull()
@@ -497,6 +510,8 @@ describe('NativeChatToolRun', () => {
     const settledRow = runHeader(container)
     expect(settledRow).toHaveTextContent('pnpm test')
     expect(settledRow.querySelector('.lucide-check')).toBeInTheDocument()
+    // Windowing remounts settled rows on scroll; a mark that faded in would replay.
+    expect(settledRow.querySelector('.lucide-check')).not.toHaveClass('animate-in')
     expect(settledRow.querySelector('.animate-pulse')).toBeNull()
     expect(container.querySelector('.animate-pulse')).toBeNull()
   })

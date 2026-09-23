@@ -273,10 +273,7 @@ export function NativeChatToolRun({
               and never while live: between two calls nothing is running, and a
               mark that appeared then would flash on every call. */}
           {structuredActivityUi && !live && runSucceeded ? (
-            <Check
-              aria-hidden
-              className="size-3 shrink-0 text-muted-foreground animate-in fade-in duration-150 motion-reduce:animate-none"
-            />
+            <Check aria-hidden className="size-3 shrink-0 text-muted-foreground" />
           ) : null}
           {latestCallLabel ? (
             <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
