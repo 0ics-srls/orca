@@ -23,7 +23,7 @@ afterEach(() => {
   }
 })
 
-function fixture(shell: string): { cwd: string; pidPath: string } {
+function fixture(shell: string): { cwd: string; pidPath: string; bin: string } {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'orca-agent-login-')))
   fixtureDirs.push(root)
   const bin = join(root, 'bin')
@@ -34,6 +34,7 @@ function fixture(shell: string): { cwd: string; pidPath: string } {
   const startup = [
     `export PATH=${quotePosixShell(bin)}:"$PATH"`,
     'printf "LOGIN BANNER\\n"',
+    'export ORCA_AGENT_FIXTURE=from-login',
     'cd /'
   ].join('\n')
   writeFileSync(join(root, '.zshrc'), startup)
@@ -46,6 +47,8 @@ function fixture(shell: string): { cwd: string; pidPath: string } {
     if (process.argv.includes('--wait')) {
       fs.writeFileSync(${JSON.stringify(pidPath)}, String(process.pid))
       setInterval(() => {}, 1000)
+    } else if (process.argv.includes('--environment')) {
+      process.stdout.write(JSON.stringify({ value: process.env.ORCA_AGENT_FIXTURE, path: process.env.PATH }))
     } else {
       let stdin = ''
       process.stdin.on('data', chunk => stdin += chunk)
@@ -64,7 +67,7 @@ function fixture(shell: string): { cwd: string; pidPath: string } {
   vi.stubEnv('ZDOTDIR', root)
   vi.stubEnv('SHELL', shell)
   vi.stubEnv('PATH', '/usr/bin:/bin')
-  return { cwd, pidPath }
+  return { cwd, pidPath, bin }
 }
 
 describe('SSH agent login execution', () => {
@@ -93,6 +96,28 @@ describe('SSH agent login execution', () => {
           timedOut: false,
           canceled: false
         })
+        expect(existsSync(join(cwd, 'injected'))).toBe(false)
+      }
+    )
+  }
+
+  for (const shell of ['/bin/bash', '/bin/zsh']) {
+    it.skipIf(process.platform === 'win32' || !existsSync(shell))(
+      `keeps explicit environment values after login startup in ${shell}`,
+      async () => {
+        const { cwd, bin } = fixture(shell)
+        const value = 'caller $HOME $(touch injected) `pwd`'
+        const result = await createHandlers().get('agent.execNonInteractive')!(
+          {
+            binary: 'orca-login-agent',
+            args: ['--environment'],
+            cwd,
+            loginShell: true,
+            env: { ORCA_AGENT_FIXTURE: value, PATH: bin }
+          },
+          requestContext()
+        )
+        expect(result).toMatchObject({ stdout: JSON.stringify({ value, path: bin }), exitCode: 0 })
         expect(existsSync(join(cwd, 'injected'))).toBe(false)
       }
     )

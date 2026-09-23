@@ -164,7 +164,12 @@ export class AgentExecHandler {
 
     return new Promise<ExecResult>((resolve) => {
       let child
-      const loginShell = agentExecLoginShell(binary, args, cwd, params.loginShell)
+      const loginShellEnv = Object.fromEntries(
+        Object.entries(spawnEnv).filter(
+          ([key, value]) => Object.hasOwn(extraEnv ?? {}, key) || value !== process.env[key]
+        )
+      )
+      const loginShell = agentExecLoginShell(binary, args, cwd, params.loginShell, loginShellEnv)
       try {
         const { spawnCmd, spawnArgs } = loginShell ?? getWindowsSafeSpawn(binary, args, spawnEnv)
         child = spawnProcess({

@@ -6,7 +6,8 @@ export function agentExecLoginShell(
   binary: string,
   args: string[],
   cwd: string | undefined,
-  requested: unknown
+  requested: unknown,
+  env: NodeJS.ProcessEnv = {}
 ): { spawnCmd: string; spawnArgs: string[]; readStdout: (stdout: string) => string | null } | null {
   if (process.platform === 'win32' || requested !== true) {
     return null
@@ -17,9 +18,23 @@ export function agentExecLoginShell(
   }
 
   const captured = buildCapturedShellCommand('cd -- "$1" || exit; shift; exec "$@"')
+  // Apply explicit values after startup files have populated the login environment.
+  const assignments = Object.entries(env)
+    .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+    .map(([key, value]) => `${key}=${value}`)
   return {
     spawnCmd: shell,
-    spawnArgs: ['-ilc', captured.command, 'orca-agent', cwd ?? process.cwd(), binary, ...args],
+    spawnArgs: [
+      '-ilc',
+      captured.command,
+      'orca-agent',
+      cwd ?? process.cwd(),
+      '/usr/bin/env',
+      '--',
+      ...assignments,
+      binary,
+      ...args
+    ],
     readStdout: captured.readStdout
   }
 }
