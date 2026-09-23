@@ -373,6 +373,8 @@ describe('a send with no live owner', () => {
 
     expect(acquire).toHaveBeenCalledOnce()
     expect(dispatch).toHaveBeenCalledOnce()
+    // The reopened child is nobody's: it goes on the idle clock like any unheld restart.
+    expect(host['holds'].isReleasePending(SESSION)).toBe(true)
   })
 
   it('refuses for good when the owner cannot be restarted', async () => {

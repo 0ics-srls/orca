@@ -184,6 +184,34 @@ describe('a surface leaving while its structured session resumes', () => {
     expect(evict).not.toHaveBeenCalled()
   })
 
+  it('keeps a hold that found the child already there when the resume that made it still fails', async () => {
+    const gate = Promise.withResolvers<void>()
+    let child = false
+    const holds = new StructuredAgentSessionHolds({
+      // The child is up before the resume settles, and then the resume fails behind it.
+      resume: async () => {
+        child = true
+        await gate.promise
+        return { fromFence: 1 }
+      },
+      hasProviderChild: () => child,
+      isTurnActive: () => false,
+      evict: async () => {},
+      graceMs: GRACE_MS
+    })
+    pendingHolds.push(holds)
+    const first = holds.hold('session-1', 'same-holder')
+    const rejected = expect(first).rejects.toThrow('acquisition failed')
+    holds.release('session-1', 'same-holder')
+    await holds.hold('session-1', 'same-holder')
+
+    gate.reject(new Error('acquisition failed'))
+    await rejected
+
+    expect(holds.isHeld('session-1')).toBe(true)
+    expect(holds.isReleasePending('session-1')).toBe(false)
+  })
+
   it('starts a fresh resume once the failed one has settled', async () => {
     let child = false
     const resume = vi

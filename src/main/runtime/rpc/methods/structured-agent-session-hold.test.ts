@@ -162,106 +162,77 @@ describe('a client that holds a session', () => {
 })
 
 describe('a client that disappears without cleanup', () => {
-  it('releases a late child after its same-ID replacement refuses the stale fence', async () => {
+  it('shares one child with a same-ID replacement that arrives while the first hold resumes', async () => {
     await host.close(SESSION)
     await host.restoreReadableSessions()
     closeSession.mockClear()
-    const firstEntered = Promise.withResolvers<void>()
-    const firstGate = Promise.withResolvers<void>()
-    const replacementEntered = Promise.withResolvers<void>()
-    const replacementGate = Promise.withResolvers<void>()
+    const entered = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
     const attach = host.attach.bind(host)
-    const attachSpy = vi
-      .spyOn(host, 'attach')
-      .mockImplementationOnce(async (...args) => {
-        firstEntered.resolve()
-        await firstGate.promise
-        return attach(...args)
-      })
-      .mockImplementationOnce(async (...args) => {
-        replacementEntered.resolve()
-        await replacementGate.promise
-        return attach(...args)
-      })
+    const attachSpy = vi.spyOn(host, 'attach').mockImplementationOnce(async (...args) => {
+      entered.resolve()
+      await gate.promise
+      return attach(...args)
+    })
     try {
       const params = { sessionId: SESSION, holderId: 'same-chat' }
       const first = call('agentSession.hold', params)
-      await firstEntered.promise
+      await entered.promise
+      // Re-registering the cleanup id released the first hold; the replacement joins its resume.
       const replacement = call('agentSession.hold', params)
-      await replacementEntered.promise
-      firstGate.resolve()
+      gate.resolve()
+
       expect(await first).toMatchObject({ ok: true })
+      expect(await replacement).toMatchObject({ ok: true })
+      expect(attachSpy).toHaveBeenCalledOnce()
       expect(host.isHeld(SESSION)).toBe(true)
+      await new Promise((resolve) => setTimeout(resolve, GRACE_MS * 4))
       expect(closeSession).not.toHaveBeenCalled()
 
-      replacementGate.resolve()
-      expect(await replacement).toMatchObject({
-        ok: false,
-        error: { code: 'agent_session_checkpoint_stale' }
-      })
-      expect(host.isHeld(SESSION)).toBe(false)
+      runtime.cleanupSubscriptionsForConnection(CONNECTION)
       await vi.waitFor(() => expect(host.hasSession(SESSION)).toBe(false))
       expect(closeSession).toHaveBeenCalledExactlyOnceWith(SESSION)
     } finally {
-      firstGate.resolve()
-      replacementGate.resolve()
+      gate.resolve()
       attachSpy.mockRestore()
     }
   })
 
-  it.each([false, true])(
-    'keeps replacement hold and cleanup after an old request fails (replacement finished=%s)',
-    async (replacementFinished) => {
-      await host.close(SESSION)
-      await host.restoreReadableSessions()
-      closeSession.mockClear()
-      const firstEntered = Promise.withResolvers<void>()
-      const firstGate = Promise.withResolvers<void>()
-      const replacementEntered = Promise.withResolvers<void>()
-      const replacementGate = Promise.withResolvers<void>()
-      const attach = host.attach.bind(host)
-      const attachSpy = vi
-        .spyOn(host, 'attach')
-        .mockImplementationOnce(async () => {
-          firstEntered.resolve()
-          await firstGate.promise
-          throw new Error('old acquisition failed')
-        })
-        .mockImplementationOnce(async (...args) => {
-          replacementEntered.resolve()
-          await replacementGate.promise
-          return attach(...args)
-        })
-      try {
-        const params = { sessionId: SESSION, holderId: 'same-chat' }
-        const first = call('agentSession.hold', params)
-        await firstEntered.promise
-        const replacement = call('agentSession.hold', params)
-        await replacementEntered.promise
-        if (replacementFinished) {
-          replacementGate.resolve()
-          expect(await replacement).toMatchObject({ ok: true })
-        }
+  it('fails a hold and its same-ID replacement together when their one resume fails, and the next hold starts over', async () => {
+    await host.close(SESSION)
+    await host.restoreReadableSessions()
+    closeSession.mockClear()
+    const entered = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
+    const attachSpy = vi.spyOn(host, 'attach').mockImplementationOnce(async () => {
+      entered.resolve()
+      await gate.promise
+      throw new Error('acquisition failed')
+    })
+    try {
+      const params = { sessionId: SESSION, holderId: 'same-chat' }
+      const first = call('agentSession.hold', params)
+      await entered.promise
+      const replacement = call('agentSession.hold', params)
+      gate.resolve()
 
-        firstGate.resolve()
-        expect(await first).toMatchObject({ ok: false })
-        expect(host.isHeld(SESSION)).toBe(true)
-        replacementGate.resolve()
-        expect(await replacement).toMatchObject({ ok: true })
-        await new Promise((resolve) => setTimeout(resolve, GRACE_MS * 4))
-        expect(host.hasSession(SESSION)).toBe(true)
-        expect(closeSession).not.toHaveBeenCalled()
+      expect(await first).toMatchObject({ ok: false })
+      expect(await replacement).toMatchObject({ ok: false })
+      expect(host.isHeld(SESSION)).toBe(false)
+      expect(closeSession).not.toHaveBeenCalled()
 
-        runtime.cleanupSubscriptionsForConnection(CONNECTION)
-        await vi.waitFor(() => expect(host.hasSession(SESSION)).toBe(false))
-        expect(closeSession).toHaveBeenCalledExactlyOnceWith(SESSION)
-      } finally {
-        firstGate.resolve()
-        replacementGate.resolve()
-        attachSpy.mockRestore()
-      }
+      expect(await call('agentSession.hold', params)).toMatchObject({ ok: true })
+      expect(attachSpy).toHaveBeenCalledTimes(2)
+      expect(host.isHeld(SESSION)).toBe(true)
+
+      runtime.cleanupSubscriptionsForConnection(CONNECTION)
+      await vi.waitFor(() => expect(host.hasSession(SESSION)).toBe(false))
+      expect(closeSession).toHaveBeenCalledExactlyOnceWith(SESSION)
+    } finally {
+      gate.resolve()
+      attachSpy.mockRestore()
     }
-  )
+  })
 
   it('still releases the session when its transport closes', async () => {
     await call('agentSession.hold', { sessionId: SESSION, holderId: 'chat-1' })
