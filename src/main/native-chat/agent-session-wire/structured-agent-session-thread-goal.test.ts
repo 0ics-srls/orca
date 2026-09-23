@@ -63,7 +63,8 @@ function appendGoalRow(
 
 function context(
   journal: AgentSessionJournal,
-  adapter: Partial<StructuredAgentSessionAdapter>
+  adapter: Partial<StructuredAgentSessionAdapter>,
+  flushStreamedEvents: () => Promise<void> = async () => undefined
 ): AgentSessionTurnContext {
   return {
     sessionId: 'session-1',
@@ -74,7 +75,7 @@ function context(
     persistOptions: async () => undefined,
     resolvedBy: 'client-1',
     publish: vi.fn(),
-    flushStreamedEvents: async () => undefined,
+    flushStreamedEvents,
     now: () => 1
   }
 }
@@ -250,6 +251,22 @@ describe('performThreadGoalChange', () => {
         })
       ]
     ])
+  })
+
+  it('drains accepted provider events before deciding whether a set replaces a goal', async () => {
+    const journal = await openJournal()
+    const changeThreadGoal = vi.fn(async () => ({ ok: true as const }))
+    // The goal the provider reported is still in the deferred sink when the set arrives.
+    const ctx = context(journal, { changeThreadGoal, supportsThreadGoal: () => true }, async () => {
+      await appendGoalRow(journal, { status: 'active' })
+    })
+
+    await performThreadGoalChange(ctx, {
+      clientOperationId: 'op-10',
+      change: { kind: 'set', objective: 'Ship the tests' }
+    })
+
+    expect(changeThreadGoal).toHaveBeenCalledWith(expect.objectContaining({ replacesGoal: true }))
   })
 })
 

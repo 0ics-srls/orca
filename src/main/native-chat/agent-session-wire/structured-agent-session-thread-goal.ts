@@ -48,8 +48,13 @@ export async function performThreadGoalChange(
   }
   const { change } = input
   const identity = objectiveIdentity(input.clientOperationId)
-  // Read before the objective row lands: that row is a message, not a goal transition.
-  const replacesGoal = change.kind === 'set' && ctx.journal.threadGoal() !== null
+  let replacesGoal = false
+  if (change.kind === 'set') {
+    // A goal transition the host accepted but has not journaled yet decides this too.
+    await ctx.flushStreamedEvents()
+    // Read before the objective row lands: that row is a message, not a goal transition.
+    replacesGoal = ctx.journal.threadGoal() !== null
+  }
   // Journal first: an active goal starts provider work at once, and the objective
   // must land ahead of that work in the transcript.
   if (change.kind === 'set') {
