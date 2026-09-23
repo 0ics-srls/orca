@@ -7,6 +7,7 @@ import type {
 import {
   agentSessionThreadGoalElapsedSeconds,
   currentAgentSessionThreadGoal,
+  currentAgentSessionThreadGoalBySequence,
   isAgentSessionThreadGoalOpen
 } from './agent-session-thread-goal'
 
@@ -56,11 +57,25 @@ describe('current thread goal', () => {
     ).toBeUndefined()
   })
 
-  it('takes the latest transition by journal order, not array order', () => {
+  it('reads the last goal row of a rendered snapshot, past later rows of other kinds', () => {
     const paused = goal({ status: 'paused' })
-    expect(currentAgentSessionThreadGoal([goalRow(5, 'set', paused), goalRow(2, 'set')])).toEqual(
-      paused
-    )
+    expect(
+      currentAgentSessionThreadGoal([
+        goalRow(1, 'set'),
+        goalRow(2, 'set', paused),
+        row(3, { kind: 'status', text: 'Context compacted' })
+      ])
+    ).toEqual(paused)
+  })
+
+  it('takes the latest transition by sequence for items held unordered', () => {
+    const paused = goal({ status: 'paused' })
+    const unordered = new Map([
+      ['b', goalRow(5, 'set', paused)],
+      ['a', goalRow(2, 'set')]
+    ])
+    expect(currentAgentSessionThreadGoalBySequence(unordered.values())).toEqual(paused)
+    expect(currentAgentSessionThreadGoalBySequence([])).toBeUndefined()
   })
 
   it('answers null once the latest transition cleared the goal', () => {

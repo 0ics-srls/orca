@@ -47,21 +47,36 @@ function goalFromRow(body: AgentJournalItemBody): AgentJournalThreadGoal | null 
   return isAgentJournalThreadGoalStatus(body.threadGoal.goal.status) ? body.threadGoal.goal : null
 }
 
+function isGoalTransition(item: GoalCandidate): boolean {
+  return isRootAgentJournalItem(item) && isAgentJournalThreadGoalRow(item.body)
+}
+
 /**
  * The current goal as far as these rows can tell: `undefined` when none of them
  * records a goal transition, otherwise the latest one's goal, or null when it
- * cleared the goal or cannot be read.
+ * cleared the goal or cannot be read. Scans backwards because every caller passes
+ * a rendered snapshot, which is already in sequence order; a revision keeps its
+ * row's sequence, so the last goal row is the answer.
  */
 export function currentAgentSessionThreadGoal(
+  items: readonly GoalCandidate[]
+): AgentJournalThreadGoal | null | undefined {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index]
+    if (item && isGoalTransition(item)) {
+      return goalFromRow(item.body)
+    }
+  }
+  return undefined
+}
+
+/** The same answer for items a caller holds unordered, such as the host's own map. */
+export function currentAgentSessionThreadGoalBySequence(
   items: Iterable<GoalCandidate>
 ): AgentJournalThreadGoal | null | undefined {
   let latest: GoalCandidate | null = null
   for (const item of items) {
-    if (
-      isRootAgentJournalItem(item) &&
-      isAgentJournalThreadGoalRow(item.body) &&
-      (latest === null || item.sequence > latest.sequence)
-    ) {
+    if (isGoalTransition(item) && (latest === null || item.sequence > latest.sequence)) {
       latest = item
     }
   }

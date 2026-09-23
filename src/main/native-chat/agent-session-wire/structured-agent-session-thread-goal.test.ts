@@ -2,11 +2,18 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AgentSessionJournalIdentity } from '../../../shared/agent-session-journal-types'
+import type {
+  AgentJournalThreadGoal,
+  AgentSessionJournalIdentity
+} from '../../../shared/agent-session-journal-types'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { createTrackedJournalOpener } from '../agent-session-journal/journal-store-test-open'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
-import { performThreadGoalChange } from './structured-agent-session-thread-goal'
+import {
+  journalRecordsThreadGoalChange,
+  performThreadGoalChange,
+  threadGoalPlan
+} from './structured-agent-session-thread-goal'
 import type { AgentSessionTurnContext } from './structured-agent-session-turns'
 
 const IDENTITY: AgentSessionJournalIdentity = {
@@ -31,6 +38,27 @@ afterEach(async () => {
 async function openJournal(): Promise<AgentSessionJournal> {
   root ??= await mkdtemp(join(tmpdir(), 'orca-thread-goal-'))
   return journals.open({ identity: IDENTITY, journalDir: root })
+}
+
+const GOAL: AgentJournalThreadGoal = {
+  objective: 'Ship the parser',
+  status: 'active',
+  tokenBudget: null,
+  tokensUsed: 1,
+  timeUsedSeconds: 2,
+  createdAt: 3_000,
+  updatedAt: 4_000
+}
+
+function appendGoalRow(
+  journal: AgentSessionJournal,
+  overrides: Partial<AgentJournalThreadGoal>
+): Promise<unknown> {
+  return journal.appendItem(
+    { provider: 'orca', clientMessageId: `goal-row:${journal.snapshot().items.length}` },
+    { kind: 'status', text: 'Goal', threadGoal: { state: 'set', goal: { ...GOAL, ...overrides } } },
+    { fence: 1 }
+  )
 }
 
 function context(
@@ -65,7 +93,8 @@ describe('performThreadGoalChange', () => {
     expect(changeThreadGoal).toHaveBeenCalledWith({
       sessionId: 'session-1',
       fence: 1,
-      change: { kind: 'set', objective: 'Ship the parser' }
+      change: { kind: 'set', objective: 'Ship the parser' },
+      replacesGoal: false
     })
     const expected = {
       kind: 'message',
@@ -152,21 +181,85 @@ describe('performThreadGoalChange', () => {
 
   it('reports the latest goal the whole journal records', async () => {
     const journal = await openJournal()
-    const goal = {
-      objective: 'Ship the parser',
-      status: 'paused' as const,
-      tokenBudget: null,
-      tokensUsed: 1,
-      timeUsedSeconds: 2,
-      createdAt: 3_000,
-      updatedAt: 4_000
-    }
     expect(journal.threadGoal()).toBeNull()
-    await journal.appendItem(
-      { provider: 'orca', clientMessageId: 'goal-row' },
-      { kind: 'status', text: 'Goal paused', threadGoal: { state: 'set', goal } },
-      { fence: 1 }
-    )
-    expect(journal.threadGoal()).toEqual(goal)
+    await appendGoalRow(journal, { status: 'paused' })
+    expect(journal.threadGoal()).toEqual({ ...GOAL, status: 'paused' })
+  })
+
+  it('tells the adapter a set replaces the goal the journal records, whatever its status', async () => {
+    const journal = await openJournal()
+    await appendGoalRow(journal, { status: 'complete' })
+    const changeThreadGoal = vi.fn(async () => ({ ok: true as const }))
+    const ctx = context(journal, { changeThreadGoal, supportsThreadGoal: () => true })
+
+    await performThreadGoalChange(ctx, {
+      clientOperationId: 'op-6',
+      change: { kind: 'set', objective: 'Ship the tests' }
+    })
+    await performThreadGoalChange(ctx, {
+      clientOperationId: 'op-7',
+      change: { kind: 'status', status: 'paused' }
+    })
+
+    expect(changeThreadGoal.mock.calls).toEqual([
+      [
+        expect.objectContaining({
+          change: { kind: 'set', objective: 'Ship the tests' },
+          replacesGoal: true
+        })
+      ],
+      [
+        expect.objectContaining({
+          change: { kind: 'status', status: 'paused' },
+          replacesGoal: false
+        })
+      ]
+    ])
+  })
+})
+
+describe('threadGoalPlan replay', () => {
+  const envelope = {
+    sessionId: 'session-1',
+    clientOperationId: 'op-8',
+    expectedRuntimeFence: 1,
+    payloadFingerprint: 'fp'
+  }
+
+  it('answers a lost response from the goal the journal records, and runs again otherwise', async () => {
+    const journal = await openJournal()
+    const ctx = context(journal, {})
+    const paused = threadGoalPlan({ envelope, change: { kind: 'status', status: 'paused' } })
+    const set = threadGoalPlan({ envelope, change: { kind: 'set', objective: 'Ship the parser' } })
+    const clear = threadGoalPlan({ envelope, change: { kind: 'clear' } })
+    const unknown = { status: 'unknown' as const }
+
+    expect(paused.recoverUnknownFromDurableState).toBe(true)
+    expect(paused.rerunWhenReplayMissing?.(ctx)).toBe(true)
+    // Nothing recorded yet: only a clear reads as applied.
+    expect(paused.replay(ctx, unknown)).toBeNull()
+    expect(set.replay(ctx, unknown)).toBeNull()
+    expect(clear.replay(ctx, unknown)).toEqual({ change: 'clear' })
+
+    await appendGoalRow(journal, { status: 'paused' })
+    expect(paused.replay(ctx, unknown)).toEqual({ change: 'status' })
+    expect(set.replay(ctx, unknown)).toBeNull()
+    expect(clear.replay(ctx, unknown)).toBeNull()
+
+    // A settled success always replays; a refusal never does.
+    expect(set.replay(ctx, { status: 'succeeded', sessionId: 'session-1' })).toEqual({
+      change: 'set'
+    })
+    expect(
+      set.replay(ctx, { status: 'failed', code: 'agent_session_operation_invalid' })
+    ).toBeNull()
+  })
+
+  it('reads a set as applied only when the recorded goal is that objective, active', () => {
+    const change = { kind: 'set' as const, objective: 'Ship the parser' }
+    expect(journalRecordsThreadGoalChange(GOAL, change)).toBe(true)
+    expect(journalRecordsThreadGoalChange({ ...GOAL, status: 'paused' }, change)).toBe(false)
+    expect(journalRecordsThreadGoalChange({ ...GOAL, objective: 'Ship it' }, change)).toBe(false)
+    expect(journalRecordsThreadGoalChange(null, change)).toBe(false)
   })
 })

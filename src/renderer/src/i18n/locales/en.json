@@ -17562,6 +17562,7 @@
         "placeholder": "Describe your goal, define measurable outcomes for best results",
         "clear": "Clear goal",
         "chip": "Goal",
+        "exitMode": "Exit goal mode",
         "sentAsGoal": "Sent as goal",
         "collapse": "Hide full goal",
         "expand": "Show full goal",

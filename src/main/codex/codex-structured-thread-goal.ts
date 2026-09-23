@@ -2,32 +2,46 @@ import type { AgentSessionThreadGoalChange } from '../../shared/agent-session-wi
 import { isCodexAppServerRequestError } from './codex-app-server-connection'
 import type { CodexSession } from './codex-structured-session-state'
 
-/** The app-server request that makes one goal change on a thread. */
-export function codexThreadGoalRequest(
+type CodexThreadGoalRequest = {
+  method: 'thread/goal/set' | 'thread/goal/clear'
+  params: Record<string, unknown>
+}
+
+/** The app-server requests that make one goal change on a thread, in order. */
+export function codexThreadGoalRequests(
   threadId: string,
-  change: AgentSessionThreadGoalChange
-): { method: 'thread/goal/set' | 'thread/goal/clear'; params: Record<string, unknown> } {
+  change: AgentSessionThreadGoalChange,
+  replacesGoal: boolean
+): CodexThreadGoalRequest[] {
+  const clear: CodexThreadGoalRequest = { method: 'thread/goal/clear', params: { threadId } }
   if (change.kind === 'clear') {
-    return { method: 'thread/goal/clear', params: { threadId } }
+    return [clear]
   }
-  // An active goal on an idle thread starts work by itself, so a set needs no turn.
-  return {
-    method: 'thread/goal/set',
-    params:
-      change.kind === 'set'
-        ? { threadId, objective: change.objective, status: 'active' }
-        : { threadId, status: change.status }
+  if (change.kind === 'status') {
+    return [{ method: 'thread/goal/set', params: { threadId, status: change.status } }]
   }
+  // `set` on an existing goal rewrites its objective and keeps its id and usage
+  // counters, so a replacement clears first. An active goal on an idle thread
+  // starts work by itself, so a set needs no turn.
+  return [
+    ...(replacesGoal ? [clear] : []),
+    {
+      method: 'thread/goal/set',
+      params: { threadId, objective: change.objective, status: 'active' }
+    }
+  ]
 }
 
 export async function changeCodexThreadGoal(
   session: Pick<CodexSession, 'connection' | 'threadId'>,
   change: AgentSessionThreadGoalChange,
+  replacesGoal: boolean,
   timeoutMs: number | undefined
 ): Promise<{ ok: true } | { ok: false; rejected: string }> {
-  const request = codexThreadGoalRequest(session.threadId, change)
   try {
-    await session.connection.request(request.method, request.params, { timeoutMs })
+    for (const request of codexThreadGoalRequests(session.threadId, change, replacesGoal)) {
+      await session.connection.request(request.method, request.params, { timeoutMs })
+    }
     return { ok: true }
   } catch (error) {
     if (isCodexAppServerRequestError(error)) {

@@ -270,7 +270,12 @@ export class CodexStructuredSessionAdapter implements StructuredAgentSessionAdap
   }
 
   changeThreadGoal: NonNullable<StructuredAgentSessionAdapter['changeThreadGoal']> = (input) =>
-    changeCodexThreadGoal(this.session(input.sessionId), input.change, this.deps.requestTimeoutMs)
+    changeCodexThreadGoal(
+      this.session(input.sessionId),
+      input.change,
+      input.replacesGoal,
+      this.deps.requestTimeoutMs
+    )
 
   supportsThreadGoal = (sessionId: string): boolean => this.sessions.has(sessionId)
 

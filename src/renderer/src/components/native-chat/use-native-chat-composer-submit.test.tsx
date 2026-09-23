@@ -126,6 +126,23 @@ describe('composer goal mode', () => {
     expect(onError).toHaveBeenCalledWith('Remove attachments before setting a goal.')
   })
 
+  it('enters goal mode from a typed bare /goal, like the pick does', () => {
+    const { hook, calls } = harness({ draft: '/goal ', threadGoal: { setObjective: vi.fn() } })
+    act(() => hook.result.current.send())
+    expect(calls.sendStructured).not.toHaveBeenCalled()
+    expect(calls.setDraft).toHaveBeenCalledWith('')
+    expect(hook.result.current.goalMode.active).toBe(true)
+
+    // With an objective it is the host command, and without goals it is message text.
+    const withObjective = harness({ draft: '/goal ship it', threadGoal: { setObjective: vi.fn() } })
+    act(() => withObjective.hook.result.current.send())
+    expect(withObjective.calls.sendStructured).toHaveBeenCalledWith('/goal ship it', [])
+    const withoutGoals = harness({ draft: '/goal' })
+    act(() => withoutGoals.hook.result.current.send())
+    expect(withoutGoals.calls.sendStructured).toHaveBeenCalledWith('/goal', [])
+    expect(withoutGoals.hook.result.current.goalMode.active).toBe(false)
+  })
+
   it('sends an ordinary message outside goal mode', () => {
     const { hook, calls } = harness({ draft: 'hello', threadGoal: { setObjective: vi.fn() } })
     act(() => hook.result.current.send())

@@ -224,6 +224,9 @@ export type StructuredAgentSessionAdapter = {
     sessionId: string
     fence: number
     change: AgentSessionThreadGoalChange
+    /** True when the journal records a goal, whatever its status: a `set` must
+     *  start a new goal rather than rewrite that one's objective in place. */
+    replacesGoal: boolean
   }): Promise<{ ok: true } | { ok: false; rejected: string }>
   /** Whether this live session can change its goal. */
   supportsThreadGoal?(sessionId: string): boolean

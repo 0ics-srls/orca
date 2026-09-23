@@ -4,6 +4,7 @@ import { applyPickerSuggestion, type NativeChatPickerItem } from './native-chat-
 import { pushHistory, type HistoryState } from './native-chat-composer-state'
 import type { NativeChatStructuredComposerTransport } from './native-chat-composer-types'
 import type { NativeChatComposerImageAttachment } from './NativeChatComposerField'
+import { isBareStructuredAgentSessionGoalCommand } from '../../../../shared/structured-agent-session-composer'
 
 const GOAL_COMMAND = 'goal'
 
@@ -38,7 +39,6 @@ export function useNativeChatComposerSubmit(args: {
   const { setCaret, setDraft, setHistory, structuredTransport } = args
   const threadGoal = structuredTransport?.threadGoal
   const [entered, setEntered] = useState(false)
-  const [settingGoal, setSettingGoal] = useState(false)
   const active = entered && threadGoal !== undefined
 
   const interceptPick = useCallback(
@@ -58,9 +58,11 @@ export function useNativeChatComposerSubmit(args: {
     [caret, draft, setCaret, setDraft, threadGoal]
   )
 
+  // In-flight changes are serialized by the session's goal controller, which
+  // answers false to a second submit while the first is unsettled.
   const setGoal = useCallback(() => {
     const objective = draft.trim()
-    if (!threadGoal || !structuredTransport || objective === '' || settingGoal) {
+    if (!threadGoal || !structuredTransport || objective === '') {
       return
     }
     if (imageAttachments.length > 0) {
@@ -72,26 +74,21 @@ export function useNativeChatComposerSubmit(args: {
       )
       return
     }
-    setSettingGoal(true)
-    void threadGoal
-      .setObjective(objective)
-      .then((accepted) => {
-        if (accepted) {
-          structuredTransport.onError(null)
-          setHistory((previous) => pushHistory(previous, draft))
-          setDraft('')
-          setCaret(0)
-          setEntered(false)
-        }
-      })
-      .finally(() => setSettingGoal(false))
+    void threadGoal.setObjective(objective).then((accepted) => {
+      if (accepted) {
+        structuredTransport.onError(null)
+        setHistory((previous) => pushHistory(previous, draft))
+        setDraft('')
+        setCaret(0)
+        setEntered(false)
+      }
+    })
   }, [
     draft,
     imageAttachments.length,
     setCaret,
     setDraft,
     setHistory,
-    settingGoal,
     structuredTransport,
     threadGoal
   ])
@@ -106,6 +103,11 @@ export function useNativeChatComposerSubmit(args: {
       }
     } else if (!structuredTransport) {
       sendPty()
+    } else if (threadGoal && isBareStructuredAgentSessionGoalCommand(draft)) {
+      // Same entrance as picking `/goal`: the token becomes the chip.
+      setDraft('')
+      setCaret(0)
+      setEntered(true)
     } else if ((draft.trim() !== '' || imageAttachments.length > 0) && !disabled) {
       sendStructured(draft, imageAttachments)
     }
@@ -116,8 +118,11 @@ export function useNativeChatComposerSubmit(args: {
     imageAttachments,
     sendPty,
     sendStructured,
+    setCaret,
+    setDraft,
     setGoal,
-    structuredTransport
+    structuredTransport,
+    threadGoal
   ])
 
   const exit = useCallback(() => setEntered(false), [])

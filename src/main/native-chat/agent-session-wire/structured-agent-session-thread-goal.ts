@@ -1,7 +1,10 @@
 // `agentSession.threadGoal`: change the provider thread's goal through the same
 // admission, ledger and journal path every other session mutation takes.
 
-import type { AgentJournalItemIdentity } from '../../../shared/agent-session-journal-types'
+import type {
+  AgentJournalItemIdentity,
+  AgentJournalThreadGoal
+} from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionMutationEnvelope,
   AgentSessionThreadGoalChange,
@@ -19,6 +22,23 @@ function objectiveIdentity(clientOperationId: string): AgentJournalItemIdentity 
   return { provider: 'orca', clientMessageId: `thread-goal:${clientOperationId}` }
 }
 
+/** Whether the journal's latest goal already shows this change applied. The
+ *  provider reports every goal transition, so this is the durable answer to an
+ *  operation whose response was lost. */
+export function journalRecordsThreadGoalChange(
+  goal: AgentJournalThreadGoal | null,
+  change: AgentSessionThreadGoalChange
+): boolean {
+  switch (change.kind) {
+    case 'clear':
+      return goal === null
+    case 'status':
+      return goal !== null && goal.status === change.status
+    case 'set':
+      return goal !== null && goal.status === 'active' && goal.objective === change.objective
+  }
+}
+
 export async function performThreadGoalChange(
   ctx: AgentSessionTurnContext,
   input: { clientOperationId: string; change: AgentSessionThreadGoalChange }
@@ -28,6 +48,8 @@ export async function performThreadGoalChange(
   }
   const { change } = input
   const identity = objectiveIdentity(input.clientOperationId)
+  // Read before the objective row lands: that row is a message, not a goal transition.
+  const replacesGoal = change.kind === 'set' && ctx.journal.threadGoal() !== null
   // Journal first: an active goal starts provider work at once, and the objective
   // must land ahead of that work in the transcript.
   if (change.kind === 'set') {
@@ -55,7 +77,8 @@ export async function performThreadGoalChange(
     result = await ctx.adapter.changeThreadGoal({
       sessionId: ctx.sessionId,
       fence: ctx.fence,
-      change
+      change,
+      replacesGoal
     })
   } catch (error) {
     await withdrawObjective()
@@ -72,6 +95,7 @@ export function threadGoalPlan(params: {
   envelope: AgentSessionMutationEnvelope
   change: AgentSessionThreadGoalChange
 }): MutationPlan<AgentSessionThreadGoalResult> {
+  const value: AgentSessionThreadGoalResult = { change: params.change.kind }
   return {
     method: 'agentSession.threadGoal',
     fields: { change: params.change },
@@ -80,9 +104,15 @@ export function threadGoalPlan(params: {
         clientOperationId: params.envelope.clientOperationId,
         change: params.change
       }),
-    // Setting an active goal starts provider work, so only a settled success is answered
-    // without running again.
-    replay: (_ctx, outcome) =>
-      outcome.status === 'succeeded' ? { change: params.change.kind } : null
+    // A lost response is answered from the journal, which the provider keeps
+    // current; otherwise the change runs again, which is safe for every kind.
+    recoverUnknownFromDurableState: true,
+    replay: (ctx, outcome) =>
+      outcome.status === 'succeeded' ||
+      (outcome.status === 'unknown' &&
+        journalRecordsThreadGoalChange(ctx.journal.threadGoal(), params.change))
+        ? value
+        : null,
+    rerunWhenReplayMissing: () => true
   }
 }

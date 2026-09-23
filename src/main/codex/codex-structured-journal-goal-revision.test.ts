@@ -6,6 +6,7 @@ import type { AgentSessionJournalIdentity } from '../../shared/agent-session-jou
 import { currentAgentSessionThreadGoal } from '../../shared/agent-session-thread-goal'
 import type { AgentSessionJournal } from '../native-chat/agent-session-journal/journal-store'
 import { createTrackedJournalOpener } from '../native-chat/agent-session-journal/journal-store-test-open'
+import { readAgentSessionHistory } from '../native-chat/agent-session-wire/agent-session-history-page'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { CodexJournalGoals } from './codex-structured-journal-goals'
 
@@ -96,6 +97,7 @@ describe('codex goal accounting revisions', () => {
     await drained()
     expect(journal.snapshot().items[1]?.revision).toBe(created?.revision)
 
+    const subscriberCursor = journal.cursor()
     goals.handle({
       threadId: THREAD,
       method: 'thread/goal/updated',
@@ -117,6 +119,21 @@ describe('codex goal accounting revisions', () => {
       timeUsedSeconds: 45,
       updatedAt: 1789068033_000
     })
+    // The live page a caught-up subscriber is sent after the write carries the
+    // revised row under its original sequence, not a second goal row.
+    const page = readAgentSessionHistory(journal, {
+      sessionId: IDENTITY.sessionId,
+      direction: 'after',
+      cursor: subscriberCursor
+    })
+    expect(page.ok && page.page.items).toEqual([
+      expect.objectContaining({
+        itemId: created?.itemId,
+        sequence: created?.sequence,
+        revision: (created?.revision ?? 0) + 1
+      })
+    ])
+    expect(page.ok && page.page.removedItemIds).toEqual([])
     goals.dispose()
   })
 
