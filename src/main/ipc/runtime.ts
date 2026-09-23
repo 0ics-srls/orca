@@ -52,7 +52,9 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
     }
   )
 
-  ipcMain.handle('runtime:getStatus', (): RuntimeStatus => {
+  ipcMain.handle('runtime:getStatus', async (): Promise<RuntimeStatus> => {
+    // Why: same gate as `status.get`; the renderer caption must not see the bare hostname either.
+    await runtime.machineNameReady()
     return runtime.getStatus()
   })
 

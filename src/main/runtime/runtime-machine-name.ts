@@ -51,17 +51,22 @@ function detectRuntimeMachineNameOnce(): Promise<string> {
 
 export class RuntimeMachineName {
   private detectedName = normalizeMachineName(os.hostname())
-  private started = false
+  private settled: Promise<void> | null = null
 
   constructor(private readonly readConfiguredName: MachineNameReader) {}
 
   /** Starts the one-time lookup; `read` answers with the hostname until it lands. */
   start(): void {
-    if (this.started) {
-      return
-    }
-    this.started = true
-    void detectRuntimeMachineNameOnce().then(
+    void this.settle()
+  }
+
+  /** Settles once the lookup has landed or given up, so a publisher can wait instead of leaking the hostname. */
+  ready(): Promise<void> {
+    return this.settle()
+  }
+
+  private settle(): Promise<void> {
+    this.settled ??= detectRuntimeMachineNameOnce().then(
       (name) => {
         this.detectedName = name
       },
@@ -69,6 +74,7 @@ export class RuntimeMachineName {
         // detectRuntimeMachineName resolves on every path it owns; keep a surprise from becoming an unhandled rejection.
       }
     )
+    return this.settled
   }
 
   read(): string {

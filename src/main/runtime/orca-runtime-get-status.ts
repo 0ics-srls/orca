@@ -134,12 +134,22 @@ export class OrcaRuntimeWithGetStatus extends OrcaRuntimeWithGetRuntimeId {
       worktreeCreateIdempotency: { dedupeTtlMs: WORKTREE_CREATE_RESULT_TTL_MS },
       ...(windowsProcessStartTimeAvailable ? { windowsProcessStartTimeAvailable } : {}),
       hostPlatform: process.platform,
-      machineName: this.machineName.read(),
+      machineName: this.readMachineName(),
       terminalWindowsShell: this.store?.getSettings?.().terminalWindowsShell ?? null,
       floatingWorkspaceEnabled: this.store?.getSettings?.().floatingTerminalEnabled !== false,
       protocolVersion: RUNTIME_PROTOCOL_VERSION,
       minCompatibleMobileVersion: MIN_COMPATIBLE_RUNTIME_CLIENT_VERSION
     }
+  }
+
+  /** The name status publishes: the configured override, else the detected one. */
+  readMachineName(): string {
+    return this.machineName.read()
+  }
+
+  /** Settles once the machine-name lookup has landed, so a status publisher never leaks the bare hostname. */
+  machineNameReady(): Promise<void> {
+    return this.machineName.ready()
   }
 
   setPtyController(controller: RuntimePtyController | null): void {

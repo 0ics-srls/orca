@@ -76,7 +76,8 @@ describe('runtime machine name detection', () => {
     expect(second.read()).toBe(hostname)
     if (process.platform !== 'darwin') {
       expect(runProcessMock).not.toHaveBeenCalled()
-      await vi.waitFor(() => expect(first.read()).toBe(hostname))
+      await first.ready()
+      expect(first.read()).toBe(hostname)
       return
     }
     // Every runtime in the process shares one lookup; the second `start` must not spawn again.
@@ -88,7 +89,10 @@ describe('runtime machine name detection', () => {
       stderr: '',
       timedOut: false
     })
-    await vi.waitFor(() => expect(first.read()).toBe('Friendly Name'))
+    // `ready` is the publisher's gate: once it settles, no reader sees the hostname again.
+    await first.ready()
+    expect(first.read()).toBe('Friendly Name')
+    await second.ready()
     expect(second.read()).toBe('Friendly Name')
     expect(runProcessMock).toHaveBeenCalledTimes(1)
   })
